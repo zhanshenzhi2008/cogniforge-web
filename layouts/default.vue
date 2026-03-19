@@ -16,6 +16,7 @@
             <el-menu-item index="/agents">Agents</el-menu-item>
             <el-menu-item index="/workflows">工作流</el-menu-item>
             <el-menu-item index="/knowledge">知识库</el-menu-item>
+            <el-menu-item index="/keys">API 密钥</el-menu-item>
           </el-menu>
           <div class="user-info">
             <el-dropdown>
@@ -26,7 +27,7 @@
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item>个人设置</el-dropdown-item>
-                  <el-dropdown-item divided>退出登录</el-dropdown-item>
+                  <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -41,6 +42,23 @@
 </template>
 
 <script setup lang="ts">
+const router = useRouter()
+
+const handleLogout = async () => {
+  try {
+    const { post } = useApi()
+    await post('/api/v1/auth/logout')
+  } catch (error) {
+    // 即使 API 失败也清除本地状态
+  } finally {
+    const token = useCookie('token')
+    const user = useCookie('user')
+    token.value = null
+    user.value = null
+    ElMessage.success('已退出登录')
+    router.push('/login')
+  }
+}
 </script>
 
 <style scoped>

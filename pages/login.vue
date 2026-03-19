@@ -86,10 +86,19 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
-        // TODO: 调用登录 API
+        const { post } = useApi()
+        const res = await post<AuthResponse>('/api/v1/auth/login', form)
+        
+        const token = useCookie('token')
+        token.value = res.token
+        
+        const user = useCookie('user')
+        user.value = res.user
+        
+        ElMessage.success('登录成功')
         router.push('/')
-      } catch (error) {
-        ElMessage.error('登录失败')
+      } catch (error: any) {
+        ElMessage.error(error.data?.message || '登录失败')
       } finally {
         loading.value = false
       }
