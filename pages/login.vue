@@ -88,17 +88,21 @@ const handleLogin = async () => {
       try {
         const { post } = useApi()
         const res = await post<AuthResponse>('/api/v1/auth/login', form)
-        
-        const token = useCookie('token')
-        token.value = res.token
-        
-        const user = useCookie('user')
-        user.value = res.user
-        
-        ElMessage.success('登录成功')
-        router.push('/')
+
+        if (res.data) {
+          const token = useCookie('token')
+          token.value = res.data.token
+
+          const user = useCookie('user')
+          user.value = res.data.user
+
+          ElMessage.success('登录成功')
+          router.push('/')
+        } else if (res.error) {
+          ElMessage.error(res.error)
+        }
       } catch (error: any) {
-        ElMessage.error(error.data?.message || '登录失败')
+        ElMessage.error(error.data?.error || error.data?.message || '登录失败')
       } finally {
         loading.value = false
       }

@@ -1,38 +1,42 @@
-const config = useRuntimeConfig()
+import { createApiClient } from '../utils/apiClient'
 
-interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
-  body?: any
-  headers?: Record<string, string>
+export interface HealthResponse {
+  status: 'ok' | 'error'
+  timestamp: string
+  version: string
+}
+
+export interface ApiResponse<T = unknown> {
+  data?: T
+  error?: string
+  message?: string
 }
 
 export const useApi = () => {
-  const baseURL = config.public.apiBase
+  return createApiClient({
+    baseUrl: (import.meta.server ? 'http://localhost:8080' : (window.__API_BASE_URL__ || 'http://localhost:8080')),
+    getToken: () => typeof window !== 'undefined' ? localStorage.getItem('token') : null,
+  })
+}
 
-  const request = async <T = any>(endpoint: string, options: RequestOptions = {}): Promise<T> => {
-    const { method = 'GET', body, headers = {} } = options
+export const useHealthApi = () => {
+  const api = useApi()
 
-    const token = useCookie('token')
-    if (token.value) {
-      headers['Authorization'] = `Bearer ${token.value}`
-    }
-
-    const response = await $fetch<T>(`${baseURL}${endpoint}`, {
-      method,
-      body,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers
-      }
-    })
-
-    return response
+  const checkHealth = async (): Promise<ApiResponse<HealthResponse>> => {
+    return api.get<HealthResponse>('/health')
   }
 
-  const get = <T = any>(endpoint: string) => request<T>(endpoint)
-  const post = <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'POST', body })
-  const put = <T = any>(endpoint: string, body?: any) => request<T>(endpoint, { method: 'PUT', body })
-  const del = <T = any>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' })
+  const checkReady = async (): Promise<ApiResponse<{ status: string }>> => {
+    return api.get<{ status: string }>('/ready')
+  }
 
-  return { request, get, post, put, del }
+  const checkLive = async (): Promise<ApiResponse<{ status: string }>> => {
+    return api.get<{ status: string }>('/live')
+  }
+
+  return {
+    checkHealth,
+    checkReady,
+    checkLive,
+  }
 }

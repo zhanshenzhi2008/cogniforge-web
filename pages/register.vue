@@ -70,7 +70,8 @@
 
 <script setup lang="ts">
 import { User, Message, Lock } from '@element-plus/icons-vue'
-import type { FormInstance, FormRules } from 'element-plus'
+import {ElMessage, type FormInstance, type FormRules} from 'element-plus'
+import type { AuthResponse } from '~/types/auth'
 
 definePageMeta({
   layout: 'false'
@@ -121,11 +122,27 @@ const handleRegister = async () => {
     if (valid) {
       loading.value = true
       try {
-        // TODO: 调用注册 API
-        ElMessage.success('注册成功')
-        router.push('/login')
-      } catch (error) {
-        ElMessage.error('注册失败')
+        const { post } = useApi()
+        const res = await post<AuthResponse>('/api/v1/auth/register', {
+          email: form.email,
+          password: form.password,
+          name: form.name
+        })
+
+        if (res.data) {
+          const token = useCookie('token')
+          token.value = res.data.token
+
+          const user = useCookie('user')
+          user.value = res.data.user
+
+          ElMessage.success('注册成功')
+          router.push('/')
+        } else if (res.error) {
+          ElMessage.error(res.error)
+        }
+      } catch (error: any) {
+        ElMessage.error(error.data?.error || error.data?.message || '注册失败')
       } finally {
         loading.value = false
       }
