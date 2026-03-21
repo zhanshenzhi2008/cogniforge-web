@@ -90,8 +90,12 @@ const handleLogin = async () => {
         const res = await post<AuthResponse>('/api/v1/auth/login', form)
 
         if (res.data) {
+          // 同时存储到 Cookie 和 localStorage
           const token = useCookie('token')
           token.value = res.data.token
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('token', res.data.token)
+          }
 
           const user = useCookie('user')
           user.value = res.data.user

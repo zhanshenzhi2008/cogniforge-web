@@ -70,7 +70,7 @@
 
 <script setup lang="ts">
 import { User, Message, Lock } from '@element-plus/icons-vue'
-import {ElMessage, type FormInstance, type FormRules} from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
 import type { AuthResponse } from '~/types/auth'
 
 definePageMeta({

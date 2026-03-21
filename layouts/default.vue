@@ -19,18 +19,18 @@
             <el-menu-item index="/keys">API 密钥</el-menu-item>
           </el-menu>
           <div class="user-info">
-            <el-dropdown>
-              <span class="user-dropdown">
-                <el-icon><User /></el-icon>
-                <span>用户</span>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item>个人设置</el-dropdown-item>
-                  <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+          <el-dropdown @command="handleLogout">
+            <span class="user-dropdown">
+              <el-icon><User /></el-icon>
+              <span>用户</span>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item>个人设置</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
           </div>
         </div>
       </el-header>
@@ -42,9 +42,11 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
+
 const router = useRouter()
 
-const handleLogout = async () => {
+const handleLogout = async (_command: string | number | object) => {
   try {
     const { post } = useApi()
     await post('/api/v1/auth/logout')
@@ -55,6 +57,9 @@ const handleLogout = async () => {
     const user = useCookie('user')
     token.value = null
     user.value = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token')
+    }
     ElMessage.success('已退出登录')
     router.push('/login')
   }

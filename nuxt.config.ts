@@ -6,6 +6,9 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
   ],
 
+  // 禁用 SSR，Element Plus 与 Nuxt SSR 的水合存在兼容性问题
+  ssr: false,
+
   css: [
     'element-plus/dist/index.css',
     '~/assets/css/main.css',
