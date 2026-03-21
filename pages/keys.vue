@@ -125,7 +125,11 @@ const submitCreate = async () => {
       creating.value = true
       try {
         const res = await post<{ key: string }>('/api/v1/keys/', form)
-        newKey.value = res.key
+        if (res.error) {
+          ElMessage.error(res.error)
+          return
+        }
+        newKey.value = res.data?.key || ''
         await fetchKeys()
       } catch (error) {
         ElMessage.error('创建失败')
