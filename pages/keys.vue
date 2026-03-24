@@ -142,11 +142,15 @@ const submitCreate = async () => {
 
 const handleDelete = async (id: string) => {
   try {
-    await del(`/api/v1/keys/${id}`)
-    ElMessage.success('撤销成功')
+    const res = await del<{ message?: string }>(`/api/v1/keys/${id}`)
+    if (res.error) {
+      ElMessage.error(res.error)
+      return
+    }
+    ElMessage.success(res.data?.message || '撤销成功')
     await fetchKeys()
   } catch (error) {
-    ElMessage.error('撤销失败')
+    ElMessage.error('撤销失败，请稍后重试')
   }
 }
 
