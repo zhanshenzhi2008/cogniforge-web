@@ -48,7 +48,7 @@
       </div>
       <el-form v-else ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入密钥名称" />
+          <el-input v-model="form.name" placeholder="请输入密钥名称" @keyup.enter.prevent="submitCreate" />
         </el-form-item>
       </el-form>
       <template #footer>
