@@ -13,6 +13,7 @@ export interface ApiResponse<T = unknown> {
 export interface ApiConfig {
   baseUrl: string
   getToken?: () => string | null
+  onUnauthorized?: () => void
 }
 
 export const defaultConfig: ApiConfig = {
@@ -47,6 +48,13 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
       })
 
       const data = await response.json()
+
+      if (response.status === 401) {
+        finalConfig.onUnauthorized?.()
+        return {
+          error: data.error || data.message || 'Unauthorized',
+        }
+      }
 
       if (!response.ok) {
         return {

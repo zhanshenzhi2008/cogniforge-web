@@ -44,24 +44,18 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 
-const router = useRouter()
+const { clearAuth } = useAuth()
 
-const handleLogout = async (_command: string | number | object) => {
+const handleLogout = async () => {
   try {
     const { post } = useApi()
     await post('/api/v1/auth/logout')
   } catch (error) {
     // 即使 API 失败也清除本地状态
   } finally {
-    const token = useCookie('token')
-    const user = useCookie('user')
-    token.value = null
-    user.value = null
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token')
-    }
+    clearAuth()
     ElMessage.success('已退出登录')
-    router.push('/login')
+    navigateTo('/login')
   }
 }
 </script>

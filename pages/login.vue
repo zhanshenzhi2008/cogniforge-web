@@ -60,7 +60,7 @@ definePageMeta({
   layout: 'false'
 })
 
-const router = useRouter()
+const { setAuth } = useAuth()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
@@ -87,28 +87,21 @@ const handleLogin = async () => {
       loading.value = true
       try {
         const { post } = useApi()
-        // 判断输入是邮箱还是用户名
         const isEmail = form.account.includes('@')
         const payload = isEmail
           ? { email: form.account, password: form.password }
           : { username: form.account, password: form.password }
-        const res = await post<AuthResponse>('/api/v1/auth/login', payload)
+        const res = await post<{ token: string; user: any }>('/api/v1/auth/login', payload)
+
+        if (res.error) {
+          ElMessage.error(res.error)
+          return
+        }
 
         if (res.data) {
-          // 同时存储到 Cookie 和 localStorage
-          const token = useCookie('token')
-          token.value = res.data.token
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('token', res.data.token)
-          }
-
-          const user = useCookie('user')
-          user.value = res.data.user
-
+          setAuth(res.data.token, res.data.user)
           ElMessage.success('登录成功')
-          router.push('/')
-        } else if (res.error) {
-          ElMessage.error(res.error)
+          navigateTo('/')
         }
       } catch (error: any) {
         ElMessage.error(error.data?.error || error.data?.message || '登录失败')
