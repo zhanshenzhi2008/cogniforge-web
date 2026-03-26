@@ -28,12 +28,14 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> => {
     const url = `${finalConfig.baseUrl}${endpoint}`
+    console.log('[apiClient] request start:', options.method || 'GET', url)
 
     const defaultHeaders: HeadersInit = {
       'Content-Type': 'application/json',
     }
 
     const token = finalConfig.getToken?.()
+    console.log('[apiClient] getToken result:', token)
     if (token) {
       defaultHeaders['Authorization'] = `Bearer ${token}`
     }
@@ -78,6 +80,7 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
 
       return { data }
     } catch (error) {
+      console.error('[apiClient] request error:', error, 'url:', url, 'options:', options)
       return {
         error: error instanceof Error ? error.message : 'Network error',
       }
