@@ -141,11 +141,8 @@ const submitCreate = async () => {
 }
 
 const handleDelete = async (id: string) => {
-  console.log('[keys] handleDelete ENTRY, id:', id, 'keys:', JSON.stringify(keys.value.map(k => k.id)))
   try {
-    console.log('[keys] del function:', typeof del)
     const res = await del<{ message?: string }>(`/api/v1/keys/${id}`)
-    console.log('[keys] del response:', JSON.stringify(res))
     if (res.error) {
       ElMessage.error(res.error)
       return
@@ -153,7 +150,6 @@ const handleDelete = async (id: string) => {
     ElMessage.success(res.data?.message || '撤销成功')
     await fetchKeys()
   } catch (error) {
-    console.error('[keys] handleDelete error:', error)
     ElMessage.error('撤销失败，请稍后重试')
   }
 }
