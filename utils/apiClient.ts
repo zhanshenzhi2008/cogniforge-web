@@ -47,10 +47,24 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
         },
       })
 
-      const data = await response.json()
+      let data: any
+      try {
+        data = await response.json()
+      } catch {
+        if (!response.ok) {
+          return {
+            error: `HTTP ${response.status}`,
+          }
+        }
+        return { data: undefined }
+      }
 
       if (response.status === 401) {
-        finalConfig.onUnauthorized?.()
+        try {
+          finalConfig.onUnauthorized?.()
+        } catch {
+          // ignore redirect errors
+        }
         return {
           error: data.error || data.message || 'Unauthorized',
         }
