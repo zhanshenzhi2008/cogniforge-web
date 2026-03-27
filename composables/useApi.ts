@@ -1,4 +1,5 @@
 import { createApiClient } from '../utils/apiClient'
+import { useAuth } from './useAuth'
 
 export interface HealthResponse {
   status: 'ok' | 'error'
@@ -13,12 +14,12 @@ export interface ApiResponse<T = unknown> {
 }
 
 export const useApi = () => {
-  const { getToken, redirectToLogin } = useAuth()
+  const auth = useAuth()
 
   return createApiClient({
     baseUrl: 'http://localhost:8080',
-    getToken,
-    onUnauthorized: () => redirectToLogin(),
+    getToken: () => auth.getToken(),
+    onUnauthorized: () => auth.redirectToLogin(),
   })
 }
 

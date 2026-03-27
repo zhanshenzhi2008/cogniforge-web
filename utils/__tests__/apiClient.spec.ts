@@ -1,77 +1,175 @@
 import { describe, it, expect } from 'vitest'
 import { createApiClient, defaultConfig } from '../apiClient'
 
-describe('createApiClient', () => {
-  describe('initialization', () => {
-    it('should create client with default config', () => {
+// --- Method presence tests ---
+// These verify that apiClient returns the exact methods that pages actually use.
+// If a page calls a method that doesn't exist, the test suite catches it.
+
+describe('apiClient method contract', () => {
+  describe('methods that pages depend on', () => {
+    it('should have get method (used by keys.vue, playground.vue)', () => {
       const client = createApiClient()
-      expect(client).toBeDefined()
-    })
-
-    it('should use default baseUrl', () => {
-      expect(defaultConfig.baseUrl).toBe('http://localhost:8080')
-    })
-
-    it('should accept custom baseUrl', () => {
-      const client = createApiClient({ baseUrl: 'https://api.example.com' })
-      expect(client).toBeDefined()
-    })
-  })
-
-  describe('get method', () => {
-    it('should have get method', () => {
-      const client = createApiClient()
-      expect(client.get).toBeDefined()
       expect(typeof client.get).toBe('function')
     })
-  })
 
-  describe('post method', () => {
-    it('should have post method', () => {
+    it('should have post method (used by keys.vue, login.vue, register.vue)', () => {
       const client = createApiClient()
-      expect(client.post).toBeDefined()
       expect(typeof client.post).toBe('function')
     })
-  })
 
-  describe('put method', () => {
-    it('should have put method', () => {
+    it('should have del method (used by keys.vue — NOT delete)', () => {
       const client = createApiClient()
-      expect(client.put).toBeDefined()
-      expect(typeof client.put).toBe('function')
+      expect(typeof client.del).toBe('function')
     })
   })
 
-  describe('delete method', () => {
-    it('should have delete method', () => {
+  describe('HTTP method bindings', () => {
+    it('get should use GET', () => {
       const client = createApiClient()
-      expect(client.delete).toBeDefined()
-      expect(typeof client.delete).toBe('function')
+      const originalFetch = globalThis.fetch
+      let capturedMethod = ''
+      globalThis.fetch = (url, options) => {
+        capturedMethod = options?.method || 'GET'
+        return Promise.resolve(new Response('{}', { status: 200 }))
+      }
+      client.get<unknown>('/test')
+      globalThis.fetch = originalFetch
+      expect(capturedMethod).toBe('GET')
+    })
+
+    it('post should use POST', () => {
+      const client = createApiClient()
+      const originalFetch = globalThis.fetch
+      let capturedMethod = ''
+      globalThis.fetch = (url, options) => {
+        capturedMethod = options?.method || 'GET'
+        return Promise.resolve(new Response('{}', { status: 200 }))
+      }
+      client.post<unknown>('/test', { foo: 'bar' })
+      globalThis.fetch = originalFetch
+      expect(capturedMethod).toBe('POST')
+    })
+
+    it('del should use DELETE', () => {
+      const client = createApiClient()
+      const originalFetch = globalThis.fetch
+      let capturedMethod = ''
+      globalThis.fetch = (url, options) => {
+        capturedMethod = options?.method || 'GET'
+        return Promise.resolve(new Response('{}', { status: 200 }))
+      }
+      client.del<unknown>('/test')
+      globalThis.fetch = originalFetch
+      expect(capturedMethod).toBe('DELETE')
     })
   })
 })
 
-describe('ApiResponse type', () => {
-  it('should support success response with data', () => {
-    const response = { data: { id: 1 } }
-    expect(response.data).toBeDefined()
+// --- Response shape tests ---
+// These verify that the ApiResponse shape matches what pages expect.
+
+describe('ApiResponse shape', () => {
+  it('should return { data } on success', async () => {
+    const client = createApiClient()
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = () =>
+      Promise.resolve(new Response(JSON.stringify({ id: 1 }), { status: 200 }))
+    const res = await client.get<{ id: number }>('/test')
+    globalThis.fetch = originalFetch
+    expect(res.data).toBeDefined()
+    expect((res as any).error).toBeUndefined()
   })
 
-  it('should support error response', () => {
-    const response = { error: 'Something went wrong' }
-    expect(response.error).toBeDefined()
+  it('should return { error } on HTTP error', async () => {
+    const client = createApiClient()
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = () =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'bad request' }), { status: 400 }))
+    const res = await client.get<unknown>('/test')
+    globalThis.fetch = originalFetch
+    expect(res.error).toBeDefined()
+    expect((res as any).data).toBeUndefined()
   })
 
-  it('should support message field', () => {
-    const response = { message: 'Success' }
-    expect(response.message).toBeDefined()
+  it('should call onUnauthorized on 401', async () => {
+    let called = false
+    const client = createApiClient({
+      onUnauthorized: () => { called = true },
+    })
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = () =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 }))
+    await client.get<unknown>('/test')
+    globalThis.fetch = originalFetch
+    expect(called).toBe(true)
+  })
+
+  it('should include Authorization header when token exists', async () => {
+    const client = createApiClient({
+      getToken: () => 'test-token',
+    })
+    const originalFetch = globalThis.fetch
+    let capturedHeaders: HeadersInit = {}
+    globalThis.fetch = (url, options) => {
+      capturedHeaders = options?.headers || {}
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    client.get<unknown>('/test')
+    globalThis.fetch = originalFetch
+    expect((capturedHeaders as Record<string, string>)['Authorization']).toBe('Bearer test-token')
+  })
+
+  it('should not include Authorization header when no token', async () => {
+    const client = createApiClient({
+      getToken: () => null,
+    })
+    const originalFetch = globalThis.fetch
+    let capturedHeaders: HeadersInit = {}
+    globalThis.fetch = (url, options) => {
+      capturedHeaders = options?.headers || {}
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    client.get<unknown>('/test')
+    globalThis.fetch = originalFetch
+    expect((capturedHeaders as Record<string, string>)['Authorization']).toBeUndefined()
+  })
+
+  it('should use default baseUrl', () => {
+    expect(defaultConfig.baseUrl).toBe('http://localhost:8080')
+  })
+
+  it('should accept custom baseUrl', async () => {
+    const client = createApiClient({ baseUrl: 'https://api.example.com' })
+    const originalFetch = globalThis.fetch
+    let capturedUrl = ''
+    globalThis.fetch = (url) => {
+      capturedUrl = url as string
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    client.get<unknown>('/v1/test')
+    globalThis.fetch = originalFetch
+    expect(capturedUrl).toBe('https://api.example.com/v1/test')
+  })
+
+  it('should JSON-stringify body for POST', async () => {
+    const client = createApiClient()
+    const originalFetch = globalThis.fetch
+    let capturedBody = ''
+    globalThis.fetch = (url, options) => {
+      capturedBody = options?.body as string || ''
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    client.post<unknown>('/test', { name: 'test' })
+    globalThis.fetch = originalFetch
+    expect(JSON.parse(capturedBody)).toEqual({ name: 'test' })
   })
 })
 
-describe('HealthResponse type', () => {
-  it('should define correct shape for health check', () => {
+// --- HealthResponse shape ---
+describe('HealthResponse shape', () => {
+  it('should define correct fields', () => {
     const response = {
-      status: 'ok',
+      status: 'ok' as const,
       timestamp: '2024-01-01T00:00:00Z',
       version: '1.0.0',
     }

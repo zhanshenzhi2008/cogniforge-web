@@ -147,7 +147,8 @@ const renderMarkdown = (content: string) => {
 const fetchModels = async () => {
   try {
     const res = await get<{ models: Model[] }>('/api/v1/models/')
-    models.value = res.models || []
+    if (res.error) return
+    models.value = res.data?.models || []
     if (models.value.length > 0) {
       selectedModel.value = models.value[0].id
     }
