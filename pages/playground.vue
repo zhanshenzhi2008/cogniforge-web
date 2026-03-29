@@ -183,10 +183,14 @@ const sendMessage = async () => {
       })
     })
 
-    const reader = response.body?.getReader()
-    const decoder = new TextDecoder()
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
 
-    if (reader) {
+      if (!reader) {
+        console.error('[stream] no reader available')
+        return
+      }
+
       messages.value.push({ role: 'assistant', content: '' })
       const assistantMessage = messages.value[messages.value.length - 1]
 
@@ -214,7 +218,6 @@ const sendMessage = async () => {
           }
         }
       }
-    }
   } catch (error) {
     ElMessage.error('发送消息失败')
     messages.value.pop()
