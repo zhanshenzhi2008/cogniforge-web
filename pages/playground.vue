@@ -60,7 +60,7 @@
             >
               <div class="message-avatar">
                 <el-icon v-if="msg.role === 'user'"><User /></el-icon>
-                <el-icon v-else><Robot /></el-icon>
+                <el-icon v-else><MagicStick /></el-icon>
               </div>
               <div class="message-content">
                 <div class="message-text" v-html="renderMarkdown(msg.content)" />
@@ -69,7 +69,7 @@
 
             <div v-if="streaming" class="message assistant streaming">
               <div class="message-avatar">
-                <el-icon><Robot /></el-icon>
+                <el-icon><MagicStick /></el-icon>
               </div>
               <div class="message-content">
                 <div class="message-text" v-html="renderMarkdown(streamingContent)" />
@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { ChatDotRound, User, Robot } from '@element-plus/icons-vue'
+import { ChatDotRound, User, MagicStick } from '@element-plus/icons-vue'
 import { marked } from 'marked'
 
 interface Message {
@@ -177,7 +177,7 @@ const sendMessage = async () => {
       },
       body: JSON.stringify({
         model: selectedModel.value,
-        messages: messages.value.slice(0, -1).map(m => ({ role: m.role, content: m.content })),
+        messages: messages.value.map(m => ({ role: m.role, content: m.content })),
         stream: true,
         ...params
       })
@@ -203,8 +203,8 @@ const sendMessage = async () => {
             if (data === '[DONE]') continue
             try {
               const parsed = JSON.parse(data)
-              if (parsed.content) {
-                assistantMessage.content += parsed.content
+              if (parsed.choices?.[0]?.delta?.content) {
+                assistantMessage.content += parsed.choices[0].delta.content
                 streamingContent.value = assistantMessage.content
                 scrollToBottom()
               }
