@@ -169,7 +169,7 @@ const sendMessage = async () => {
   streamingContent.value = ''
 
   try {
-    const response = await fetch(`${config.public.apiBase}/api/v1/models/chat/stream`, {
+    const response = await fetch(`${config.public.apiBase}/api/v1/chat/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,41 +183,96 @@ const sendMessage = async () => {
       })
     })
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
+    const decoder = new TextDecoder()
 
-      if (!reader) {
-        console.error('[stream] no reader available')
-        return
-      }
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      ElMessage.error(
+        `发送消息失败：HTTP ${response.status}${text ? ` - ${text}` : ''}`,
+      )
+      return
+    }
 
-      messages.value.push({ role: 'assistant', content: '' })
-      const assistantMessage = messages.value[messages.value.length - 1]
+    const reader = response.body?.getReader()
+    if (!reader) {
+      ElMessage.error('发送消息失败：response body 不可用')
+      return
+    }
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+    messages.value.push({ role: 'assistant', content: '' })
+    const assistantMessage = messages.value[messages.value.length - 1]
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+    // SSE 可能会被拆成多段读取，必须做缓冲处理，避免跨块导致解析不到 `data: ...`。
+    let buffer = ''
 
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() || ''
+
+      for (const part of parts) {
+        const lines = part.split('\n')
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') continue
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.choices?.[0]?.delta?.content) {
-                assistantMessage.content += parsed.choices[0].delta.content
-                streamingContent.value = assistantMessage.content
-                scrollToBottom()
-              }
-            } catch (e) {
-              // ignore parse errors
+          if (!line.startsWith('data: ')) continue
+
+          const data = line.slice(6).trim()
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            // 后端错误会走 `data: {"error": "..."}` 这种结构
+            if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
+              ElMessage.error(parsed.error)
+              assistantMessage.content = parsed.error
+              streamingContent.value = assistantMessage.content
+              scrollToBottom()
+              return
             }
+            const content = parsed?.choices?.[0]?.delta?.content
+            if (typeof content === 'string' && content.length > 0) {
+              assistantMessage.content += content
+              streamingContent.value = assistantMessage.content
+              scrollToBottom()
+            }
+          } catch {
+            // ignore parse errors (may happen on chunk boundaries)
           }
         }
       }
+    }
+
+    // 兜底：处理最后一段残留 buffer（如果服务端没以 '\n\n' 结尾）
+    if (buffer) {
+      const lines = buffer.split('\n')
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6).trim()
+        if (data === '[DONE]') continue
+        try {
+          const parsed = JSON.parse(data)
+          // 后端错误会走 `data: {"error": "..."}` 这种结构
+          if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
+            ElMessage.error(parsed.error)
+            assistantMessage.content = parsed.error
+            streamingContent.value = assistantMessage.content
+            streamingContent.value = assistantMessage.content
+            scrollToBottom()
+            return
+          }
+          const content = parsed?.choices?.[0]?.delta?.content
+          if (typeof content === 'string' && content.length > 0) {
+            assistantMessage.content += content
+            streamingContent.value = assistantMessage.content
+            scrollToBottom()
+          }
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
   } catch (error) {
     ElMessage.error('发送消息失败')
     messages.value.pop()
