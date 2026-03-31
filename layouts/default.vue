@@ -13,7 +13,7 @@
           >
             <el-menu-item index="/">控制台</el-menu-item>
             <el-menu-item index="/playground">Playground</el-menu-item>
-            <el-menu-item index="/agents">Agents</el-menu-item>
+            <el-menu-item index="/agents">Agent 管理</el-menu-item>
             <el-menu-item index="/workflows">工作流</el-menu-item>
             <el-menu-item index="/knowledge">知识库</el-menu-item>
             <el-menu-item index="/keys">API 密钥</el-menu-item>
