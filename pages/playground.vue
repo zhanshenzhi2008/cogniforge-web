@@ -1,8 +1,26 @@
 <template>
   <div class="playground-page">
     <div class="playground-container">
-      <!-- 左侧：模型选择和参数配置 -->
+      <!-- 左侧：Agent 选择、模型选择和参数配置 -->
       <div class="sidebar">
+        <el-card>
+          <template #header>
+            <span>Agent 选择</span>
+          </template>
+          <el-select v-model="selectedAgent" placeholder="选择 Agent" clearable style="width: 100%" @change="handleAgentChange">
+            <el-option
+              v-for="agent in agents"
+              :key="agent.id"
+              :label="agent.name"
+              :value="agent.id"
+            />
+          </el-select>
+          <div v-if="selectedAgentInfo" class="agent-info">
+            <p class="agent-model">模型: {{ selectedAgentInfo.model }}</p>
+            <p class="agent-desc">{{ selectedAgentInfo.description || '无描述' }}</p>
+          </div>
+        </el-card>
+
         <el-card>
           <template #header>
             <span>模型选择</span>
@@ -40,7 +58,7 @@
         <el-card class="messages-card" ref="messagesCard">
           <template #header>
             <div class="messages-header">
-              <span>对话</span>
+              <span>{{ currentTitle }}</span>
               <el-button link type="danger" size="small" @click="clearMessages">
                 清空对话
               </el-button>
@@ -109,6 +127,7 @@
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, User, MagicStick } from '@element-plus/icons-vue'
 import { marked } from 'marked'
+import type { Agent } from '@/composables/useAgents'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -120,7 +139,9 @@ interface Model {
   name: string
 }
 
+const route = useRoute()
 const config = useRuntimeConfig()
+const { list: listAgents, get: getAgent } = useAgents()
 const { get, post } = useApi()
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
@@ -129,6 +150,18 @@ const streamingContent = ref('')
 const selectedModel = ref('')
 const models = ref<Model[]>([])
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// Agent 相关
+const agents = ref<Agent[]>([])
+const selectedAgent = ref<string>('')
+const selectedAgentInfo = ref<Agent | null>(null)
+
+const currentTitle = computed(() => {
+  if (selectedAgentInfo.value) {
+    return `与 ${selectedAgentInfo.value.name} 对话`
+  }
+  return '对话'
+})
 
 const params = reactive({
   temperature: 0.7,
@@ -142,6 +175,36 @@ const tokenCount = computed(() => {
 
 const renderMarkdown = (content: string) => {
   return marked.parse(content, { async: false }) as string
+}
+
+const fetchAgents = async () => {
+  try {
+    const res = await listAgents()
+    if (res.error) {
+      ElMessage.error(res.error)
+      return
+    }
+    agents.value = res.data || []
+  } catch (error) {
+    console.error('Failed to fetch agents:', error)
+  }
+}
+
+const handleAgentChange = async (agentId: string) => {
+  if (!agentId) {
+    selectedAgentInfo.value = null
+    selectedModel.value = models.value[0]?.id || ''
+    return
+  }
+  const res = await getAgent(agentId)
+  if (res.error) {
+    ElMessage.error(res.error)
+    return
+  }
+  selectedAgentInfo.value = res.data || null
+  if (res.data?.model) {
+    selectedModel.value = res.data.model
+  }
 }
 
 const fetchModels = async () => {
@@ -169,18 +232,24 @@ const sendMessage = async () => {
   streamingContent.value = ''
 
   try {
-    const response = await fetch(`${config.public.apiBase}/api/v1/chat/stream`, {
+    const endpoint = selectedAgent.value
+      ? `${config.public.apiBase}/api/v1/agents/${selectedAgent.value}/chat`
+      : `${config.public.apiBase}/api/v1/chat/stream`
+
+    const body: any = {
+      model: selectedModel.value,
+      messages: messages.value.map(m => ({ role: m.role, content: m.content })),
+      stream: true,
+      ...params
+    }
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${useCookie('token').value}`
       },
-      body: JSON.stringify({
-        model: selectedModel.value,
-        messages: messages.value.map(m => ({ role: m.role, content: m.content })),
-        stream: true,
-        ...params
-      })
+      body: JSON.stringify(body)
     })
 
     const decoder = new TextDecoder()
@@ -301,8 +370,16 @@ const scrollToBottom = () => {
   })
 }
 
-onMounted(() => {
-  fetchModels()
+onMounted(async () => {
+  await fetchAgents()
+  await fetchModels()
+
+  // 从 URL 参数加载 agent
+  const agentId = route.query.agent as string
+  if (agentId) {
+    selectedAgent.value = agentId
+    await handleAgentChange(agentId)
+  }
 })
 </script>
 
@@ -317,6 +394,31 @@ onMounted(() => {
   display: flex;
   gap: 20px;
   height: 100%;
+}
+
+.agent-info {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #ebeef5;
+  font-size: 12px;
+  color: #606266;
+}
+
+.agent-info p {
+  margin: 4px 0;
+}
+
+.agent-model {
+  font-weight: 500;
+}
+
+.agent-desc {
+  color: #909399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .sidebar {

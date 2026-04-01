@@ -26,8 +26,13 @@ export interface AgentChatResponse {
 
 export const useAgentChat = () => {
   const api = useApi()
+  const config = useRuntimeConfig()
   const streaming = ref(false)
   const error = ref<string | null>(null)
+
+  const getBaseUrl = () => {
+    return config.public.apiBase || 'http://localhost:8080'
+  }
 
   /**
    * Non-streaming chat with an agent
@@ -62,7 +67,7 @@ export const useAgentChat = () => {
     try {
       const token = useAuth().getToken()
       const response = await fetch(
-        `${api.config?.baseUrl || 'http://localhost:8080'}/api/v1/agents/${agentId}/chat`,
+        `${getBaseUrl()}/api/v1/agents/${agentId}/chat`,
         {
           method: 'POST',
           headers: {

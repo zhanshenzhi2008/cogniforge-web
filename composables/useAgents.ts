@@ -2,16 +2,6 @@
  * Agent types and API composable
  */
 
-export interface MemoryConfig {
-  type: 'short_term' | 'long_term'
-  max_turns: number
-}
-
-export interface Guardrails {
-  input_filter: boolean
-  output_filter: boolean
-}
-
 export interface Agent {
   id: string
   user_id: string
@@ -20,8 +10,10 @@ export interface Agent {
   model: string
   system_prompt: string
   tools: string[]
-  memory_config: MemoryConfig
-  guardrails: Guardrails
+  memory_type: string
+  memory_turns: number
+  input_filter: boolean
+  output_filter: boolean
   status: 'active' | 'disabled'
   metadata: Record<string, any>
   created_at: string
@@ -34,8 +26,6 @@ export interface CreateAgentInput {
   model: string
   system_prompt?: string
   tools?: string[]
-  memory_config?: MemoryConfig
-  guardrails?: Guardrails
 }
 
 export interface UpdateAgentInput {
@@ -44,8 +34,6 @@ export interface UpdateAgentInput {
   model?: string
   system_prompt?: string
   tools?: string[]
-  memory_config?: MemoryConfig
-  guardrails?: Guardrails
   status?: string
 }
 
