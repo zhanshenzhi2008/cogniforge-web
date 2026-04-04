@@ -1,211 +1,241 @@
 <template>
   <div class="playground-page">
-    <!-- 顶部栏 -->
-    <header class="page-header">
-      <div class="header-left">
-        <h1 class="page-title">
-          <el-icon><ChatLineSquare /></el-icon>
-          AI Playground
-        </h1>
-        <span v-if="selectedAgentInfo" class="current-agent">
-          <el-icon><Connection /></el-icon>
-          {{ selectedAgentInfo.name }}
-        </span>
-      </div>
-      <div class="header-right">
-        <el-tag v-if="selectedModel" type="info" effect="plain" size="small">
-          {{ selectedModel }}
-        </el-tag>
-        <el-button link type="danger" @click="clearMessages">
-          <el-icon><Delete /></el-icon>
-          清空
-        </el-button>
-      </div>
-    </header>
+        <div class="playground-container">
 
-    <div class="playground-container">
-      <!-- 左侧：配置面板 -->
-      <aside class="sidebar">
-        <!-- Agent 选择 -->
-        <div class="config-section">
-          <div class="section-label">Agent</div>
-          <el-select
-            v-model="selectedAgent"
-            placeholder="选择 Agent"
-            clearable
-            size="large"
-            class="config-select"
-            @change="handleAgentChange"
-          >
-            <template #prefix>
-              <el-icon><User /></el-icon>
-            </template>
-            <el-option
-              v-for="agent in agents"
-              :key="agent.id"
-              :label="agent.name"
-              :value="agent.id"
-            />
-          </el-select>
-          <div v-if="selectedAgentInfo" class="agent-info-card">
-            <div class="agent-meta">
-              <el-tag size="small">{{ selectedAgentInfo.model }}</el-tag>
-            </div>
-            <p class="agent-desc">{{ selectedAgentInfo.description || '暂无描述' }}</p>
-          </div>
-        </div>
-
-        <!-- 模型选择 -->
-        <div class="config-section">
-          <div class="section-label">模型</div>
-          <el-select
-            v-model="selectedModel"
-            placeholder="选择模型"
-            size="large"
-            class="config-select"
-          >
-            <template #prefix>
-              <el-icon><Cpu /></el-icon>
-            </template>
-            <el-option
-              v-for="model in models"
-              :key="model.id"
-              :label="model.name"
-              :value="model.id"
-            />
-          </el-select>
-        </div>
-
-        <!-- 参数配置 -->
-        <div class="config-section params-section">
-          <div class="section-label">参数</div>
-          <div class="param-item">
-            <div class="param-header">
-              <span class="param-name">Temperature</span>
-              <span class="param-value">{{ params.temperature }}</span>
-            </div>
-            <el-slider v-model="params.temperature" :min="0" :max="2" :step="0.1" :show-tooltip="false" />
-          </div>
-          <div class="param-item">
-            <div class="param-header">
-              <span class="param-name">Max Tokens</span>
-              <span class="param-value">{{ params.max_tokens }}</span>
-            </div>
-            <el-slider v-model="params.max_tokens" :min="256" :max="8192" :step="256" :show-tooltip="false" />
-          </div>
-          <div class="param-item">
-            <div class="param-header">
-              <span class="param-name">Top P</span>
-              <span class="param-value">{{ params.top_p }}</span>
-            </div>
-            <el-slider v-model="params.top_p" :min="0" :max="1" :step="0.05" :show-tooltip="false" />
-          </div>
-        </div>
-      </aside>
-
-      <!-- 右侧：聊天区域 -->
-      <main class="chat-area">
-        <!-- 消息列表 -->
-        <div class="messages-wrapper" ref="messagesContainer">
-          <!-- 空状态 -->
-          <div v-if="messages.length === 0 && !streaming" class="empty-state">
-            <div class="empty-icon">
-              <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4"/>
-                <path d="M20 28h24M20 36h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="44" cy="44" r="8" fill="#6366f1"/>
-                <path d="M41 44l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <p class="empty-title">开始一段对话</p>
-            <p class="empty-hint">输入消息，AI 将为你生成回复</p>
-          </div>
-
-          <!-- 消息列表 -->
-          <div class="messages-list">
-            <div
-              v-for="(msg, index) in messages"
-              :key="index"
-              :class="['message', msg.role]"
-            >
-              <div class="message-avatar">
-                <el-avatar v-if="msg.role === 'user'" :size="36" color="#6366f1">
-                  <el-icon><User /></el-icon>
-                </el-avatar>
-                <el-avatar v-else :size="36" :style="{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }">
-                  <el-icon><MagicStick /></el-icon>
-                </el-avatar>
+          <!-- 左侧配置面板 -->
+          <aside class="sidebar">
+            <!-- 顶部标题 -->
+            <div class="sidebar-header">
+              <n-avatar
+                :size="36"
+                round
+                src="https://api.dicebear.com/7.x/bottts/svg?seed=cogniforge"
+              />
+              <div class="sidebar-title">
+                <span class="app-name">CogniForge</span>
+                <span class="app-sub">AI Agent Platform</span>
               </div>
-              <div class="message-body">
-                <div class="message-bubble" :class="{ 'user-bubble': msg.role === 'user' }">
-                  <div class="message-text" v-html="renderMarkdown(msg.content)" />
+            </div>
+
+            <!-- Agent 选择 -->
+            <n-card size="small" class="config-card">
+              <template #header>
+                <div class="card-header">
+                  <n-icon :component="AgentIcon" />
+                  <span>Agent</span>
+                </div>
+              </template>
+              <n-select
+                v-model:value="selectedAgent"
+                :options="agentOptions"
+                placeholder="选择 Agent"
+                clearable
+                @update:value="handleAgentChange"
+              />
+              <div v-if="selectedAgentInfo" class="agent-meta">
+                <div class="meta-item">
+                  <span class="meta-label">模型</span>
+                  <n-tag size="small" type="info">{{ selectedAgentInfo.model }}</n-tag>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">描述</span>
+                  <p class="meta-desc">{{ selectedAgentInfo.description || '暂无描述' }}</p>
                 </div>
               </div>
-            </div>
+            </n-card>
 
-            <!-- 流式输出 -->
-            <div v-if="streaming" class="message assistant streaming">
-              <div class="message-avatar">
-                <el-avatar :size="36" :style="{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }">
-                  <el-icon><MagicStick /></el-icon>
-                </el-avatar>
-              </div>
-              <div class="message-body">
-                <div class="message-bubble streaming-bubble">
-                  <span class="streaming-text" v-html="renderMarkdown(streamingContent)" />
-                  <span class="typing-cursor" />
+            <!-- 模型选择 -->
+            <n-card size="small" class="config-card">
+              <template #header>
+                <div class="card-header">
+                  <n-icon :component="SettingsIcon" />
+                  <span>模型</span>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
+              </template>
+              <n-select
+                v-model:value="selectedModel"
+                :options="modelOptions"
+                placeholder="选择模型"
+              />
+            </n-card>
 
-        <!-- 输入区域 -->
-        <div class="input-wrapper">
-          <div class="input-card">
-            <el-input
-              v-model="inputMessage"
-              type="textarea"
-              :rows="3"
-              placeholder="输入消息... (Shift+Enter 换行，Enter 发送)"
-              :disabled="streaming"
-              resize="none"
-              @keydown="handleKeyDown"
-            />
-            <div class="input-footer">
-              <span class="token-indicator">
-                <el-icon><Odometer /></el-icon>
-                {{ tokenCount }} tokens
-              </span>
-              <el-button
-                type="primary"
-                size="large"
-                :loading="streaming"
-                :disabled="!inputMessage.trim()"
-                @click="sendMessage"
+            <!-- 参数配置 -->
+            <n-card size="small" class="config-card params-card">
+              <template #header>
+                <div class="card-header">
+                  <n-icon :component="SettingsIcon" />
+                  <span>参数</span>
+                </div>
+              </template>
+              <div class="param-row">
+                <div class="param-label">
+                  <span>Temperature</span>
+                  <n-tag size="small" type="warning">{{ params.temperature }}</n-tag>
+                </div>
+                <n-slider
+                  v-model:value="params.temperature"
+                  :min="0"
+                  :max="2"
+                  :step="0.1"
+                  :tooltip="false"
+                />
+              </div>
+              <div class="param-row">
+                <div class="param-label">
+                  <span>Max Tokens</span>
+                  <n-tag size="small" type="warning">{{ params.max_tokens }}</n-tag>
+                </div>
+                <n-input-number
+                  v-model:value="params.max_tokens"
+                  :min="1"
+                  :max="8192"
+                  size="small"
+                  :show-button="false"
+                />
+              </div>
+              <div class="param-row">
+                <div class="param-label">
+                  <span>Top P</span>
+                  <n-tag size="small" type="warning">{{ params.top_p }}</n-tag>
+                </div>
+                <n-slider
+                  v-model:value="params.top_p"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  :tooltip="false"
+                />
+              </div>
+            </n-card>
+
+          </aside>
+
+          <!-- 右侧聊天区域 -->
+          <main class="chat-area">
+            <!-- 顶部栏 -->
+            <div class="chat-topbar">
+              <div class="chat-title">
+                <n-icon :component="selectedAgent ? SparklesIcon : ChatIcon" :size="20" />
+                <span>{{ currentTitle }}</span>
+              </div>
+              <n-button
+                quaternary
+                size="small"
+                type="error"
+                @click="clearMessages"
               >
-                <template #icon v-if="!streaming">
-                  <el-icon><Promotion /></el-icon>
+                <template #icon>
+                  <n-icon :component="TrashIcon" />
                 </template>
-                {{ streaming ? '生成中...' : '发送' }}
-              </el-button>
+                清空
+              </n-button>
             </div>
-          </div>
+
+            <!-- 消息列表 -->
+            <div class="messages-wrapper" ref="messagesContainer">
+              <div v-if="messages.length === 0" class="empty-state">
+                <div class="empty-glow" />
+                <n-icon :component="ChatIcon" :size="56" class="empty-icon" />
+                <p class="empty-title">开始新对话</p>
+                <p class="empty-sub">输入消息与 AI 互动</p>
+              </div>
+
+              <TransitionGroup name="msg" tag="div" class="messages">
+                <div
+                  v-for="(msg, index) in messages"
+                  :key="index"
+                  :class="['message', msg.role]"
+                >
+                  <div class="message-avatar">
+                    <n-icon v-if="msg.role === 'user'" :component="UserIcon" :size="20" />
+                    <n-icon v-else :component="BotIcon" :size="20" />
+                  </div>
+                  <div class="message-bubble">
+                    <div class="message-text" v-html="renderMarkdown(msg.content)" />
+                    <div class="message-time">{{ formatTime(msg.time) }}</div>
+                  </div>
+                </div>
+
+                <!-- 流式输出 -->
+                <div v-if="streaming" :class="['message', 'assistant', 'streaming']">
+                  <div class="message-avatar">
+                    <n-icon :component="BotIcon" :size="20" />
+                  </div>
+                  <div class="message-bubble">
+                    <div class="message-text" v-html="renderMarkdown(streamingContent)" />
+                    <span class="cursor">▍</span>
+                  </div>
+                </div>
+              </TransitionGroup>
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="input-area">
+              <div class="input-box">
+                <textarea
+                  v-model="inputMessage"
+                  class="chat-input"
+                  placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+                  :disabled="streaming"
+                  rows="3"
+                  @keydown="handleKeyDown"
+                />
+                <div class="input-footer">
+                  <span class="token-hint">{{ tokenCount }} tokens</span>
+                  <n-button
+                    type="primary"
+                    :loading="streaming"
+                    :disabled="!inputMessage.trim()"
+                    @click="sendMessage"
+                  >
+                    <template #icon>
+                      <n-icon :component="SendIcon" />
+                    </template>
+                    {{ streaming ? '生成中' : '发送' }}
+                  </n-button>
+                </div>
+              </div>
+            </div>
+          </main>
+
         </div>
-      </main>
-    </div>
-  </div>
+      </div>
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { ChatLineSquare, Connection, Delete, User, MagicStick, Cpu, Odometer, Promotion } from '@element-plus/icons-vue'
+import { useMessage } from 'naive-ui'
 import { marked } from 'marked'
+import {
+  ChatbubbleOutline,
+  PersonOutline,
+  SparklesOutline,
+  HardwareChipOutline,
+  SettingsOutline,
+  PaperPlaneOutline,
+  TrashOutline,
+} from '~/constants/icons'
+
+const SparklesIcon = SparklesOutline
 import type { Agent } from '@/composables/useAgents'
+
+const ChatIcon = ChatbubbleOutline
+const UserIcon = PersonOutline
+const BotIcon = SparklesOutline
+const AgentIcon = HardwareChipOutline
+const SettingsIcon = SettingsOutline
+const SendIcon = PaperPlaneOutline
+const TrashIcon = TrashOutline
+
+const route = useRoute()
+const config = useRuntimeConfig()
+const { list: listAgents, get: getAgent } = useAgents()
+const { get } = useApi()
+const message = useMessage()
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  time?: string
 }
 
 interface Model {
@@ -213,10 +243,6 @@ interface Model {
   name: string
 }
 
-const route = useRoute()
-const config = useRuntimeConfig()
-const { list: listAgents, get: getAgent } = useAgents()
-const { get, post } = useApi()
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
 const streaming = ref(false)
@@ -225,15 +251,29 @@ const selectedModel = ref('')
 const models = ref<Model[]>([])
 const messagesContainer = ref<HTMLElement | null>(null)
 
-// Agent 相关
 const agents = ref<Agent[]>([])
 const selectedAgent = ref<string>('')
 const selectedAgentInfo = ref<Agent | null>(null)
 
+const currentTitle = computed(() => {
+  if (selectedAgentInfo.value) {
+    return `与 ${selectedAgentInfo.value.name} 对话`
+  }
+  return '通用对话'
+})
+
+const agentOptions = computed(() =>
+  agents.value.map(a => ({ label: a.name, value: a.id }))
+)
+
+const modelOptions = computed(() =>
+  models.value.map(m => ({ label: m.name, value: m.id }))
+)
+
 const params = reactive({
   temperature: 0.7,
   max_tokens: 2048,
-  top_p: 0.9
+  top_p: 0.9,
 })
 
 const tokenCount = computed(() => {
@@ -244,11 +284,16 @@ const renderMarkdown = (content: string) => {
   return marked.parse(content, { async: false }) as string
 }
 
+const formatTime = (time?: string) => {
+  if (!time) return ''
+  return new Date(time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+}
+
 const fetchAgents = async () => {
   try {
     const res = await listAgents()
     if (res.error) {
-      ElMessage.error(res.error)
+      message.error(res.error)
       return
     }
     agents.value = res.data || []
@@ -265,7 +310,7 @@ const handleAgentChange = async (agentId: string) => {
   }
   const res = await getAgent(agentId)
   if (res.error) {
-    ElMessage.error(res.error)
+    message.error(res.error)
     return
   }
   selectedAgentInfo.value = res.data || null
@@ -291,7 +336,7 @@ const sendMessage = async () => {
   if (!inputMessage.value.trim() || streaming.value) return
 
   const userMessage = inputMessage.value.trim()
-  messages.value.push({ role: 'user', content: userMessage })
+  messages.value.push({ role: 'user', content: userMessage, time: new Date().toISOString() })
   inputMessage.value = ''
   scrollToBottom()
 
@@ -307,38 +352,35 @@ const sendMessage = async () => {
       model: selectedModel.value,
       messages: messages.value.map(m => ({ role: m.role, content: m.content })),
       stream: true,
-      ...params
+      ...params,
     }
 
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${useCookie('token').value}`
+        Authorization: `Bearer ${useCookie('token').value}`,
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     })
 
     const decoder = new TextDecoder()
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      ElMessage.error(
-        `发送消息失败：HTTP ${response.status}${text ? ` - ${text}` : ''}`,
-      )
+      message.error(`发送失败：HTTP ${response.status}${text ? ` - ${text}` : ''}`)
       return
     }
 
     const reader = response.body?.getReader()
     if (!reader) {
-      ElMessage.error('发送消息失败：response body 不可用')
+      message.error('发送失败：response body 不可用')
       return
     }
 
-    messages.value.push({ role: 'assistant', content: '' })
+    messages.value.push({ role: 'assistant', content: '', time: new Date().toISOString() })
     const assistantMessage = messages.value[messages.value.length - 1]
 
-    // SSE 可能会被拆成多段读取，必须做缓冲处理，避免跨块导致解析不到 `data: ...`。
     let buffer = ''
 
     while (true) {
@@ -359,9 +401,8 @@ const sendMessage = async () => {
 
           try {
             const parsed = JSON.parse(data)
-            // 后端错误会走 `data: {"error": "..."}` 这种结构
             if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
-              ElMessage.error(parsed.error)
+              message.error(parsed.error)
               assistantMessage.content = parsed.error
               streamingContent.value = assistantMessage.content
               scrollToBottom()
@@ -374,13 +415,12 @@ const sendMessage = async () => {
               scrollToBottom()
             }
           } catch {
-            // ignore parse errors (may happen on chunk boundaries)
+            // ignore parse errors
           }
         }
       }
     }
 
-    // 兜底：处理最后一段残留 buffer（如果服务端没以 '\n\n' 结尾）
     if (buffer) {
       const lines = buffer.split('\n')
       for (const line of lines) {
@@ -389,11 +429,9 @@ const sendMessage = async () => {
         if (data === '[DONE]') continue
         try {
           const parsed = JSON.parse(data)
-          // 后端错误会走 `data: {"error": "..."}` 这种结构
           if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
-            ElMessage.error(parsed.error)
+            message.error(parsed.error)
             assistantMessage.content = parsed.error
-            streamingContent.value = assistantMessage.content
             streamingContent.value = assistantMessage.content
             scrollToBottom()
             return
@@ -410,7 +448,7 @@ const sendMessage = async () => {
       }
     }
   } catch (error) {
-    ElMessage.error('发送消息失败')
+    message.error('发送失败')
     messages.value.pop()
   } finally {
     streaming.value = false
@@ -441,7 +479,6 @@ onMounted(async () => {
   await fetchAgents()
   await fetchModels()
 
-  // 从 URL 参数加载 agent
   const agentId = route.query.agent as string
   if (agentId) {
     selectedAgent.value = agentId
@@ -451,199 +488,187 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* === 全局布局 === */
 .playground-page {
-  height: calc(100vh - 60px);
-  display: flex;
-  flex-direction: column;
-  background: #0f0f0f;
-  color: #fff;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: #1a1a1a;
-  border-bottom: 1px solid #2a2a2a;
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  margin: 0;
-}
-
-.current-agent {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  border-radius: 20px;
-  font-size: 13px;
-  color: #a5b4fc;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  height: calc(100vh - 56px);
+  background: #f1f5f9;
+  background: #0a0a0f;
+  overflow: hidden;
 }
 
 .playground-container {
   display: flex;
-  flex: 1;
-  overflow: hidden;
+  height: 100%;
 }
 
+/* === 左侧边栏 === */
 .sidebar {
   width: 280px;
   flex-shrink: 0;
-  background: #1a1a1a;
-  border-right: 1px solid #2a2a2a;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-right: 1px solid #e2e8f0;
+  background: #ffffff;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
 }
 
-.config-section {
+.sidebar-header {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
 }
 
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
+.sidebar-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #4f46e5;
+  letter-spacing: 0.5px;
+}
+
+.app-sub {
+  font-size: 10px;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
 }
 
-.config-select {
-  width: 100%;
+.config-card {
+  backdrop-filter: blur(12px);
 }
 
-.config-select :deep(.el-input__wrapper) {
-  background: #262626;
-  border: 1px solid #3a3a3a;
-  box-shadow: none;
-  border-radius: 8px;
-}
-
-.config-select :deep(.el-input__wrapper:hover) {
-  border-color: #6366f1;
-}
-
-.config-select :deep(.el-input__wrapper.is-focus) {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-.agent-info-card {
-  background: #262626;
-  border: 1px solid #3a3a3a;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.agent-meta {
+.card-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-}
-
-.agent-meta .el-tag {
-  background: rgba(99, 102, 241, 0.15);
-  border: none;
-  color: #a5b4fc;
-}
-
-.agent-desc {
   font-size: 13px;
-  color: #9ca3af;
-  line-height: 1.5;
-  margin: 0;
+  font-weight: 600;
+  color: #64748b;
 }
 
-.params-section {
+.card-header :deep(.n-icon) {
+  color: #6366f1;
+}
+
+.agent-meta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.meta-label {
+  font-size: 11px;
+  color: #94a3b8;
+  min-width: 32px;
+  padding-top: 2px;
+}
+
+.meta-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.params-card {
   flex: 1;
 }
 
-.param-item {
-  background: #262626;
-  border: 1px solid #3a3a3a;
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
+.param-row {
+  margin-bottom: 16px;
 }
 
-.param-header {
+.param-row:last-child {
+  margin-bottom: 0;
+}
+
+.param-label {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 
-.param-name {
-  font-size: 13px;
-  color: #d1d5db;
-}
-
-.param-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6366f1;
-  font-variant-numeric: tabular-nums;
-}
-
-.param-item :deep(.el-slider__runway) {
-  background: #3a3a3a;
-  height: 4px;
-  border-radius: 2px;
-}
-
-.param-item :deep(.el-slider__bar) {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
-  height: 4px;
-  border-radius: 2px;
-}
-
-.param-item :deep(.el-slider__button) {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #6366f1;
-  background: #fff;
-}
-
+/* === 右侧聊天区 === */
 .chat-area {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-width: 0;
+  background: #f1f5f9;
 }
 
+.chat-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.chat-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.chat-title :deep(.n-icon) {
+  color: #6366f1;
+}
+
+/* === 消息列表 === */
 .messages-wrapper {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
   scroll-behavior: smooth;
+}
+
+.messages-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+
+.messages-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .empty-state {
@@ -656,31 +681,23 @@ onMounted(async () => {
 }
 
 .empty-icon {
-  color: #4b5563;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  color: #cbd5e1;
 }
 
 .empty-title {
   font-size: 18px;
-  font-weight: 500;
-  color: #9ca3af;
-  margin: 8px 0 0;
-}
-
-.empty-hint {
-  font-size: 14px;
-  color: #6b7280;
+  font-weight: 600;
+  color: #94a3b8;
   margin: 0;
 }
 
-.messages-list {
-  max-width: 800px;
-  margin: 0 auto;
+.empty-sub {
+  font-size: 13px;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.messages {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -689,195 +706,200 @@ onMounted(async () => {
 .message {
   display: flex;
   gap: 14px;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  align-items: flex-start;
+  max-width: 80%;
 }
 
 .message.user {
   flex-direction: row-reverse;
+  margin-left: auto;
 }
 
 .message-avatar {
-  flex-shrink: 0;
-}
-
-.message.user .message-avatar :deep(.el-avatar) {
-  background: #6366f1;
-}
-
-.message-body {
-  max-width: 75%;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
 }
 
-.message.user .message-body {
-  align-items: flex-end;
+.message.user .message-avatar {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+.message.assistant .message-avatar {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #6366f1;
 }
 
 .message-bubble {
   padding: 12px 16px;
   border-radius: 16px;
-  line-height: 1.6;
+  position: relative;
+  border: 1px solid #e2e8f0;
 }
 
-.user-bubble {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+.message.user .message-bubble {
+  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
   color: #fff;
+  border-color: transparent;
   border-bottom-right-radius: 4px;
 }
 
-.message:not(.user) .message-bubble {
-  background: #262626;
-  border: 1px solid #3a3a3a;
+.message.assistant .message-bubble {
+  background: #ffffff;
   border-bottom-left-radius: 4px;
-}
-
-.streaming-bubble {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  border-color: #e2e8f0;
 }
 
 .message-text {
+  line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
+  font-size: 14px;
 }
 
-.message-text :deep(p) {
-  margin: 0 0 8px;
+.message.user .message-text {
+  color: #f1f5f9;
 }
 
-.message-text :deep(p:last-child) {
-  margin-bottom: 0;
+.message.assistant .message-text {
+  color: #1e293b;
 }
 
 .message-text :deep(code) {
-  background: rgba(0, 0, 0, 0.3);
+  background: #f1f5f9;
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.9em;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  color: #4f46e5;
 }
 
+.message.assistant .message-text :deep(code) {
+  background: #f1f5f9;
+}
+
+.message.user .message-text :deep(pre),
 .message.user .message-text :deep(code) {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+  color: #f1f5f9;
 }
 
 .message-text :deep(pre) {
-  background: #1a1a1a;
-  border: 1px solid #3a3a3a;
-  border-radius: 8px;
-  padding: 12px;
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 16px;
   overflow-x: auto;
   margin: 8px 0;
 }
 
 .message-text :deep(pre code) {
   background: none;
+  border: none;
   padding: 0;
+  color: #e2e8f0;
 }
 
-.typing-cursor {
+.message-time {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 6px;
+  text-align: right;
+}
+
+.message.user .message-time {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.streaming .cursor {
   display: inline-block;
-  width: 2px;
-  height: 16px;
-  background: #6366f1;
-  border-radius: 1px;
-  animation: blink 0.8s infinite;
-  vertical-align: middle;
+  color: #6366f1;
+  animation: blink 1.2s infinite;
+  font-size: 12px;
   margin-left: 2px;
 }
 
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
-.input-wrapper {
-  padding: 16px 24px 24px;
-  background: linear-gradient(to top, #0f0f0f 60%, transparent);
+/* === 输入区域 === */
+.input-area {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
   flex-shrink: 0;
 }
 
-.input-card {
-  max-width: 800px;
-  margin: 0 auto;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+.input-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 4px;
-  transition: border-color 0.2s;
+  padding: 14px 16px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.input-card:focus-within {
+.input-box:focus-within {
   border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
-.input-card :deep(.el-textarea__inner) {
+.chat-input {
+  width: 100%;
   background: transparent;
   border: none;
-  color: #fff;
-  font-size: 15px;
-  padding: 12px 16px;
+  outline: none;
+  color: #1e293b;
+  font-size: 14px;
   line-height: 1.6;
+  resize: none;
+  font-family: inherit;
+  caret-color: #6366f1;
 }
 
-.input-card :deep(.el-textarea__inner::placeholder) {
-  color: #6b7280;
+.chat-input::placeholder {
+  color: #94a3b8;
 }
 
-.input-card :deep(.el-textarea__inner:focus) {
-  box-shadow: none;
+.chat-input:disabled {
+  opacity: 0.5;
 }
 
 .input-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  margin-top: 10px;
 }
 
-.token-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #6b7280;
+.token-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  padding-top: 2px;
 }
 
-.input-card :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border: none;
-  padding: 10px 24px;
-  font-weight: 500;
+/* === 消息动画 === */
+.msg-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.input-card :deep(.el-button--primary:hover) {
-  background: linear-gradient(135deg, #5558e3, #7c4fd6);
+.msg-leave-active {
+  transition: all 0.2s ease;
 }
 
-.input-card :deep(.el-button--primary.is-disabled) {
-  background: #3a3a3a;
-  color: #6b7280;
+.msg-enter-from {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
 }
 
-@media (max-width: 768px) {
-  .sidebar {
-    display: none;
-  }
-
-  .messages-wrapper {
-    padding: 16px;
-  }
-
-  .message-body {
-    max-width: 85%;
-  }
+.msg-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
 }
 </style>

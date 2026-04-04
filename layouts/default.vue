@@ -1,61 +1,92 @@
 <template>
   <div class="default-layout">
-    <el-container>
-      <el-header class="header">
-        <div class="header-left">
-          <h1 class="logo">CogniForge</h1>
-        </div>
-        <div class="header-right">
-          <el-menu
-            mode="horizontal"
-            :ellipsis="false"
-            router
-          >
-            <el-menu-item index="/">控制台</el-menu-item>
-            <el-menu-item index="/playground">Playground</el-menu-item>
-            <el-menu-item index="/agents">Agent 管理</el-menu-item>
-            <el-menu-item index="/workflows">工作流</el-menu-item>
-            <el-menu-item index="/knowledge">知识库</el-menu-item>
-            <el-menu-item index="/keys">API 密钥</el-menu-item>
-          </el-menu>
-          <div class="user-info">
-          <el-dropdown @command="handleLogout">
-            <span class="user-dropdown">
-              <el-icon><User /></el-icon>
-              <span>用户</span>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item>个人设置</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+    <n-layout class="root-layout" :native-scrollbar="false">
+      <n-layout-header bordered class="header">
+        <div class="header-inner">
+          <div class="header-left">
+            <span class="logo">CogniForge</span>
+          </div>
+          <div class="header-right">
+            <n-menu
+              v-model:value="menuKey"
+              mode="horizontal"
+              :options="menuOptions"
+              class="nav-menu"
+              @update:value="onMenuSelect"
+            />
+            <n-dropdown
+              trigger="click"
+              :options="userMenuOptions"
+              @select="onUserMenuSelect"
+            >
+              <button type="button" class="user-trigger">
+                <n-icon :size="18" :component="PeopleOutline" />
+                <span>用户</span>
+              </button>
+            </n-dropdown>
           </div>
         </div>
-      </el-header>
-      <el-main>
+      </n-layout-header>
+      <n-layout-content class="main-content" content-style="padding: 0;">
         <slot />
-      </el-main>
-    </el-container>
+      </n-layout-content>
+    </n-layout>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import type { MenuOption } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+import { PeopleOutline } from '@vicons/ionicons5'
 
+const route = useRoute()
+const message = useMessage()
 const { clearAuth } = useAuth()
 
-const handleLogout = async () => {
+const menuKey = ref(route.path)
+
+watch(
+  () => route.path,
+  (p) => {
+    menuKey.value = p
+  }
+)
+
+const menuOptions: MenuOption[] = [
+  { label: '控制台', key: '/' },
+  { label: 'Playground', key: '/playground' },
+  { label: 'Agent 管理', key: '/agents' },
+  { label: '工作流', key: '/workflows' },
+  { label: '知识库', key: '/knowledge' },
+  { label: 'API 密钥', key: '/keys' },
+]
+
+function onMenuSelect(key: string) {
+  navigateTo(key)
+}
+
+const userMenuOptions: MenuOption[] = [
+  { label: '个人设置', key: 'settings' },
+  { type: 'divider', key: 'd1' },
+  { label: '退出登录', key: 'logout' },
+]
+
+async function handleLogout() {
   try {
     const { post } = useApi()
     await post('/api/v1/auth/logout')
-  } catch (error) {
+  } catch {
     // 即使 API 失败也清除本地状态
   } finally {
     clearAuth()
-    ElMessage.success('已退出登录')
+    message.success('已退出登录')
     navigateTo('/login')
+  }
+}
+
+function onUserMenuSelect(key: string) {
+  if (key === 'logout') {
+    void handleLogout()
   }
 }
 </script>
@@ -63,36 +94,81 @@ const handleLogout = async () => {
 <style scoped>
 .default-layout {
   min-height: 100vh;
+  background: #f8fafc;
 }
+
+.root-layout {
+  min-height: 100vh;
+  background: transparent;
+}
+
 .header {
+  height: 56px;
+  padding: 0;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid var(--border-color);
   padding: 0 20px;
 }
-.header-left {
-  display: flex;
-  align-items: center;
-}
+
 .logo {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--primary-color);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #4f46e5;
 }
+
 .header-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
 }
-.user-info {
-  margin-left: 20px;
+
+.nav-menu {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+  --n-item-height: 40px;
 }
-.user-dropdown {
-  display: flex;
+
+.nav-menu :deep(.n-menu-item-content) {
+  padding: 0 12px;
+}
+
+.user-trigger {
+  display: inline-flex;
   align-items: center;
- gap: 8px;
+  gap: 8px;
+  margin-left: 12px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 14px;
   cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.user-trigger:hover {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+}
+
+.main-content {
+  min-height: calc(100vh - 56px);
+  background: #f8fafc;
 }
 </style>
