@@ -82,6 +82,7 @@ definePageMeta({
 })
 
 const message = useMessage()
+const dialog = useDialog()
 const { get, post, del } = useApi()
 
 const loading = ref(false)
@@ -195,7 +196,6 @@ const submitCreate = async () => {
 }
 
 const handleDelete = async (id: string) => {
-  const dialog = useDialog()
   dialog.warning({
     title: '撤销确认',
     content: '确定要撤销此 API 密钥吗？此操作不可恢复。',
