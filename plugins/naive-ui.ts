@@ -1,0 +1,80 @@
+import type { App } from 'vue'
+import {
+  NConfigProvider,
+  NMessageProvider,
+  NDialogProvider,
+  NButton,
+  NCard,
+  NIcon,
+  NSelect,
+  NSlider,
+  NInputNumber,
+  NTag,
+  NDataTable,
+  NEmpty,
+  NSpin,
+  NModal,
+  NForm,
+  NFormItem,
+  NInput,
+  NCheckboxGroup,
+  NCheckbox,
+  NSwitch,
+  NSpace,
+  NGrid,
+  NGi,
+  NAlert,
+  NLayout,
+  NLayoutHeader,
+  NLayoutContent,
+  NMenu,
+  NDropdown,
+  NText,
+  NFormItemGi,
+} from 'naive-ui'
+
+/** Explicit names so registration works even if component.name is stripped in production. */
+const NAIVE_GLOBALS: [string, unknown][] = [
+  ['NConfigProvider', NConfigProvider],
+  ['NMessageProvider', NMessageProvider],
+  ['NDialogProvider', NDialogProvider],
+  ['NButton', NButton],
+  ['NCard', NCard],
+  ['NIcon', NIcon],
+  ['NSelect', NSelect],
+  ['NSlider', NSlider],
+  ['NInputNumber', NInputNumber],
+  ['NTag', NTag],
+  ['NDataTable', NDataTable],
+  ['NEmpty', NEmpty],
+  ['NSpin', NSpin],
+  ['NModal', NModal],
+  ['NForm', NForm],
+  ['NFormItem', NFormItem],
+  ['NFormItemGi', NFormItemGi],
+  ['NInput', NInput],
+  ['NCheckboxGroup', NCheckboxGroup],
+  ['NCheckbox', NCheckbox],
+  ['NSwitch', NSwitch],
+  ['NSpace', NSpace],
+  ['NGrid', NGrid],
+  ['NGi', NGi],
+  ['NAlert', NAlert],
+  ['NLayout', NLayout],
+  ['NLayoutHeader', NLayoutHeader],
+  ['NLayoutContent', NLayoutContent],
+  ['NMenu', NMenu],
+  ['NDropdown', NDropdown],
+  ['NText', NText],
+]
+
+export default defineNuxtPlugin((nuxtApp) => {
+  const naive = {
+    install(app: App) {
+      for (const [name, comp] of NAIVE_GLOBALS) {
+        app.component(name, comp as never)
+      }
+    },
+  }
+  nuxtApp.vueApp.use(naive)
+})

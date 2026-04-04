@@ -2,69 +2,71 @@
   <div class="keys-page">
     <div class="page-header">
       <h2>API 密钥</h2>
-      <el-button type="primary" @click="handleCreateKey">
-        <el-icon><Plus /></el-icon>
+      <n-button type="primary" @click="handleCreateKey">
+        <template #icon>
+          <n-icon :component="AddOutline" />
+        </template>
         创建密钥
-      </el-button>
+      </n-button>
     </div>
 
-    <el-card>
-      <el-table :data="keys" v-loading="loading">
-        <el-table-column prop="name" label="名称" />
-        <el-table-column prop="key" label="密钥">
-          <template #default="{ row }">
-            <span v-if="!row.show">{{ row.maskedKey }}</span>
-            <span v-else>{{ row.key }}</span>
-            <el-button link type="primary" size="small" @click="toggleShow(row)">
-              {{ row.show ? '隐藏' : '显示' }}
-            </el-button>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120">
-          <template #default="{ row }">
-            <el-button link type="danger" size="small" @click="handleDelete(row.id)">
-              撤销
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <n-card>
+      <n-spin :show="loading">
+        <n-data-table
+          :columns="columns"
+          :data="keys"
+          :pagination="false"
+          :row-key="(row: ApiKey) => row.id"
+          size="large"
+        />
+        <n-empty v-if="!loading && keys.length === 0" description="暂无 API 密钥" style="margin-top: 40px" />
+      </n-spin>
+    </n-card>
 
-      <el-empty v-if="!loading && keys.length === 0" description="暂无 API 密钥" />
-    </el-card>
-
-    <el-dialog v-model="dialogVisible" title="创建 API 密钥" width="500px">
+    <n-modal
+      v-model:show="dialogVisible"
+      preset="card"
+      title="创建 API 密钥"
+      style="width: 500px; max-width: 90vw"
+    >
       <div v-if="newKey" class="new-key-box">
-        <p class="tip">请妥善保存以下密钥，它只会显示一次：</p>
-        <el-input v-model="newKey" readonly>
-          <template #append>
-            <el-button @click="copyKey">复制</el-button>
+        <n-alert type="warning" :show-icon="false" style="margin-bottom: 16px">
+          请妥善保存以下密钥，它只会显示一次。
+        </n-alert>
+        <n-input v-model:value="newKey" readonly>
+          <template #suffix>
+            <n-button size="tiny" @click="copyKey">复制</n-button>
           </template>
-        </el-input>
+        </n-input>
       </div>
-      <el-form v-else ref="formRef" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入密钥名称" @keyup.enter.prevent="submitCreate" />
-        </el-form-item>
-      </el-form>
+
+      <n-form
+        v-else
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-placement="top"
+      >
+        <n-form-item label="名称" path="name">
+          <n-input v-model:value="form.name" placeholder="请输入密钥名称" @keyup.enter.prevent="submitCreate" />
+        </n-form-item>
+      </n-form>
+
       <template #footer>
-        <el-button @click="dialogVisible = false">关闭</el-button>
-        <el-button v-if="!newKey" type="primary" :loading="creating" @click="submitCreate">
-          创建
-        </el-button>
+        <n-space justify="end">
+          <n-button @click="dialogVisible = false">关闭</n-button>
+          <n-button v-if="!newKey" type="primary" :loading="creating" @click="submitCreate">
+            创建
+          </n-button>
+        </n-space>
       </template>
-    </el-dialog>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { AddOutline } from '@vicons/ionicons5'
+import { useMessage, useDialog, NButton } from 'naive-ui'
 
 interface ApiKey {
   id: string
@@ -75,28 +77,78 @@ interface ApiKey {
   show?: boolean
 }
 
+definePageMeta({
+  layout: 'default',
+})
+
+const message = useMessage()
 const { get, post, del } = useApi()
+
 const loading = ref(false)
 const creating = ref(false)
 const keys = ref<ApiKey[]>([])
 const dialogVisible = ref(false)
 const newKey = ref('')
-const formRef = ref<FormInstance>()
+const formRef = ref()
 
 const form = reactive({
   name: ''
 })
 
-const rules: FormRules = {
+const rules = {
   name: [{ required: true, message: '请输入密钥名称', trigger: 'blur' }]
 }
+
+const columns = [
+  {
+    title: '名称',
+    key: 'name',
+    width: 200,
+  },
+  {
+    title: '密钥',
+    key: 'key',
+    render(row: ApiKey) {
+      return h('div', { style: 'display:flex;align-items:center;gap:8px' }, [
+        h('span', { style: 'font-family:monospace;font-size:13px' }, row.show ? row.key : row.maskedKey),
+        h(NButton, {
+          text: true,
+          type: 'primary',
+          size: 'tiny',
+          onClick: () => { row.show = !row.show }
+        }, { default: () => row.show ? '隐藏' : '显示' }),
+      ])
+    },
+  },
+  {
+    title: '创建时间',
+    key: 'created_at',
+    width: 180,
+    render(row: ApiKey) {
+      return new Date(row.created_at).toLocaleString('zh-CN')
+    },
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 100,
+    render(row: ApiKey) {
+      return h(NButton, {
+        text: true,
+        type: 'error',
+        size: 'small',
+        onClick: () => handleDelete(row.id)
+      }, { default: () => '撤销' })
+    },
+  },
+]
 
 const fetchKeys = async () => {
   loading.value = true
   try {
     const res = await get<{ keys: any[] }>('/api/v1/keys/')
     if (res.error) {
-      ElMessage.error(res.error)
+      message.error(res.error)
       return
     }
     const keyList = res.data?.keys || []
@@ -105,8 +157,8 @@ const fetchKeys = async () => {
       maskedKey: k.key ? k.key.slice(0, 10) + '****' + k.key.slice(-4) : '',
       show: false
     }))
-  } catch (error) {
-    ElMessage.error('获取密钥列表失败')
+  } catch {
+    message.error('获取密钥列表失败')
   } finally {
     loading.value = false
   }
@@ -120,51 +172,50 @@ const handleCreateKey = () => {
 
 const submitCreate = async () => {
   if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
-    if (valid) {
-      creating.value = true
-      try {
-        const res = await post<{ key: string }>('/api/v1/keys/', form)
-        if (res.error) {
-          ElMessage.error(res.error)
-          return
-        }
-        newKey.value = res.data?.key || ''
-        await fetchKeys()
-      } catch (error) {
-        ElMessage.error('创建失败')
-      } finally {
-        creating.value = false
-      }
-    }
-  })
-}
-
-const handleDelete = async (id: string) => {
   try {
-    const res = await del<{ message?: string }>(`/api/v1/keys/${id}`)
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+
+  creating.value = true
+  try {
+    const res = await post<{ key: string }>('/api/v1/keys/', form)
     if (res.error) {
-      ElMessage.error(res.error)
+      message.error(res.error)
       return
     }
-    ElMessage.success(res.data?.message || '撤销成功')
+    newKey.value = res.data?.key || ''
     await fetchKeys()
-  } catch (error) {
-    ElMessage.error('撤销失败，请稍后重试')
+  } catch {
+    message.error('创建失败')
+  } finally {
+    creating.value = false
   }
 }
 
-const toggleShow = (row: ApiKey) => {
-  row.show = !row.show
+const handleDelete = async (id: string) => {
+  const dialog = useDialog()
+  dialog.warning({
+    title: '撤销确认',
+    content: '确定要撤销此 API 密钥吗？此操作不可恢复。',
+    positiveText: '撤销',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const res = await del<{ message?: string }>(`/api/v1/keys/${id}`)
+      if (res.error) {
+        message.error(res.error)
+        return
+      }
+      message.success(res.data?.message || '撤销成功')
+      await fetchKeys()
+    },
+  })
 }
 
 const copyKey = () => {
   navigator.clipboard.writeText(newKey.value)
-  ElMessage.success('已复制到剪贴板')
-}
-
-const formatTime = (time: string) => {
-  return new Date(time).toLocaleString('zh-CN')
+  message.success('已复制到剪贴板')
 }
 
 onMounted(() => {
@@ -176,22 +227,21 @@ onMounted(() => {
 .keys-page {
   padding: 20px;
 }
+
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
+
 .page-header h2 {
   margin: 0;
 }
+
 .new-key-box {
-  padding: 20px;
-  background: #f5f7fa;
+  padding: 16px;
+  background: #f8fafc;
   border-radius: 8px;
-}
-.new-key-box .tip {
-  color: #909399;
-  margin-bottom: 16px;
 }
 </style>

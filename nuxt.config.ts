@@ -3,7 +3,8 @@
 
 // Feature flag: when true, enables SSR-compatible Naive UI setup via @bg-dev/nuxt-naiveui.
 // When false (default), uses the lightweight client-only manual setup — no extra module overhead.
-const ssrNaive = false
+// Change SSR_NAIVE in .env to toggle between modes.
+const ssrNaive = process.env.SSR_NAIVE === 'true'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -18,6 +19,26 @@ export default defineNuxtConfig({
   css: [
     '~/assets/css/main.css',
   ],
+
+  vite: {
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: '@use "@/assets/css/variables.scss" as *;',
+        },
+      },
+    },
+    optimizeDeps: {
+      include: ssrNaive ? [] : ['naive-ui'],
+    },
+    ssr: {
+      noExternal: ssrNaive ? ['naive-ui'] : [],
+    },
+    server: {
+      port: 3000,
+      strictPort: true,
+    },
+  },
 
   app: {
     head: {
@@ -36,7 +57,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.API_BASE || 'http://localhost:8080',
-      ssrNaive: ssrNaive,
+      ssrNaive,
     },
   },
 
@@ -45,16 +66,4 @@ export default defineNuxtConfig({
     typeCheck: false,
   },
 
-  vite: {
-    optimizeDeps: {
-      include: ssrNaive ? [] : ['naive-ui'],
-    },
-    ssr: {
-      noExternal: ssrNaive ? ['naive-ui'] : [],
-    },
-    server: {
-      port: 3000,
-      strictPort: true,
-    },
-  },
 })

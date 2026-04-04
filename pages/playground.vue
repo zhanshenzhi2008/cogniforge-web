@@ -6,11 +6,9 @@
           <aside class="sidebar">
             <!-- 顶部标题 -->
             <div class="sidebar-header">
-              <n-avatar
-                :size="36"
-                round
-                src="https://api.dicebear.com/7.x/bottts/svg?seed=cogniforge"
-              />
+              <div class="header-logo">
+                <n-icon :component="HardwareChipOutline" :size="22" />
+              </div>
               <div class="sidebar-title">
                 <span class="app-name">CogniForge</span>
                 <span class="app-sub">AI Agent Platform</span>
@@ -521,6 +519,19 @@ onMounted(async () => {
   padding-bottom: 8px;
   border-bottom: 1px solid #f1f5f9;
   margin-bottom: 4px;
+}
+
+.header-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
 .sidebar-title {

@@ -2,130 +2,117 @@
   <div class="agents-page">
     <div class="page-header">
       <h2>我的 Agent</h2>
-      <el-button type="primary" @click="handleCreate">
-        <el-icon><Plus /></el-icon>
+      <n-button type="primary" @click="handleCreate">
+        <template #icon>
+          <n-icon :component="AddOutline" />
+        </template>
         创建 Agent
-      </el-button>
+      </n-button>
     </div>
 
-    <el-card>
-      <el-table :data="agents" v-loading="loading" empty-text="暂无 Agent，点击上方按钮创建">
-        <el-table-column prop="name" label="名称" min-width="150">
-          <template #default="{ row }">
-            <div class="agent-name">
-              <span class="name">{{ row.name }}</span>
-              <el-tag size="small" :type="row.status === 'active' ? 'success' : 'info'">
-                {{ row.status === 'active' ? '启用' : '禁用' }}
-              </el-tag>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="description" label="描述" min-width="200">
-          <template #default="{ row }">
-            <span class="description">{{ row.description || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="model" label="模型" width="150">
-          <template #default="{ row }">
-            <el-tag size="small">{{ row.model }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180">
-          <template #default="{ row }">
-            {{ formatTime(row.created_at) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="handleEdit(row)">
-              编辑
-            </el-button>
-            <el-button link type="primary" size="small" @click="handleChat(row)">
-              对话
-            </el-button>
-            <el-button link type="danger" size="small" @click="handleDelete(row)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <n-card>
+      <n-spin :show="loading">
+        <n-data-table
+          :columns="columns"
+          :data="agents"
+          :pagination="false"
+          :row-key="(row: Agent) => row.id"
+          size="large"
+        />
+        <n-empty v-if="!loading && agents.length === 0" description="暂无 Agent，点击上方按钮创建" style="margin-top: 40px" />
+      </n-spin>
+    </n-card>
 
-    <!-- 创建/编辑对话框 -->
-    <el-dialog
-      v-model="dialogVisible"
+    <n-modal
+      v-model:show="dialogVisible"
+      preset="card"
       :title="isEditing ? '编辑 Agent' : '创建 Agent'"
-      width="600px"
-      @close="handleDialogClose"
+      style="width: 600px; max-width: 90vw"
+      :segmented="{ content: true, footer: true }"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入 Agent 名称" />
-        </el-form-item>
+      <n-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-placement="top"
+      >
+        <n-form-item label="名称" path="name">
+          <n-input v-model:value="form.name" placeholder="请输入 Agent 名称" />
+        </n-form-item>
 
-        <el-form-item label="描述" prop="description">
-          <el-input
-            v-model="form.description"
+        <n-form-item label="描述" path="description">
+          <n-input
+            v-model:value="form.description"
             type="textarea"
-            :rows="2"
+            :autosize="{ minRows: 2, maxRows: 4 }"
             placeholder="请输入描述（可选）"
           />
-        </el-form-item>
+        </n-form-item>
 
-        <el-form-item label="模型" prop="model">
-          <el-select v-model="form.model" placeholder="请选择模型" style="width: 100%">
-            <el-option label="GPT-4o" value="gpt-4o" />
-            <el-option label="GPT-4o-mini" value="gpt-4o-mini" />
-            <el-option label="Claude 3.5 Sonnet" value="claude-3.5-sonnet" />
-            <el-option label="Claude 3 Haiku" value="claude-3-haiku" />
-          </el-select>
-        </el-form-item>
+        <n-form-item label="模型" path="model">
+          <n-select
+            v-model:value="form.model"
+            :options="modelOptions"
+            placeholder="请选择模型"
+          />
+        </n-form-item>
 
-        <el-form-item label="系统提示" prop="system_prompt">
-          <el-input
-            v-model="form.system_prompt"
+        <n-form-item label="系统提示" path="system_prompt">
+          <n-input
+            v-model:value="form.system_prompt"
             type="textarea"
-            :rows="4"
+            :autosize="{ minRows: 3, maxRows: 8 }"
             placeholder="定义 Agent 的角色和行为..."
           />
-        </el-form-item>
+        </n-form-item>
 
-        <el-form-item label="工具" prop="tools">
-          <el-checkbox-group v-model="form.tools">
-            <el-checkbox label="web_search">网页搜索</el-checkbox>
-            <el-checkbox label="calculator">计算器</el-checkbox>
-            <el-checkbox label="code_executor">代码执行</el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
+        <n-form-item label="工具" path="tools">
+          <n-checkbox-group v-model:value="form.tools">
+            <n-space>
+              <n-checkbox value="web_search" label="网页搜索" />
+              <n-checkbox value="calculator" label="计算器" />
+              <n-checkbox value="code_executor" label="代码执行" />
+            </n-space>
+          </n-checkbox-group>
+        </n-form-item>
 
-        <el-form-item label="状态" prop="status">
-          <el-switch
-            v-model="form.status"
-            active-value="active"
-            inactive-value="disabled"
-            active-text="启用"
-            inactive-text="禁用"
-          />
-        </el-form-item>
-      </el-form>
+        <n-form-item label="状态" path="status">
+          <n-switch
+            v-model:value="form.statusActive"
+            :checked-value="'active'"
+            :unchecked-value="'disabled'"
+          >
+            <template #checked>启用</template>
+            <template #unchecked>禁用</template>
+          </n-switch>
+        </n-form-item>
+      </n-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          {{ isEditing ? '保存' : '创建' }}
-        </el-button>
+        <n-space justify="end">
+          <n-button @click="dialogVisible = false">取消</n-button>
+          <n-button type="primary" :loading="submitting" @click="handleSubmit">
+            {{ isEditing ? '保存' : '创建' }}
+          </n-button>
+        </n-space>
       </template>
-    </el-dialog>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import { AddOutline } from '@vicons/ionicons5'
+import { NButton, NTag } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
+import type { DataTableColumns } from 'naive-ui'
 import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
 
+definePageMeta({
+  layout: 'default',
+})
+
 const router = useRouter()
+const message = useMessage()
 const { list, create, update, remove } = useAgents()
 
 const loading = ref(false)
@@ -134,7 +121,7 @@ const agents = ref<Agent[]>([])
 const dialogVisible = ref(false)
 const isEditing = ref(false)
 const editingId = ref('')
-const formRef = ref<FormInstance>()
+const formRef = ref()
 
 const form = reactive({
   name: '',
@@ -142,33 +129,91 @@ const form = reactive({
   model: 'gpt-4o',
   system_prompt: '',
   tools: [] as string[],
-  status: 'active',
+  statusActive: 'active' as 'active' | 'disabled',
 })
 
-const rules: FormRules = {
+const rules = {
   name: [
     { required: true, message: '名称不能为空', trigger: 'blur' },
-    { max: 100, message: '名称不能超过100个字符', trigger: 'blur' },
+    { max: 100, message: '名称不能超过 100 个字符', trigger: 'blur' },
   ],
   model: [
     { required: true, message: '请选择模型', trigger: 'change' },
   ],
-  system_prompt: [
-    { max: 10000, message: '系统提示不能超过10000个字符', trigger: 'blur' },
-  ],
 }
+
+const modelOptions = [
+  { label: 'GPT-4o', value: 'gpt-4o' },
+  { label: 'GPT-4o-mini', value: 'gpt-4o-mini' },
+  { label: 'Claude 3.5 Sonnet', value: 'claude-3.5-sonnet' },
+  { label: 'Claude 3 Haiku', value: 'claude-3-haiku' },
+]
+
+const columns: DataTableColumns<Agent> = [
+  {
+    title: '名称',
+    key: 'name',
+    width: 180,
+    render(row) {
+      return h('div', { class: 'agent-name' }, [
+        h('span', { class: 'name' }, row.name),
+        h(NTag, {
+          size: 'small',
+          type: row.status === 'active' ? 'success' : 'default',
+          bordered: false,
+        }, { default: () => row.status === 'active' ? '启用' : '禁用' }),
+      ])
+    },
+  },
+  {
+    title: '描述',
+    key: 'description',
+    ellipsis: { tooltip: true },
+    render(row) {
+      return row.description || '—'
+    },
+  },
+  {
+    title: '模型',
+    key: 'model',
+    width: 160,
+    render(row) {
+      return h(NTag, { size: 'small', bordered: false }, { default: () => row.model })
+    },
+  },
+  {
+    title: '创建时间',
+    key: 'created_at',
+    width: 180,
+    render(row) {
+      return new Date(row.created_at).toLocaleString('zh-CN')
+    },
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 200,
+    render(row) {
+      return h('div', { class: 'action-btns' }, [
+        h(NButton, { text: true, type: 'primary', size: 'small', onClick: () => handleEdit(row) }, { default: () => '编辑' }),
+        h(NButton, { text: true, type: 'primary', size: 'small', onClick: () => handleChat(row) }, { default: () => '对话' }),
+        h(NButton, { text: true, type: 'error', size: 'small', onClick: () => handleDelete(row) }, { default: () => '删除' }),
+      ])
+    },
+  },
+]
 
 const fetchAgents = async () => {
   loading.value = true
   try {
     const res = await list()
     if (res.error) {
-      ElMessage.error(res.error)
+      message.error(res.error)
       return
     }
     agents.value = res.data || []
-  } catch (error) {
-    ElMessage.error('获取 Agent 列表失败')
+  } catch {
+    message.error('获取 Agent 列表失败')
   } finally {
     loading.value = false
   }
@@ -189,7 +234,7 @@ const handleEdit = (agent: Agent) => {
   form.model = agent.model
   form.system_prompt = agent.system_prompt || ''
   form.tools = [...(agent.tools || [])]
-  form.status = agent.status
+  form.statusActive = agent.status as 'active' | 'disabled'
   dialogVisible.value = true
 }
 
@@ -198,79 +243,72 @@ const handleChat = (agent: Agent) => {
 }
 
 const handleDelete = async (agent: Agent) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除 Agent「${agent.name}」吗？此操作不可恢复。`,
-      '删除确认',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
+  const dialog = useDialog()
+  dialog.warning({
+    title: '删除确认',
+    content: `确定要删除 Agent「${agent.name}」吗？此操作不可恢复。`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      const res = await remove(agent.id)
+      if (res.error) {
+        message.error(res.error)
+        return
       }
-    )
-
-    const res = await remove(agent.id)
-    if (res.error) {
-      ElMessage.error(res.error)
-      return
-    }
-    ElMessage.success('删除成功')
-    await fetchAgents()
-  } catch {
-    // 用户取消
-  }
+      message.success('删除成功')
+      await fetchAgents()
+    },
+  })
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
 
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
 
-    submitting.value = true
-    try {
-      if (isEditing.value) {
-        const input: UpdateAgentInput = {
-          name: form.name,
-          description: form.description,
-          model: form.model,
-          system_prompt: form.system_prompt,
-          tools: form.tools,
-          status: form.status,
-        }
-        const res = await update(editingId.value, input)
-        if (res.error) {
-          ElMessage.error(res.error)
-          return
-        }
-        ElMessage.success('保存成功')
-      } else {
-        const input: CreateAgentInput = {
-          name: form.name,
-          description: form.description,
-          model: form.model,
-          system_prompt: form.system_prompt,
-          tools: form.tools,
-        }
-        const res = await create(input)
-        if (res.error) {
-          ElMessage.error(res.error)
-          return
-        }
-        ElMessage.success('创建成功')
+  submitting.value = true
+  try {
+    if (isEditing.value) {
+      const input: UpdateAgentInput = {
+        name: form.name,
+        description: form.description,
+        model: form.model,
+        system_prompt: form.system_prompt,
+        tools: form.tools,
+        status: form.statusActive,
       }
-      dialogVisible.value = false
-      await fetchAgents()
-    } catch (error) {
-      ElMessage.error(isEditing.value ? '保存失败' : '创建失败')
-    } finally {
-      submitting.value = false
+      const res = await update(editingId.value, input)
+      if (res.error) {
+        message.error(res.error)
+        return
+      }
+      message.success('保存成功')
+    } else {
+      const input: CreateAgentInput = {
+        name: form.name,
+        description: form.description,
+        model: form.model,
+        system_prompt: form.system_prompt,
+        tools: form.tools,
+      }
+      const res = await create(input)
+      if (res.error) {
+        message.error(res.error)
+        return
+      }
+      message.success('创建成功')
     }
-  })
-}
-
-const handleDialogClose = () => {
-  resetForm()
+    dialogVisible.value = false
+    await fetchAgents()
+  } catch {
+    message.error(isEditing.value ? '保存失败' : '创建失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 const resetForm = () => {
@@ -279,12 +317,8 @@ const resetForm = () => {
   form.model = 'gpt-4o'
   form.system_prompt = ''
   form.tools = []
-  form.status = 'active'
-  formRef.value?.resetFields()
-}
-
-const formatTime = (time: string) => {
-  return new Date(time).toLocaleString('zh-CN')
+  form.statusActive = 'active'
+  formRef.value?.restoreValidation()
 }
 
 onMounted(() => {
@@ -318,10 +352,8 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.description {
-  color: #909399;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.action-btns {
+  display: flex;
+  gap: 4px;
 }
 </style>
