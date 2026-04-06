@@ -61,13 +61,15 @@ const navItems: Array<{ label: string; key: string; to: string }> = [
   { label: 'API 密钥', key: 'keys', to: '/keys' },
 ]
 
-const activeKey = computed(() => {
+const activeKey = ref('dashboard')
+
+watch(() => route.path, () => {
   const path = route.path
   const match = navItems.find((item) =>
     item.to === '/' ? path === '/' : path === item.to || path.startsWith(`${item.to}/`)
   )
-  return match?.key ?? 'dashboard'
-})
+  activeKey.value = match?.key ?? 'dashboard'
+}, { immediate: true })
 
 const menuOptions: MenuOption[] = navItems.map((item) => ({
   label: item.label,

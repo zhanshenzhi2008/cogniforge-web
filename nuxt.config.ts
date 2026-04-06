@@ -14,7 +14,7 @@ export default defineNuxtConfig({
     ssrNaive ? '@bg-dev/nuxt-naiveui' : null,
   ].filter(Boolean),
 
-  ssr: ssrNaive,
+  ssr: ssrNaive === true,
 
   css: [
     '~/assets/css/main.css',

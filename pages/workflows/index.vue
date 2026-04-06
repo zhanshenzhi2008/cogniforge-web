@@ -26,7 +26,7 @@
     <n-modal
       v-model:show="dialogVisible"
       preset="card"
-      :title="isEditing ? '编辑工作流' : '创建工作流'"
+      :title="'创建工作流'"
       style="width: 500px; max-width: 90vw"
       :segmented="{ content: true, footer: true }"
     >
@@ -53,9 +53,7 @@
       <template #footer>
         <n-space justify="end">
           <n-button @click="dialogVisible = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleSubmit">
-            {{ isEditing ? '保存' : '创建' }}
-          </n-button>
+          <n-button type="primary" :loading="loading" @click="handleSubmit">创建</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -63,25 +61,44 @@
 </template>
 
 <script setup lang="ts">
-import { AddOutline } from '@vicons/ionicons5'
-import { NButton, NTag } from 'naive-ui'
-import { useMessage, useDialog } from 'naive-ui'
+import { markRaw } from 'vue'
+import { AddOutline, OpenOutline, RocketOutline, TrashOutline } from '@vicons/ionicons5'
+import { NButton, NTag, NIcon, NSpace } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import type { Workflow, CreateWorkflowInput } from '@/composables/useWorkflows'
+import type { Workflow } from '@/composables/useWorkflows'
+import { useMessage, useDialog } from 'naive-ui'
 
 definePageMeta({
   layout: 'default',
 })
 
-const router = useRouter()
+/** 与 [id].vue 中一致：仅用于本地验证动态路由 + 画布能否渲染 */
+const CANVAS_SMOKE_ID = '__canvas_smoke__'
+
 const message = useMessage()
-const { list, create, remove } = useWorkflows()
+const dialog = useDialog()
+const { list, create, remove, execute } = useWorkflows()
+
+const RawButton = markRaw(NButton)
+const RawIcon = markRaw(NIcon)
+const RawTag = markRaw(NTag)
+
+const openSmokeTest = () => {
+  navigateTo(`/workflows/${CANVAS_SMOKE_ID}`)
+}
+
+const openFirstWorkflow = () => {
+  const id = workflows.value[0]?.id
+  if (!id) {
+    message.warning('列表为空')
+    return
+  }
+  navigateTo(`/workflows/${encodeURIComponent(id)}`)
+}
 
 const loading = ref(false)
-const submitting = ref(false)
 const workflows = ref<Workflow[]>([])
 const dialogVisible = ref(false)
-const isEditing = ref(false)
 const formRef = ref()
 
 const form = reactive({
@@ -121,8 +138,16 @@ const columns: DataTableColumns<Workflow> = [
     width: 200,
     render(row) {
       return h('div', { class: 'workflow-name' }, [
-        h('span', { class: 'name' }, row.name),
-        h(NTag, {
+        h('a', {
+          href: `/workflows/${encodeURIComponent(row.id)}`,
+          class: 'name-link',
+          onClick: (e: Event) => {
+            e.preventDefault()
+            e.stopPropagation()
+            navigateTo(`/workflows/${encodeURIComponent(row.id)}`)
+          },
+        }, row.name),
+        h(RawTag, {
           size: 'small',
           type: statusType(row.status) as any,
           bordered: false,
@@ -157,12 +182,48 @@ const columns: DataTableColumns<Workflow> = [
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 130,
     render(row) {
       return h('div', { class: 'action-btns' }, [
-        h(NButton, { text: true, type: 'primary', size: 'small', onClick: () => handleEdit(row) }, { default: () => '编辑' }),
-        h(NButton, { text: true, type: 'info', size: 'small', onClick: () => handleExecute(row) }, { default: () => '执行' }),
-        h(NButton, { text: true, type: 'error', size: 'small', onClick: () => handleDelete(row) }, { default: () => '删除' }),
+        h(RawButton, {
+          quaternary: true,
+          circle: true,
+          size: 'small',
+          title: '画布',
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            e.preventDefault()
+            navigateTo(`/workflows/${encodeURIComponent(row.id)}`)
+          },
+        }, {
+          icon: () => h(RawIcon, { component: markRaw(OpenOutline), size: 18 }),
+        }),
+        h(RawButton, {
+          quaternary: true,
+          circle: true,
+          size: 'small',
+          type: 'info',
+          title: '执行',
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            handleExecute(row)
+          },
+        }, {
+          icon: () => h(RawIcon, { component: markRaw(RocketOutline), size: 18 }),
+        }),
+        h(RawButton, {
+          quaternary: true,
+          circle: true,
+          size: 'small',
+          type: 'error',
+          title: '删除',
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            handleDelete(row)
+          },
+        }, {
+          icon: () => h(RawIcon, { component: markRaw(TrashOutline), size: 18 }),
+        }),
       ])
     },
   },
@@ -185,17 +246,14 @@ const fetchWorkflows = async () => {
 }
 
 const handleCreate = () => {
-  isEditing.value = false
-  resetForm()
+  form.name = ''
+  form.description = ''
+  formRef.value?.restoreValidation()
   dialogVisible.value = true
 }
 
-const handleEdit = (workflow: Workflow) => {
-  router.push(`/workflows/${workflow.id}`)
-}
-
 const handleExecute = async (workflow: Workflow) => {
-  const res = await useWorkflows().execute(workflow.id)
+  const res = await execute(workflow.id)
   if (res.error) {
     message.error(res.error)
     return
@@ -204,7 +262,6 @@ const handleExecute = async (workflow: Workflow) => {
 }
 
 const handleDelete = async (workflow: Workflow) => {
-  const dialog = useDialog()
   dialog.warning({
     title: '删除确认',
     content: `确定要删除工作流「${workflow.name}」吗？此操作不可恢复。`,
@@ -231,31 +288,17 @@ const handleSubmit = async () => {
     return
   }
 
-  submitting.value = true
-  try {
-    const input: CreateWorkflowInput = {
-      name: form.name,
-      description: form.description,
-    }
-    const res = await create(input)
-    if (res.error) {
-      message.error(res.error)
-      return
-    }
-    message.success('创建成功')
-    dialogVisible.value = false
-    await fetchWorkflows()
-  } catch {
-    message.error('创建失败')
-  } finally {
-    submitting.value = false
+  const res = await create({
+    name: form.name,
+    description: form.description,
+  })
+  if (res.error) {
+    message.error(res.error)
+    return
   }
-}
-
-const resetForm = () => {
-  form.name = ''
-  form.description = ''
-  formRef.value?.restoreValidation()
+  message.success('创建成功')
+  dialogVisible.value = false
+  await fetchWorkflows()
 }
 
 onMounted(() => {
@@ -285,12 +328,29 @@ onMounted(() => {
   gap: 8px;
 }
 
-.workflow-name .name {
+.workflow-name .name-link {
   font-weight: 500;
+  color: #4f46e5;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.workflow-name .name-link:hover {
+  color: #7c3aed;
 }
 
 .action-btns {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-btns :deep(.n-button) {
+  opacity: 0.7;
+}
+
+.action-btns :deep(.n-button:hover) {
+  opacity: 1;
 }
 </style>

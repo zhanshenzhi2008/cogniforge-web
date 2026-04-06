@@ -101,8 +101,9 @@
 </template>
 
 <script setup lang="ts">
-import { AddOutline } from '@vicons/ionicons5'
-import { NButton, NTag } from 'naive-ui'
+import type { Component } from 'vue'
+import { AddOutline, PencilOutline, ChatboxEllipsesOutline, TrashOutline } from '@vicons/ionicons5'
+import { NButton, NTag, NIcon, NTooltip } from 'naive-ui'
 import { useMessage, useDialog } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
@@ -149,6 +150,26 @@ const modelOptions = [
   { label: 'Claude 3 Haiku', value: 'claude-3-haiku' },
 ]
 
+function renderIconAction(
+  label: string,
+  Type: 'default' | 'info' | 'error',
+  onClick: () => void,
+  Icon: Component,
+) {
+  return h(NTooltip, { placement: 'top' }, {
+    trigger: () => h(NButton, {
+      quaternary: true,
+      circle: true,
+      size: 'small',
+      depth: 3,
+      onClick,
+    }, {
+      icon: () => h(NIcon, { component: Icon, size: 20 }),
+    }),
+    default: () => label,
+  })
+}
+
 const columns: DataTableColumns<Agent> = [
   {
     title: '名称',
@@ -192,12 +213,12 @@ const columns: DataTableColumns<Agent> = [
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 120,
     render(row) {
       return h('div', { class: 'action-btns' }, [
-        h(NButton, { text: true, type: 'primary', size: 'small', onClick: () => handleEdit(row) }, { default: () => '编辑' }),
-        h(NButton, { text: true, type: 'primary', size: 'small', onClick: () => handleChat(row) }, { default: () => '对话' }),
-        h(NButton, { text: true, type: 'error', size: 'small', onClick: () => handleDelete(row) }, { default: () => '删除' }),
+        renderIconAction('编辑', 'default', () => handleEdit(row), PencilOutline),
+        renderIconAction('对话', 'info', () => handleChat(row), ChatboxEllipsesOutline),
+        renderIconAction('删除', 'error', () => handleDelete(row), TrashOutline),
       ])
     },
   },
@@ -354,6 +375,22 @@ onMounted(() => {
 
 .action-btns {
   display: flex;
-  gap: 4px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-btns :deep(.n-button) {
+  opacity: 0.75;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.action-btns :deep(.n-button:hover) {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.action-btns :deep(.n-button:hover) :deep(.n-icon) {
+  color: #4f46e5;
 }
 </style>

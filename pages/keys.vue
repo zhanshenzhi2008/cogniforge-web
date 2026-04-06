@@ -65,8 +65,9 @@
 </template>
 
 <script setup lang="ts">
-import { AddOutline } from '@vicons/ionicons5'
-import { useMessage, useDialog, NButton } from 'naive-ui'
+import type { Component } from 'vue'
+import { AddOutline, TrashOutline, EyeOutline, EyeOffOutline } from '@vicons/ionicons5'
+import { useMessage, useDialog, NButton, NIcon, NTooltip } from 'naive-ui'
 
 interface ApiKey {
   id: string
@@ -100,6 +101,26 @@ const rules = {
   name: [{ required: true, message: '请输入密钥名称', trigger: 'blur' }]
 }
 
+function renderIconAction(
+  label: string,
+  type: 'default' | 'info' | 'error',
+  onClick: () => void,
+  Icon: Component,
+) {
+  return h(NTooltip, { placement: 'top' }, {
+    trigger: () => h(NButton, {
+      quaternary: true,
+      circle: true,
+      size: 'small',
+      depth: 3,
+      onClick,
+    }, {
+      icon: () => h(NIcon, { component: Icon, size: 20 }),
+    }),
+    default: () => label,
+  })
+}
+
 const columns = [
   {
     title: '名称',
@@ -110,14 +131,22 @@ const columns = [
     title: '密钥',
     key: 'key',
     render(row: ApiKey) {
-      return h('div', { style: 'display:flex;align-items:center;gap:8px' }, [
-        h('span', { style: 'font-family:monospace;font-size:13px' }, row.show ? row.key : row.maskedKey),
-        h(NButton, {
-          text: true,
-          type: 'primary',
-          size: 'tiny',
-          onClick: () => { row.show = !row.show }
-        }, { default: () => row.show ? '隐藏' : '显示' }),
+      const ShowIcon = row.show ? EyeOffOutline : EyeOutline
+      const showLabel = row.show ? '隐藏' : '显示'
+      return h('div', { class: 'key-secret-row' }, [
+        h('span', { class: 'key-secret-text' }, row.show ? row.key : row.maskedKey),
+        h(NTooltip, { placement: 'top' }, {
+          trigger: () => h(NButton, {
+            quaternary: true,
+            circle: true,
+            size: 'small',
+            type: 'default',
+            onClick: () => { row.show = !row.show },
+          }, {
+            icon: () => h(NIcon, { component: ShowIcon, size: 18 }),
+          }),
+          default: () => showLabel,
+        }),
       ])
     },
   },
@@ -132,14 +161,9 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
-    width: 100,
+    width: 56,
     render(row: ApiKey) {
-      return h(NButton, {
-        text: true,
-        type: 'error',
-        size: 'small',
-        onClick: () => handleDelete(row.id)
-      }, { default: () => '撤销' })
+      return renderIconAction('撤销', 'error', () => handleDelete(row.id), TrashOutline)
     },
   },
 ]
@@ -243,5 +267,26 @@ onMounted(() => {
   padding: 16px;
   background: #f8fafc;
   border-radius: 8px;
+}
+
+.key-secret-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.key-secret-row :deep(.n-button) {
+  opacity: 0.75;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.key-secret-row :deep(.n-button:hover) {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.key-secret-text {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
 }
 </style>
