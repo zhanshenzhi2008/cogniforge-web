@@ -103,8 +103,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
 import { AddOutline, PencilOutline, ChatboxEllipsesOutline, TrashOutline } from '@vicons/ionicons5'
-import { NButton, NTag, NIcon, NTooltip } from 'naive-ui'
-import { useMessage, useDialog } from 'naive-ui'
+import { NButton, NTag, NIcon, NTooltip, useMessage, useDialog } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
 
@@ -114,6 +113,7 @@ definePageMeta({
 
 const router = useRouter()
 const message = useMessage()
+const dialog = useDialog()
 const { list, create, update, remove } = useAgents()
 
 const loading = ref(false)
@@ -264,7 +264,6 @@ const handleChat = (agent: Agent) => {
 }
 
 const handleDelete = async (agent: Agent) => {
-  const dialog = useDialog()
   dialog.warning({
     title: '删除确认',
     content: `确定要删除 Agent「${agent.name}」吗？此操作不可恢复。`,

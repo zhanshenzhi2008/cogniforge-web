@@ -5,9 +5,11 @@ export interface HealthResponse {
 }
 
 export interface ApiResponse<T = unknown> {
+  code: number
+  message: string
+  trace_id: string
   data?: T
   error?: string
-  message?: string
 }
 
 export interface ApiConfig {
@@ -76,6 +78,17 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
         }
       }
 
+      // 统一响应格式
+      if (data && typeof data === 'object' && 'code' in data) {
+        if (data.code !== 0) {
+          return {
+            error: data.error || data.message || `API error (code: ${data.code})`,
+          }
+        }
+        return { data: data.data }
+      }
+
+      // 兜底：直接返回 body 作为 data
       return { data }
     } catch (error) {
       return {

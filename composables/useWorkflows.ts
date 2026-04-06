@@ -68,8 +68,9 @@ export const useWorkflows = () => {
 
   const list = async (): Promise<{ data?: Workflow[]; error?: string }> => {
     try {
-      const res = await api.get<{ data: Workflow[] }>('/api/v1/workflows/')
-      return { data: res.data?.data || [] }
+      const res = await api.get<Workflow[]>('/api/v1/workflows/')
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
     } catch (err: any) {
       return { error: err.message || '获取工作流列表失败' }
     }
@@ -77,7 +78,8 @@ export const useWorkflows = () => {
 
   const get = async (id: string): Promise<{ data?: Workflow; error?: string }> => {
     try {
-      const res = await api.get<{ data: Workflow }>(`/api/v1/workflows/${id}`)
+      const res = await api.get<Workflow>(`/api/v1/workflows/${id}`)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '获取工作流详情失败' }
@@ -86,7 +88,8 @@ export const useWorkflows = () => {
 
   const create = async (input: CreateWorkflowInput): Promise<{ data?: Workflow; error?: string }> => {
     try {
-      const res = await api.post<{ data: Workflow }>('/api/v1/workflows/', input)
+      const res = await api.post<Workflow>('/api/v1/workflows/', input)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '创建工作流失败' }
@@ -95,7 +98,8 @@ export const useWorkflows = () => {
 
   const update = async (id: string, input: UpdateWorkflowInput): Promise<{ data?: Workflow; error?: string }> => {
     try {
-      const res = await api.put<{ data: Workflow }>(`/api/v1/workflows/${id}`, input)
+      const res = await api.put<Workflow>(`/api/v1/workflows/${id}`, input)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '更新工作流失败' }
@@ -104,7 +108,8 @@ export const useWorkflows = () => {
 
   const remove = async (id: string): Promise<{ error?: string }> => {
     try {
-      await api.del(`/api/v1/workflows/${id}`)
+      const res = await api.del(`/api/v1/workflows/${id}`)
+      if (res.error) return { error: res.error }
       return {}
     } catch (err: any) {
       return { error: err.message || '删除工作流失败' }
@@ -114,6 +119,7 @@ export const useWorkflows = () => {
   const execute = async (id: string, input?: Record<string, any>): Promise<{ executionId?: string; status?: string; error?: string }> => {
     try {
       const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/execute`, { input })
+      if (res.error) return { error: res.error }
       return { executionId: res.data?.execution_id, status: res.data?.status }
     } catch (err: any) {
       return { error: err.message || '执行工作流失败' }
@@ -122,7 +128,8 @@ export const useWorkflows = () => {
 
   const getExecution = async (id: string, executionId: string): Promise<{ data?: WorkflowExecution; error?: string }> => {
     try {
-      const res = await api.get<{ data: WorkflowExecution }>(`/api/v1/workflows/${id}/executions/${executionId}`)
+      const res = await api.get<WorkflowExecution>(`/api/v1/workflows/${id}/executions/${executionId}`)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '获取执行记录失败' }
