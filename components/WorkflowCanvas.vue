@@ -52,8 +52,6 @@
       </div>
     </template>
 
-    <ConnectionLine />
-
     <Background pattern-color="#aaa" :gap="16" />
     <Controls />
     <MiniMap />
@@ -61,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { VueFlow, Handle, Position, ConnectionLine } from '@vue-flow/core'
+import { VueFlow, Handle, Position } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
