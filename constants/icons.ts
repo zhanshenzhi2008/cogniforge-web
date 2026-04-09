@@ -13,4 +13,11 @@ export {
   ServerOutline,
   DocumentTextOutline,
   KeyOutline,
+  AddOutline,
+  BookOutline,
+  CloudUploadOutline,
+  PencilOutline,
+  EyeOutline,
+  EllipsisHorizontalOutline,
+  SearchOutline,
 } from '@vicons/ionicons5'
