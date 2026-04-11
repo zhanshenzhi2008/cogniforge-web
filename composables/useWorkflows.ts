@@ -68,7 +68,7 @@ export const useWorkflows = () => {
 
   const list = async (): Promise<{ data?: Workflow[]; error?: string }> => {
     try {
-      const res = await api.get<Workflow[]>('/api/v1/workflows')
+      const res = await api.get<Workflow[]>('/api/v1/workflows/')
       if (res.error) return { error: res.error }
       return { data: res.data || [] }
     } catch (err: any) {
@@ -88,7 +88,7 @@ export const useWorkflows = () => {
 
   const create = async (input: CreateWorkflowInput): Promise<{ data?: Workflow; error?: string }> => {
     try {
-      const res = await api.post<Workflow>('/api/v1/workflows', input)
+      const res = await api.post<Workflow>('/api/v1/workflows/', input)
       if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {

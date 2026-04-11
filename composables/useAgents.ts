@@ -42,7 +42,7 @@ export const useAgents = () => {
 
   const list = async (): Promise<{ data?: Agent[]; error?: string }> => {
     try {
-      const res = await api.get<Agent[]>('/api/v1/agents')
+      const res = await api.get<Agent[]>('/api/v1/agents/')
       if (res.error) return { error: res.error }
       return { data: res.data || [] }
     } catch (err: any) {
@@ -62,7 +62,7 @@ export const useAgents = () => {
 
   const create = async (input: CreateAgentInput): Promise<{ data?: Agent; error?: string }> => {
     try {
-      const res = await api.post<Agent>('/api/v1/agents', input)
+      const res = await api.post<Agent>('/api/v1/agents/', input)
       if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {

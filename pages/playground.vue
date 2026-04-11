@@ -319,7 +319,7 @@ const handleAgentChange = async (agentId: string) => {
 
 const fetchModels = async () => {
   try {
-    const res = await get<{ models: Model[] }>('/api/v1/models')
+    const res = await get<{ models: Model[] }>('/api/v1/models/')
     if (res.error) return
     models.value = res.data?.models || []
     if (models.value.length > 0) {

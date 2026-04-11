@@ -171,7 +171,7 @@ const columns = [
 const fetchKeys = async () => {
   loading.value = true
   try {
-    const res = await get<{ keys: any[] }>('/api/v1/keys')
+    const res = await get<{ keys: any[] }>('/api/v1/keys/')
     if (res.error) {
       message.error(res.error)
       return
@@ -205,7 +205,7 @@ const submitCreate = async () => {
 
   creating.value = true
   try {
-    const res = await post<{ key: string }>('/api/v1/keys', form)
+    const res = await post<{ key: string }>('/api/v1/keys/', form)
     if (res.error) {
       message.error(res.error)
       return
