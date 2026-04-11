@@ -37,6 +37,7 @@ export { useApi, useHealthApi } from '../composables/useApi';
 export { useAuth, AuthUser } from '../composables/useAuth';
 export { useKnowledgeBases, KnowledgeBase, CreateKBInput, UpdateKBInput, Document, SearchResult, SearchResponse, SearchInput } from '../composables/useKnowledgeBases';
 export { useModels, Model } from '../composables/useModels';
+export { useMonitor, RequestLog, RequestLogQuery, RequestLogListResponse, DailyStat, StatusStat, MethodStat, PathStat, UsageStats, RealtimeStats } from '../composables/useMonitor';
 export { useWorkflows, Workflow, WorkflowExecution, CreateWorkflowInput, UpdateWorkflowInput, WorkflowDefinition, WorkflowNode, WorkflowEdge } from '../composables/useWorkflows';
 export { isApiSuccessCode, defaultConfig, createApiClient, HealthResponse, ApiResponse, ApiConfig, ApiClient } from '../utils/apiClient';
 export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/.pnpm/@pinia+nuxt@0.5.5_magicast@0.5.2_typescript@5.9.3_vue@3.5.30_typescript@5.9.3_/node_modules/@pinia/nuxt/dist/runtime/composables';

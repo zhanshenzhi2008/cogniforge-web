@@ -125,6 +125,7 @@ declare global {
   const useLoadingIndicator: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/loading-indicator').useLoadingIndicator
   const useModel: typeof import('vue').useModel
   const useModels: typeof import('../../composables/useModels').useModels
+  const useMonitor: typeof import('../../composables/useMonitor').useMonitor
   const useNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/nuxt').useNuxtApp
   const useNuxtData: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/asyncData').useNuxtData
   const useNuxtDevTools: typeof import('../../node_modules/.pnpm/@nuxt+devtools@2.6.4_vite@7.3.1_@types+node@20.19.37_jiti@2.6.1_terser@5.46.1_yaml@2.8.2__vue@3.5.30_typescript@5.9.3_/node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools').useNuxtDevTools
@@ -212,6 +213,9 @@ declare global {
   // @ts-ignore
   export type { Model } from '../../composables/useModels'
   import('../../composables/useModels')
+  // @ts-ignore
+  export type { RequestLog, RequestLogQuery, RequestLogListResponse, DailyStat, StatusStat, MethodStat, PathStat, UsageStats, RealtimeStats } from '../../composables/useMonitor'
+  import('../../composables/useMonitor')
   // @ts-ignore
   export type { Workflow, WorkflowExecution, CreateWorkflowInput, UpdateWorkflowInput, WorkflowDefinition, WorkflowNode, WorkflowEdge } from '../../composables/useWorkflows'
   import('../../composables/useWorkflows')
@@ -347,6 +351,7 @@ declare module 'vue' {
     readonly useLoadingIndicator: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/loading-indicator')['useLoadingIndicator']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useModels: UnwrapRef<typeof import('../../composables/useModels')['useModels']>
+    readonly useMonitor: UnwrapRef<typeof import('../../composables/useMonitor')['useMonitor']>
     readonly useNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']>
     readonly useNuxtData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>
     readonly useNuxtDevTools: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+devtools@2.6.4_vite@7.3.1_@types+node@20.19.37_jiti@2.6.1_terser@5.46.1_yaml@2.8.2__vue@3.5.30_typescript@5.9.3_/node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools')['useNuxtDevTools']>

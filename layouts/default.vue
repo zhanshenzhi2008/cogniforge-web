@@ -59,6 +59,7 @@ const navItems: Array<{ label: string; key: string; to: string }> = [
   { label: '工作流', key: 'workflows', to: '/workflows' },
   { label: '知识库', key: 'knowledge', to: '/knowledge' },
   { label: 'API 密钥', key: 'keys', to: '/keys' },
+  { label: '监控中心', key: 'monitor', to: '/monitor' },
 ]
 
 const activeKey = ref('dashboard')
