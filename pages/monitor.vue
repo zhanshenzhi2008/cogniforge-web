@@ -59,6 +59,12 @@
               clearable
               style="width: 200px"
             />
+            <n-date-picker
+              v-model:value="filterTimeRange"
+              type="daterange"
+              clearable
+              style="width: 280px"
+            />
             <n-button type="primary" @click="loadLogs">搜索</n-button>
           </n-space>
         </template>
@@ -105,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted } from 'vue'
+import { h, ref, computed, onMounted } from 'vue'
 import type { Component } from 'vue'
 import {
   NButton,
@@ -122,6 +128,7 @@ import {
   NDescriptionsItem,
   NModal,
   NAlert,
+  NDatePicker,
 } from 'naive-ui'
 
 const { listRequestLogs, getUsageStats } = useMonitor()
@@ -136,6 +143,7 @@ const selectedLog = ref<RequestLog | null>(null)
 // 筛选
 const filterMethod = ref<string | null>(null)
 const filterPath = ref('')
+const filterTimeRange = ref<[number, number] | null>(null)
 const page = ref(1)
 const pageSize = ref(20)
 
@@ -148,9 +156,9 @@ const methodOptions = [
 ]
 
 // 分页
-const pagination = {
-  page,
-  pageSize,
+const pagination = computed(() => ({
+  page: page.value,
+  pageSize: pageSize.value,
   showSizePicker: true,
   pageSizes: [10, 20, 50, 100],
   onUpdate: (p: number, ps: number) => {
@@ -158,7 +166,7 @@ const pagination = {
     pageSize.value = ps
     loadLogs()
   },
-}
+}))
 
 // 表格列
 const columns = [
@@ -217,14 +225,17 @@ const columns = [
     render: (row: RequestLog) => {
       return h(
         NButton,
-        { size: 'small', text: true, type: 'primary' },
         {
-          default: () => '详情',
-          onClick: () => {
+          size: 'small',
+          text: true,
+          type: 'primary',
+          onClick: (e: MouseEvent) => {
+            e.stopPropagation()
             selectedLog.value = row
             showLogDetail.value = true
           },
-        }
+        },
+        { default: () => '详情' }
       )
     },
   },
@@ -251,6 +262,27 @@ function formatDate(dateStr: string): string {
   })
 }
 
+// 格式化日期为后端格式 (YYYY-MM-DD HH:MM:SS)
+function formatDateForApi(timestamp: number): string {
+  const date = new Date(timestamp)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+// 获取日期的开始时间 (00:00:00)
+function getStartOfDay(timestamp: number): string {
+  const date = new Date(timestamp)
+  date.setHours(0, 0, 0, 0)
+  return formatDateForApi(date.getTime())
+}
+
+// 获取日期的结束时间 (23:59:59)
+function getEndOfDay(timestamp: number): string {
+  const date = new Date(timestamp)
+  date.setHours(23, 59, 59, 999)
+  return formatDateForApi(date.getTime())
+}
+
 // 加载日志
 async function loadLogs() {
   loading.value = true
@@ -260,6 +292,8 @@ async function loadLogs() {
       page_size: pageSize.value,
       method: filterMethod.value || undefined,
       path: filterPath.value || undefined,
+      start_time: filterTimeRange.value ? getStartOfDay(filterTimeRange.value[0]) : undefined,
+      end_time: filterTimeRange.value ? getEndOfDay(filterTimeRange.value[1]) : undefined,
     })
     if (res.error) {
       console.error(res.error)
