@@ -148,9 +148,9 @@ const methodOptions = [
 ]
 
 // 分页
-const pagination = {
-  page,
-  pageSize,
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
   showSizePicker: true,
   pageSizes: [10, 20, 50, 100],
   onUpdate: (p: number, ps: number) => {
@@ -158,7 +158,7 @@ const pagination = {
     pageSize.value = ps
     loadLogs()
   },
-}
+})
 
 // 表格列
 const columns = [
