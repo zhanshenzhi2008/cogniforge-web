@@ -17,7 +17,7 @@
             <div class="kb-name">
               <n-icon :component="BookOutline" size="20" />
               <span>{{ kb.name }}</span>
-              <n-tag size="small" :type="kb.status === 'active' ? 'success' : 'default'" bordered={false}>
+              <n-tag size="small" :type="kb.status === 'active' ? 'success' : 'default'" :bordered="false">
                 {{ kb.status === 'active' ? '启用' : '禁用' }}
               </n-tag>
             </div>
@@ -115,20 +115,16 @@
       :title="`知识库 - ${selectedKB?.name || ''}`"
     >
       <n-drawer-content>
+        <div class="drawer-header-actions">
+          <n-button type="primary" size="small" @click="uploadModalVisible = true">
+            <template #icon>
+              <n-icon :component="CloudUploadOutline" />
+            </template>
+            上传文档
+          </n-button>
+        </div>
         <n-tabs type="line" animated>
           <n-tab-pane name="docs" tab="文档管理">
-            <template #header>
-              <div class="tab-header">
-                <span>文档管理</span>
-                <n-button type="primary" size="tiny" @click="uploadModalVisible = true">
-                  <template #icon>
-                    <n-icon :component="CloudUploadOutline" />
-                  </template>
-                  上传
-                </n-button>
-              </div>
-            </template>
-
             <n-spin :show="docsLoading">
               <n-data-table
                 :columns="docColumns"
@@ -136,7 +132,7 @@
                 :pagination="false"
                 :row-key="(row: Document) => row.id"
               />
-              <n-empty v-if="!docsLoading && documents.length === 0" description="暂无文档，请上传" />
+              <n-empty v-if="!docsLoading && documents.length === 0" description="暂无文档，请点击上方按钮上传" />
             </n-spin>
           </n-tab-pane>
 
@@ -248,7 +244,7 @@ import {
   EllipsisHorizontalOutline,
   SearchOutline,
 } from '@/constants/icons'
-import { NButton, NIcon, NTag, NDropdown, NDrawer, NUpload, NTabs, NTabPane, useMessage, useDialog } from 'naive-ui'
+import { NButton, NIcon, NTag, NDropdown, NDrawer, NDrawerContent, NUpload, NTabs, NTabPane, useMessage, useDialog } from 'naive-ui'
 import type { DataTableColumns, FormInst } from 'naive-ui'
 import type { KnowledgeBase, Document, CreateKBInput, UpdateKBInput, SearchResult, SearchResponse } from '@/composables/useKnowledgeBases'
 
@@ -712,6 +708,12 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+}
+
+.drawer-header-actions {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 12px;
 }
 
 .tab-header {
