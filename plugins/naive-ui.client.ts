@@ -31,6 +31,9 @@ import {
   NDropdown,
   NText,
   NFormItemGi,
+  NAvatar,
+  NUpload,
+  NUploadDragger,
 } from 'naive-ui'
 
 /** Explicit names so registration works even if component.name is stripped in production. */
@@ -66,6 +69,9 @@ const NAIVE_GLOBALS: [string, unknown][] = [
   ['NMenu', NMenu],
   ['NDropdown', NDropdown],
   ['NText', NText],
+  ['NAvatar', NAvatar],
+  ['NUpload', NUpload],
+  ['NUploadDragger', NUploadDragger],
 ]
 
 export default defineNuxtPlugin((nuxtApp) => {

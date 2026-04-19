@@ -123,6 +123,7 @@ declare global {
   const useLazyFetch: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/fetch').useLazyFetch
   const useLink: typeof import('vue-router').useLink
   const useLoadingIndicator: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/loading-indicator').useLoadingIndicator
+  const useMessage: typeof import('../../composables/useMessage').useMessage
   const useModel: typeof import('vue').useModel
   const useModels: typeof import('../../composables/useModels').useModels
   const useMonitor: typeof import('../../composables/useMonitor').useMonitor
@@ -349,6 +350,7 @@ declare module 'vue' {
     readonly useLazyFetch: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/fetch')['useLazyFetch']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useLoadingIndicator: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/loading-indicator')['useLoadingIndicator']>
+    readonly useMessage: UnwrapRef<typeof import('../../composables/useMessage')['useMessage']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useModels: UnwrapRef<typeof import('../../composables/useModels')['useModels']>
     readonly useMonitor: UnwrapRef<typeof import('../../composables/useMonitor')['useMonitor']>

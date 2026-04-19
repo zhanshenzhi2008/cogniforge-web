@@ -36,6 +36,7 @@ export { useAgents, Agent, CreateAgentInput, UpdateAgentInput } from '../composa
 export { useApi, useHealthApi } from '../composables/useApi';
 export { useAuth, AuthUser } from '../composables/useAuth';
 export { useKnowledgeBases, KnowledgeBase, CreateKBInput, UpdateKBInput, Document, SearchResult, SearchResponse, SearchInput } from '../composables/useKnowledgeBases';
+export { useMessage } from '../composables/useMessage';
 export { useModels, Model } from '../composables/useModels';
 export { useMonitor, RequestLog, RequestLogQuery, RequestLogListResponse, DailyStat, StatusStat, MethodStat, PathStat, UsageStats, RealtimeStats } from '../composables/useMonitor';
 export { useWorkflows, Workflow, WorkflowExecution, CreateWorkflowInput, UpdateWorkflowInput, WorkflowDefinition, WorkflowNode, WorkflowEdge } from '../composables/useWorkflows';

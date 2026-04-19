@@ -29,7 +29,8 @@ export default defineNuxtConfig({
       },
     },
     optimizeDeps: {
-      include: ssrNaive ? [] : ['naive-ui'],
+      include: ['naive-ui', 'vueuc', 'date-fns', 'icons', '@vicons/ionicons5'],
+      exclude: [],
     },
     ssr: {
       noExternal: ssrNaive ? ['naive-ui'] : [],
