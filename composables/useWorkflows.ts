@@ -18,10 +18,11 @@ export interface WorkflowExecution {
   id: string
   workflow_id: string
   user_id: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'debugging' | 'cancelled'
   input: Record<string, any>
   output: string
   error: string
+  current_node?: string
   started_at: string | null
   completed_at: string | null
   created_at: string
@@ -136,6 +137,36 @@ export const useWorkflows = () => {
     }
   }
 
+  const listExecutions = async (id: string): Promise<{ data?: WorkflowExecution[]; error?: string }> => {
+    try {
+      const res = await api.get<WorkflowExecution[]>(`/api/v1/workflows/${id}/executions`)
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取执行列表失败' }
+    }
+  }
+
+  const cancelExecution = async (id: string, executionId: string): Promise<{ error?: string }> => {
+    try {
+      const res = await api.post(`/api/v1/workflows/${id}/executions/${executionId}/cancel`, {})
+      if (res.error) return { error: res.error }
+      return {}
+    } catch (err: any) {
+      return { error: err.message || '取消执行失败' }
+    }
+  }
+
+  const debug = async (id: string, input?: Record<string, any>, breakpoints?: string[]): Promise<{ executionId?: string; error?: string }> => {
+    try {
+      const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/debug`, { input, node_breakpoints: breakpoints })
+      if (res.error) return { error: res.error }
+      return { executionId: res.data?.execution_id }
+    } catch (err: any) {
+      return { error: err.message || '启动调试失败' }
+    }
+  }
+
   return {
     list,
     get,
@@ -144,5 +175,8 @@ export const useWorkflows = () => {
     remove,
     execute,
     getExecution,
+    listExecutions,
+    cancelExecution,
+    debug,
   }
 }

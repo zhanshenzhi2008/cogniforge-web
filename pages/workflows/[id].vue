@@ -45,6 +45,12 @@
           </div>
         </n-popover>
         <n-button :disabled="isSmokeTest" @click="handleSave" :loading="saving">保存</n-button>
+        <n-button @click="showDebugPanel = !showDebugPanel">
+          <template #icon>
+            <n-icon :component="BugOutline" />
+          </template>
+          调试
+        </n-button>
         <n-button :disabled="isSmokeTest" type="primary" @click="handleExecute" :loading="executing">执行</n-button>
       </n-space>
     </div>
@@ -138,7 +144,7 @@
 <script setup lang="ts">
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 
-import { ArrowBackOutline, ChatboxEllipsesOutline, GitBranchOutline, SearchOutline, DownloadOutline, CloudUploadOutline, CreateOutline } from '@vicons/ionicons5'
+import { ArrowBackOutline, ChatboxEllipsesOutline, GitBranchOutline, SearchOutline, DownloadOutline, CloudUploadOutline, CreateOutline, BugOutline, PlayOutline, PauseOutline, StopOutline, RefreshOutline, TimerOutline } from '@vicons/ionicons5'
 import { NButton, NIcon, NSpace, NSelect, NInput, NForm, NFormItem, NDrawer, NDrawerContent, NTag, useMessage, NPopover } from 'naive-ui'
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
@@ -152,7 +158,7 @@ definePageMeta({
 
 const route = useRoute()
 const message = useMessage()
-const { get, update, execute } = useWorkflows()
+const { get, update, execute, listExecutions, getExecution, cancelExecution, debug } = useWorkflows()
 
 const canvasRef = ref<HTMLElement>()
 
@@ -191,7 +197,14 @@ const nodeConfig = reactive({
 
 const currentWorkflow = ref<any>(null)
 
-const nodeTypes = ['llm', 'condition', 'input', 'output', 'search']
+const showDebugPanel = ref(false)
+const debugInput = ref('{}')
+const currentExecution = ref<any>(null)
+const executionLogs = ref<any[]>([])
+const isDebugging = ref(false)
+const debugPollInterval = ref<number | null>(null)
+
+const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay']
 
 const modelOptions = [
   { label: 'GPT-4o', value: 'gpt-4o' },
@@ -202,8 +215,15 @@ const modelOptions = [
 
 const getNodeIcon = (type: string) => {
   const icons: Record<string, any> = {
+    start: PlayOutline,
+    end: StopOutline,
     llm: ChatboxEllipsesOutline,
+    agent: ChatboxEllipsesOutline,
     condition: GitBranchOutline,
+    loop: RefreshOutline,
+    http: DownloadOutline,
+    code: CloudUploadOutline,
+    delay: TimerOutline,
     search: SearchOutline,
     input: DownloadOutline,
     output: CloudUploadOutline,
@@ -213,8 +233,15 @@ const getNodeIcon = (type: string) => {
 
 const getNodeLabel = (type: string) => {
   const labels: Record<string, string> = {
+    start: '开始',
+    end: '结束',
     llm: 'LLM 节点',
-    condition: '条件节点',
+    agent: 'Agent 节点',
+    condition: '条件分支',
+    loop: '循环节点',
+    http: 'HTTP 请求',
+    code: '代码执行',
+    delay: '延时节点',
     search: '搜索节点',
     input: '输入节点',
     output: '输出节点',
@@ -511,6 +538,85 @@ const handleBack = () => {
   navigateTo('/workflows')
 }
 
+const startDebug = async () => {
+  if (!workflowId.value || isSmokeTest.value) return
+  if (!currentWorkflow.value) {
+    message.warning('请先保存工作流')
+    return
+  }
+
+  isDebugging.value = true
+  executionLogs.value = []
+  currentExecution.value = null
+
+  try {
+    let input = {}
+    try {
+      input = JSON.parse(debugInput.value || '{}')
+    } catch {
+      message.error('输入 JSON 格式错误')
+      isDebugging.value = false
+      return
+    }
+
+    const res = await debug(workflowId.value, input)
+    if (res.error) {
+      message.error(res.error)
+      isDebugging.value = false
+      return
+    }
+
+    message.success(`调试会话已启动: ${res.executionId}`)
+    currentExecution.value = { id: res.executionId, status: 'debugging' }
+
+    debugPollInterval.value = window.setInterval(async () => {
+      const execRes = await getExecution(workflowId.value, res.executionId!)
+      if (execRes.data) {
+        currentExecution.value = execRes.data
+        if (execRes.data.status === 'completed' || execRes.data.status === 'failed' || execRes.data.status === 'cancelled') {
+          stopPolling()
+          isDebugging.value = false
+          if (execRes.data.status === 'completed') {
+            message.success('调试完成')
+          } else if (execRes.data.status === 'failed') {
+            message.error(`调试失败: ${execRes.data.error}`)
+          }
+        }
+      }
+    }, 1000)
+  } catch {
+    message.error('启动调试失败')
+    isDebugging.value = false
+  }
+}
+
+const stopPolling = () => {
+  if (debugPollInterval.value) {
+    clearInterval(debugPollInterval.value)
+    debugPollInterval.value = null
+  }
+}
+
+const cancelDebug = async () => {
+  if (!currentExecution.value?.id) return
+  const res = await cancelExecution(workflowId.value, currentExecution.value.id)
+  if (res.error) {
+    message.error(res.error)
+    return
+  }
+  stopPolling()
+  isDebugging.value = false
+  message.success('已取消调试')
+}
+
+const loadExecutionHistory = async () => {
+  if (!workflowId.value || isSmokeTest.value) return
+  const res = await listExecutions(workflowId.value)
+  if (res.data) {
+    executionLogs.value = res.data
+  }
+}
+
 onMounted(() => {
   nextTick(() => {
     const palette = document.querySelector('.node-palette')
@@ -683,5 +789,102 @@ onMounted(() => {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #f0f0f0;
+}
+
+.debug-panel {
+  position: fixed;
+  right: 0;
+  top: 56px;
+  bottom: 0;
+  width: 400px;
+  background: #fff;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+}
+
+.debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.debug-header h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.debug-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.debug-section {
+  margin-bottom: 16px;
+}
+
+.debug-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.debug-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.debug-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.debug-status-dot.pending { background: #f59e0b; }
+.debug-status-dot.running { background: #3b82f6; animation: pulse 1s infinite; }
+.debug-status-dot.completed { background: #10b981; }
+.debug-status-dot.failed { background: #ef4444; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.debug-log-item {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  font-size: 12px;
+  border-left: 3px solid #e2e8f0;
+}
+
+.debug-log-item.info { border-left-color: #3b82f6; }
+.debug-log-item.warn { border-left-color: #f59e0b; }
+.debug-log-item.error { border-left-color: #ef4444; }
+.debug-log-item.success { border-left-color: #10b981; }
+
+.debug-log-time {
+  color: #94a3b8;
+  font-size: 10px;
+  margin-bottom: 4px;
+}
+
+.debug-log-message {
+  color: #334155;
+  word-break: break-all;
 }
 </style>
