@@ -15,6 +15,10 @@ type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {},
 
 
 export const PasswordStrength: typeof import("../components/PasswordStrength.vue")['default']
+export const PreferencesSection: typeof import("../components/PreferencesSection.vue")['default']
+export const ProfileSection: typeof import("../components/ProfileSection.vue")['default']
+export const SecuritySection: typeof import("../components/SecuritySection.vue")['default']
+export const SessionsSection: typeof import("../components/SessionsSection.vue")['default']
 export const WorkflowCanvas: typeof import("../components/WorkflowCanvas.vue")['default']
 export const NuxtWelcome: typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/components/welcome.vue")['default']
 export const NuxtLayout: typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/components/nuxt-layout")['default']
@@ -40,6 +44,10 @@ export const Html: typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watc
 export const Body: typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/head/runtime/components")['Body']
 export const NuxtIsland: typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/components/nuxt-island")['default']
 export const LazyPasswordStrength: LazyComponent<typeof import("../components/PasswordStrength.vue")['default']>
+export const LazyPreferencesSection: LazyComponent<typeof import("../components/PreferencesSection.vue")['default']>
+export const LazyProfileSection: LazyComponent<typeof import("../components/ProfileSection.vue")['default']>
+export const LazySecuritySection: LazyComponent<typeof import("../components/SecuritySection.vue")['default']>
+export const LazySessionsSection: LazyComponent<typeof import("../components/SessionsSection.vue")['default']>
 export const LazyWorkflowCanvas: LazyComponent<typeof import("../components/WorkflowCanvas.vue")['default']>
 export const LazyNuxtWelcome: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/components/welcome.vue")['default']>
 export const LazyNuxtLayout: LazyComponent<typeof import("../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/components/nuxt-layout")['default']>

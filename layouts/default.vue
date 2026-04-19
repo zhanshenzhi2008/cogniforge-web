@@ -147,7 +147,7 @@ function handleMenuSelect(key: string) {
 // 用户菜单选择处理
 async function handleUserMenuSelect(key: string) {
   if (key === 'settings') {
-    await router.push('/settings/profile')
+    await router.push('/settings')
   } else if (key === 'admin-users') {
     await router.push('/admin/users')
   } else if (key === 'admin-roles') {

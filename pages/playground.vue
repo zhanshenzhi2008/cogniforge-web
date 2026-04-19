@@ -140,8 +140,8 @@
 
               <TransitionGroup name="msg" tag="div" class="messages">
                 <div
-                  v-for="(msg, index) in messages"
-                  :key="index"
+                  v-for="(msg) in messages"
+                  :key="msg.id || msg.time"
                   :class="['message', msg.role]"
                 >
                   <div class="message-avatar">
@@ -155,7 +155,7 @@
                 </div>
 
                 <!-- 流式输出 -->
-                <div v-if="streaming" :class="['message', 'assistant', 'streaming']">
+                <div v-if="streaming" :key="'streaming-' + streamingKey" :class="['message', 'assistant', 'streaming']">
                   <div class="message-avatar">
                     <n-icon :component="BotIcon" :size="20" />
                   </div>
@@ -231,6 +231,7 @@ const { get } = useApi()
 const message = useMessage()
 
 interface Message {
+  id: string
   role: 'user' | 'assistant'
   content: string
   time?: string
@@ -243,6 +244,8 @@ interface Model {
 
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
+const streamingKey = ref(0)
+
 const streaming = ref(false)
 const streamingContent = ref('')
 const selectedModel = ref('')
@@ -334,10 +337,11 @@ const sendMessage = async () => {
   if (!inputMessage.value.trim() || streaming.value) return
 
   const userMessage = inputMessage.value.trim()
-  messages.value.push({ role: 'user', content: userMessage, time: new Date().toISOString() })
+  messages.value.push({ id: crypto.randomUUID(), role: 'user', content: userMessage, time: new Date().toISOString() })
   inputMessage.value = ''
   scrollToBottom()
 
+  streamingKey.value++
   streaming.value = true
   streamingContent.value = ''
 
@@ -376,7 +380,7 @@ const sendMessage = async () => {
       return
     }
 
-    messages.value.push({ role: 'assistant', content: '', time: new Date().toISOString() })
+    messages.value.push({ id: crypto.randomUUID(), role: 'assistant', content: '', time: new Date().toISOString() })
     const assistantMessage = messages.value[messages.value.length - 1]
 
     let buffer = ''

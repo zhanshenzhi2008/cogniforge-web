@@ -34,6 +34,11 @@ import {
   NAvatar,
   NUpload,
   NUploadDragger,
+  NPopconfirm,
+  NPopselect,
+  NRadio,
+  NRadioGroup,
+  NRadioButton,
 } from 'naive-ui'
 
 /** Explicit names so registration works even if component.name is stripped in production. */
@@ -72,6 +77,11 @@ const NAIVE_GLOBALS: [string, unknown][] = [
   ['NAvatar', NAvatar],
   ['NUpload', NUpload],
   ['NUploadDragger', NUploadDragger],
+  ['NPopconfirm', NPopconfirm],
+  ['NPopselect', NPopselect],
+  ['NRadio', NRadio],
+  ['NRadioGroup', NRadioGroup],
+  ['NRadioButton', NRadioButton],
 ]
 
 export default defineNuxtPlugin((nuxtApp) => {
