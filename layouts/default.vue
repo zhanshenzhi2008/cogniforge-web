@@ -7,9 +7,9 @@
         <n-menu
           v-model:value="activeKey"
           mode="horizontal"
-          :options="menuOptions"
+          :options="filteredMenuOptions"
           class="nav-menu"
-          @update:value="(key) => navigateTo(navItems.find(i => i.key === key)?.to ?? '/')"
+          @update:value="handleMenuSelect"
         />
 
         <n-dropdown
@@ -21,7 +21,7 @@
             <template #icon>
               <n-icon :component="PeopleOutline" />
             </template>
-            用户
+            {{ user?.name || '用户' }}
             <n-icon :component="ChevronDownOutline" class="chevron-icon" />
           </n-button>
         </n-dropdown>
@@ -45,23 +45,47 @@ import {
   NIcon,
   useMessage,
   type MenuOption,
+  type DropdownOption,
 } from 'naive-ui'
-import { PeopleOutline, ChevronDownOutline, ExitOutline } from '@vicons/ionicons5'
+import {
+  PeopleOutline,
+  ChevronDownOutline,
+  ExitOutline,
+  SettingsOutline,
+  PeopleCircleOutline,
+  ShieldCheckmarkOutline,
+} from '@vicons/ionicons5'
 
 const route = useRoute()
+const router = useRouter()
 const message = useMessage()
-const { clearAuth } = useAuth()
+const { user, clearAuth } = useAuth()
 
-const navItems: Array<{ label: string; key: string; to: string }> = [
-  { label: '控制台', key: 'dashboard', to: '/' },
-  { label: 'Playground', key: 'playground', to: '/playground' },
-  { label: 'Agent 管理', key: 'agents', to: '/agents' },
-  { label: '工作流', key: 'workflows', to: '/workflows' },
-  { label: '知识库', key: 'knowledge', to: '/knowledge' },
-  { label: 'API 密钥', key: 'keys', to: '/keys' },
-  { label: '监控中心', key: 'monitor', to: '/monitor' },
+// 导航菜单项定义
+const navItems = [
+  { label: '控制台', key: 'dashboard', to: '/', roles: ['admin', 'user'] },
+  { label: 'Playground', key: 'playground', to: '/playground', roles: ['admin', 'user'] },
+  { label: 'Agent 管理', key: 'agents', to: '/agents', roles: ['admin', 'user'] },
+  { label: '工作流', key: 'workflows', to: '/workflows', roles: ['admin', 'user'] },
+  { label: '知识库', key: 'knowledge', to: '/knowledge', roles: ['admin', 'user'] },
+  { label: 'API 密钥', key: 'keys', to: '/keys', roles: ['admin', 'user'] },
+  { label: '监控中心', key: 'monitor', to: '/monitor', roles: ['admin'] },
 ]
 
+// 计算当前用户的可见菜单项
+const filteredMenuOptions = computed<MenuOption[]>(() => {
+  const userRole = user.value?.role || 'user'
+
+  return navItems
+    .filter(item => !item.roles || item.roles.includes(userRole))
+    .map(item => ({
+      label: item.label,
+      key: item.key,
+      to: item.to,
+    }))
+})
+
+// 当前激活的菜单项
 const activeKey = ref('dashboard')
 
 watch(() => route.path, () => {
@@ -72,24 +96,63 @@ watch(() => route.path, () => {
   activeKey.value = match?.key ?? 'dashboard'
 }, { immediate: true })
 
-const menuOptions: MenuOption[] = navItems.map((item) => ({
-  label: item.label,
-  key: item.key,
-  to: item.to,
-}))
+// 用户菜单选项
+const userMenuOptions = computed<DropdownOption[]>(() => {
+  const isAdmin = user.value?.role === 'admin'
+  const options: DropdownOption[] = [
+    {
+      label: '个人设置',
+      key: 'settings',
+      icon: () => h(NIcon, null, { default: () => h(SettingsOutline) }),
+    },
+  ]
 
-const userMenuOptions = [
-  { label: '个人设置', key: 'settings', icon: () => h(NIcon, null, { default: () => h(PeopleOutline) }) },
-  { type: 'divider', key: 'd1' },
-  { label: '退出登录', key: 'logout', icon: () => h(NIcon, null, { default: () => h(ExitOutline) }) },
-]
+  // 管理员额外菜单
+  if (isAdmin) {
+    options.push(
+      { type: 'divider', key: 'd1' },
+      {
+        label: '用户管理',
+        key: 'admin-users',
+        icon: () => h(NIcon, null, { default: () => h(PeopleCircleOutline) }),
+      },
+      {
+        label: '角色权限',
+        key: 'admin-roles',
+        icon: () => h(NIcon, null, { default: () => h(ShieldCheckmarkOutline) }),
+      }
+    )
+  }
 
+  options.push(
+    { type: 'divider', key: 'd2' },
+    {
+      label: '退出登录',
+      key: 'logout',
+      icon: () => h(NIcon, null, { default: () => h(ExitOutline) }),
+    }
+  )
+
+  return options
+})
+
+// 菜单选择处理
+function handleMenuSelect(key: string) {
+  const item = navItems.find(i => i.key === key)
+  if (item?.to) {
+    router.push(item.to)
+  }
+}
+
+// 用户菜单选择处理
 async function handleUserMenuSelect(key: string) {
   if (key === 'settings') {
-    message.info('个人设置即将开放')
-    return
-  }
-  if (key === 'logout') {
+    await router.push('/settings/profile')
+  } else if (key === 'admin-users') {
+    await router.push('/admin/users')
+  } else if (key === 'admin-roles') {
+    await router.push('/admin/roles')
+  } else if (key === 'logout') {
     try {
       const { post } = useApi()
       await post('/api/v1/auth/logout')
@@ -98,7 +161,7 @@ async function handleUserMenuSelect(key: string) {
     } finally {
       clearAuth()
       message.success('已退出登录')
-      navigateTo('/login')
+      router.push('/login')
     }
   }
 }

@@ -7,6 +7,8 @@ export interface AuthUser {
   id: string
   email: string
   name: string
+  avatar_url?: string
+  role?: string
 }
 
 const TOKEN_KEY = 'token'
@@ -100,13 +102,34 @@ export const useAuth = () => {
     return !!useCookie(TOKEN_KEY).value
   }
 
+  const fetchUser = async () => {
+    try {
+      const token = getToken()
+      if (!token) return
+
+      const data = await $fetch('/api/v1/auth/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (data) {
+        currentUser.value = data
+        setAuth(token, data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error)
+    }
+  }
+
   return {
     isAuthenticated: readonly(isAuthenticated),
     currentUser: readonly(currentUser),
+    user: readonly(currentUser),
     setAuth,
     clearAuth,
     getToken,
     redirectToLogin,
     isLoggedIn,
+    fetchUser,
   }
 }
