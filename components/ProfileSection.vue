@@ -130,7 +130,7 @@ const form = reactive({
 })
 
 const validateName = () => {
-  if (!form.name.trim()) {
+  if (!form.name?.trim()) {
     nameError.value = '请输入姓名'
     return false
   }

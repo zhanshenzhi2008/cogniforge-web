@@ -140,8 +140,8 @@
 
               <TransitionGroup name="msg" tag="div" class="messages">
                 <div
-                  v-for="(msg) in messages"
-                  :key="msg.id || msg.time"
+                  v-for="(msg, index) in messages"
+                  :key="msg.id || `msg-${index}`"
                   :class="['message', msg.role]"
                 >
                   <div class="message-avatar">

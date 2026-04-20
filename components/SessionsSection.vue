@@ -42,8 +42,8 @@
 
           <TransitionGroup name="session-list" tag="div">
             <div
-              v-for="session in sessions"
-              :key="session.id"
+              v-for="(session, index) in sessions"
+              :key="session.id || `session-${index}`"
               class="session-item"
             >
               <div class="session-icon">
