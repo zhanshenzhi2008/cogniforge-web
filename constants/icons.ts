@@ -12,6 +12,8 @@ export {
   TrashOutline,
   ServerOutline,
   DocumentTextOutline,
+  DocumentOutline,
+  CodeSlashOutline,
   KeyOutline,
   AddOutline,
   BookOutline,

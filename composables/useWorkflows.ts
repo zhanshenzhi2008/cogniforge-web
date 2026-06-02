@@ -2,6 +2,9 @@
  * Workflow types and API composable
  */
 
+import { createApiClient } from '../utils/apiClient'
+import { useAuth } from './useAuth'
+
 export interface Workflow {
   id: string
   user_id: string
@@ -65,7 +68,13 @@ export interface WorkflowEdge {
 }
 
 export const useWorkflows = () => {
-  const api = useApi()
+  const auth = useAuth()
+
+  const api = createApiClient({
+    baseUrl: 'http://localhost:8080',
+    getToken: () => auth.getToken(),
+    onUnauthorized: () => auth.redirectToLogin(),
+  })
 
   const list = async (): Promise<{ data?: Workflow[]; error?: string }> => {
     try {

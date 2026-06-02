@@ -18,6 +18,26 @@ export interface ApiConfig {
   onUnauthorized?: () => void
 }
 
+// traceId header 名称（与后端一致）
+const TRACE_ID_HEADER = 'X-Trace-ID'
+const RESPONSE_TRACE_ID_HEADER = 'X-Trace-ID'
+
+// 生成 traceId
+function generateTraceId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`
+}
+
+// 获取或生成 traceId（存储在 session 中）
+function getOrCreateTraceId(): string {
+  const storageKey = 'x-trace-id'
+  let traceId = sessionStorage.getItem(storageKey)
+  if (!traceId) {
+    traceId = generateTraceId()
+    sessionStorage.setItem(storageKey, traceId)
+  }
+  return traceId
+}
+
 /** 与后端 internal/model/code.go IsSuccess 一致：2xxx 为成功；0 为旧版兼容 */
 export function isApiSuccessCode(code: number): boolean {
   return code === 0 || (code >= 2000 && code < 3000)
@@ -36,8 +56,12 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
   ): Promise<ApiResponse<T>> => {
     const url = `${finalConfig.baseUrl}${endpoint}`
 
+    // 获取当前 traceId 并添加到请求 header
+    const traceId = getOrCreateTraceId()
+
     const defaultHeaders: HeadersInit = {
       'Content-Type': 'application/json',
+      [TRACE_ID_HEADER]: traceId,
     }
 
     const token = finalConfig.getToken?.()
@@ -124,8 +148,13 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
     upload: async <T>(endpoint: string, formData: FormData): Promise<ApiResponse<T>> => {
       const url = `${finalConfig.baseUrl}${endpoint}`
 
+      // 获取当前 traceId 并添加到请求 header
+      const traceId = getOrCreateTraceId()
+      const headers: HeadersInit = {
+        [TRACE_ID_HEADER]: traceId,
+      }
+
       const token = finalConfig.getToken?.()
-      const headers: HeadersInit = {}
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
@@ -171,3 +200,10 @@ export const createApiClient = (config: Partial<ApiConfig> = {}) => {
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>
+
+// 导出 traceId 相关工具函数
+export const traceIdUtils = {
+  generate: generateTraceId,
+  get: getOrCreateTraceId,
+  clear: () => sessionStorage.removeItem('x-trace-id'),
+}

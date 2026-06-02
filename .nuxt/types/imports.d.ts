@@ -97,6 +97,7 @@ declare global {
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs
   const toValue: typeof import('vue').toValue
+  const traceIdUtils: typeof import('../../utils/apiClient').traceIdUtils
   const triggerRef: typeof import('vue').triggerRef
   const tryUseNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/nuxt').tryUseNuxtApp
   const unref: typeof import('vue').unref
@@ -177,6 +178,7 @@ declare global {
   const useServerHead: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/head').useServerHead
   const useServerHeadSafe: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/head').useServerHeadSafe
   const useServerSeoMeta: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/head').useServerSeoMeta
+  const useSessions: typeof import('../../composables/useSessions').useSessions
   const useShadowRoot: typeof import('vue').useShadowRoot
   const useSlots: typeof import('vue').useSlots
   const useState: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/state').useState
@@ -217,6 +219,9 @@ declare global {
   // @ts-ignore
   export type { RequestLog, RequestLogQuery, RequestLogListResponse, DailyStat, StatusStat, MethodStat, PathStat, UsageStats, RealtimeStats } from '../../composables/useMonitor'
   import('../../composables/useMonitor')
+  // @ts-ignore
+  export type { Session } from '../../composables/useSessions'
+  import('../../composables/useSessions')
   // @ts-ignore
   export type { Workflow, WorkflowExecution, CreateWorkflowInput, UpdateWorkflowInput, WorkflowDefinition, WorkflowNode, WorkflowEdge } from '../../composables/useWorkflows'
   import('../../composables/useWorkflows')
@@ -324,6 +329,7 @@ declare module 'vue' {
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
+    readonly traceIdUtils: UnwrapRef<typeof import('../../utils/apiClient')['traceIdUtils']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly tryUseNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/nuxt')['tryUseNuxtApp']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
@@ -404,6 +410,7 @@ declare module 'vue' {
     readonly useServerHead: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/head')['useServerHead']>
     readonly useServerHeadSafe: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/head')['useServerHeadSafe']>
     readonly useServerSeoMeta: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/head')['useServerSeoMeta']>
+    readonly useSessions: UnwrapRef<typeof import('../../composables/useSessions')['useSessions']>
     readonly useShadowRoot: UnwrapRef<typeof import('vue')['useShadowRoot']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useState: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/state')['useState']>

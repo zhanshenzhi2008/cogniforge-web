@@ -2,6 +2,9 @@
  * Agent types and API composable
  */
 
+import { createApiClient } from '../utils/apiClient'
+import { useAuth } from './useAuth'
+
 export interface Agent {
   id: string
   user_id: string
@@ -38,7 +41,13 @@ export interface UpdateAgentInput {
 }
 
 export const useAgents = () => {
-  const api = useApi()
+  const auth = useAuth()
+
+  const api = createApiClient({
+    baseUrl: 'http://localhost:8080',
+    getToken: () => auth.getToken(),
+    onUnauthorized: () => auth.redirectToLogin(),
+  })
 
   const list = async (): Promise<{ data?: Agent[]; error?: string }> => {
     try {
