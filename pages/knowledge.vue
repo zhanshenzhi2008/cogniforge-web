@@ -113,8 +113,18 @@
       :width="700"
       placement="right"
       :title="`知识库 - ${selectedKB?.name || ''}`"
+      @update:show="(val) => { if (!val) stopDocRefresh() }"
     >
       <n-drawer-content>
+        <template #header>
+          <n-space vertical :size="4">
+            <span>{{ selectedKB?.name }}</span>
+            <n-text depth="3" style="font-size: 12px">
+              {{ documents.length }} 个文档
+            </n-text>
+          </n-space>
+        </template>
+
         <div class="drawer-header-actions">
           <n-button type="primary" size="small" @click="uploadModalVisible = true">
             <template #icon>
@@ -123,24 +133,35 @@
             上传文档
           </n-button>
         </div>
-        <n-tabs type="line" animated>
+
+        <n-tabs v-model:value="drawerActiveTab" type="line" animated>
           <n-tab-pane name="docs" tab="文档管理">
+            <template #tab>
+              <n-space>
+                <span>文档管理</span>
+                <n-badge :value="documents.length" :max="99" />
+              </n-space>
+            </template>
             <n-spin :show="docsLoading">
-              <n-data-table
-                :columns="docColumns"
-                :data="documents"
-                :pagination="false"
-                :row-key="(row: Document) => row.id"
-              />
-              <n-empty v-if="!docsLoading && documents.length === 0" description="暂无文档，请点击上方按钮上传" />
+              <div v-if="documents.length > 0" class="doc-list-container">
+                <n-data-table
+                  :columns="docColumns"
+                  :data="documents"
+                  :pagination="false"
+                  :row-key="(row: Document) => row.id"
+                  size="small"
+                />
+              </div>
+              <n-empty v-else description="暂无文档，请点击上方按钮上传" />
             </n-spin>
           </n-tab-pane>
 
-          <n-tab-pane name="search" tab="检索测试">
-            <template #header>
-              <div class="tab-header">
+          <n-tab-pane name="search">
+            <template #tab>
+              <n-space>
                 <span>检索测试</span>
-              </div>
+                <n-badge :value="searchResults.length" :max="99" type="info" />
+              </n-space>
             </template>
 
             <div class="search-panel">
@@ -237,14 +258,17 @@ import {
   AddOutline,
   BookOutline,
   DocumentTextOutline,
+  DocumentOutline,
+  CodeSlashOutline,
   ServerOutline,
   CloudUploadOutline,
   PencilOutline,
   TrashOutline,
   EllipsisHorizontalOutline,
   SearchOutline,
+  RefreshOutline,
 } from '@/constants/icons'
-import { NButton, NIcon, NTag, NDropdown, NDrawer, NDrawerContent, NUpload, NTabs, NTabPane, useMessage, useDialog } from 'naive-ui'
+import { NButton, NIcon, NTag, NDropdown, NDrawer, NDrawerContent, NUpload, NTabs, NTabPane, useMessage, useDialog, NBadge, NPopconfirm } from 'naive-ui'
 import type { DataTableColumns, FormInst } from 'naive-ui'
 import type { KnowledgeBase, Document, CreateKBInput, UpdateKBInput, SearchResult, SearchResponse } from '@/composables/useKnowledgeBases'
 
@@ -254,7 +278,7 @@ definePageMeta({
 
 const message = useMessage()
 const dialog = useDialog()
-const { listKBs, createKB, updateKB, deleteKB, listDocs, uploadDoc, deleteDoc, searchKB } = useKnowledgeBases()
+const { listKBs, createKB, updateKB, deleteKB, listDocs, uploadDoc, deleteDoc, reparseDoc, searchKB } = useKnowledgeBases()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -279,6 +303,7 @@ const rules = {
 }
 
 const vectorDbOptions = [
+  { label: 'PGVector', value: 'pgvector' },
   { label: 'Chroma', value: 'chroma' },
   { label: 'Qdrant', value: 'qdrant' },
   { label: 'Weaviate', value: 'weaviate' },
@@ -293,6 +318,7 @@ const embeddingModelOptions = [
 
 // Documents
 const drawerVisible = ref(false)
+const drawerActiveTab = ref('docs')
 const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const selectedKB = ref<KnowledgeBase | null>(null)
@@ -313,8 +339,13 @@ const docColumns: DataTableColumns<Document> = [
   {
     title: '名称',
     key: 'name',
-    width: 180,
     ellipsis: { tooltip: true },
+    render(row) {
+      return h('div', { class: 'doc-name-cell' }, [
+        h(NIcon, { component: getFileIcon(row.file_type), size: 16, depth: 3 }),
+        h('span', { style: { marginLeft: '6px' } }, row.name),
+      ])
+    },
   },
   {
     title: '状态',
@@ -332,17 +363,33 @@ const docColumns: DataTableColumns<Document> = [
     },
   },
   {
+    title: '分块',
+    key: 'chunk_count',
+    width: 70,
+    render(row) {
+      return row.chunk_count || '—'
+    },
+  },
+  {
     title: '大小',
     key: 'file_size',
-    width: 100,
+    width: 80,
     render(row) {
       return formatFileSize(row.file_size)
     },
   },
   {
+    title: '时间',
+    key: 'created_at',
+    width: 100,
+    render(row) {
+      return formatDate(row.created_at)
+    },
+  },
+  {
     title: '操作',
     key: 'actions',
-    width: 80,
+    width: 100,
     render(row) {
       return h('div', { class: 'action-btns' }, [
         h(
@@ -351,14 +398,46 @@ const docColumns: DataTableColumns<Document> = [
             quaternary: true,
             circle: true,
             size: 'small',
-            onClick: () => handleDeleteDoc(row),
+            title: '重新解析',
+            onClick: () => handleReparseDoc(row),
           },
-          { icon: () => h(NIcon, { component: TrashOutline, size: 16 }) },
+          { icon: () => h(NIcon, { component: RefreshOutline, size: 16 }) },
+        ),
+        h(
+          NPopconfirm,
+          {
+            onPositiveClick: () => handleDeleteDoc(row),
+          },
+          {
+            trigger: () =>
+              h(
+                NButton,
+                {
+                  quaternary: true,
+                  circle: true,
+                  size: 'small',
+                  title: '删除',
+                },
+                { icon: () => h(NIcon, { component: TrashOutline, size: 16 }) },
+              ),
+            default: () => `确定要删除文档「${row.name}」吗？`,
+          },
         ),
       ])
     },
   },
 ]
+
+function getFileIcon(fileType: string) {
+  const icons: Record<string, any> = {
+    pdf: DocumentTextOutline,
+    txt: DocumentOutline,
+    md: DocumentOutline,
+    docx: DocumentOutline,
+    html: CodeSlashOutline,
+  }
+  return icons[fileType] || DocumentOutline
+}
 
 function getKBDropdownOptions(kb: KnowledgeBase) {
   return [
@@ -411,10 +490,35 @@ const fetchDocuments = async (kbId: string) => {
   }
 }
 
+// 文档状态刷新
+const refreshInterval = ref<NodeJS.Timeout | null>(null)
+
+const startDocRefresh = () => {
+  stopDocRefresh()
+  // 每 3 秒刷新一次文档列表
+  refreshInterval.value = setInterval(() => {
+    if (selectedKB.value && documents.value.some(d => d.status === 'pending' || d.status === 'processing')) {
+      fetchDocuments(selectedKB.value.id)
+    }
+  }, 3000)
+}
+
+const stopDocRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+    refreshInterval.value = null
+  }
+}
+
 const handleSelectKB = async (kb: KnowledgeBase) => {
   selectedKB.value = kb
   drawerVisible.value = true
   await fetchDocuments(kb.id)
+  // 如果有正在处理的文档，启动自动刷新
+  const hasProcessing = documents.value.some(d => d.status === 'pending' || d.status === 'processing')
+  if (hasProcessing) {
+    startDocRefresh()
+  }
 }
 
 const handleCreate = () => {
@@ -542,22 +646,28 @@ const handleUploadSubmit = async () => {
 const handleDeleteDoc = async (doc: Document) => {
   if (!selectedKB.value) return
 
-  dialog.warning({
-    title: '删除确认',
-    content: `确定要删除文档「${doc.name}」吗？`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      const res = await deleteDoc(selectedKB.value!.id, doc.id)
-      if (res.error) {
-        message.error(res.error)
-        return
-      }
-      message.success('删除成功')
-      await fetchDocuments(selectedKB.value!.id)
-      await fetchKnowledgeBases()
-    },
-  })
+  const res = await deleteDoc(selectedKB.value!.id, doc.id)
+  if (res.error) {
+    message.error(res.error)
+    return
+  }
+  message.success('删除成功')
+  await fetchDocuments(selectedKB.value!.id)
+  await fetchKnowledgeBases()
+}
+
+const handleReparseDoc = async (doc: Document) => {
+  if (!selectedKB.value) return
+
+  const res = await reparseDoc(selectedKB.value!.id, doc.id)
+  if (res.error) {
+    message.error(res.error)
+    return
+  }
+  message.success('文档已提交重新解析')
+  // 刷新文档列表并启动自动刷新
+  await fetchDocuments(selectedKB.value!.id)
+  startDocRefresh()
 }
 
 const handleSubmit = async () => {
@@ -617,6 +727,10 @@ const resetForm = () => {
 
 onMounted(() => {
   fetchKnowledgeBases()
+})
+
+onUnmounted(() => {
+  stopDocRefresh()
 })
 </script>
 
@@ -701,6 +815,15 @@ onMounted(() => {
 .action-btns :deep(.n-button:hover) {
   opacity: 1;
   transform: scale(1.1);
+}
+
+.doc-list-container {
+  margin: -12px;
+}
+
+.doc-name-cell {
+  display: flex;
+  align-items: center;
 }
 
 .drawer-header {

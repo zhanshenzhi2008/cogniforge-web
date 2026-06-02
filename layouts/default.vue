@@ -66,6 +66,7 @@ const navItems = [
   { label: '控制台', key: 'dashboard', to: '/', roles: ['admin', 'user'] },
   { label: 'Playground', key: 'playground', to: '/playground', roles: ['admin', 'user'] },
   { label: 'Agent 管理', key: 'agents', to: '/agents', roles: ['admin', 'user'] },
+  { label: '模型配置', key: 'models', to: '/models', roles: ['admin', 'user'] },
   { label: '工作流', key: 'workflows', to: '/workflows', roles: ['admin', 'user'] },
   { label: '知识库', key: 'knowledge', to: '/knowledge', roles: ['admin', 'user'] },
   { label: 'API 密钥', key: 'keys', to: '/keys', roles: ['admin', 'user'] },

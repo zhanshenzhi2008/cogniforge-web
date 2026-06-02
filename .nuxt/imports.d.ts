@@ -39,7 +39,8 @@ export { useKnowledgeBases, KnowledgeBase, CreateKBInput, UpdateKBInput, Documen
 export { useMessage } from '../composables/useMessage';
 export { useModels, Model } from '../composables/useModels';
 export { useMonitor, RequestLog, RequestLogQuery, RequestLogListResponse, DailyStat, StatusStat, MethodStat, PathStat, UsageStats, RealtimeStats } from '../composables/useMonitor';
+export { PROVIDER_META, PROVIDER_OPTIONS, useProviders, AIProvider, CreateProviderInput, UpdateProviderInput, TestResult } from '../composables/useProviders';
+export { useSessions, Session } from '../composables/useSessions';
 export { useWorkflows, Workflow, WorkflowExecution, CreateWorkflowInput, UpdateWorkflowInput, WorkflowDefinition, WorkflowNode, WorkflowEdge } from '../composables/useWorkflows';
-export { isApiSuccessCode, defaultConfig, createApiClient, HealthResponse, ApiResponse, ApiConfig, ApiClient } from '../utils/apiClient';
+export { isApiSuccessCode, defaultConfig, createApiClient, traceIdUtils, HealthResponse, ApiResponse, ApiConfig, ApiClient } from '../utils/apiClient';
 export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/.pnpm/@pinia+nuxt@0.5.5_magicast@0.5.2_typescript@5.9.3_vue@3.5.30_typescript@5.9.3_/node_modules/@pinia/nuxt/dist/runtime/composables';
-export { useNuxtDevTools } from '../node_modules/.pnpm/@nuxt+devtools@2.6.4_vite@7.3.1_@types+node@20.19.37_jiti@2.6.1_terser@5.46.1_yaml@2.8.2__vue@3.5.30_typescript@5.9.3_/node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';

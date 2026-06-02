@@ -2,6 +2,9 @@
  * Knowledge Base types and API composable
  */
 
+import { createApiClient } from '../utils/apiClient'
+import { useAuth } from './useAuth'
+
 export interface KnowledgeBase {
   id: string
   user_id: string
@@ -49,7 +52,6 @@ export interface Document {
   updated_at: string
 }
 
-// 检索相关类型
 export interface SearchResult {
   document_id: string
   document_name: string
@@ -72,9 +74,13 @@ export interface SearchInput {
 }
 
 export const useKnowledgeBases = () => {
-  const api = useApi()
+  const auth = useAuth()
 
-  // ==================== Knowledge Base APIs ====================
+  const api = createApiClient({
+    baseUrl: 'http://localhost:8080',
+    getToken: () => auth.getToken(),
+    onUnauthorized: () => auth.redirectToLogin(),
+  })
 
   const listKBs = async (): Promise<{ data?: KnowledgeBase[]; error?: string }> => {
     try {
@@ -126,8 +132,6 @@ export const useKnowledgeBases = () => {
     }
   }
 
-  // ==================== Document APIs ====================
-
   const listDocs = async (kbId: string): Promise<{ data?: Document[]; error?: string }> => {
     try {
       const res = await api.get<Document[]>(`/api/v1/knowledge/${kbId}/documents`)
@@ -143,7 +147,7 @@ export const useKnowledgeBases = () => {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await api.upload<Document>(`/api/v1/knowledge/${kbId}/documents`, formData)
+      const res = await api.upload<Document>(`/api/v1/knowledge/${kbId}/documents/upload`, formData)
       if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
@@ -161,7 +165,15 @@ export const useKnowledgeBases = () => {
     }
   }
 
-  // ==================== Search APIs ====================
+  const reparseDoc = async (kbId: string, docId: string): Promise<{ data?: Document; error?: string }> => {
+    try {
+      const res = await api.post<Document>(`/api/v1/knowledge/${kbId}/documents/reparse`, { document_id: docId })
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '重新解析失败' }
+    }
+  }
 
   const searchKB = async (kbId: string, input: SearchInput): Promise<{ data?: SearchResponse; error?: string }> => {
     try {
@@ -174,17 +186,15 @@ export const useKnowledgeBases = () => {
   }
 
   return {
-    // Knowledge Base
     listKBs,
     getKB,
     createKB,
     updateKB,
     deleteKB,
-    // Documents
     listDocs,
     uploadDoc,
     deleteDoc,
-    // Search
+    reparseDoc,
     searchKB,
   }
 }

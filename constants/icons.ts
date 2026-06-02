@@ -12,6 +12,8 @@ export {
   TrashOutline,
   ServerOutline,
   DocumentTextOutline,
+  DocumentOutline,
+  CodeSlashOutline,
   KeyOutline,
   AddOutline,
   BookOutline,
@@ -20,4 +22,8 @@ export {
   EyeOutline,
   EllipsisHorizontalOutline,
   SearchOutline,
+  RefreshOutline,
+  AlertCircleOutline,
+  CheckmarkCircleOutline,
+  StarOutline,
 } from '@vicons/ionicons5'
