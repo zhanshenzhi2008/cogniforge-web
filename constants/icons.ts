@@ -26,4 +26,5 @@ export {
   AlertCircleOutline,
   CheckmarkCircleOutline,
   StarOutline,
+  PowerOutline,
 } from '@vicons/ionicons5'

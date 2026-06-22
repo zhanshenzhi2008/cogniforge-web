@@ -151,15 +151,18 @@
             <!-- Card footer -->
             <div class="provider-card-footer">
               <div class="footer-left">
-                <n-button
-                  :type="p.is_enabled ? 'default' : 'success'"
-                  size="small"
-                  quaternary
-                  :loading="testingId === p.id"
-                  @click="handleToggleEnable(p)"
-                >
-                  {{ p.is_enabled ? '禁用' : '启用' }}
-                </n-button>
+                <n-tooltip :style="{ maxWidth: '300px' }">
+                  <template #trigger>
+                    <n-button
+                      size="small"
+                      quaternary
+                      circle
+                      @click="handleToggleEnable(p)"
+                    >
+                      <template #icon>
+                        <n-icon :component="PowerOutline" size="16" />
+                      </template>
+                    </n-button>
               </div>
               <div class="footer-right">
                 <n-tooltip v-if="!p.is_default" trigger="hover">
@@ -339,6 +342,7 @@ import {
   AlertCircleOutline,
   CheckmarkCircleOutline,
   StarOutline,
+  PowerOutline,
 } from '@/constants/icons'
 import { NButton, NIcon, NTag, NDropdown, NText, NCard, NSpin, NEmpty, NModal, NFormItem, NInput, NInputNumber, NForm, NCollapseTransition, NSpace, NTooltip, useMessage, useDialog } from 'naive-ui'
 import type { FormInst } from 'naive-ui'
