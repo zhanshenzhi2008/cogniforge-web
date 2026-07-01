@@ -132,6 +132,7 @@ declare global {
   const useMonitor: typeof import('../../composables/useMonitor').useMonitor
   const useNuxtApp: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/nuxt').useNuxtApp
   const useNuxtData: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/asyncData').useNuxtData
+  const useNuxtDevTools: typeof import('../../node_modules/.pnpm/@nuxt+devtools@2.6.4_vite@7.3.1_@types+node@20.19.37_jiti@2.6.1_terser@5.46.1_yaml@2.8.2__vue@3.5.30_typescript@5.9.3_/node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools').useNuxtDevTools
   const usePinia: typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.5.5_magicast@0.5.2_typescript@5.9.3_vue@3.5.30_typescript@5.9.3_/node_modules/@pinia/nuxt/dist/runtime/composables').usePinia
   const usePreviewMode: typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/preview').usePreviewMode
   const useProviders: typeof import('../../composables/useProviders').useProviders
@@ -369,6 +370,7 @@ declare module 'vue' {
     readonly useMonitor: UnwrapRef<typeof import('../../composables/useMonitor')['useMonitor']>
     readonly useNuxtApp: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/nuxt')['useNuxtApp']>
     readonly useNuxtData: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/asyncData')['useNuxtData']>
+    readonly useNuxtDevTools: UnwrapRef<typeof import('../../node_modules/.pnpm/@nuxt+devtools@2.6.4_vite@7.3.1_@types+node@20.19.37_jiti@2.6.1_terser@5.46.1_yaml@2.8.2__vue@3.5.30_typescript@5.9.3_/node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools')['useNuxtDevTools']>
     readonly usePinia: UnwrapRef<typeof import('../../node_modules/.pnpm/@pinia+nuxt@0.5.5_magicast@0.5.2_typescript@5.9.3_vue@3.5.30_typescript@5.9.3_/node_modules/@pinia/nuxt/dist/runtime/composables')['usePinia']>
     readonly usePreviewMode: UnwrapRef<typeof import('../../node_modules/.pnpm/nuxt@3.21.2_@parcel+watcher@2.5.6_@types+node@20.19.37_@vue+compiler-sfc@3.5.30_cac@6.7.14_db_ptkuyby3tdzcu23xfksts2vzpe/node_modules/nuxt/dist/app/composables/preview')['usePreviewMode']>
     readonly useProviders: UnwrapRef<typeof import('../../composables/useProviders')['useProviders']>
