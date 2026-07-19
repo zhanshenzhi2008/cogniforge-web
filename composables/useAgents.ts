@@ -2,6 +2,9 @@
  * Agent types and API composable
  */
 
+import { createApiClient } from '../utils/apiClient'
+import { useAuth } from './useAuth'
+
 export interface Agent {
   id: string
   user_id: string
@@ -38,12 +41,19 @@ export interface UpdateAgentInput {
 }
 
 export const useAgents = () => {
-  const api = useApi()
+  const auth = useAuth()
+
+  const api = createApiClient({
+    baseUrl: 'http://localhost:8080',
+    getToken: () => auth.getToken(),
+    onUnauthorized: () => auth.redirectToLogin(),
+  })
 
   const list = async (): Promise<{ data?: Agent[]; error?: string }> => {
     try {
-      const res = await api.get<{ data: Agent[] }>('/api/v1/agents/')
-      return { data: res.data?.data || [] }
+      const res = await api.get<Agent[]>('/api/v1/agents')
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
     } catch (err: any) {
       return { error: err.message || '获取 Agent 列表失败' }
     }
@@ -52,6 +62,7 @@ export const useAgents = () => {
   const get = async (id: string): Promise<{ data?: Agent; error?: string }> => {
     try {
       const res = await api.get<Agent>(`/api/v1/agents/${id}`)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '获取 Agent 详情失败' }
@@ -60,7 +71,8 @@ export const useAgents = () => {
 
   const create = async (input: CreateAgentInput): Promise<{ data?: Agent; error?: string }> => {
     try {
-      const res = await api.post<Agent>('/api/v1/agents/', input)
+      const res = await api.post<Agent>('/api/v1/agents', input)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '创建 Agent 失败' }
@@ -70,6 +82,7 @@ export const useAgents = () => {
   const update = async (id: string, input: UpdateAgentInput): Promise<{ data?: Agent; error?: string }> => {
     try {
       const res = await api.put<Agent>(`/api/v1/agents/${id}`, input)
+      if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '更新 Agent 失败' }
@@ -78,7 +91,8 @@ export const useAgents = () => {
 
   const remove = async (id: string): Promise<{ error?: string }> => {
     try {
-      await api.del(`/api/v1/agents/${id}`)
+      const res = await api.del(`/api/v1/agents/${id}`)
+      if (res.error) return { error: res.error }
       return {}
     } catch (err: any) {
       return { error: err.message || '删除 Agent 失败' }

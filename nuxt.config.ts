@@ -1,19 +1,45 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 // @ts-ignore
+
+// Feature flag: when true, enables SSR-compatible Naive UI setup via @bg-dev/nuxt-naiveui.
+// When false (default), uses the lightweight client-only manual setup — no extra module overhead.
+// Change SSR_NAIVE in .env to toggle between modes.
+const ssrNaive = process.env.SSR_NAIVE === 'true'
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
   modules: [
     '@pinia/nuxt',
-  ],
+    ssrNaive ? '@bg-dev/nuxt-naiveui' : null,
+  ].filter(Boolean),
 
-  // 禁用 SSR，Element Plus 与 Nuxt SSR 的水合存在兼容性问题
-  ssr: false,
+  ssr: ssrNaive === true,
 
   css: [
-    'element-plus/dist/index.css',
     '~/assets/css/main.css',
   ],
+
+  vite: {
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: '@use "@/assets/css/variables.scss" as *;',
+        },
+      },
+    },
+    optimizeDeps: {
+      include: ['naive-ui', 'vueuc', 'date-fns', 'icons', '@vicons/ionicons5'],
+      exclude: [],
+    },
+    ssr: {
+      noExternal: ssrNaive ? ['naive-ui'] : [],
+    },
+    server: {
+      port: 3000,
+      strictPort: true,
+    },
+  },
 
   app: {
     head: {
@@ -32,6 +58,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.API_BASE || 'http://localhost:8080',
+      ssrNaive,
     },
   },
 
@@ -40,13 +67,4 @@ export default defineNuxtConfig({
     typeCheck: false,
   },
 
-  vite: {
-    optimizeDeps: {
-      include: ['element-plus'],
-    },
-    server: {
-      port: 3000,
-      strictPort: true,
-    },
-  },
 })

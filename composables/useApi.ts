@@ -1,18 +1,6 @@
 import { createApiClient } from '../utils/apiClient'
 import { useAuth } from './useAuth'
 
-export interface HealthResponse {
-  status: 'ok' | 'error'
-  timestamp: string
-  version: string
-}
-
-export interface ApiResponse<T = unknown> {
-  data?: T
-  error?: string
-  message?: string
-}
-
 export const useApi = () => {
   const auth = useAuth()
 

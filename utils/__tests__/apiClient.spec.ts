@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createApiClient, defaultConfig } from '../apiClient'
+import { createApiClient, defaultConfig, isApiSuccessCode } from '../apiClient'
 
 // --- Method presence tests ---
 // These verify that apiClient returns the exact methods that pages actually use.
@@ -78,6 +78,48 @@ describe('ApiResponse shape', () => {
     globalThis.fetch = originalFetch
     expect(res.data).toBeDefined()
     expect((res as any).error).toBeUndefined()
+  })
+
+  it('should treat backend business code 2000 as success', async () => {
+    const client = createApiClient()
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            code: 2000,
+            message: '成功',
+            trace_id: 'abc-1',
+            data: [{ id: '1' }],
+          }),
+          { status: 200 },
+        ),
+      )
+    const res = await client.get<{ id: string }[]>('/test')
+    globalThis.fetch = originalFetch
+    expect(res.error).toBeUndefined()
+    expect(res.data).toEqual([{ id: '1' }])
+  })
+
+  it('should treat code 5001 as error even when HTTP 200', async () => {
+    const client = createApiClient()
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            code: 5001,
+            message: '参数无效',
+            trace_id: 'abc-2',
+            error: 'name required',
+          }),
+          { status: 200 },
+        ),
+      )
+    const res = await client.get<unknown>('/test')
+    globalThis.fetch = originalFetch
+    expect(res.error).toBe('name required')
+    expect(res.data).toBeUndefined()
   })
 
   it('should return { error } on HTTP error', async () => {
@@ -162,6 +204,19 @@ describe('ApiResponse shape', () => {
     client.post<unknown>('/test', { name: 'test' })
     globalThis.fetch = originalFetch
     expect(JSON.parse(capturedBody)).toEqual({ name: 'test' })
+  })
+})
+
+describe('isApiSuccessCode', () => {
+  it('accepts 0 and 2xxx range', () => {
+    expect(isApiSuccessCode(0)).toBe(true)
+    expect(isApiSuccessCode(2000)).toBe(true)
+    expect(isApiSuccessCode(2001)).toBe(true)
+    expect(isApiSuccessCode(2999)).toBe(true)
+  })
+  it('rejects 4xxx and 5xxx', () => {
+    expect(isApiSuccessCode(4001)).toBe(false)
+    expect(isApiSuccessCode(5001)).toBe(false)
   })
 })
 

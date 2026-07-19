@@ -8,6 +8,7 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Server side: use cookie-based auth state (setAuth writes to cookies too)
   if (process.server) {
+    console.log('[Auth Middleware] Server side, path:', to.path, 'isAuthenticated:', isAuthenticated.value)
     if (!isAuthenticated.value) {
       if (!isAuthPage) {
         return navigateTo('/login')

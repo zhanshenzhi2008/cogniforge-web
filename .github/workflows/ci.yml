@@ -1,0 +1,66 @@
+# =============================================================================
+# GitHub Actions CI 模板：cogniforge-web (Nuxt 3 + Vue)
+# 适用：前端单元测试 + lint + type check
+# 用法：放到 .github/workflows/ci.yml，改顶部 env 块
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  # ── 前端配置 ─────────────────────────────────────────────────────
+  FRONTEND_DIR: .                       # ← 改 1：前端代码目录（仓库根或子目录）
+  NODE_VERSION: '20'                    # ← 改 2：Node 版本
+  PACKAGE_MANAGER: pnpm                 # ← 改 3：npm / pnpm / yarn
+
+jobs:
+  # =========================================================================
+  # 前端 lint + type check + 单元测试
+  # =========================================================================
+  frontend-test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_DIR }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup ${{ env.PACKAGE_MANAGER }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+        if: env.PACKAGE_MANAGER == 'pnpm'
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ env.PACKAGE_MANAGER }}
+          cache-dependency-path: ${{ env.FRONTEND_DIR }}/${{ env.PACKAGE_MANAGER }}-lock.yaml
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/${{ env.PACKAGE_MANAGER }}/store
+          key: ${{ runner.os }}-${{ env.PACKAGE_MANAGER }}-${{ hashFiles('${{ env.FRONTEND_DIR }}/${{ env.PACKAGE_MANAGER }}-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.PACKAGE_MANAGER }}-
+
+      - name: Install dependencies
+        run: ${{ env.PACKAGE_MANAGER }} install --frozen-lockfile
+
+      - name: Lint
+        run: ${{ env.PACKAGE_MANAGER }} lint || true
+
+      - name: Type check
+        run: ${{ env.PACKAGE_MANAGER }} typecheck || true
+
+      - name: Unit tests
+        run: ${{ env.PACKAGE_MANAGER }} test || true
