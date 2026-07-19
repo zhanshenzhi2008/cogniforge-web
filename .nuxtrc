@@ -1,0 +1,5 @@
+# Nuxt CLI persistent port configuration
+# This file ensures the dev server always starts on port 3000
+
+# Dev server port
+port=3000

@@ -1,0 +1,51 @@
+| =============================================================================
+# cogniforge-web 生产部署
+# 部署位置：/opt/project/cogniforge/docker-compose-web.yml
+# 单部署根目录：三个仓的 compose 都集中到 /opt/project/cogniforge/
+# 路由：Traefik 自动发现（labels 块）
+# 镜像：CD 流程构建并推到 ghcr.io，此处只 pull + up
+# 配置：前端环境变量很少，全部直接写在 compose 的 environment 里，
+#       不再单独维护 .env.web 文件
+# =============================================================================
+
+services:
+  cogniforge-web:
+    image: ghcr.io/${IMAGE_NAMESPACE:-zhanshenzhi2008}/cogniforge/cogniforge-web:latest
+    container_name: cogniforge-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      # ── Traefik 路由用域名前端 ───────────────────────
+      DOMAIN: ${DOMAIN:?DOMAIN is required}            # 例：cogniforge.example.com
+      # ── 前端 API base（同源走 Traefik 反代 /api → 后端）
+      NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-/api}
+      # ── 运行时配置（按需调整）─────────────────────
+      SSR_NAIVE: ${SSR_NAIVE:-false}                  # Nuxt SSR 是否开启（默认关闭）
+    networks:
+      - cogniforge-net
+    labels:
+      # ── Traefik 路由配置（自动 HTTPS）──
+      - "traefik.enable=true"
+      - "traefik.http.routers.cogniforge-web.rule=Host(`${DOMAIN:?DOMAIN is required}`)"
+      - "traefik.http.routers.cogniforge-web.entrypoints=websecure"
+      - "traefik.http.routers.cogniforge-web.tls=true"
+      - "traefik.http.routers.cogniforge-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cogniforge-web.loadbalancer.server.port=3000"
+      # HTTP → HTTPS 强制跳转
+      - "traefik.http.middlewares.cogniforge-web-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.cogniforge-web-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.cogniforge-web-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.cogniforge-web-http.entrypoints=web"
+      - "traefik.http.routers.cogniforge-web-http.middlewares=cogniforge-web-redirect"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  cogniforge-net:
+    external: true
+    name: cogniforge-net
