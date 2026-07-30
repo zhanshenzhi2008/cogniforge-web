@@ -45,7 +45,7 @@ jobs:
   # ---------------------------------------------------------------------------
   build:
     runs-on: ubuntu-latest
-    environment: production
+    environment: xcy
 
     #permissions:
     #  contents: read
@@ -83,7 +83,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    environment: production
+    environment: xcy
 
     permissions:
       contents: read
@@ -112,7 +112,7 @@ jobs:
             set -e
             echo "=== SSH OK $(whoami)@$(hostname) ==="
 
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.IMAGE_REGISTRY }} -u "${{ github.actor }}" --password-stdin
+            echo "${{ secrets.IMAGE_REGISTRY_TOKEN }}" | docker login ${{ env.IMAGE_REGISTRY }} -u "${{ github.repository_owner }}" --password-stdin
 
             # ── 确保网络存在 ─────────────────────────────────────
             # cogniforge-net：应用层网络
