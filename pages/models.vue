@@ -163,6 +163,8 @@
                         <n-icon :component="PowerOutline" size="16" />
                       </template>
                     </n-button>
+                  </template>
+                </n-tooltip>
               </div>
               <div class="footer-right">
                 <n-tooltip v-if="!p.is_default" trigger="hover">
