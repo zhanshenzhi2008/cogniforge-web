@@ -16,8 +16,8 @@ services:
     expose:
       - "3000"
     environment:
-      # ── Traefik 路由用域名前端 ───────────────────────
-      DOMAIN: ${DOMAIN:?DOMAIN is required}            # 例：cogniforge.example.com
+      # ── Traefik 路由用域名前端（可选，DOMAIN 为空时跳过） ─
+      DOMAIN: ${DOMAIN:-}
       # ── 前端 API base（同源走 Traefik 反代 /api → 后端）
       NUXT_PUBLIC_API_BASE: ${NUXT_PUBLIC_API_BASE:-/api}
       # ── 运行时配置（按需调整）─────────────────────
@@ -25,9 +25,10 @@ services:
     networks:
       - cogniforge-net
     labels:
-      # ── Traefik 路由配置（自动 HTTPS）──
+      # ── Traefik 路由配置 ───────────────────────────
       - "traefik.enable=true"
-      - "traefik.http.routers.cogniforge-web.rule=Host(`${DOMAIN:?DOMAIN is required}`)"
+      # 域名模式（需要 DOMAIN 环境变量）
+      - "traefik.http.routers.cogniforge-web.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.cogniforge-web.entrypoints=websecure"
       - "traefik.http.routers.cogniforge-web.tls=true"
       - "traefik.http.routers.cogniforge-web.tls.certresolver=letsencrypt"
