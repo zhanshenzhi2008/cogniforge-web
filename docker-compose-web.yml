@@ -40,7 +40,7 @@ services:
       - "traefik.http.routers.cogniforge-web-http.entrypoints=web"
       - "traefik.http.routers.cogniforge-web-http.middlewares=cogniforge-web-redirect"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
       interval: 30s
       timeout: 5s
       retries: 3
