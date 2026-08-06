@@ -35,10 +35,11 @@ export default defineNuxtConfig({
     ssr: {
       noExternal: ssrNaive ? ['naive-ui'] : [],
     },
-    server: {
-      port: 3000,
-      strictPort: true,
-    },
+  },
+
+  devServer: {
+    port: 3000,
+    strictPort: true,
   },
 
   app: {
@@ -67,4 +68,9 @@ export default defineNuxtConfig({
     typeCheck: false,
   },
 
+  nitro: {
+    prerender: {
+      routes: ['/'],
+    },
+  },
 })
