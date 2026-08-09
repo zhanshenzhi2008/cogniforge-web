@@ -58,7 +58,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE || 'http://localhost:8080',
+      // 生产镜像由 Nginx 将同源 /api/* 转发到 Go 后端；本地可用 API_BASE 覆盖。
+      apiBase: process.env.API_BASE || '/api',
       ssrNaive,
     },
   },
