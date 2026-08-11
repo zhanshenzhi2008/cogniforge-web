@@ -14,7 +14,7 @@ services:
     container_name: cogniforge-web
     restart: unless-stopped
     expose:
-      - "3000"
+      - "80"
     networks:
       - cogniforge-net
       - proxy
@@ -26,12 +26,14 @@ services:
       - "traefik.http.routers.cogniforge-web.entrypoints=websecure"
       - "traefik.http.routers.cogniforge-web.tls.certresolver=letsencrypt"
       - "traefik.http.services.cogniforge-web.loadbalancer.server.port=80"
+    # Traefik v3 会过滤 unhealthy/starting 容器（日志：Filtering unhealthy or starting container）
+    # nginx 监听 80；/health 为精确 location（见 nginx.conf），勿用 3000 或 /health/
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "--bind-address=127.0.0.1", "http://localhost:3000/"]
-      interval: 30s
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/health"]
+      interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 10s
 
 networks:
   cogniforge-net:
