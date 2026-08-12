@@ -1,19 +1,146 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* -------------------------------------------------------------------------- */
+/* CogniForge theme tokens — Aurora / Ink Night / Citrus / Glass              */
+/* -------------------------------------------------------------------------- */
+
+:root,
+html[data-theme="aurora"] {
+  --cf-bg: #eef7f8;
+  --cf-bg-elevated: rgb(255 255 255 / 0.78);
+  --cf-bg-muted: #e4f1f2;
+  --cf-ink: #12151a;
+  --cf-ink-soft: #5c6570;
+  --cf-line: rgb(18 21 26 / 0.1);
+  --cf-accent: #0f9f8a;
+  --cf-accent-ink: #087a6a;
+  --cf-accent-soft: #d8f3ee;
+  --cf-ok: #1f8a5b;
+  --cf-warn: #b7791f;
+  --cf-danger: #c23b3b;
+  --cf-blur: blur(14px);
+  --cf-bg-aura:
+    radial-gradient(1200px 600px at 10% -10%, #b8f1e8 0%, transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, #cfe8ff 0%, transparent 50%),
+    #eef7f8;
+  color-scheme: light;
+}
+
+html[data-theme="inknight"] {
+  --cf-bg: #0e1116;
+  --cf-bg-elevated: rgb(22 27 34 / 0.92);
+  --cf-bg-muted: #1a222c;
+  --cf-ink: #e8eef5;
+  --cf-ink-soft: #9aa7b5;
+  --cf-line: rgb(232 238 245 / 0.12);
+  --cf-accent: #2ee6c7;
+  --cf-accent-ink: #1bc4a8;
+  --cf-accent-soft: #12352f;
+  --cf-ok: #3ecf8e;
+  --cf-warn: #e0b14a;
+  --cf-danger: #f07178;
+  --cf-blur: blur(16px);
+  --cf-bg-aura:
+    radial-gradient(800px 400px at 100% 0%, #12352f 0%, transparent 60%),
+    radial-gradient(700px 380px at 0% 100%, #152033 0%, transparent 55%),
+    #0e1116;
+  color-scheme: dark;
+}
+
+html[data-theme="citrus"] {
+  --cf-bg: #f3faf3;
+  --cf-bg-elevated: rgb(255 255 255 / 0.88);
+  --cf-bg-muted: #e5f5e6;
+  --cf-ink: #14201a;
+  --cf-ink-soft: #5a6b60;
+  --cf-line: rgb(20 32 26 / 0.1);
+  --cf-accent: #0d9f6e;
+  --cf-accent-ink: #0a7d57;
+  --cf-accent-soft: #d4f5c8;
+  --cf-accent-2: #e6a23c;
+  --cf-ok: #1f8a5b;
+  --cf-warn: #e6a23c;
+  --cf-danger: #c23b3b;
+  --cf-blur: blur(12px);
+  --cf-bg-aura:
+    radial-gradient(900px 500px at 0% 0%, #d4f5c8 0%, transparent 55%),
+    radial-gradient(800px 480px at 100% 0%, #d9f0ff 0%, transparent 50%),
+    #f3faf3;
+  color-scheme: light;
+}
+
+html[data-theme="glass"] {
+  --cf-bg: #f4f7fb;
+  --cf-bg-elevated: rgb(255 255 255 / 0.55);
+  --cf-bg-muted: #e8eef6;
+  --cf-ink: #12151a;
+  --cf-ink-soft: #5c6570;
+  --cf-line: rgb(18 21 26 / 0.1);
+  --cf-accent: #0f9f8a;
+  --cf-accent-ink: #087a6a;
+  --cf-accent-soft: #d8f3ee;
+  --cf-ok: #1f8a5b;
+  --cf-warn: #b7791f;
+  --cf-danger: #c23b3b;
+  --cf-blur: blur(16px);
+  --cf-bg-aura:
+    radial-gradient(600px 400px at 20% 10%, rgb(15 159 138 / 0.18), transparent),
+    radial-gradient(500px 360px at 80% 0%, rgb(100 160 255 / 0.14), transparent),
+    #f4f7fb;
+  color-scheme: light;
+}
+
+@theme static {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-primary-50: #e7f8f4;
+  --color-primary-100: #d8f3ee;
+  --color-primary-200: #a9e6da;
+  --color-primary-300: #6fd4c2;
+  --color-primary-400: #35bda6;
+  --color-primary-500: #0f9f8a;
+  --color-primary-600: #087a6a;
+  --color-primary-700: #066155;
+  --color-primary-800: #054d44;
+  --color-primary-900: #033830;
+  --color-primary-950: #02241f;
+}
+
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  font-family: var(--font-sans);
   line-height: 1.6;
-  background: #f8fafc;
-  color: #1e293b;
+  color: var(--cf-ink);
+  background: var(--cf-bg-aura);
+  background-attachment: fixed;
 }
 
 a {
-  color: #6366f1;
+  color: var(--cf-accent-ink);
   text-decoration: none;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.cf-surface {
+  background: var(--cf-bg-elevated);
+  border: 1px solid var(--cf-line);
+  backdrop-filter: var(--cf-blur);
+  -webkit-backdrop-filter: var(--cf-blur);
 }
 
 ::-webkit-scrollbar {
@@ -26,10 +153,19 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: color-mix(in oklab, var(--cf-ink) 18%, transparent);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: color-mix(in oklab, var(--cf-ink) 28%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -10,6 +10,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  padding: 24px 16px;
+  background: var(--cf-bg-aura);
+  background-attachment: fixed;
 }
 </style>

@@ -1,112 +1,101 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="card-header">
-        <div class="logo-mark">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
-            <path d="M10 16L14 20L22 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                <stop stop-color="#6366f1"/>
-                <stop offset="1" stop-color="#8b5cf6"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <h1 class="title">CogniForge</h1>
-        <p class="subtitle">AI Agent Platform</p>
-      </div>
+  <div class="auth-page">
+    <div class="auth-brand">
+      <h1 class="auth-brand__title font-display">CogniForge</h1>
+      <p class="auth-brand__tagline">Forge your agents.</p>
+    </div>
 
-      <n-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        size="large"
-      >
-        <n-form-item path="account" :show-feedback="false">
-          <n-input
-            v-model:value="form.account"
+    <div class="auth-panel cf-surface">
+      <form class="auth-form" @submit.prevent="handleLogin">
+        <div class="field">
+          <label class="field__label" for="login-account">账号</label>
+          <UInput
+            id="login-account"
+            v-model="form.account"
+            class="w-full"
+            size="lg"
             placeholder="邮箱 / 用户名"
-            @keyup.enter="handleLogin"
-          >
-            <template #prefix>
-              <n-icon :component="PersonOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+            leading-icon="i-lucide-user"
+            autocomplete="username"
+            :color="errors.account ? 'error' : 'neutral'"
+            :highlight="!!errors.account"
+            @update:model-value="errors.account = ''"
+          />
+          <p v-if="errors.account" class="field__error">{{ errors.account }}</p>
+        </div>
 
-        <n-form-item path="password" :show-feedback="false">
-          <n-input
-            v-model:value="form.password"
+        <div class="field">
+          <label class="field__label" for="login-password">密码</label>
+          <UInput
+            id="login-password"
+            v-model="form.password"
+            class="w-full"
+            size="lg"
             type="password"
             placeholder="密码"
-            show-password-on="mousedown"
-            @keyup.enter="handleLogin"
-          >
-            <template #prefix>
-              <n-icon :component="LockClosedOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+            leading-icon="i-lucide-lock"
+            autocomplete="current-password"
+            :color="errors.password ? 'error' : 'neutral'"
+            :highlight="!!errors.password"
+            @update:model-value="errors.password = ''"
+          />
+          <p v-if="errors.password" class="field__error">{{ errors.password }}</p>
+        </div>
 
-        <n-button
-          type="primary"
+        <UButton
+          type="submit"
           block
-          secondary
+          size="lg"
+          color="primary"
+          class="auth-submit"
           :loading="loading"
           :disabled="loading"
-          @click="handleLogin"
         >
           登录
-        </n-button>
-      </n-form>
+        </UButton>
+      </form>
 
-      <div class="card-footer">
-        <n-text depth="3">还没有账号？</n-text>
-        <n-button text type="primary" @click="navigateTo('/register')">
-          立即注册
-        </n-button>
+      <div class="auth-footer">
+        <span class="auth-footer__muted">还没有账号？</span>
+        <UButton variant="link" color="primary" to="/register">立即注册</UButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useMessage } from 'naive-ui'
-import { PersonOutline, LockClosedOutline } from '@vicons/ionicons5'
-
 definePageMeta({
   layout: 'auth',
 })
 
-const message = useMessage()
+const toast = useToast()
 const router = useRouter()
 const { setAuth } = useAuth()
 
-const formRef = ref()
 const loading = ref(false)
-
 const form = reactive({
   account: '',
   password: '',
 })
+const errors = reactive({
+  account: '',
+  password: '',
+})
 
-const rules: Record<string, Record<string, unknown>[]> = {
-  account: [{ required: true, message: '请输入邮箱或用户名', trigger: 'blur' }],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
-  ],
+function validate(): boolean {
+  errors.account = form.account.trim() ? '' : '请输入邮箱或用户名'
+  if (!form.password) {
+    errors.password = '请输入密码'
+  } else if (form.password.length < 6) {
+    errors.password = '密码至少 6 位'
+  } else {
+    errors.password = ''
+  }
+  return !errors.account && !errors.password
 }
 
 const handleLogin = async () => {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
+  if (!validate()) return
 
   loading.value = true
   try {
@@ -118,14 +107,14 @@ const handleLogin = async () => {
     const res = await post<{ token: string; user: any }>('/api/v1/auth/login', payload)
 
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
 
     if (res.data) {
       setAuth(res.data.token, res.data.user)
-      message.success('登录成功')
-      router.push('/')
+      toast.add({ title: '登录成功', color: 'success' })
+      await router.push('/')
     }
   } finally {
     loading.value = false
@@ -134,53 +123,82 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px;
-}
-
-.login-card {
+.auth-page {
   width: 100%;
   max-width: 400px;
-  padding: 40px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-.card-header {
+.auth-brand {
   text-align: center;
-  margin-bottom: 32px;
 }
 
-.logo-mark {
-  display: inline-flex;
-  margin-bottom: 12px;
-}
-
-.title {
-  font-size: 26px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 4px;
-  letter-spacing: -0.01em;
-}
-
-.subtitle {
-  font-size: 13px;
-  color: #64748b;
+.auth-brand__title {
   margin: 0;
+  font-size: clamp(2.4rem, 6vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--cf-ink);
+  line-height: 1.05;
 }
 
-.card-footer {
+.auth-brand__tagline {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  color: var(--cf-ink-soft);
+}
+
+.auth-panel {
+  border-radius: 10px;
+  padding: 28px 24px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+}
+
+.field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-danger);
+}
+
+.auth-form :deep(input) {
+  width: 100%;
+}
+
+.auth-submit {
+  margin-top: 4px;
+}
+
+.auth-footer {
+  margin-top: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 24px;
+  gap: 4px;
+}
+
+.auth-footer__muted {
+  font-size: 0.875rem;
+  color: var(--cf-ink-soft);
 }
 </style>

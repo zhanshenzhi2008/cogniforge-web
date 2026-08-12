@@ -1,154 +1,166 @@
 <template>
-  <div class="register-page">
-    <div class="register-card">
-      <div class="card-header">
-        <div class="logo-mark">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
-            <path d="M10 16L14 20L22 12" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                <stop stop-color="#6366f1"/>
-                <stop offset="1" stop-color="#8b5cf6"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <h1 class="title">创建账号</h1>
-        <p class="subtitle">开始使用 CogniForge</p>
-      </div>
+  <div class="auth-page">
+    <div class="auth-brand">
+      <h1 class="auth-brand__title font-display">CogniForge</h1>
+      <p class="auth-brand__tagline">创建账号，开始锻造 Agent</p>
+    </div>
 
-      <n-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        size="large"
-      >
-        <n-form-item path="name" :show-feedback="false">
-          <n-input
-            v-model:value="form.name"
+    <div class="auth-panel cf-surface">
+      <form class="auth-form" @submit.prevent="handleRegister">
+        <div class="field">
+          <label class="field__label" for="reg-name">用户名</label>
+          <UInput
+            id="reg-name"
+            v-model="form.name"
+            class="w-full"
+            size="lg"
             placeholder="用户名"
-          >
-            <template #prefix>
-              <n-icon :component="PersonOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+            leading-icon="i-lucide-user"
+            autocomplete="nickname"
+            :color="errors.name ? 'error' : 'neutral'"
+            :highlight="!!errors.name"
+            @update:model-value="errors.name = ''"
+          />
+          <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+        </div>
 
-        <n-form-item path="email" :show-feedback="false">
-          <n-input
-            v-model:value="form.email"
+        <div class="field">
+          <label class="field__label" for="reg-email">邮箱</label>
+          <UInput
+            id="reg-email"
+            v-model="form.email"
+            class="w-full"
+            size="lg"
+            type="email"
             placeholder="邮箱"
-          >
-            <template #prefix>
-              <n-icon :component="MailOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+            leading-icon="i-lucide-mail"
+            autocomplete="email"
+            :color="errors.email ? 'error' : 'neutral'"
+            :highlight="!!errors.email"
+            @update:model-value="errors.email = ''"
+          />
+          <p v-if="errors.email" class="field__error">{{ errors.email }}</p>
+        </div>
 
-        <n-form-item path="password" :show-feedback="false">
-          <n-input
-            v-model:value="form.password"
+        <div class="field">
+          <label class="field__label" for="reg-password">密码</label>
+          <UInput
+            id="reg-password"
+            v-model="form.password"
+            class="w-full"
+            size="lg"
             type="password"
             placeholder="密码"
-            show-password-on="mousedown"
-          >
-            <template #prefix>
-              <n-icon :component="LockClosedOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+            leading-icon="i-lucide-lock"
+            autocomplete="new-password"
+            :color="errors.password ? 'error' : 'neutral'"
+            :highlight="!!errors.password"
+            @update:model-value="errors.password = ''"
+          />
+          <p v-if="errors.password" class="field__error">{{ errors.password }}</p>
+        </div>
 
-        <n-form-item path="confirmPassword" :show-feedback="false">
-          <n-input
-            v-model:value="form.confirmPassword"
+        <div class="field">
+          <label class="field__label" for="reg-confirm">确认密码</label>
+          <UInput
+            id="reg-confirm"
+            v-model="form.confirmPassword"
+            class="w-full"
+            size="lg"
             type="password"
             placeholder="确认密码"
-            show-password-on="mousedown"
-            @keyup.enter="handleRegister"
-          >
-            <template #prefix>
-              <n-icon :component="ShieldCheckmarkOutline" />
-            </template>
-          </n-input>
-        </n-form-item>
+            leading-icon="i-lucide-shield-check"
+            autocomplete="new-password"
+            :color="errors.confirmPassword ? 'error' : 'neutral'"
+            :highlight="!!errors.confirmPassword"
+            @update:model-value="errors.confirmPassword = ''"
+          />
+          <p v-if="errors.confirmPassword" class="field__error">{{ errors.confirmPassword }}</p>
+        </div>
 
-        <n-button
-          type="primary"
+        <UButton
+          type="submit"
           block
-          secondary
+          size="lg"
+          color="primary"
+          class="auth-submit"
           :loading="loading"
           :disabled="loading"
-          @click="handleRegister"
         >
           注册
-        </n-button>
-      </n-form>
+        </UButton>
+      </form>
 
-      <div class="card-footer">
-        <n-text depth="3">已有账号？</n-text>
-        <n-button text type="primary" @click="navigateTo('/login')">
-          立即登录
-        </n-button>
+      <div class="auth-footer">
+        <span class="auth-footer__muted">已有账号？</span>
+        <UButton variant="link" color="primary" to="/login">立即登录</UButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PersonOutline, MailOutline, LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
-import { useMessage } from 'naive-ui'
-
 definePageMeta({
   layout: 'auth',
 })
 
-const message = useMessage()
+const toast = useToast()
 const { setAuth } = useAuth()
 
-const formRef = ref()
 const loading = ref(false)
-
 const form = reactive({
   name: '',
   email: '',
   password: '',
   confirmPassword: '',
 })
+const errors = reactive({
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+})
 
-const validateConfirmPassword = (_rule: unknown, value: string) => {
-  if (value !== form.password) {
-    return new Error('两次输入的密码不一致')
+function validate(): boolean {
+  const name = form.name.trim()
+  if (!name) {
+    errors.name = '请输入用户名'
+  } else if (name.length < 2 || name.length > 20) {
+    errors.name = '用户名长度在 2 到 20 个字符'
+  } else {
+    errors.name = ''
   }
-  return true
-}
 
-const rules: Record<string, Record<string, unknown>[]> = {
-  name: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, max: 20, message: '用户名长度在 2 到 20 个字符', trigger: 'blur' },
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' },
-  ],
+  const email = form.email.trim()
+  if (!email) {
+    errors.email = '请输入邮箱'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.email = '请输入正确的邮箱格式'
+  } else {
+    errors.email = ''
+  }
+
+  if (!form.password) {
+    errors.password = '请输入密码'
+  } else if (form.password.length < 6) {
+    errors.password = '密码至少 6 位'
+  } else {
+    errors.password = ''
+  }
+
+  if (!form.confirmPassword) {
+    errors.confirmPassword = '请确认密码'
+  } else if (form.confirmPassword !== form.password) {
+    errors.confirmPassword = '两次输入的密码不一致'
+  } else {
+    errors.confirmPassword = ''
+  }
+
+  return !errors.name && !errors.email && !errors.password && !errors.confirmPassword
 }
 
 const handleRegister = async () => {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
+  if (!validate()) return
 
   loading.value = true
   try {
@@ -160,17 +172,20 @@ const handleRegister = async () => {
     })
 
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
 
     if (res.data) {
       setAuth(res.data.token, res.data.user)
-      message.success('注册成功')
-      navigateTo('/')
+      toast.add({ title: '注册成功', color: 'success' })
+      await navigateTo('/')
     }
   } catch (error: any) {
-    message.error(error.data?.error || error.data?.message || '注册失败')
+    toast.add({
+      title: error.data?.error || error.data?.message || '注册失败',
+      color: 'error',
+    })
   } finally {
     loading.value = false
   }
@@ -178,53 +193,82 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-.register-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px;
-}
-
-.register-card {
+.auth-page {
   width: 100%;
   max-width: 400px;
-  padding: 40px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
-.card-header {
+.auth-brand {
   text-align: center;
-  margin-bottom: 32px;
 }
 
-.logo-mark {
-  display: inline-flex;
-  margin-bottom: 12px;
-}
-
-.title {
-  font-size: 26px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 4px;
-  letter-spacing: -0.01em;
-}
-
-.subtitle {
-  font-size: 13px;
-  color: #64748b;
+.auth-brand__title {
   margin: 0;
+  font-size: clamp(2.4rem, 6vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--cf-ink);
+  line-height: 1.05;
 }
 
-.card-footer {
+.auth-brand__tagline {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  color: var(--cf-ink-soft);
+}
+
+.auth-panel {
+  border-radius: 10px;
+  padding: 28px 24px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+}
+
+.field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-danger);
+}
+
+.auth-form :deep(input) {
+  width: 100%;
+}
+
+.auth-submit {
+  margin-top: 4px;
+}
+
+.auth-footer {
+  margin-top: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  margin-top: 24px;
+  gap: 4px;
+}
+
+.auth-footer__muted {
+  font-size: 0.875rem;
+  color: var(--cf-ink-soft);
 }
 </style>
