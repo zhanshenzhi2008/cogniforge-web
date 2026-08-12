@@ -106,7 +106,7 @@
         <div class="chat-topbar cf-surface">
           <div class="chat-title">
             <UIcon
-              :name="selectedAgent ? 'i-lucide-sparkles' : 'i-lucide-messages-square'"
+              :name="selectedAgent !== NONE_AGENT ? 'i-lucide-sparkles' : 'i-lucide-messages-square'"
               class="size-5 title-icon"
             />
             <span>{{ currentTitle }}</span>
@@ -242,7 +242,9 @@ const streaming = ref(false)
 const selectedModel = ref('')
 const models = ref<Model[]>([])
 const agents = ref<Agent[]>([])
-const selectedAgent = ref('')
+/** USelect forbids empty-string item values; sentinel = “no agent”. */
+const NONE_AGENT = '__none__'
+const selectedAgent = ref(NONE_AGENT)
 const selectedAgentInfo = ref<Agent | null>(null)
 const abortController = ref<AbortController | null>(null)
 
@@ -261,7 +263,7 @@ const currentTitle = computed(() => {
 
 const agentOptions = computed(() =>
   [
-    { label: '不选择 Agent（通用对话）', value: '' },
+    { label: '不选择 Agent（通用对话）', value: NONE_AGENT },
     ...agents.value.map(a => ({ label: a.name, value: a.id })),
   ],
 )
@@ -323,9 +325,9 @@ const fetchAgents = async () => {
 }
 
 const handleAgentChange = async (agentId: string | undefined | null) => {
-  const id = agentId || ''
+  const id = !agentId || agentId === NONE_AGENT ? NONE_AGENT : agentId
   selectedAgent.value = id
-  if (!id) {
+  if (id === NONE_AGENT) {
     selectedAgentInfo.value = null
     selectedModel.value = models.value[0]?.id || ''
     return
@@ -382,7 +384,7 @@ const sendMessage = async () => {
   abortController.value = controller
 
   try {
-    const endpoint = selectedAgent.value
+    const endpoint = selectedAgent.value !== NONE_AGENT
       ? apiUrl(`/api/v1/agents/${selectedAgent.value}/chat`, String(config.public.apiBase ?? ''))
       : apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
 

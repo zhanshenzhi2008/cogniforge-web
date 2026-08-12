@@ -210,7 +210,9 @@ const loading = ref(false)
 const showLogDetail = ref(false)
 const selectedLog = ref<RequestLog | null>(null)
 
-const filterMethod = ref('')
+/** USelect forbids empty-string item values. */
+const METHOD_ALL = 'all'
+const filterMethod = ref(METHOD_ALL)
 const filterPath = ref('')
 const page = ref(1)
 const pageSize = ref(20)
@@ -218,7 +220,7 @@ const total = ref(0)
 const totalPages = ref(0)
 
 const methodOptions = [
-  { label: '全部方法', value: '' },
+  { label: '全部方法', value: METHOD_ALL },
   { label: 'GET', value: 'GET' },
   { label: 'POST', value: 'POST' },
   { label: 'PUT', value: 'PUT' },
@@ -287,7 +289,7 @@ async function loadLogs() {
     const res = await listRequestLogs({
       page: page.value,
       page_size: pageSize.value,
-      method: filterMethod.value || undefined,
+      method: filterMethod.value && filterMethod.value !== METHOD_ALL ? filterMethod.value : undefined,
       path: filterPath.value || undefined,
     })
     if (res.error) {

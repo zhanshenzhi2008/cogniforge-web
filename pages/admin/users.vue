@@ -229,7 +229,7 @@ const submitting = ref(false)
 const deletingLoading = ref(false)
 const users = ref<any[]>([])
 const searchQuery = ref('')
-const filterStatus = ref('')
+const filterStatus = ref('all')
 const showUserModal = ref(false)
 const showStatusModal = ref(false)
 const deleteVisible = ref(false)
@@ -266,8 +266,10 @@ const statusOptions = [
   { label: '锁定', value: 'locked' },
 ]
 
+/** USelect forbids empty-string item values. */
+const STATUS_ALL = 'all'
 const statusFilterOptions = [
-  { label: '全部状态', value: '' },
+  { label: '全部状态', value: STATUS_ALL },
   ...statusOptions,
 ]
 
@@ -338,7 +340,7 @@ const fetchUsers = async () => {
   try {
     const params: any = {}
     if (searchQuery.value) params.search = searchQuery.value
-    if (filterStatus.value) params.status = filterStatus.value
+    if (filterStatus.value && filterStatus.value !== 'all') params.status = filterStatus.value
 
     const data = await $fetch('/api/v1/admin/users', {
       params,
