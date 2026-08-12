@@ -1,236 +1,214 @@
 <template>
   <div class="playground-page">
-        <div class="playground-container">
-
-          <!-- 左侧配置面板 -->
-          <aside class="sidebar">
-            <!-- 顶部标题 -->
-            <div class="sidebar-header">
-              <div class="header-logo">
-                <n-icon :component="HardwareChipOutline" :size="22" />
-              </div>
-              <div class="sidebar-title">
-                <span class="app-name">CogniForge</span>
-                <span class="app-sub">AI Agent Platform</span>
-              </div>
-            </div>
-
-            <!-- Agent 选择 -->
-            <n-card size="small" class="config-card">
-              <template #header>
-                <div class="card-header">
-                  <n-icon :component="AgentIcon" />
-                  <span>Agent</span>
-                </div>
-              </template>
-              <n-select
-                v-model:value="selectedAgent"
-                :options="agentOptions"
-                placeholder="选择 Agent"
-                clearable
-                @update:value="handleAgentChange"
-              />
-              <div v-if="selectedAgentInfo" class="agent-meta">
-                <div class="meta-item">
-                  <span class="meta-label">模型</span>
-                  <n-tag size="small" type="info">{{ selectedAgentInfo.model }}</n-tag>
-                </div>
-                <div class="meta-item">
-                  <span class="meta-label">描述</span>
-                  <p class="meta-desc">{{ selectedAgentInfo.description || '暂无描述' }}</p>
-                </div>
-              </div>
-            </n-card>
-
-            <!-- 模型选择 -->
-            <n-card size="small" class="config-card">
-              <template #header>
-                <div class="card-header">
-                  <n-icon :component="SettingsIcon" />
-                  <span>模型</span>
-                </div>
-              </template>
-              <n-select
-                v-model:value="selectedModel"
-                :options="modelOptions"
-                placeholder="选择模型"
-              />
-            </n-card>
-
-            <!-- 参数配置 -->
-            <n-card size="small" class="config-card params-card">
-              <template #header>
-                <div class="card-header">
-                  <n-icon :component="SettingsIcon" />
-                  <span>参数</span>
-                </div>
-              </template>
-              <div class="param-row">
-                <div class="param-label">
-                  <span>Temperature</span>
-                  <n-tag size="small" type="warning">{{ params.temperature }}</n-tag>
-                </div>
-                <n-slider
-                  v-model:value="params.temperature"
-                  :min="0"
-                  :max="2"
-                  :step="0.1"
-                  :tooltip="false"
-                />
-              </div>
-              <div class="param-row">
-                <div class="param-label">
-                  <span>Max Tokens</span>
-                  <n-tag size="small" type="warning">{{ params.max_tokens }}</n-tag>
-                </div>
-                <n-input-number
-                  v-model:value="params.max_tokens"
-                  :min="1"
-                  :max="8192"
-                  size="small"
-                  :show-button="false"
-                />
-              </div>
-              <div class="param-row">
-                <div class="param-label">
-                  <span>Top P</span>
-                  <n-tag size="small" type="warning">{{ params.top_p }}</n-tag>
-                </div>
-                <n-slider
-                  v-model:value="params.top_p"
-                  :min="0"
-                  :max="1"
-                  :step="0.05"
-                  :tooltip="false"
-                />
-              </div>
-            </n-card>
-
-          </aside>
-
-          <!-- 右侧聊天区域 -->
-          <main class="chat-area">
-            <!-- 顶部栏 -->
-            <div class="chat-topbar">
-              <div class="chat-title">
-                <n-icon :component="selectedAgent ? SparklesIcon : ChatIcon" :size="20" />
-                <span>{{ currentTitle }}</span>
-              </div>
-              <n-button
-                quaternary
-                size="small"
-                type="error"
-                @click="clearMessages"
-              >
-                <template #icon>
-                  <n-icon :component="TrashIcon" />
-                </template>
-                清空
-              </n-button>
-            </div>
-
-            <!-- 消息列表 -->
-            <div class="messages-wrapper" ref="messagesContainer">
-              <div v-if="messages.length === 0" class="empty-state">
-                <div class="empty-glow" />
-                <n-icon :component="ChatIcon" :size="56" class="empty-icon" />
-                <p class="empty-title">开始新对话</p>
-                <p class="empty-sub">输入消息与 AI 互动</p>
-              </div>
-
-              <TransitionGroup name="msg" tag="div" class="messages">
-                <div
-                  v-for="(msg, index) in messages"
-                  :key="msg.id || `msg-${index}`"
-                  :class="['message', msg.role]"
-                >
-                  <div class="message-avatar">
-                    <n-icon v-if="msg.role === 'user'" :component="UserIcon" :size="20" />
-                    <n-icon v-else :component="BotIcon" :size="20" />
-                  </div>
-                  <div class="message-bubble">
-                    <div class="message-text" v-html="renderMarkdown(msg.content)" />
-                    <div class="message-time">{{ formatTime(msg.time) }}</div>
-                  </div>
-                </div>
-
-                <!-- 流式输出 -->
-                <div v-if="streaming" :key="'streaming-' + streamingKey" :class="['message', 'assistant', 'streaming']">
-                  <div class="message-avatar">
-                    <n-icon :component="BotIcon" :size="20" />
-                  </div>
-                  <div class="message-bubble">
-                    <div class="message-text" v-html="renderMarkdown(streamingContent)" />
-                    <span class="cursor">▍</span>
-                  </div>
-                </div>
-              </TransitionGroup>
-            </div>
-
-            <!-- 输入区域 -->
-            <div class="input-area">
-              <div class="input-box">
-                <textarea
-                  v-model="inputMessage"
-                  class="chat-input"
-                  placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
-                  :disabled="streaming"
-                  rows="3"
-                  @keydown="handleKeyDown"
-                />
-                <div class="input-footer">
-                  <span class="token-hint">{{ tokenCount }} tokens</span>
-                  <n-button
-                    type="primary"
-                    :loading="streaming"
-                    :disabled="!inputMessage.trim()"
-                    @click="sendMessage"
-                  >
-                    <template #icon>
-                      <n-icon :component="SendIcon" />
-                    </template>
-                    {{ streaming ? '生成中' : '发送' }}
-                  </n-button>
-                </div>
-              </div>
-            </div>
-          </main>
-
+    <div class="playground-container">
+      <!-- 左侧配置面板 -->
+      <aside class="sidebar cf-surface">
+        <div class="sidebar-header">
+          <div class="header-logo">
+            <UIcon name="i-lucide-cpu" class="size-5" />
+          </div>
+          <div class="sidebar-title">
+            <span class="app-name font-display">CogniForge</span>
+            <span class="app-sub">AI Agent Platform</span>
+          </div>
         </div>
-      </div>
+
+        <section class="config-block">
+          <div class="card-header">
+            <UIcon name="i-lucide-bot" class="size-4" />
+            <span>Agent</span>
+          </div>
+          <USelect
+            v-model="selectedAgent"
+            :items="agentOptions"
+            placeholder="选择 Agent"
+            value-key="value"
+            class="w-full"
+            @update:model-value="handleAgentChange"
+          />
+          <div v-if="selectedAgentInfo" class="agent-meta">
+            <div class="meta-item">
+              <span class="meta-label">模型</span>
+              <UBadge size="sm" variant="subtle" color="primary">
+                {{ selectedAgentInfo.model }}
+              </UBadge>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">描述</span>
+              <p class="meta-desc">{{ selectedAgentInfo.description || '暂无描述' }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="config-block">
+          <div class="card-header">
+            <UIcon name="i-lucide-settings-2" class="size-4" />
+            <span>模型</span>
+          </div>
+          <USelect
+            v-model="selectedModel"
+            :items="modelOptions"
+            placeholder="选择模型"
+            value-key="value"
+            class="w-full"
+          />
+        </section>
+
+        <section class="config-block params-block">
+          <div class="card-header">
+            <UIcon name="i-lucide-sliders-horizontal" class="size-4" />
+            <span>参数</span>
+          </div>
+          <div class="param-row">
+            <div class="param-label">
+              <span>Temperature</span>
+              <UBadge size="sm" variant="subtle" color="warning">{{ params.temperature }}</UBadge>
+            </div>
+            <USlider
+              v-model="params.temperature"
+              :min="0"
+              :max="2"
+              :step="0.1"
+              color="primary"
+            />
+          </div>
+          <div class="param-row">
+            <div class="param-label">
+              <span>Max Tokens</span>
+              <UBadge size="sm" variant="subtle" color="warning">{{ params.max_tokens }}</UBadge>
+            </div>
+            <UInput
+              v-model.number="params.max_tokens"
+              type="number"
+              :min="1"
+              :max="8192"
+              size="sm"
+            />
+          </div>
+          <div class="param-row">
+            <div class="param-label">
+              <span>Top P</span>
+              <UBadge size="sm" variant="subtle" color="warning">{{ params.top_p }}</UBadge>
+            </div>
+            <USlider
+              v-model="params.top_p"
+              :min="0"
+              :max="1"
+              :step="0.05"
+              color="primary"
+            />
+          </div>
+        </section>
+      </aside>
+
+      <!-- 右侧聊天区域 -->
+      <main class="chat-area">
+        <div class="chat-topbar cf-surface">
+          <div class="chat-title">
+            <UIcon
+              :name="selectedAgent ? 'i-lucide-sparkles' : 'i-lucide-messages-square'"
+              class="size-5 title-icon"
+            />
+            <span>{{ currentTitle }}</span>
+          </div>
+          <UButton
+            color="error"
+            variant="ghost"
+            size="sm"
+            icon="i-lucide-trash-2"
+            @click="clearMessages"
+          >
+            清空
+          </UButton>
+        </div>
+
+        <div class="messages-wrapper">
+          <div v-if="messages.length === 0" class="empty-state">
+            <div class="empty-glow" />
+            <UIcon name="i-lucide-messages-square" class="size-14 empty-icon" />
+            <p class="empty-title font-display">开始新对话</p>
+            <p class="empty-sub">输入消息与 AI 互动</p>
+            <div class="suggestion-chips">
+              <UButton
+                v-for="chip in suggestionChips"
+                :key="chip"
+                size="sm"
+                color="primary"
+                variant="soft"
+                @click="sendSuggestion(chip)"
+              >
+                {{ chip }}
+              </UButton>
+            </div>
+          </div>
+
+          <div v-else class="chat-column">
+            <UChatMessages
+              :messages="uiMessages"
+              :status="chatStatus"
+              :should-auto-scroll="true"
+              :user="{ side: 'right', variant: 'soft', icon: 'i-lucide-user' }"
+              :assistant="{ side: 'left', variant: 'naked', icon: 'i-lucide-sparkles' }"
+              :spacing-offset="24"
+              class="chat-messages"
+            >
+              <template #content="{ message }">
+                <div
+                  class="message-md"
+                  v-html="renderMarkdown(partsToText(message?.parts))"
+                />
+              </template>
+              <template #indicator>
+                <UChatShimmer text="正在思考…" />
+              </template>
+            </UChatMessages>
+          </div>
+        </div>
+
+        <div class="composer-area">
+          <div class="composer-meta">
+            <span class="token-hint">{{ tokenCount }} tokens</span>
+          </div>
+          <UChatPrompt
+            v-model="inputMessage"
+            :disabled="streaming"
+            :submit-on-enter="true"
+            placeholder="输入消息… (Enter 发送, Shift+Enter 换行)"
+            variant="subtle"
+            :rows="2"
+            :maxrows="6"
+            class="composer-prompt"
+            @submit="sendMessage"
+          >
+            <template #footer>
+              <div class="composer-footer">
+                <span class="composer-hint">Enter 发送 · Shift+Enter 换行</span>
+                <UChatPromptSubmit
+                  :status="chatStatus"
+                  color="primary"
+                  :disabled="!inputMessage.trim() && chatStatus === 'ready'"
+                  @stop="stopStreaming"
+                />
+              </div>
+            </template>
+          </UChatPrompt>
+        </div>
+      </main>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { useMessage } from 'naive-ui'
 import { marked } from 'marked'
 import { apiUrl } from '~/utils/apiBase'
-import {
-  ChatbubbleOutline,
-  PersonOutline,
-  SparklesOutline,
-  HardwareChipOutline,
-  SettingsOutline,
-  PaperPlaneOutline,
-  TrashOutline,
-} from '~/constants/icons'
-
-const SparklesIcon = SparklesOutline
 import type { Agent } from '@/composables/useAgents'
 
-const ChatIcon = ChatbubbleOutline
-const UserIcon = PersonOutline
-const BotIcon = SparklesOutline
-const AgentIcon = HardwareChipOutline
-const SettingsIcon = SettingsOutline
-const SendIcon = PaperPlaneOutline
-const TrashIcon = TrashOutline
+definePageMeta({
+  layout: 'default',
+  requiresAuth: true,
+})
 
-const route = useRoute()
-const config = useRuntimeConfig()
-const { list: listAgents, get: getAgent } = useAgents()
-const { get } = useApi()
-const message = useMessage()
-
+/** Local playground message — API still uses role + content only. */
 interface Message {
   id: string
   role: 'user' | 'assistant'
@@ -238,24 +216,41 @@ interface Message {
   time?: string
 }
 
+/** Thin AI-SDK-shaped message for Nuxt UI Chat (parts). */
+interface UIChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  parts: Array<{ type: 'text'; text: string }>
+}
+
 interface Model {
   id: string
   name: string
 }
 
+type ChatStatus = 'submitted' | 'streaming' | 'ready' | 'error'
+
+const route = useRoute()
+const config = useRuntimeConfig()
+const toast = useToast()
+const { list: listAgents, get: getAgent } = useAgents()
+const { get } = useApi()
+
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
-const streamingKey = ref(0)
-
 const streaming = ref(false)
-const streamingContent = ref('')
 const selectedModel = ref('')
 const models = ref<Model[]>([])
-const messagesContainer = ref<HTMLElement | null>(null)
-
 const agents = ref<Agent[]>([])
-const selectedAgent = ref<string>('')
+const selectedAgent = ref('')
 const selectedAgentInfo = ref<Agent | null>(null)
+const abortController = ref<AbortController | null>(null)
+
+const suggestionChips = [
+  '介绍一下你自己',
+  '帮我写一段产品说明',
+  '用三点总结今天的重点',
+]
 
 const currentTitle = computed(() => {
   if (selectedAgentInfo.value) {
@@ -265,11 +260,14 @@ const currentTitle = computed(() => {
 })
 
 const agentOptions = computed(() =>
-  agents.value.map(a => ({ label: a.name, value: a.id }))
+  [
+    { label: '不选择 Agent（通用对话）', value: '' },
+    ...agents.value.map(a => ({ label: a.name, value: a.id })),
+  ],
 )
 
 const modelOptions = computed(() =>
-  models.value.map(m => ({ label: m.name, value: m.id }))
+  models.value.map(m => ({ label: m.name, value: m.id })),
 )
 
 const params = reactive({
@@ -282,20 +280,40 @@ const tokenCount = computed(() => {
   return messages.value.reduce((acc, msg) => acc + msg.content.length / 4, 0) | 0
 })
 
-const renderMarkdown = (content: string) => {
-  return marked.parse(content, { async: false }) as string
+const chatStatus = computed<ChatStatus>(() => (streaming.value ? 'streaming' : 'ready'))
+
+/** Map local messages → UIMessage-like `{ id, role, parts }` for UChat*. */
+function mapToUIMessage(msg: Message): UIChatMessage {
+  return {
+    id: msg.id,
+    role: msg.role,
+    parts: msg.content ? [{ type: 'text', text: msg.content }] : [],
+  }
 }
 
-const formatTime = (time?: string) => {
-  if (!time) return ''
-  return new Date(time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+const uiMessages = computed(() => messages.value.map(mapToUIMessage))
+
+function partsToText(parts?: Array<{ type: string; text?: string }>): string {
+  if (!parts?.length) return ''
+  return parts
+    .filter(p => p.type === 'text' && typeof p.text === 'string')
+    .map(p => p.text as string)
+    .join('')
+}
+
+const renderMarkdown = (content: string) => {
+  return marked.parse(content || '', { async: false }) as string
+}
+
+const notifyError = (title: string) => {
+  toast.add({ title, color: 'error' })
 }
 
 const fetchAgents = async () => {
   try {
     const res = await listAgents()
     if (res.error) {
-      message.error(res.error)
+      notifyError(res.error)
       return
     }
     agents.value = res.data || []
@@ -304,15 +322,17 @@ const fetchAgents = async () => {
   }
 }
 
-const handleAgentChange = async (agentId: string) => {
-  if (!agentId) {
+const handleAgentChange = async (agentId: string | undefined | null) => {
+  const id = agentId || ''
+  selectedAgent.value = id
+  if (!id) {
     selectedAgentInfo.value = null
     selectedModel.value = models.value[0]?.id || ''
     return
   }
-  const res = await getAgent(agentId)
+  const res = await getAgent(id)
   if (res.error) {
-    message.error(res.error)
+    notifyError(res.error)
     return
   }
   selectedAgentInfo.value = res.data || null
@@ -326,7 +346,7 @@ const fetchModels = async () => {
     const res = await get<{ models: Model[] }>('/api/v1/models')
     if (res.error) return
     models.value = res.data?.models || []
-    if (models.value.length > 0) {
+    if (models.value.length > 0 && !selectedModel.value) {
       selectedModel.value = models.value[0].id
     }
   } catch (error) {
@@ -334,24 +354,39 @@ const fetchModels = async () => {
   }
 }
 
+const stopStreaming = () => {
+  abortController.value?.abort()
+  abortController.value = null
+  streaming.value = false
+}
+
+const sendSuggestion = (text: string) => {
+  inputMessage.value = text
+  sendMessage()
+}
+
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || streaming.value) return
 
   const userMessage = inputMessage.value.trim()
-  messages.value.push({ id: crypto.randomUUID(), role: 'user', content: userMessage, time: new Date().toISOString() })
+  messages.value.push({
+    id: crypto.randomUUID(),
+    role: 'user',
+    content: userMessage,
+    time: new Date().toISOString(),
+  })
   inputMessage.value = ''
-  scrollToBottom()
 
-  streamingKey.value++
   streaming.value = true
-  streamingContent.value = ''
+  const controller = new AbortController()
+  abortController.value = controller
 
   try {
     const endpoint = selectedAgent.value
       ? apiUrl(`/api/v1/agents/${selectedAgent.value}/chat`, String(config.public.apiBase ?? ''))
       : apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
 
-    const body: any = {
+    const body = {
       model: selectedModel.value,
       messages: messages.value.map(m => ({ role: m.role, content: m.content })),
       stream: true,
@@ -365,26 +400,54 @@ const sendMessage = async () => {
         Authorization: `Bearer ${useCookie('token').value}`,
       },
       body: JSON.stringify(body),
+      signal: controller.signal,
     })
 
     const decoder = new TextDecoder()
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      message.error(`发送失败：HTTP ${response.status}${text ? ` - ${text}` : ''}`)
+      notifyError(`发送失败：HTTP ${response.status}${text ? ` - ${text}` : ''}`)
       return
     }
 
     const reader = response.body?.getReader()
     if (!reader) {
-      message.error('发送失败：response body 不可用')
+      notifyError('发送失败：response body 不可用')
       return
     }
 
-    messages.value.push({ id: crypto.randomUUID(), role: 'assistant', content: '', time: new Date().toISOString() })
+    messages.value.push({
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: '',
+      time: new Date().toISOString(),
+    })
     const assistantMessage = messages.value[messages.value.length - 1]
 
     let buffer = ''
+
+    const consumeDataLine = (line: string): boolean => {
+      if (!line.startsWith('data: ')) return false
+      const data = line.slice(6).trim()
+      if (data === '[DONE]') return false
+
+      try {
+        const parsed = JSON.parse(data)
+        if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
+          notifyError(parsed.error)
+          assistantMessage.content = parsed.error
+          return true
+        }
+        const content = parsed?.choices?.[0]?.delta?.content
+        if (typeof content === 'string' && content.length > 0) {
+          assistantMessage.content += content
+        }
+      } catch {
+        // ignore parse errors
+      }
+      return false
+    }
 
     while (true) {
       const { done, value } = await reader.read()
@@ -395,87 +458,32 @@ const sendMessage = async () => {
       buffer = parts.pop() || ''
 
       for (const part of parts) {
-        const lines = part.split('\n')
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-
-          const data = line.slice(6).trim()
-          if (data === '[DONE]') continue
-
-          try {
-            const parsed = JSON.parse(data)
-            if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
-              message.error(parsed.error)
-              assistantMessage.content = parsed.error
-              streamingContent.value = assistantMessage.content
-              scrollToBottom()
-              return
-            }
-            const content = parsed?.choices?.[0]?.delta?.content
-            if (typeof content === 'string' && content.length > 0) {
-              assistantMessage.content += content
-              streamingContent.value = assistantMessage.content
-              scrollToBottom()
-            }
-          } catch {
-            // ignore parse errors
-          }
+        for (const line of part.split('\n')) {
+          if (consumeDataLine(line)) return
         }
       }
     }
 
     if (buffer) {
-      const lines = buffer.split('\n')
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6).trim()
-        if (data === '[DONE]') continue
-        try {
-          const parsed = JSON.parse(data)
-          if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
-            message.error(parsed.error)
-            assistantMessage.content = parsed.error
-            streamingContent.value = assistantMessage.content
-            scrollToBottom()
-            return
-          }
-          const content = parsed?.choices?.[0]?.delta?.content
-          if (typeof content === 'string' && content.length > 0) {
-            assistantMessage.content += content
-            streamingContent.value = assistantMessage.content
-            scrollToBottom()
-          }
-        } catch {
-          // ignore parse errors
-        }
+      for (const line of buffer.split('\n')) {
+        if (consumeDataLine(line)) return
       }
     }
-  } catch (error) {
-    message.error('发送失败')
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      return
+    }
+    notifyError('发送失败')
     messages.value.pop()
   } finally {
     streaming.value = false
-    streamingContent.value = ''
-  }
-}
-
-const handleKeyDown = (e: KeyboardEvent) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
+    abortController.value = null
   }
 }
 
 const clearMessages = () => {
+  stopStreaming()
   messages.value = []
-}
-
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
 }
 
 onMounted(async () => {
@@ -491,11 +499,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* === 全局布局 === */
 .playground-page {
-  height: calc(100vh - 56px);
-  background: #f1f5f9;
-  background: #0a0a0f;
+  height: calc(100vh - 64px);
   overflow: hidden;
 }
 
@@ -504,16 +509,15 @@ onMounted(async () => {
   height: 100%;
 }
 
-/* === 左侧边栏 === */
 .sidebar {
   width: 280px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   padding: 16px;
-  border-right: 1px solid #e2e8f0;
-  background: #ffffff;
+  border-right: 1px solid var(--cf-line);
+  border-radius: 0;
   overflow-y: auto;
 }
 
@@ -521,22 +525,20 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #f1f5f9;
-  margin-bottom: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--cf-line);
 }
 
 .header-logo {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  border-radius: 10px;
+  background: var(--cf-accent);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
 .sidebar-title {
@@ -547,19 +549,21 @@ onMounted(async () => {
 .app-name {
   font-size: 16px;
   font-weight: 700;
-  color: #4f46e5;
-  letter-spacing: 0.5px;
+  color: var(--cf-ink);
+  letter-spacing: 0.2px;
 }
 
 .app-sub {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
-.config-card {
-  backdrop-filter: blur(12px);
+.config-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .card-header {
@@ -568,17 +572,17 @@ onMounted(async () => {
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--cf-ink-soft);
 }
 
-.card-header :deep(.n-icon) {
-  color: #6366f1;
+.card-header :deep(svg) {
+  color: var(--cf-accent);
 }
 
 .agent-meta {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cf-line);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -592,14 +596,14 @@ onMounted(async () => {
 
 .meta-label {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
   min-width: 32px;
   padding-top: 2px;
 }
 
 .meta-desc {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 0;
   line-height: 1.5;
   overflow: hidden;
@@ -609,12 +613,12 @@ onMounted(async () => {
   -webkit-box-orient: vertical;
 }
 
-.params-card {
+.params-block {
   flex: 1;
 }
 
 .param-row {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .param-row:last-child {
@@ -627,25 +631,23 @@ onMounted(async () => {
   align-items: center;
   margin-bottom: 8px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
 }
 
-/* === 右侧聊天区 === */
 .chat-area {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #f1f5f9;
 }
 
 .chat-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #ffffff;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--cf-line);
+  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -655,267 +657,157 @@ onMounted(async () => {
   gap: 10px;
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--cf-ink);
 }
 
-.chat-title :deep(.n-icon) {
-  color: #6366f1;
+.title-icon {
+  color: var(--cf-accent);
 }
 
-/* === 消息列表 === */
 .messages-wrapper {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 20px 24px;
   scroll-behavior: smooth;
 }
 
-.messages-wrapper::-webkit-scrollbar {
-  width: 6px;
+.chat-column {
+  width: min(780px, 100%);
+  margin: 0 auto;
+  min-height: 100%;
 }
 
-.messages-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.messages-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 3px;
-}
-
-.messages-wrapper::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+.chat-messages {
+  min-height: 100%;
 }
 
 .empty-state {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 12px;
+  gap: 10px;
+  text-align: center;
+}
+
+.empty-glow {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in oklab, var(--cf-accent) 22%, transparent), transparent 70%);
+  pointer-events: none;
 }
 
 .empty-icon {
-  color: #cbd5e1;
+  color: color-mix(in oklab, var(--cf-ink-soft) 55%, transparent);
+  position: relative;
 }
 
 .empty-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #94a3b8;
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--cf-ink);
   margin: 0;
+  position: relative;
 }
 
 .empty-sub {
   font-size: 13px;
-  color: #cbd5e1;
+  color: var(--cf-ink-soft);
   margin: 0;
-}
-
-.messages {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.message {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  max-width: 80%;
-}
-
-.message.user {
-  flex-direction: row-reverse;
-  margin-left: auto;
-}
-
-.message-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 1px solid #e2e8f0;
-}
-
-.message.user .message-avatar {
-  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
-  color: #fff;
-}
-
-.message.assistant .message-avatar {
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  color: #6366f1;
-}
-
-.message-bubble {
-  padding: 12px 16px;
-  border-radius: 16px;
   position: relative;
-  border: 1px solid #e2e8f0;
 }
 
-.message.user .message-bubble {
-  background: linear-gradient(135deg, #6366f1 0%, #7c3aed 100%);
-  color: #fff;
-  border-color: transparent;
-  border-bottom-right-radius: 4px;
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+  position: relative;
+  max-width: 480px;
 }
 
-.message.assistant .message-bubble {
-  background: #ffffff;
-  border-bottom-left-radius: 4px;
-  border-color: #e2e8f0;
-}
-
-.message-text {
+.message-md {
   line-height: 1.7;
-  white-space: pre-wrap;
   word-break: break-word;
   font-size: 14px;
+  color: var(--cf-ink);
 }
 
-.message.user .message-text {
-  color: #f1f5f9;
+.message-md :deep(p) {
+  margin: 0 0 0.6em;
 }
 
-.message.assistant .message-text {
-  color: #1e293b;
+.message-md :deep(p:last-child) {
+  margin-bottom: 0;
 }
 
-.message-text :deep(code) {
-  background: #f1f5f9;
+.message-md :deep(code) {
+  background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
-  color: #4f46e5;
+  color: var(--cf-accent-ink);
 }
 
-.message.assistant .message-text :deep(code) {
-  background: #f1f5f9;
-}
-
-.message.user .message-text :deep(pre),
-.message.user .message-text :deep(code) {
-  background: rgba(255, 255, 255, 0.2);
-  color: #f1f5f9;
-}
-
-.message-text :deep(pre) {
-  background: #1e293b;
+.message-md :deep(pre) {
+  background: color-mix(in oklab, var(--cf-ink) 92%, #0a0a0f);
   border-radius: 10px;
-  padding: 16px;
+  padding: 14px;
   overflow-x: auto;
   margin: 8px 0;
 }
 
-.message-text :deep(pre code) {
+.message-md :deep(pre code) {
   background: none;
-  border: none;
   padding: 0;
   color: #e2e8f0;
 }
 
-.message-time {
-  font-size: 10px;
-  color: #94a3b8;
-  margin-top: 6px;
-  text-align: right;
-}
-
-.message.user .message-time {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.streaming .cursor {
-  display: inline-block;
-  color: #6366f1;
-  animation: blink 1.2s infinite;
-  font-size: 12px;
-  margin-left: 2px;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-/* === 输入区域 === */
-.input-area {
-  padding: 16px 24px 20px;
-  border-top: 1px solid #e2e8f0;
-  background: #ffffff;
+.composer-area {
+  width: min(780px, 100%);
+  margin: 0 auto;
+  padding: 0 24px 20px;
   flex-shrink: 0;
 }
 
-.input-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 14px 16px 12px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.input-box:focus-within {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-}
-
-.chat-input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #1e293b;
-  font-size: 14px;
-  line-height: 1.6;
-  resize: none;
-  font-family: inherit;
-  caret-color: #6366f1;
-}
-
-.chat-input::placeholder {
-  color: #94a3b8;
-}
-
-.chat-input:disabled {
-  opacity: 0.5;
-}
-
-.input-footer {
+.composer-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
+  justify-content: flex-end;
+  margin-bottom: 6px;
 }
 
 .token-hint {
   font-size: 11px;
-  color: #94a3b8;
-  padding-top: 2px;
+  color: var(--cf-ink-soft);
+  font-family: var(--font-mono);
 }
 
-/* === 消息动画 === */
-.msg-enter-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.composer-prompt {
+  width: 100%;
 }
 
-.msg-leave-active {
-  transition: all 0.2s ease;
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
 }
 
-.msg-enter-from {
-  opacity: 0;
-  transform: translateY(12px) scale(0.98);
+.composer-hint {
+  font-size: 11px;
+  color: var(--cf-ink-soft);
 }
 
-.msg-leave-to {
-  opacity: 0;
-  transform: scale(0.98);
+@media (max-width: 900px) {
+  .sidebar {
+    display: none;
+  }
 }
 </style>
