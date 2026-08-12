@@ -3,7 +3,7 @@ node_modules
 
 # Build output
 .output
-.nuxt
+.nuxt/
 .nitro
 dist
 
@@ -37,4 +37,3 @@ Thumbs.db
 
 # Misc
 *.bak
-.nuxt/
