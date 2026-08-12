@@ -1,56 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ref, readonly } from 'vue'
 
-// Create shared mock API
-const mockApi = {
-  get: vi.fn(),
-  post: vi.fn(),
-  put: vi.fn(),
-  del: vi.fn(),
-  upload: vi.fn(),
-}
-
-// Mock Nuxt auto-imports
-vi.mock('#imports', () => ({
-  ref,
-  readonly,
-  useRouter: () => ({ push: vi.fn() }),
-  useCookie: () => ({ value: null }),
-  useRuntimeConfig: () => ({
-    public: { apiBase: 'http://localhost:8080' },
-  }),
-}))
-
-// Mock useAuth
-vi.mock('../useAuth', () => ({
-  useAuth: () => ({
-    getToken: vi.fn(() => 'mock-token'),
-    redirectToLogin: vi.fn(),
-    clearAuth: vi.fn(),
-    setAuth: vi.fn(),
-    isAuthenticated: { value: true },
-    currentUser: { value: { id: 'user-1', email: 'test@example.com', name: 'Test User' } },
-    isLoggedIn: vi.fn(() => true),
-  }),
-}))
-
-// Mock the entire composable module
-vi.mock('../useWorkflows', () => {
-  return {
-    useWorkflows: () => ({
-      list: mockApi.get,
-      get: mockApi.get,
-      create: mockApi.post,
-      update: mockApi.put,
-      remove: mockApi.del,
-      execute: mockApi.post,
-      getExecution: mockApi.get,
-      listExecutions: mockApi.get,
-      cancelExecution: mockApi.post,
-      debug: mockApi.post,
-    }),
+const { mockApi, createMockWorkflows } = vi.hoisted(() => {
+  const mockApi = {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    del: vi.fn(),
   }
+
+  const createMockWorkflows = () => ({
+    list: vi.fn(() => mockApi.get()),
+    get: vi.fn((id: string) => mockApi.get(id)),
+    create: vi.fn((input: unknown) => mockApi.post(input)),
+    update: vi.fn((id: string, input: unknown) => mockApi.put(id, input)),
+    remove: vi.fn((id: string) => mockApi.del(id)),
+    execute: vi.fn((id: string, input?: unknown) => mockApi.post(id, input)),
+    getExecution: vi.fn((id: string, executionId: string) => mockApi.get(id, executionId)),
+    listExecutions: vi.fn((id: string) => mockApi.get(id)),
+    cancelExecution: vi.fn((id: string, executionId: string) => mockApi.post(id, executionId)),
+    debug: vi.fn((id: string, input?: unknown) => mockApi.post(id, input)),
+  })
+
+  return { mockApi, createMockWorkflows }
 })
+
+vi.mock('../useWorkflows', () => ({
+  useWorkflows: createMockWorkflows,
+}))
 
 import { useWorkflows } from '../useWorkflows'
 
@@ -91,10 +67,10 @@ describe('useWorkflows', () => {
           updated_at: '2026-04-01T00:00:00Z',
         },
       ]
-      mockApi.get.mockResolvedValueOnce({ code: 2000, data: mockWorkflows })
+      mockApi.get.mockResolvedValueOnce({ data: mockWorkflows })
 
       const { list } = useWorkflows()
-      const result = await list('/api/v1/workflows')
+      const result = await list()
 
       expect(result.data).toEqual(mockWorkflows)
     })
@@ -103,7 +79,7 @@ describe('useWorkflows', () => {
       mockApi.get.mockResolvedValueOnce({ error: 'Unauthorized' })
 
       const { list } = useWorkflows()
-      const result = await list('/api/v1/workflows')
+      const result = await list()
 
       expect(result.error).toBe('Unauthorized')
     })
@@ -122,10 +98,10 @@ describe('useWorkflows', () => {
         created_at: '2026-04-01T00:00:00Z',
         updated_at: '2026-04-01T00:00:00Z',
       }
-      mockApi.get.mockResolvedValueOnce({ code: 2000, data: mockWorkflow })
+      mockApi.get.mockResolvedValueOnce({ data: mockWorkflow })
 
       const { get } = useWorkflows()
-      const result = await get('/api/v1/workflows/wf-1')
+      const result = await get('wf-1')
 
       expect(result.data).toEqual(mockWorkflow)
     })
@@ -142,10 +118,10 @@ describe('useWorkflows', () => {
         status: 'draft',
         version: 1,
       }
-      mockApi.post.mockResolvedValueOnce({ code: 2000, data: mockWorkflow })
+      mockApi.post.mockResolvedValueOnce({ data: mockWorkflow })
 
       const { create } = useWorkflows()
-      const result = await create('/api/v1/workflows', input)
+      const result = await create(input)
 
       expect(result.data).toEqual(mockWorkflow)
     })
@@ -162,10 +138,10 @@ describe('useWorkflows', () => {
         status: 'draft',
         version: 2,
       }
-      mockApi.put.mockResolvedValueOnce({ code: 2000, data: mockWorkflow })
+      mockApi.put.mockResolvedValueOnce({ data: mockWorkflow })
 
       const { update } = useWorkflows()
-      const result = await update('/api/v1/workflows/wf-1', input)
+      const result = await update('wf-1', input)
 
       expect(result.data).toEqual(mockWorkflow)
     })
@@ -173,10 +149,10 @@ describe('useWorkflows', () => {
 
   describe('remove', () => {
     it('should delete workflow successfully', async () => {
-      mockApi.del.mockResolvedValueOnce({ code: 2000, data: null })
+      mockApi.del.mockResolvedValueOnce({})
 
       const { remove } = useWorkflows()
-      const result = await remove('/api/v1/workflows/wf-1')
+      const result = await remove('wf-1')
 
       expect(result.error).toBeUndefined()
     })
@@ -185,7 +161,7 @@ describe('useWorkflows', () => {
       mockApi.del.mockResolvedValueOnce({ error: 'Workflow not found' })
 
       const { remove } = useWorkflows()
-      const result = await remove('/api/v1/workflows/non-existent')
+      const result = await remove('non-existent')
 
       expect(result.error).toBe('Workflow not found')
     })

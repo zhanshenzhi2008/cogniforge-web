@@ -1,7 +1,8 @@
 // Vitest global setup — provides mock implementations for Nuxt auto-imports
 // so that composables (e.g. useApi calling useAuth) work in vitest without a full Nuxt runtime.
 
-import { vi, ref as makeRef, readonly } from 'vitest'
+import { vi } from 'vitest'
+import { ref as makeRef, readonly } from 'vue'
 
 vi.mock('#imports', () => ({
   ref: makeRef,
