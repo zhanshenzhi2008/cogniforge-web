@@ -1,58 +1,57 @@
 <template>
   <div class="workflow-editor">
     <div class="editor-header">
-      <n-button @click="handleBack">
-        <template #icon>
-          <n-icon :component="ArrowBackOutline" />
-        </template>
+      <UButton color="neutral" variant="outline" icon="i-lucide-arrow-left" @click="handleBack">
         返回
-      </n-button>
+      </UButton>
       <h3>{{ workflowName }}</h3>
-      <n-tag v-if="currentWorkflow" :type="statusType(currentWorkflow.status)" size="small" style="margin-right: 8px">
+      <UBadge
+        v-if="currentWorkflow"
+        size="sm"
+        variant="subtle"
+        :color="statusType(currentWorkflow.status)"
+      >
         {{ statusText(currentWorkflow.status) }}
-      </n-tag>
-      <n-tag v-else-if="isSmokeTest" type="warning" size="small" style="margin-right: 8px">
+      </UBadge>
+      <UBadge v-else-if="isSmokeTest" size="sm" variant="subtle" color="warning">
         路由测试
-      </n-tag>
-      <n-space>
-        <n-popover trigger="click" placement="bottom-end" :show-arrow="false">
-          <template #trigger>
-            <n-button :disabled="isSmokeTest">
-              <template #icon>
-                <n-icon :component="CreateOutline" />
-              </template>
-              编辑
-            </n-button>
-          </template>
-          <div class="edit-popover">
-            <n-form :model="workflowBasicInfo" label-placement="top" label-width="60">
-              <n-form-item label="名称">
-                <n-input v-model:value="workflowBasicInfo.name" placeholder="工作流名称" />
-              </n-form-item>
-              <n-form-item label="描述">
-                <n-input
-                  v-model:value="workflowBasicInfo.description"
-                  type="textarea"
-                  :autosize="{ minRows: 2, maxRows: 4 }"
-                  placeholder="工作流描述"
-                />
-              </n-form-item>
-            </n-form>
-            <div class="edit-popover-footer">
-              <n-button size="small" @click="handleCancelEdit">取消</n-button>
-              <n-button type="primary" size="small" :loading="savingBasic" @click="handleSaveBasic">保存</n-button>
-            </div>
-          </div>
-        </n-popover>
-        <n-button :disabled="isSmokeTest" @click="handleSave" :loading="saving">保存</n-button>
-        <n-button @click="showDebugPanel = !showDebugPanel">
-          <template #icon>
-            <n-icon :component="BugOutline" />
-          </template>
+      </UBadge>
+      <div class="header-actions">
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-pencil"
+          :disabled="isSmokeTest"
+          @click="editPopoverShow = true"
+        >
+          编辑
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          :disabled="isSmokeTest"
+          :loading="saving"
+          @click="handleSave"
+        >
+          保存
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-bug"
+          @click="showDebugPanel = !showDebugPanel"
+        >
           调试
-        </n-button>
-        <n-button :disabled="isSmokeTest" type="primary" @click="handleExecute" :loading="executing">执行</n-button>
-      </n-space>
+        </UButton>
+        <UButton
+          color="primary"
+          :disabled="isSmokeTest"
+          :loading="executing"
+          @click="handleExecute"
+        >
+          执行
+        </UButton>
+      </div>
     </div>
 
     <div class="editor-container">
@@ -64,7 +63,7 @@
           class="palette-item"
           :data-type="type"
         >
-          <n-icon :component="getNodeIcon(type)" />
+          <UIcon :name="getNodeIcon(type)" class="size-4" />
           {{ getNodeLabel(type) }}
         </div>
       </div>
@@ -87,65 +86,109 @@
       </div>
     </div>
 
-    <n-drawer v-model:show="configDrawer" :width="400" placement="right">
-      <n-drawer-content :title="selectedNode ? `配置 ${getNodeLabel(selectedNode.type)}` : '节点配置'">
-        <template v-if="selectedNode">
-          <n-form :model="nodeConfig" label-placement="top">
-            <n-form-item label="节点名称">
-              <n-input v-model:value="nodeConfig.name" placeholder="请输入节点名称" />
-            </n-form-item>
+    <UModal
+      v-model:open="editPopoverShow"
+      title="编辑基本信息"
+      :ui="{ content: 'sm:max-w-md' }"
+    >
+      <template #body>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label">名称</label>
+            <UInput v-model="workflowBasicInfo.name" class="w-full" placeholder="工作流名称" />
+          </div>
+          <div class="field">
+            <label class="field__label">描述</label>
+            <UTextarea
+              v-model="workflowBasicInfo.description"
+              class="w-full"
+              :rows="3"
+              placeholder="工作流描述"
+            />
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" size="sm" @click="handleCancelEdit">取消</UButton>
+          <UButton color="primary" size="sm" :loading="savingBasic" @click="handleSaveBasic">保存</UButton>
+        </div>
+      </template>
+    </UModal>
 
-            <n-form-item label="模型" v-if="selectedNode.type === 'llm'">
-              <n-select v-model:value="nodeConfig.model" :options="modelOptions" placeholder="请选择模型" />
-            </n-form-item>
+    <USlideover
+      v-model:open="configDrawer"
+      :title="selectedNode ? `配置 ${getNodeLabel(selectedNode.type)}` : '节点配置'"
+      :ui="{ content: 'max-w-md w-full' }"
+    >
+      <template #body>
+        <div v-if="selectedNode" class="form-grid">
+          <div class="field">
+            <label class="field__label">节点名称</label>
+            <UInput v-model="nodeConfig.name" class="w-full" placeholder="请输入节点名称" />
+          </div>
 
-            <n-form-item label="系统提示" v-if="selectedNode.type === 'llm'">
-              <n-input
-                v-model:value="nodeConfig.systemPrompt"
-                type="textarea"
-                :autosize="{ minRows: 3, maxRows: 8 }"
-                placeholder="定义 Agent 的角色和行为..."
-              />
-            </n-form-item>
+          <div v-if="selectedNode.type === 'llm'" class="field">
+            <label class="field__label">模型</label>
+            <USelect
+              v-model="nodeConfig.model"
+              class="w-full"
+              :items="modelOptions"
+              placeholder="请选择模型"
+              value-key="value"
+            />
+          </div>
 
-            <n-form-item label="描述" v-if="selectedNode.type === 'condition'">
-              <n-input
-                v-model:value="nodeConfig.description"
-                type="textarea"
-                :autosize="{ minRows: 2, maxRows: 4 }"
-                placeholder="条件描述..."
-              />
-            </n-form-item>
+          <div v-if="selectedNode.type === 'llm'" class="field">
+            <label class="field__label">系统提示</label>
+            <UTextarea
+              v-model="nodeConfig.systemPrompt"
+              class="w-full"
+              :rows="5"
+              placeholder="定义 Agent 的角色和行为..."
+            />
+          </div>
 
-            <n-form-item label="搜索词" v-if="selectedNode.type === 'search'">
-              <n-input v-model:value="nodeConfig.query" placeholder="搜索关键词..." />
-            </n-form-item>
+          <div v-if="selectedNode.type === 'condition'" class="field">
+            <label class="field__label">描述</label>
+            <UTextarea
+              v-model="nodeConfig.description"
+              class="w-full"
+              :rows="3"
+              placeholder="条件描述..."
+            />
+          </div>
 
-            <n-form-item label="变量名" v-if="selectedNode.type === 'input' || selectedNode.type === 'output'">
-              <n-input v-model:value="nodeConfig.variable" placeholder="变量名称..." />
-            </n-form-item>
-          </n-form>
-        </template>
+          <div v-if="selectedNode.type === 'search'" class="field">
+            <label class="field__label">搜索词</label>
+            <UInput v-model="nodeConfig.query" class="w-full" placeholder="搜索关键词..." />
+          </div>
 
-        <template #footer>
-          <n-space justify="space-between">
-            <n-button type="error" @click="handleDeleteNode" :disabled="!selectedNode">删除节点</n-button>
-            <n-space>
-              <n-button @click="configDrawer = false">取消</n-button>
-              <n-button type="primary" @click="saveNodeConfig">保存</n-button>
-            </n-space>
-          </n-space>
-        </template>
-      </n-drawer-content>
-    </n-drawer>
+          <div v-if="selectedNode.type === 'input' || selectedNode.type === 'output'" class="field">
+            <label class="field__label">变量名</label>
+            <UInput v-model="nodeConfig.variable" class="w-full" placeholder="变量名称..." />
+          </div>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="drawer-footer">
+          <UButton color="error" variant="outline" :disabled="!selectedNode" @click="handleDeleteNode">
+            删除节点
+          </UButton>
+          <div class="drawer-footer-right">
+            <UButton color="neutral" variant="outline" @click="configDrawer = false">取消</UButton>
+            <UButton color="primary" @click="saveNodeConfig">保存</UButton>
+          </div>
+        </div>
+      </template>
+    </USlideover>
   </div>
 </template>
 
 <script setup lang="ts">
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 
-import { ArrowBackOutline, ChatboxEllipsesOutline, GitBranchOutline, SearchOutline, DownloadOutline, CloudUploadOutline, CreateOutline, BugOutline, PlayOutline, PauseOutline, StopOutline, RefreshOutline, TimerOutline } from '@vicons/ionicons5'
-import { NButton, NIcon, NSpace, NSelect, NInput, NForm, NFormItem, NDrawer, NDrawerContent, NTag, useMessage, NPopover } from 'naive-ui'
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
 
@@ -157,7 +200,7 @@ definePageMeta({
 })
 
 const route = useRoute()
-const message = useMessage()
+const toast = useToast()
 const { get, update, execute, listExecutions, getExecution, cancelExecution, debug } = useWorkflows()
 
 const canvasRef = ref<HTMLElement>()
@@ -214,21 +257,21 @@ const modelOptions = [
 ]
 
 const getNodeIcon = (type: string) => {
-  const icons: Record<string, any> = {
-    start: PlayOutline,
-    end: StopOutline,
-    llm: ChatboxEllipsesOutline,
-    agent: ChatboxEllipsesOutline,
-    condition: GitBranchOutline,
-    loop: RefreshOutline,
-    http: DownloadOutline,
-    code: CloudUploadOutline,
-    delay: TimerOutline,
-    search: SearchOutline,
-    input: DownloadOutline,
-    output: CloudUploadOutline,
+  const icons: Record<string, string> = {
+    start: 'i-lucide-play',
+    end: 'i-lucide-square',
+    llm: 'i-lucide-message-square',
+    agent: 'i-lucide-message-square',
+    condition: 'i-lucide-git-branch',
+    loop: 'i-lucide-refresh-cw',
+    http: 'i-lucide-download',
+    code: 'i-lucide-upload',
+    delay: 'i-lucide-timer',
+    search: 'i-lucide-search',
+    input: 'i-lucide-download',
+    output: 'i-lucide-upload',
   }
-  return icons[type] || ChatboxEllipsesOutline
+  return icons[type] || 'i-lucide-message-square'
 }
 
 const getNodeLabel = (type: string) => {
@@ -251,7 +294,7 @@ const getNodeLabel = (type: string) => {
 
 const loadWorkflow = async () => {
   if (!workflowId.value) {
-    message.warning('缺少工作流 ID')
+    toast.add({ title: '缺少工作流 ID', color: 'warning' })
     return
   }
 
@@ -277,7 +320,7 @@ const loadWorkflow = async () => {
 
   const res = await get(workflowId.value)
   if (res.error) {
-    message.error(res.error)
+    toast.add({ title: res.error, color: 'error' })
     return
   }
 
@@ -325,10 +368,10 @@ watch(workflowId, async (newId, oldId) => {
 
 const statusType = (status: string) => {
   switch (status) {
-    case 'draft': return 'default' as const
+    case 'draft': return 'neutral' as const
     case 'published': return 'success' as const
     case 'archived': return 'warning' as const
-    default: return 'default' as const
+    default: return 'neutral' as const
   }
 }
 
@@ -347,7 +390,7 @@ const handleCancelEdit = () => {
 
 const handleSaveBasic = async () => {
   if (isSmokeTest.value) {
-    message.info('测试路由下不调用保存接口')
+    toast.add({ title: '测试路由下不调用保存接口', color: 'info' })
     return
   }
   savingBasic.value = true
@@ -357,7 +400,7 @@ const handleSaveBasic = async () => {
       description: workflowBasicInfo.description,
     })
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
     workflowName.value = workflowBasicInfo.name
@@ -365,10 +408,10 @@ const handleSaveBasic = async () => {
       currentWorkflow.value.name = workflowBasicInfo.name
       currentWorkflow.value.description = workflowBasicInfo.description
     }
-    message.success('基本信息已保存')
+    toast.add({ title: '基本信息已保存', color: 'success' })
     editPopoverShow.value = false
   } catch {
-    message.error('保存失败')
+    toast.add({ title: '保存失败', color: 'error' })
   } finally {
     savingBasic.value = false
   }
@@ -442,7 +485,7 @@ const saveNodeConfig = () => {
     }
   }
 
-  message.success('节点配置已保存')
+  toast.add({ title: '节点配置已保存', color: 'success' })
   configDrawer.value = false
 }
 
@@ -452,12 +495,12 @@ const handleDeleteNode = () => {
   edges.value = edges.value.filter(e => e.source !== selectedNode.value.id && e.target !== selectedNode.value.id)
   selectedNode.value = null
   configDrawer.value = false
-  message.success('节点已删除')
+  toast.add({ title: '节点已删除', color: 'success' })
 }
 
 const handleSave = async () => {
   if (isSmokeTest.value) {
-    message.info('测试路由下不调用保存接口')
+    toast.add({ title: '测试路由下不调用保存接口', color: 'info' })
     return
   }
   saving.value = true
@@ -489,13 +532,13 @@ const handleSave = async () => {
     })
 
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
 
-    message.success('工作流已保存')
+    toast.add({ title: '工作流已保存', color: 'success' })
   } catch {
-    message.error('保存失败')
+    toast.add({ title: '保存失败', color: 'error' })
   } finally {
     saving.value = false
   }
@@ -503,19 +546,19 @@ const handleSave = async () => {
 
 const handleExecute = async () => {
   if (isSmokeTest.value) {
-    message.info('测试路由下不调用执行接口')
+    toast.add({ title: '测试路由下不调用执行接口', color: 'info' })
     return
   }
   if (!currentWorkflow.value) {
-    message.error('请先保存工作流')
+    toast.add({ title: '请先保存工作流', color: 'error' })
     return
   }
   if (currentWorkflow.value.status === 'draft') {
-    message.warning('草稿状态工作流不能执行，请先发布')
+    toast.add({ title: '草稿状态工作流不能执行，请先发布', color: 'warning' })
     return
   }
   if (currentWorkflow.value.status === 'archived') {
-    message.warning('已归档的工作流不能执行')
+    toast.add({ title: '已归档的工作流不能执行', color: 'warning' })
     return
   }
 
@@ -523,12 +566,12 @@ const handleExecute = async () => {
   try {
     const res = await execute(workflowId.value)
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
-    message.success(`工作流已启动，执行ID: ${res.executionId}`)
+    toast.add({ title: `工作流已启动，执行ID: ${res.executionId}`, color: 'success' })
   } catch {
-    message.error('执行失败')
+    toast.add({ title: '执行失败', color: 'error' })
   } finally {
     executing.value = false
   }
@@ -541,7 +584,7 @@ const handleBack = () => {
 const startDebug = async () => {
   if (!workflowId.value || isSmokeTest.value) return
   if (!currentWorkflow.value) {
-    message.warning('请先保存工作流')
+    toast.add({ title: '请先保存工作流', color: 'warning' })
     return
   }
 
@@ -554,19 +597,19 @@ const startDebug = async () => {
     try {
       input = JSON.parse(debugInput.value || '{}')
     } catch {
-      message.error('输入 JSON 格式错误')
+      toast.add({ title: '输入 JSON 格式错误', color: 'error' })
       isDebugging.value = false
       return
     }
 
     const res = await debug(workflowId.value, input)
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       isDebugging.value = false
       return
     }
 
-    message.success(`调试会话已启动: ${res.executionId}`)
+    toast.add({ title: `调试会话已启动: ${res.executionId}`, color: 'success' })
     currentExecution.value = { id: res.executionId, status: 'debugging' }
 
     debugPollInterval.value = window.setInterval(async () => {
@@ -577,15 +620,15 @@ const startDebug = async () => {
           stopPolling()
           isDebugging.value = false
           if (execRes.data.status === 'completed') {
-            message.success('调试完成')
+            toast.add({ title: '调试完成', color: 'success' })
           } else if (execRes.data.status === 'failed') {
-            message.error(`调试失败: ${execRes.data.error}`)
+            toast.add({ title: `调试失败: ${execRes.data.error}`, color: 'error' })
           }
         }
       }
     }, 1000)
   } catch {
-    message.error('启动调试失败')
+    toast.add({ title: '启动调试失败', color: 'error' })
     isDebugging.value = false
   }
 }
@@ -601,12 +644,12 @@ const cancelDebug = async () => {
   if (!currentExecution.value?.id) return
   const res = await cancelExecution(workflowId.value, currentExecution.value.id)
   if (res.error) {
-    message.error(res.error)
+    toast.add({ title: res.error, color: 'error' })
     return
   }
   stopPolling()
   isDebugging.value = false
-  message.success('已取消调试')
+  toast.add({ title: '已取消调试', color: 'success' })
 }
 
 const loadExecutionHistory = async () => {
@@ -637,7 +680,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 56px);
-  background: #f8fafc;
+  background: var(--cf-bg, #f8fafc);
 }
 
 .editor-header {
@@ -645,14 +688,22 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   padding: 12px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--cf-bg-elevated, #fff);
+  border-bottom: 1px solid var(--cf-line, #e2e8f0);
 }
 
 .editor-header h3 {
   margin: 0;
   flex: 1;
   font-size: 16px;
+  color: var(--cf-ink, inherit);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .editor-container {
@@ -663,8 +714,8 @@ onMounted(() => {
 
 .node-palette {
   width: 160px;
-  background: #fff;
-  border-right: 1px solid #e2e8f0;
+  background: var(--cf-bg-elevated, #fff);
+  border-right: 1px solid var(--cf-line, #e2e8f0);
   padding: 12px;
   flex-shrink: 0;
 }
@@ -672,7 +723,7 @@ onMounted(() => {
 .palette-title {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--cf-ink-soft, #64748b);
   margin-bottom: 12px;
   text-transform: uppercase;
 }
@@ -683,17 +734,18 @@ onMounted(() => {
   gap: 8px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--cf-bg, #f8fafc);
+  border: 1px solid var(--cf-line, #e2e8f0);
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
+  color: var(--cf-ink, inherit);
   transition: all 0.2s;
 }
 
 .palette-item:hover {
-  border-color: #4f46e5;
-  background: #f0f0ff;
+  border-color: color-mix(in oklab, var(--cf-accent, #4f46e5) 40%, var(--cf-line, #e2e8f0));
+  background: color-mix(in oklab, var(--cf-accent-soft, #f0f0ff) 70%, transparent);
 }
 
 .canvas-container {
@@ -712,7 +764,7 @@ onMounted(() => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #64748b;
+  color: var(--cf-ink-soft, #64748b);
   font-size: 14px;
 }
 
@@ -722,8 +774,8 @@ onMounted(() => {
   gap: 8px;
   padding: 12px 16px;
   border-radius: 8px;
-  border: 2px solid #e2e8f0;
-  background: #fff;
+  border: 2px solid var(--cf-line, #e2e8f0);
+  background: var(--cf-bg-elevated, #fff);
   font-size: 13px;
   min-width: 100px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -765,30 +817,54 @@ onMounted(() => {
 }
 
 .canvas-container :deep(.vue-flow__minimap) {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--cf-bg-elevated, #fff);
+  border: 1px solid var(--cf-line, #e2e8f0);
   border-radius: 8px;
 }
 
 .canvas-container :deep(.vue-flow__controls) {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--cf-bg-elevated, #fff);
+  border: 1px solid var(--cf-line, #e2e8f0);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.edit-popover {
-  width: 280px;
-  padding: 8px 0;
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.edit-popover-footer {
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--cf-ink-soft, #64748b);
+}
+
+.modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+}
+
+.drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.drawer-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .debug-panel {
@@ -797,8 +873,8 @@ onMounted(() => {
   top: 56px;
   bottom: 0;
   width: 400px;
-  background: #fff;
-  border-left: 1px solid #e2e8f0;
+  background: var(--cf-bg-elevated, #fff);
+  border-left: 1px solid var(--cf-line, #e2e8f0);
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -810,8 +886,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-bottom: 1px solid var(--cf-line, #e2e8f0);
+  background: var(--cf-bg, #f8fafc);
 }
 
 .debug-header h4 {
@@ -832,7 +908,7 @@ onMounted(() => {
 .debug-section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--cf-ink-soft, #64748b);
   margin-bottom: 8px;
   text-transform: uppercase;
 }
@@ -842,7 +918,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--cf-bg, #f8fafc);
   border-radius: 8px;
   margin-bottom: 16px;
 }
@@ -866,10 +942,10 @@ onMounted(() => {
 .debug-log-item {
   padding: 8px 12px;
   margin-bottom: 8px;
-  background: #f8fafc;
+  background: var(--cf-bg, #f8fafc);
   border-radius: 6px;
   font-size: 12px;
-  border-left: 3px solid #e2e8f0;
+  border-left: 3px solid var(--cf-line, #e2e8f0);
 }
 
 .debug-log-item.info { border-left-color: #3b82f6; }
@@ -884,7 +960,7 @@ onMounted(() => {
 }
 
 .debug-log-message {
-  color: #334155;
+  color: var(--cf-ink, #334155);
   word-break: break-all;
 }
 </style>
