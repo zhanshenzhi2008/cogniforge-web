@@ -16,18 +16,13 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@bg-dev/nuxt-naiveui": "^2.0.0",
-    "@element-plus/icons-vue": "^2.3.1",
     "@nuxt/ui": "^4.10.0",
     "@pinia/nuxt": "^1.0.2",
-    "@vicons/ionicons5": "^0.13.0",
     "@vue-flow/background": "^1.3.2",
     "@vue-flow/controls": "^1.1.3",
     "@vue-flow/core": "^1.48.2",
     "@vue-flow/minimap": "^1.5.4",
-    "element-plus": "^2.5.6",
     "marked": "^12.0.0",
-    "naive-ui": "^2.44.1",
     "nuxt": "^4.5.2",
     "pinia": "^3.0.4",
     "vue": "^3.4.21",

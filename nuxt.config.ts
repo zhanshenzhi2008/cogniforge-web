@@ -1,9 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-// Feature flag: when true, enables SSR-compatible Naive UI setup via @bg-dev/nuxt-naiveui.
-// When false (default), uses the lightweight client-only manual setup — no extra module overhead.
-const ssrNaive = process.env.SSR_NAIVE === 'true'
-
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -11,10 +7,10 @@ export default defineNuxtConfig({
   modules: [
     '@pinia/nuxt',
     '@nuxt/ui',
-    ssrNaive ? '@bg-dev/nuxt-naiveui' : null,
-  ].filter(Boolean),
+  ],
 
-  ssr: ssrNaive === true,
+  // Keep SPA mode (previous default when SSR_NAIVE was unset).
+  ssr: false,
 
   css: ['~/assets/css/main.css'],
 
@@ -25,13 +21,6 @@ export default defineNuxtConfig({
   },
 
   vite: {
-    optimizeDeps: {
-      include: ['naive-ui', 'vueuc', 'date-fns', '@vicons/ionicons5'],
-      exclude: [],
-    },
-    ssr: {
-      noExternal: ssrNaive ? ['naive-ui'] : [],
-    },
     server: {
       strictPort: true,
     },
@@ -67,7 +56,6 @@ export default defineNuxtConfig({
       // 生产：空字符串 = 浏览器请求当前域名 /api/v1/*（由 Nginx 转发）。
       // 本地 pnpm dev：默认打本机 Go 后端。可用 API_BASE 覆盖。
       apiBase: process.env.API_BASE ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8080'),
-      ssrNaive,
     },
   },
 
