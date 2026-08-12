@@ -203,6 +203,7 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
 import { marked } from 'marked'
+import { apiUrl } from '~/utils/apiBase'
 import {
   ChatbubbleOutline,
   PersonOutline,
@@ -347,8 +348,8 @@ const sendMessage = async () => {
 
   try {
     const endpoint = selectedAgent.value
-      ? `${config.public.apiBase}/api/v1/agents/${selectedAgent.value}/chat`
-      : `${config.public.apiBase}/api/v1/chat/stream`
+      ? apiUrl(`/api/v1/agents/${selectedAgent.value}/chat`, String(config.public.apiBase ?? ''))
+      : apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
 
     const body: any = {
       model: selectedModel.value,

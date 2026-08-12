@@ -2,8 +2,7 @@
  * Knowledge Base types and API composable
  */
 
-import { createApiClient } from '../utils/apiClient'
-import { useAuth } from './useAuth'
+import { useApi } from './useApi'
 
 export interface KnowledgeBase {
   id: string
@@ -74,13 +73,7 @@ export interface SearchInput {
 }
 
 export const useKnowledgeBases = () => {
-  const auth = useAuth()
-
-  const api = createApiClient({
-    baseUrl: 'http://localhost:8080',
-    getToken: () => auth.getToken(),
-    onUnauthorized: () => auth.redirectToLogin(),
-  })
+  const api = useApi()
 
   const listKBs = async (): Promise<{ data?: KnowledgeBase[]; error?: string }> => {
     try {

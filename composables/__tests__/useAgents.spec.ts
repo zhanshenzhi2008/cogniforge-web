@@ -28,6 +28,9 @@ vi.mock('#imports', () => ({
   readonly,
   useRouter: () => ({ push: vi.fn() }),
   useCookie: () => ({ value: null }),
+  useRuntimeConfig: () => ({
+    public: { apiBase: 'http://localhost:8080' },
+  }),
 }))
 
 // Mock useAuth

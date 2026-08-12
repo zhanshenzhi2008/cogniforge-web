@@ -2,6 +2,8 @@
  * Agent chat API composable with SSE streaming support
  */
 
+import { resolveApiBase } from '~/utils/apiBase'
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
@@ -30,9 +32,7 @@ export const useAgentChat = () => {
   const streaming = ref(false)
   const error = ref<string | null>(null)
 
-  const getBaseUrl = () => {
-    return config.public.apiBase || 'http://localhost:8080'
-  }
+  const getBaseUrl = () => resolveApiBase(String(config.public.apiBase ?? ''))
 
   /**
    * Non-streaming chat with an agent

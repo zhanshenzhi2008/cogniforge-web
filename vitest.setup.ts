@@ -10,6 +10,9 @@ vi.mock('#imports', () => ({
     push: vi.fn(),
   }),
   useCookie: vi.fn(() => ({ value: null })),
+  useRuntimeConfig: () => ({
+    public: { apiBase: 'http://localhost:8080' },
+  }),
 }))
 
 // Mock the useAuth module that composables/useApi.ts explicitly imports

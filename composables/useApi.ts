@@ -1,11 +1,24 @@
 import { createApiClient } from '../utils/apiClient'
+import { resolveApiBase } from '../utils/apiBase'
 import { useAuth } from './useAuth'
+
+function readApiBase(): string {
+  try {
+    const runtime = useRuntimeConfig()
+    const resolved = resolveApiBase(String(runtime.public?.apiBase ?? ''))
+    if (resolved) return resolved
+    if (import.meta.env?.PROD) return ''
+    return 'http://localhost:8080'
+  } catch {
+    return 'http://localhost:8080'
+  }
+}
 
 export const useApi = () => {
   const auth = useAuth()
 
   return createApiClient({
-    baseUrl: 'http://localhost:8080',
+    baseUrl: readApiBase(),
     getToken: () => auth.getToken(),
     onUnauthorized: () => auth.redirectToLogin(),
   })

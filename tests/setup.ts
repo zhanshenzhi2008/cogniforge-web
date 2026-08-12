@@ -10,7 +10,7 @@ import { vi } from 'vitest'
 // Mock useRuntimeConfig
 const mockUseRuntimeConfig = vi.fn(() => ({
   public: {
-    apiBase: 'http://localhost:8080/api/v1'
+    apiBase: 'http://localhost:8080'
   }
 }))
 

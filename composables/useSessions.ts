@@ -1,5 +1,4 @@
-import { createApiClient } from '../utils/apiClient'
-import { useAuth } from './useAuth'
+import { useApi } from './useApi'
 
 export interface Session {
   id: string
@@ -17,13 +16,7 @@ export interface Session {
 }
 
 export const useSessions = () => {
-  const auth = useAuth()
-
-  const api = createApiClient({
-    baseUrl: 'http://localhost:8080',
-    getToken: () => auth.getToken(),
-    onUnauthorized: () => auth.redirectToLogin(),
-  })
+  const api = useApi()
 
   /**
    * 获取当前用户的会话列表

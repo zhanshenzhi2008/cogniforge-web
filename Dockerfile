@@ -9,8 +9,10 @@ COPY package.json pnpm-lock.yaml* ./
 RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 COPY . .
-# 静态托管没有运行时 Nuxt 配置；同源 API 地址必须在构建时写入产物。
-ARG API_BASE=/api
+# 静态托管没有运行时 Nuxt 配置；API 基址必须在构建时写入产物。
+# 空字符串 = 浏览器请求当前域名 /api/v1/*，由本容器 Nginx 转发到后端。
+# 不要写成 /api：接口路径已包含 /api/v1，再拼会变成 /api/api/v1。
+ARG API_BASE=
 ENV API_BASE=$API_BASE
 RUN pnpm build
 

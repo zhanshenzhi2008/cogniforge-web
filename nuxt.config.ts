@@ -35,11 +35,13 @@ export default defineNuxtConfig({
     ssr: {
       noExternal: ssrNaive ? ['naive-ui'] : [],
     },
+    server: {
+      strictPort: true,
+    },
   },
 
   devServer: {
     port: 3000,
-    strictPort: true,
   },
 
   app: {
@@ -58,8 +60,10 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // 生产镜像由 Nginx 将同源 /api/* 转发到 Go 后端；本地可用 API_BASE 覆盖。
-      apiBase: process.env.API_BASE || '/api',
+      // 生产：空字符串 = 浏览器请求当前域名 /api/v1/*（由 Nginx 转发）。
+      // 本地 pnpm dev：默认打本机 Go 后端。可用 API_BASE 覆盖。
+      // 不要默认写成 /api：接口路径已含 /api/v1，再拼会变成 /api/api/v1。
+      apiBase: process.env.API_BASE ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8080'),
       ssrNaive,
     },
   },

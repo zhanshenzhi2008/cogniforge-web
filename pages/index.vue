@@ -1,6 +1,13 @@
 <template>
   <div class="home-page">
-    <n-grid cols="1 600:2 960:4" :x-gap="16" :y-gap="16">
+    <header class="page-header">
+      <h1 class="page-title">控制台</h1>
+      <p class="page-subtitle">
+        欢迎回来，{{ displayName }} · 今天也可以从这里开始工作
+      </p>
+    </header>
+
+    <n-grid cols="1 600:2 960:4" :x-gap="16" :y-gap="16" responsive="screen">
       <n-gi v-for="card in statCards" :key="card.label">
         <n-card
           class="stat-card"
@@ -15,46 +22,65 @@
             <div class="stat-info">
               <div class="stat-value">{{ card.value }}</div>
               <div class="stat-label">{{ card.label }}</div>
+              <div class="stat-caption">{{ card.caption }}</div>
             </div>
           </div>
         </n-card>
       </n-gi>
     </n-grid>
 
-    <n-grid cols="1 900:2" :x-gap="16" :y-gap="16" class="section-grid">
-      <n-gi>
+    <n-grid
+      cols="1 900:5"
+      :x-gap="16"
+      :y-gap="16"
+      class="section-grid"
+      responsive="screen"
+    >
+      <n-gi :span="2">
         <n-card :bordered="false" class="panel-card">
           <template #header>
             <div class="card-header">快速开始</div>
           </template>
-          <n-space vertical :size="12" style="width: 100%">
-            <n-button type="primary" block strong @click="go('/playground')">
-              <template #icon>
-                <n-icon :component="ChatbubbleOutline" />
-              </template>
-              体验 Playground
-            </n-button>
-            <n-button block strong secondary @click="go('/agents')">
-              <template #icon>
-                <n-icon :component="HardwareChipOutline" />
-              </template>
-              创建 Agent
-            </n-button>
-            <n-button block strong secondary @click="go('/workflows')">
-              <template #icon>
-                <n-icon :component="DocumentTextOutline" />
-              </template>
-              创建工作流
-            </n-button>
-          </n-space>
+          <div class="quick-list">
+            <button
+              v-for="item in quickActions"
+              :key="item.to"
+              type="button"
+              class="quick-item"
+              :class="{ 'quick-item--primary': item.primary }"
+              @click="go(item.to)"
+            >
+              <span class="quick-icon" :style="{ background: item.tint }">
+                <n-icon :size="18" :component="item.icon" color="#fff" />
+              </span>
+              <span class="quick-text">
+                <span class="quick-title">{{ item.title }}</span>
+                <span class="quick-desc">{{ item.desc }}</span>
+              </span>
+              <n-icon
+                class="quick-chevron"
+                :size="18"
+                :component="ChevronForwardOutline"
+              />
+            </button>
+          </div>
         </n-card>
       </n-gi>
-      <n-gi>
-        <n-card :bordered="false" class="panel-card">
+      <n-gi :span="3">
+        <n-card :bordered="false" class="panel-card panel-card--activity">
           <template #header>
             <div class="card-header">最近活动</div>
           </template>
-          <n-empty description="暂无活动" class="activity-empty" />
+          <div class="activity-empty">
+            <n-empty description="暂无活动">
+              <template #extra>
+                <p class="activity-hint">去 Playground 开始第一次对话</p>
+                <n-button type="primary" @click="go('/playground')">
+                  体验 Playground
+                </n-button>
+              </template>
+            </n-empty>
+          </div>
         </n-card>
       </n-gi>
     </n-grid>
@@ -62,6 +88,7 @@
 </template>
 
 <script setup lang="ts">
+import { ChevronForwardOutline } from '@vicons/ionicons5'
 import {
   ChatbubbleOutline,
   KeyOutline,
@@ -73,6 +100,10 @@ definePageMeta({
   layout: 'default',
 })
 
+const { user } = useAuth()
+
+const displayName = computed(() => user.value?.name || '用户')
+
 function go(path: string) {
   void navigateTo(path)
 }
@@ -81,6 +112,7 @@ const statCards = [
   {
     label: '对话次数',
     value: '0',
+    caption: '全部',
     tint: 'linear-gradient(135deg, #6366f1, #4f46e5)',
     icon: ChatbubbleOutline,
     to: '/playground',
@@ -88,6 +120,7 @@ const statCards = [
   {
     label: 'API 密钥',
     value: '0',
+    caption: '全部',
     tint: 'linear-gradient(135deg, #22c55e, #16a34a)',
     icon: KeyOutline,
     to: '/keys',
@@ -95,6 +128,7 @@ const statCards = [
   {
     label: 'Agents',
     value: '0',
+    caption: '全部',
     tint: 'linear-gradient(135deg, #f59e0b, #d97706)',
     icon: HardwareChipOutline,
     to: '/agents',
@@ -102,9 +136,37 @@ const statCards = [
   {
     label: '工作流',
     value: '0',
+    caption: '全部',
     tint: 'linear-gradient(135deg, #ef4444, #dc2626)',
     icon: DocumentTextOutline,
     to: '/workflows',
+  },
+]
+
+const quickActions = [
+  {
+    title: '体验 Playground',
+    desc: '马上试用模型对话',
+    to: '/playground',
+    primary: true,
+    tint: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    icon: ChatbubbleOutline,
+  },
+  {
+    title: '创建 Agent',
+    desc: '配置你的智能体',
+    to: '/agents',
+    primary: false,
+    tint: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    icon: HardwareChipOutline,
+  },
+  {
+    title: '创建工作流',
+    desc: '编排自动化流程',
+    to: '/workflows',
+    primary: false,
+    tint: 'linear-gradient(135deg, #ef4444, #dc2626)',
+    icon: DocumentTextOutline,
   },
 ]
 </script>
@@ -113,15 +175,35 @@ const statCards = [
 .home-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 20px 40px;
+  padding: 28px 20px 48px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.page-subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
 }
 
 .section-grid {
-  margin-top: 8px;
+  margin-top: 16px;
 }
 
 .stat-card {
   cursor: pointer;
+  height: 100%;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -133,7 +215,7 @@ const statCards = [
 .stat-content {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .stat-icon {
@@ -162,11 +244,25 @@ const statCards = [
 .stat-label {
   font-size: 13px;
   color: #64748b;
-  margin-top: 4px;
+  margin-top: 2px;
+}
+
+.stat-caption {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
 }
 
 .panel-card {
-  min-height: 220px;
+  min-height: 280px;
+  height: 100%;
+}
+
+.panel-card--activity :deep(.n-card__content) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
 }
 
 .card-header {
@@ -175,11 +271,89 @@ const statCards = [
   color: #1e293b;
 }
 
+.quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quick-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.quick-item--primary {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.quick-item--primary:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.quick-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.quick-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quick-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.quick-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.quick-chevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
 .activity-empty {
-  padding: 24px 0;
+  width: 100%;
+  padding: 8px 0 12px;
+}
+
+.activity-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #94a3b8;
 }
 
 .activity-empty :deep(.n-empty__description) {
-  color: #94a3b8;
+  color: #64748b;
 }
 </style>

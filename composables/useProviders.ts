@@ -2,8 +2,7 @@
  * AI Provider types and API composable
  */
 
-import { createApiClient } from '../utils/apiClient'
-import { useAuth } from './useAuth'
+import { useApi } from './useApi'
 
 export interface AIProvider {
   id: string
@@ -132,13 +131,7 @@ export const PROVIDER_OPTIONS = Object.entries(PROVIDER_META).map(([value, meta]
 }))
 
 export const useProviders = () => {
-  const auth = useAuth()
-
-  const api = createApiClient({
-    baseUrl: 'http://localhost:8080',
-    getToken: () => auth.getToken(),
-    onUnauthorized: () => auth.redirectToLogin(),
-  })
+  const api = useApi()
 
   const list = async (): Promise<{ data?: AIProvider[]; error?: string }> => {
     try {
