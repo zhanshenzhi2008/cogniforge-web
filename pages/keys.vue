@@ -1,74 +1,133 @@
 <template>
   <div class="keys-page">
     <div class="page-header">
-      <h2>API 密钥</h2>
-      <n-button type="primary" @click="handleCreateKey">
-        <template #icon>
-          <n-icon :component="AddOutline" />
-        </template>
+      <h1 class="page-title font-display">API 密钥</h1>
+      <UButton color="primary" icon="i-lucide-plus" @click="handleCreateKey">
         创建密钥
-      </n-button>
+      </UButton>
     </div>
 
-    <n-card>
-      <n-spin :show="loading">
-        <n-data-table
-          :columns="columns"
-          :data="keys"
-          :pagination="false"
-          :row-key="(row: ApiKey) => row.id"
-          size="large"
-        />
-        <n-empty v-if="!loading && keys.length === 0" description="暂无 API 密钥" style="margin-top: 40px" />
-      </n-spin>
-    </n-card>
-
-    <n-modal
-      v-model:show="dialogVisible"
-      preset="card"
-      title="创建 API 密钥"
-      style="width: 500px; max-width: 90vw"
-    >
-      <div v-if="newKey" class="new-key-box">
-        <n-alert type="warning" :show-icon="false" style="margin-bottom: 16px">
-          请妥善保存以下密钥，它只会显示一次。
-        </n-alert>
-        <n-input v-model:value="newKey" readonly>
-          <template #suffix>
-            <n-button size="tiny" @click="copyKey">复制</n-button>
-          </template>
-        </n-input>
+    <div class="panel cf-surface">
+      <div v-if="loading" class="state-box">
+        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
+        <span>加载中…</span>
       </div>
 
-      <n-form
-        v-else
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-placement="top"
-      >
-        <n-form-item label="名称" path="name">
-          <n-input v-model:value="form.name" placeholder="请输入密钥名称" @keyup.enter.prevent="submitCreate" />
-        </n-form-item>
-      </n-form>
+      <div v-else-if="keys.length === 0" class="state-box">
+        <UIcon name="i-lucide-key-round" class="size-8 opacity-50" />
+        <p>暂无 API 密钥</p>
+      </div>
+
+      <div v-else class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>密钥</th>
+              <th>创建时间</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in keys" :key="row.id">
+              <td class="name">{{ row.name }}</td>
+              <td>
+                <div class="key-secret-row">
+                  <code class="key-secret-text">{{ row.show ? row.key : row.maskedKey }}</code>
+                  <UTooltip :text="row.show ? '隐藏' : '显示'">
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="sm"
+                      :icon="row.show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                      @click="row.show = !row.show"
+                    />
+                  </UTooltip>
+                </div>
+              </td>
+              <td class="muted">{{ formatDate(row.created_at) }}</td>
+              <td>
+                <UTooltip text="撤销">
+                  <UButton
+                    color="error"
+                    variant="ghost"
+                    size="sm"
+                    icon="i-lucide-trash-2"
+                    @click="askDelete(row)"
+                  />
+                </UTooltip>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <UModal
+      v-model:open="dialogVisible"
+      title="创建 API 密钥"
+      :ui="{ content: 'sm:max-w-md' }"
+    >
+      <template #body>
+        <div v-if="newKey" class="new-key-box">
+          <UAlert
+            color="warning"
+            variant="subtle"
+            title="请妥善保存以下密钥，它只会显示一次。"
+            :ui="{ root: 'mb-3' }"
+          />
+          <div class="copy-row">
+            <UInput :model-value="newKey" class="w-full" readonly />
+            <UButton color="primary" variant="soft" @click="copyKey">复制</UButton>
+          </div>
+        </div>
+
+        <form v-else id="key-form" class="form-grid" @submit.prevent="submitCreate">
+          <div class="field">
+            <label class="field__label">名称</label>
+            <UInput
+              v-model="form.name"
+              class="w-full"
+              placeholder="请输入密钥名称"
+              :color="errors.name ? 'error' : 'neutral'"
+              @update:model-value="errors.name = ''"
+            />
+            <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+          </div>
+        </form>
+      </template>
 
       <template #footer>
-        <n-space justify="end">
-          <n-button @click="dialogVisible = false">关闭</n-button>
-          <n-button v-if="!newKey" type="primary" :loading="creating" @click="submitCreate">
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="dialogVisible = false">关闭</UButton>
+          <UButton
+            v-if="!newKey"
+            form="key-form"
+            type="submit"
+            color="primary"
+            :loading="creating"
+          >
             创建
-          </n-button>
-        </n-space>
+          </UButton>
+        </div>
       </template>
-    </n-modal>
+    </UModal>
+
+    <UModal v-model:open="deleteVisible" title="撤销确认" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="delete-text">确定要撤销此 API 密钥吗？此操作不可恢复。</p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
+          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">撤销</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Component } from 'vue'
-import { AddOutline, TrashOutline, EyeOutline, EyeOffOutline } from '@vicons/ionicons5'
-import { useMessage, useDialog, NButton, NIcon, NTooltip } from 'naive-ui'
-
 interface ApiKey {
   id: string
   name: string
@@ -82,108 +141,40 @@ definePageMeta({
   layout: 'default',
 })
 
-const message = useMessage()
-const dialog = useDialog()
+const toast = useToast()
 const { get, post, del } = useApi()
 
 const loading = ref(false)
 const creating = ref(false)
 const keys = ref<ApiKey[]>([])
 const dialogVisible = ref(false)
+const deleteVisible = ref(false)
+const deletingLoading = ref(false)
+const deletingId = ref('')
 const newKey = ref('')
-const formRef = ref()
+const form = reactive({ name: '' })
+const errors = reactive({ name: '' })
 
-const form = reactive({
-  name: ''
-})
-
-const rules = {
-  name: [{ required: true, message: '请输入密钥名称', trigger: 'blur' }]
+function formatDate(value: string) {
+  return new Date(value).toLocaleString('zh-CN')
 }
-
-function renderIconAction(
-  label: string,
-  type: 'default' | 'info' | 'error',
-  onClick: () => void,
-  Icon: Component,
-) {
-  return h(NTooltip, { placement: 'top' }, {
-    trigger: () => h(NButton, {
-      quaternary: true,
-      circle: true,
-      size: 'small',
-      depth: 3,
-      onClick,
-    }, {
-      icon: () => h(NIcon, { component: Icon, size: 20 }),
-    }),
-    default: () => label,
-  })
-}
-
-const columns = [
-  {
-    title: '名称',
-    key: 'name',
-    width: 200,
-  },
-  {
-    title: '密钥',
-    key: 'key',
-    render(row: ApiKey) {
-      const ShowIcon = row.show ? EyeOffOutline : EyeOutline
-      const showLabel = row.show ? '隐藏' : '显示'
-      return h('div', { class: 'key-secret-row' }, [
-        h('span', { class: 'key-secret-text' }, row.show ? row.key : row.maskedKey),
-        h(NTooltip, { placement: 'top' }, {
-          trigger: () => h(NButton, {
-            quaternary: true,
-            circle: true,
-            size: 'small',
-            type: 'default',
-            onClick: () => { row.show = !row.show },
-          }, {
-            icon: () => h(NIcon, { component: ShowIcon, size: 18 }),
-          }),
-          default: () => showLabel,
-        }),
-      ])
-    },
-  },
-  {
-    title: '创建时间',
-    key: 'created_at',
-    width: 180,
-    render(row: ApiKey) {
-      return new Date(row.created_at).toLocaleString('zh-CN')
-    },
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 56,
-    render(row: ApiKey) {
-      return renderIconAction('撤销', 'error', () => handleDelete(row.id), TrashOutline)
-    },
-  },
-]
 
 const fetchKeys = async () => {
   loading.value = true
   try {
     const res = await get<{ keys: any[] }>('/api/v1/keys')
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
     const keyList = res.data?.keys || []
     keys.value = keyList.map((k: any) => ({
       ...k,
-      maskedKey: k.key ? k.key.slice(0, 10) + '****' + k.key.slice(-4) : '',
-      show: false
+      maskedKey: k.key ? `${k.key.slice(0, 10)}****${k.key.slice(-4)}` : '',
+      show: false,
     }))
   } catch {
-    message.error('获取密钥列表失败')
+    toast.add({ title: '获取密钥列表失败', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -192,54 +183,54 @@ const fetchKeys = async () => {
 const handleCreateKey = () => {
   form.name = ''
   newKey.value = ''
+  errors.name = ''
   dialogVisible.value = true
 }
 
 const submitCreate = async () => {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
+  errors.name = form.name.trim() ? '' : '请输入密钥名称'
+  if (errors.name) return
 
   creating.value = true
   try {
     const res = await post<{ key: string }>('/api/v1/keys', form)
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
     newKey.value = res.data?.key || ''
     await fetchKeys()
   } catch {
-    message.error('创建失败')
+    toast.add({ title: '创建失败', color: 'error' })
   } finally {
     creating.value = false
   }
 }
 
-const handleDelete = async (id: string) => {
-  dialog.warning({
-    title: '撤销确认',
-    content: '确定要撤销此 API 密钥吗？此操作不可恢复。',
-    positiveText: '撤销',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      const res = await del<{ message?: string }>(`/api/v1/keys/${id}`)
-      if (res.error) {
-        message.error(res.error)
-        return
-      }
-      message.success(res.data?.message || '撤销成功')
-      await fetchKeys()
-    },
-  })
+const askDelete = (row: ApiKey) => {
+  deletingId.value = row.id
+  deleteVisible.value = true
 }
 
-const copyKey = () => {
-  navigator.clipboard.writeText(newKey.value)
-  message.success('已复制到剪贴板')
+const confirmDelete = async () => {
+  deletingLoading.value = true
+  try {
+    const res = await del<{ message?: string }>(`/api/v1/keys/${deletingId.value}`)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: res.data?.message || '撤销成功', color: 'success' })
+    deleteVisible.value = false
+    await fetchKeys()
+  } finally {
+    deletingLoading.value = false
+  }
+}
+
+const copyKey = async () => {
+  await navigator.clipboard.writeText(newKey.value)
+  toast.add({ title: '已复制到剪贴板', color: 'success' })
 }
 
 onMounted(() => {
@@ -249,44 +240,135 @@ onMounted(() => {
 
 <style scoped>
 .keys-page {
-  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.page-header h2 {
+.page-title {
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cf-ink);
 }
 
-.new-key-box {
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 8px;
+.panel {
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 220px;
+}
+
+.state-box {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--cf-ink-soft);
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--cf-line);
+  vertical-align: middle;
+}
+
+.data-table th {
+  color: var(--cf-ink-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.col-actions {
+  width: 72px;
+}
+
+.name {
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.muted {
+  color: var(--cf-ink-soft);
 }
 
 .key-secret-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.key-secret-row :deep(.n-button) {
-  opacity: 0.75;
-  transition: opacity 0.2s, transform 0.15s;
-}
-
-.key-secret-row :deep(.n-button:hover) {
-  opacity: 1;
-  transform: scale(1.1);
+  gap: 8px;
 }
 
 .key-secret-text {
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--cf-ink);
+}
+
+.new-key-box {
+  padding: 4px 0;
+}
+
+.copy-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+}
+
+.field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-danger);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-text {
+  margin: 0;
+  color: var(--cf-ink-soft);
+  line-height: 1.5;
 }
 </style>
