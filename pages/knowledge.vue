@@ -1,284 +1,355 @@
 <template>
   <div class="knowledge-page">
     <div class="page-header">
-      <h2>知识库</h2>
-      <n-button type="primary" @click="handleCreate">
-        <template #icon>
-          <n-icon :component="AddOutline" />
-        </template>
+      <h1 class="page-title font-display">知识库</h1>
+      <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
         创建知识库
-      </n-button>
+      </UButton>
     </div>
 
-    <n-grid :cols="3" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-      <n-gi v-for="kb in knowledgeBases" :key="kb.id" :span="3">
-        <n-card class="kb-card" hoverable @click="handleSelectKB(kb)">
-          <div class="kb-header">
-            <div class="kb-name">
-              <n-icon :component="BookOutline" size="20" />
-              <span>{{ kb.name }}</span>
-              <n-tag size="small" :type="kb.status === 'active' ? 'success' : 'default'" :bordered="false">
-                {{ kb.status === 'active' ? '启用' : '禁用' }}
-              </n-tag>
-            </div>
-            <n-dropdown :options="getKBDropdownOptions(kb)" @select="(key) => handleKBAction(key, kb)">
-              <n-button quaternary circle size="small" @click.stop>
-                <template #icon>
-                  <n-icon :component="EllipsisHorizontalOutline" />
-                </template>
-              </n-button>
-            </n-dropdown>
-          </div>
+    <div v-if="loading" class="state-box">
+      <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
+      <span>加载中…</span>
+    </div>
 
-          <p class="kb-description">{{ kb.description || '暂无描述' }}</p>
+    <div v-else-if="knowledgeBases.length === 0" class="state-box">
+      <UIcon name="i-lucide-book-open" class="size-8 opacity-50" />
+      <p>暂无知识库，点击上方按钮创建</p>
+    </div>
 
-          <div class="kb-meta">
-            <n-space :size="16">
-              <span class="meta-item">
-                <n-icon :component="DocumentTextOutline" />
-                {{ kb.doc_count }} 文档
-              </span>
-              <span class="meta-item">
-                <n-icon :component="ServerOutline" />
-                {{ kb.vector_db || 'chroma' }}
-              </span>
-            </n-space>
-            <span class="meta-item">
-              {{ formatDate(kb.created_at) }}
-            </span>
-          </div>
-        </n-card>
-      </n-gi>
-    </n-grid>
-
-    <n-empty v-if="!loading && knowledgeBases.length === 0" description="暂无知识库，点击上方按钮创建" style="margin-top: 40px" />
-
-    <!-- KB Dialog -->
-    <n-modal
-      v-model:show="dialogVisible"
-      preset="card"
-      :title="isEditing ? '编辑知识库' : '创建知识库'"
-      style="width: 500px; max-width: 90vw"
-      :segmented="{ content: true, footer: true }"
-    >
-      <n-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-placement="top"
+    <div v-else class="kb-grid">
+      <div
+        v-for="kb in knowledgeBases"
+        :key="kb.id"
+        class="kb-card cf-surface"
+        @click="handleSelectKB(kb)"
       >
-        <n-form-item label="名称" path="name">
-          <n-input v-model:value="form.name" placeholder="请输入知识库名称" />
-        </n-form-item>
-
-        <n-form-item label="描述" path="description">
-          <n-input
-            v-model:value="form.description"
-            type="textarea"
-            :autosize="{ minRows: 2, maxRows: 4 }"
-            placeholder="请输入描述（可选）"
-          />
-        </n-form-item>
-
-        <n-form-item label="向量数据库" path="vector_db">
-          <n-select
-            v-model:value="form.vector_db"
-            :options="vectorDbOptions"
-            placeholder="选择向量数据库"
-          />
-        </n-form-item>
-
-        <n-form-item label="Embedding 模型" path="embedding_model">
-          <n-select
-            v-model:value="form.embedding_model"
-            :options="embeddingModelOptions"
-            placeholder="选择 Embedding 模型"
-          />
-        </n-form-item>
-      </n-form>
-
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="dialogVisible = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleSubmit">
-            {{ isEditing ? '保存' : '创建' }}
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
-
-    <!-- Documents Drawer -->
-    <n-drawer
-      v-model:show="drawerVisible"
-      :width="700"
-      placement="right"
-      :title="`知识库 - ${selectedKB?.name || ''}`"
-      @update:show="(val) => { if (!val) stopDocRefresh() }"
-    >
-      <n-drawer-content>
-        <template #header>
-          <n-space vertical :size="4">
-            <span>{{ selectedKB?.name }}</span>
-            <n-text depth="3" style="font-size: 12px">
-              {{ documents.length }} 个文档
-            </n-text>
-          </n-space>
-        </template>
-
-        <div class="drawer-header-actions">
-          <n-button type="primary" size="small" @click="uploadModalVisible = true">
-            <template #icon>
-              <n-icon :component="CloudUploadOutline" />
-            </template>
-            上传文档
-          </n-button>
+        <div class="kb-header">
+          <div class="kb-name">
+            <UIcon name="i-lucide-book-open" class="size-5 shrink-0" />
+            <span>{{ kb.name }}</span>
+            <UBadge
+              size="sm"
+              variant="subtle"
+              :color="kb.status === 'active' ? 'success' : 'neutral'"
+            >
+              {{ kb.status === 'active' ? '启用' : '禁用' }}
+            </UBadge>
+          </div>
+          <UDropdownMenu :items="getKBMenuItems(kb)" @click.stop>
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-ellipsis"
+              size="sm"
+              @click.stop
+            />
+          </UDropdownMenu>
         </div>
 
-        <n-tabs v-model:value="drawerActiveTab" type="line" animated>
-          <n-tab-pane name="docs" tab="文档管理">
-            <template #tab>
-              <n-space>
-                <span>文档管理</span>
-                <n-badge :value="documents.length" :max="99" />
-              </n-space>
-            </template>
-            <n-spin :show="docsLoading">
-              <div v-if="documents.length > 0" class="doc-list-container">
-                <n-data-table
-                  :columns="docColumns"
-                  :data="documents"
-                  :pagination="false"
-                  :row-key="(row: Document) => row.id"
-                  size="small"
-                />
-              </div>
-              <n-empty v-else description="暂无文档，请点击上方按钮上传" />
-            </n-spin>
-          </n-tab-pane>
+        <p class="kb-description">{{ kb.description || '暂无描述' }}</p>
 
-          <n-tab-pane name="search">
-            <template #tab>
-              <n-space>
-                <span>检索测试</span>
-                <n-badge :value="searchResults.length" :max="99" type="info" />
-              </n-space>
-            </template>
+        <div class="kb-meta">
+          <div class="meta-left">
+            <span class="meta-item">
+              <UIcon name="i-lucide-file-text" class="size-3.5" />
+              {{ kb.doc_count }} 文档
+            </span>
+            <span class="meta-item">
+              <UIcon name="i-lucide-server" class="size-3.5" />
+              {{ kb.vector_db || 'chroma' }}
+            </span>
+          </div>
+          <span class="meta-item">{{ formatDate(kb.created_at) }}</span>
+        </div>
+      </div>
+    </div>
 
+    <!-- Create / Edit KB -->
+    <UModal
+      v-model:open="dialogVisible"
+      :title="isEditing ? '编辑知识库' : '创建知识库'"
+      :ui="{ content: 'sm:max-w-lg' }"
+    >
+      <template #body>
+        <form id="kb-form" class="form-grid" @submit.prevent="handleSubmit">
+          <div class="field">
+            <label class="field__label">名称</label>
+            <UInput
+              v-model="form.name"
+              class="w-full"
+              placeholder="请输入知识库名称"
+              :color="errors.name ? 'error' : undefined"
+              @update:model-value="errors.name = ''"
+            />
+            <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+          </div>
+
+          <div class="field">
+            <label class="field__label">描述</label>
+            <UTextarea
+              v-model="form.description"
+              class="w-full"
+              :rows="2"
+              placeholder="请输入描述（可选）"
+            />
+          </div>
+
+          <div class="field">
+            <label class="field__label">向量数据库</label>
+            <USelect
+              v-model="form.vector_db"
+              class="w-full"
+              :items="vectorDbOptions"
+              placeholder="选择向量数据库"
+            />
+          </div>
+
+          <div class="field">
+            <label class="field__label">Embedding 模型</label>
+            <USelect
+              v-model="form.embedding_model"
+              class="w-full"
+              :items="embeddingModelOptions"
+              placeholder="选择 Embedding 模型"
+            />
+          </div>
+        </form>
+      </template>
+
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="dialogVisible = false">取消</UButton>
+          <UButton form="kb-form" type="submit" color="primary" :loading="submitting">
+            {{ isEditing ? '保存' : '创建' }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Delete KB confirm -->
+    <UModal v-model:open="deleteVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="delete-text">
+          确定要删除知识库「{{ deleting?.name }}」吗？删除后无法恢复。
+        </p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
+          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Documents Slideover -->
+    <USlideover
+      v-model:open="drawerVisible"
+      :title="selectedKB?.name || '知识库'"
+      :description="`${documents.length} 个文档`"
+      :ui="{ content: 'max-w-2xl w-full' }"
+    >
+      <template #body>
+        <div class="drawer-header-actions">
+          <UButton
+            color="primary"
+            size="sm"
+            icon="i-lucide-cloud-upload"
+            @click="uploadModalVisible = true"
+          >
+            上传文档
+          </UButton>
+        </div>
+
+        <UTabs v-model="drawerActiveTab" :items="drawerTabs" class="w-full">
+          <template #docs>
+            <div v-if="docsLoading" class="state-box state-box--sm">
+              <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+              <span>加载中…</span>
+            </div>
+
+            <div v-else-if="documents.length === 0" class="state-box state-box--sm">
+              <UIcon name="i-lucide-file" class="size-7 opacity-50" />
+              <p>暂无文档，请点击上方按钮上传</p>
+            </div>
+
+            <div v-else class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>状态</th>
+                    <th>分块</th>
+                    <th>大小</th>
+                    <th>时间</th>
+                    <th class="col-actions">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="doc in documents" :key="doc.id">
+                    <td>
+                      <div class="doc-name-cell">
+                        <UIcon :name="getFileIcon(doc.file_type)" class="size-4 shrink-0 opacity-60" />
+                        <span class="doc-name">{{ doc.name }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <UBadge size="sm" variant="subtle" :color="docStatusColor(doc.status)">
+                        {{ docStatusLabel(doc.status) }}
+                      </UBadge>
+                    </td>
+                    <td class="muted">{{ doc.chunk_count || '—' }}</td>
+                    <td class="muted">{{ formatFileSize(doc.file_size) }}</td>
+                    <td class="muted">{{ formatDate(doc.created_at) }}</td>
+                    <td>
+                      <div class="action-btns">
+                        <UTooltip text="重新解析">
+                          <UButton
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-refresh-cw"
+                            size="sm"
+                            @click="handleReparseDoc(doc)"
+                          />
+                        </UTooltip>
+                        <UTooltip text="删除">
+                          <UButton
+                            color="error"
+                            variant="ghost"
+                            icon="i-lucide-trash-2"
+                            size="sm"
+                            @click="askDeleteDoc(doc)"
+                          />
+                        </UTooltip>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+
+          <template #search>
             <div class="search-panel">
-              <n-input
-                v-model:value="searchQuery"
-                type="textarea"
+              <UTextarea
+                v-model="searchQuery"
+                class="w-full"
+                :rows="2"
                 placeholder="输入检索关键词..."
-                :autosize="{ minRows: 2, maxRows: 4 }"
                 @keydown.enter.ctrl="handleSearch"
               />
-              <n-space style="margin-top: 12px">
-                <n-button type="primary" :loading="searchLoading" @click="handleSearch">
-                  <template #icon>
-                    <n-icon :component="SearchOutline" />
-                  </template>
+              <div class="search-actions">
+                <UButton
+                  color="primary"
+                  icon="i-lucide-search"
+                  :loading="searchLoading"
+                  @click="handleSearch"
+                >
                   检索
-                </n-button>
-                <n-button @click="searchQuery = ''">清空</n-button>
-                <n-text depth="3" style="margin-left: 12px; font-size: 12px">
-                  支持 Ctrl+Enter 快捷检索
-                </n-text>
-              </n-space>
+                </UButton>
+                <UButton color="neutral" variant="outline" @click="searchQuery = ''">清空</UButton>
+                <span class="search-hint">支持 Ctrl+Enter 快捷检索</span>
+              </div>
             </div>
 
             <div v-if="searchResults.length > 0" class="search-results">
               <div class="results-header">
-                <n-text>找到 {{ searchResults.length }} 条相关结果</n-text>
-                <n-text depth="3" style="font-size: 12px">
-                  耗时 {{ searchDuration }}ms
-                </n-text>
+                <span>找到 {{ searchResults.length }} 条相关结果</span>
+                <span class="muted">耗时 {{ searchDuration }}ms</span>
               </div>
 
               <div v-for="result in searchResults" :key="result.chunk_id" class="result-item">
                 <div class="result-header">
                   <span class="result-doc-name">{{ result.document_name }}</span>
-                  <n-tag size="small" :type="getScoreTagType(result.score)">
+                  <UBadge size="sm" variant="subtle" :color="getScoreColor(result.score)">
                     相似度: {{ (result.score * 100).toFixed(1) }}%
-                  </n-tag>
+                  </UBadge>
                 </div>
                 <div class="result-content">{{ result.content }}</div>
               </div>
             </div>
 
-            <n-empty v-else-if="!searchLoading && hasSearched" description="未找到相关结果" style="margin-top: 40px" />
-          </n-tab-pane>
-        </n-tabs>
-
-        <template #footer>
-          <n-space justify="end">
-            <n-button @click="drawerVisible = false">关闭</n-button>
-          </n-space>
-        </template>
-      </n-drawer-content>
-    </n-drawer>
-
-    <!-- Upload Modal -->
-    <n-modal
-      v-model:show="uploadModalVisible"
-      preset="card"
-      title="上传文档"
-      style="width: 500px; max-width: 90vw"
-      :segmented="{ content: true, footer: true }"
-    >
-      <n-upload
-        v-model:file-list="uploadFileList"
-        :max="5"
-        accept=".pdf,.txt,.md,.docx,.html"
-        multiple
-        draggable
-      >
-        <n-space vertical align="center" :size="12">
-          <n-icon :component="CloudUploadOutline" size="48" depth="3" />
-          <n-text>点击或拖拽文件到此处上传</n-text>
-          <n-text depth="3" style="font-size: 12px">
-            支持 PDF、TXT、MD、DOCX、HTML，单个文件不超过 50MB
-          </n-text>
-        </n-space>
-      </n-upload>
+            <div v-else-if="!searchLoading && hasSearched" class="state-box state-box--sm">
+              <UIcon name="i-lucide-search-x" class="size-7 opacity-50" />
+              <p>未找到相关结果</p>
+            </div>
+          </template>
+        </UTabs>
+      </template>
 
       <template #footer>
-        <n-space justify="end">
-          <n-button @click="handleUploadCancel">取消</n-button>
-          <n-button type="primary" :loading="uploadLoading" :disabled="uploadFileList.length === 0" @click="handleUploadSubmit">
-            上传
-          </n-button>
-        </n-space>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="drawerVisible = false">关闭</UButton>
+        </div>
       </template>
-    </n-modal>
+    </USlideover>
+
+    <!-- Upload Modal -->
+    <UModal
+      v-model:open="uploadModalVisible"
+      title="上传文档"
+      :ui="{ content: 'sm:max-w-lg' }"
+    >
+      <template #body>
+        <UFileUpload
+          v-model="uploadFiles"
+          multiple
+          accept=".pdf,.txt,.md,.docx,.html"
+          label="点击或拖拽文件到此处上传"
+          description="支持 PDF、TXT、MD、DOCX、HTML，单个文件不超过 50MB"
+          layout="list"
+        />
+      </template>
+
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="handleUploadCancel">取消</UButton>
+          <UButton
+            color="primary"
+            :loading="uploadLoading"
+            :disabled="!uploadFiles?.length"
+            @click="handleUploadSubmit"
+          >
+            上传
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Delete Doc confirm -->
+    <UModal v-model:open="deleteDocVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="delete-text">
+          确定要删除文档「{{ deletingDoc?.name }}」吗？
+        </p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="deleteDocVisible = false">取消</UButton>
+          <UButton color="error" :loading="deletingDocLoading" @click="confirmDeleteDoc">删除</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  AddOutline,
-  BookOutline,
-  DocumentTextOutline,
-  DocumentOutline,
-  CodeSlashOutline,
-  ServerOutline,
-  CloudUploadOutline,
-  PencilOutline,
-  TrashOutline,
-  EllipsisHorizontalOutline,
-  SearchOutline,
-  RefreshOutline,
-} from '@/constants/icons'
-import { NButton, NIcon, NTag, NDropdown, NDrawer, NDrawerContent, NUpload, NTabs, NTabPane, useMessage, useDialog, NBadge, NPopconfirm } from 'naive-ui'
-import type { DataTableColumns, FormInst } from 'naive-ui'
-import type { KnowledgeBase, Document, CreateKBInput, UpdateKBInput, SearchResult, SearchResponse } from '@/composables/useKnowledgeBases'
+import type { DropdownMenuItem } from '@nuxt/ui'
+import type {
+  KnowledgeBase,
+  Document,
+  CreateKBInput,
+  UpdateKBInput,
+  SearchResult,
+} from '@/composables/useKnowledgeBases'
 
 definePageMeta({
   layout: 'default',
 })
 
-const message = useMessage()
-const dialog = useDialog()
-const { listKBs, createKB, updateKB, deleteKB, listDocs, uploadDoc, deleteDoc, reparseDoc, searchKB } = useKnowledgeBases()
+const toast = useToast()
+const { listKBs, createKB, updateKB, deleteKB, listDocs, uploadDoc, deleteDoc, reparseDoc, searchKB } =
+  useKnowledgeBases()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -286,7 +357,10 @@ const knowledgeBases = ref<KnowledgeBase[]>([])
 const dialogVisible = ref(false)
 const isEditing = ref(false)
 const editingId = ref('')
-const formRef = ref<FormInst>()
+
+const deleteVisible = ref(false)
+const deletingLoading = ref(false)
+const deleting = ref<KnowledgeBase | null>(null)
 
 const form = reactive({
   name: '',
@@ -294,13 +368,7 @@ const form = reactive({
   vector_db: 'chroma',
   embedding_model: 'text-embedding-ada-002',
 })
-
-const rules = {
-  name: [
-    { required: true, message: '名称不能为空', trigger: 'blur' },
-    { max: 100, message: '名称不能超过 100 个字符', trigger: 'blur' },
-  ],
-}
+const errors = reactive({ name: '' })
 
 const vectorDbOptions = [
   { label: 'PGVector', value: 'pgvector' },
@@ -323,126 +391,81 @@ const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const selectedKB = ref<KnowledgeBase | null>(null)
 
-// 上传相关
+const deleteDocVisible = ref(false)
+const deletingDocLoading = ref(false)
+const deletingDoc = ref<Document | null>(null)
+
+// Upload
 const uploadModalVisible = ref(false)
-const uploadFileList = ref<any[]>([])
+const uploadFiles = ref<File[] | null>(null)
 const uploadLoading = ref(false)
 
-// 检索相关
+// Search
 const searchQuery = ref('')
 const searchLoading = ref(false)
 const searchResults = ref<SearchResult[]>([])
 const searchDuration = ref(0)
 const hasSearched = ref(false)
 
-const docColumns: DataTableColumns<Document> = [
+const drawerTabs = computed(() => [
   {
-    title: '名称',
-    key: 'name',
-    ellipsis: { tooltip: true },
-    render(row) {
-      return h('div', { class: 'doc-name-cell' }, [
-        h(NIcon, { component: getFileIcon(row.file_type), size: 16, depth: 3 }),
-        h('span', { style: { marginLeft: '6px' } }, row.name),
-      ])
-    },
+    label: '文档管理',
+    value: 'docs',
+    slot: 'docs' as const,
+    badge: documents.value.length || undefined,
   },
   {
-    title: '状态',
-    key: 'status',
-    width: 100,
-    render(row) {
-      const statusMap: Record<string, { type: 'success' | 'warning' | 'error' | 'info' | 'default'; label: string }> = {
-        pending: { type: 'default', label: '等待中' },
-        processing: { type: 'warning', label: '处理中' },
-        completed: { type: 'success', label: '已完成' },
-        failed: { type: 'error', label: '失败' },
-      }
-      const status = statusMap[row.status] || { type: 'default', label: row.status }
-      return h(NTag, { size: 'small', type: status.type, bordered: false }, { default: () => status.label })
-    },
+    label: '检索测试',
+    value: 'search',
+    slot: 'search' as const,
+    badge: searchResults.value.length || undefined,
   },
-  {
-    title: '分块',
-    key: 'chunk_count',
-    width: 70,
-    render(row) {
-      return row.chunk_count || '—'
-    },
-  },
-  {
-    title: '大小',
-    key: 'file_size',
-    width: 80,
-    render(row) {
-      return formatFileSize(row.file_size)
-    },
-  },
-  {
-    title: '时间',
-    key: 'created_at',
-    width: 100,
-    render(row) {
-      return formatDate(row.created_at)
-    },
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 100,
-    render(row) {
-      return h('div', { class: 'action-btns' }, [
-        h(
-          NButton,
-          {
-            quaternary: true,
-            circle: true,
-            size: 'small',
-            title: '重新解析',
-            onClick: () => handleReparseDoc(row),
-          },
-          { icon: () => h(NIcon, { component: RefreshOutline, size: 16 }) },
-        ),
-        h(
-          NPopconfirm,
-          {
-            onPositiveClick: () => handleDeleteDoc(row),
-          },
-          {
-            trigger: () =>
-              h(
-                NButton,
-                {
-                  quaternary: true,
-                  circle: true,
-                  size: 'small',
-                  title: '删除',
-                },
-                { icon: () => h(NIcon, { component: TrashOutline, size: 16 }) },
-              ),
-            default: () => `确定要删除文档「${row.name}」吗？`,
-          },
-        ),
-      ])
-    },
-  },
-]
+])
 
 function getFileIcon(fileType: string) {
-  const icons: Record<string, any> = {
-    pdf: DocumentTextOutline,
-    txt: DocumentOutline,
-    md: DocumentOutline,
-    docx: DocumentOutline,
-    html: CodeSlashOutline,
+  const icons: Record<string, string> = {
+    pdf: 'i-lucide-file-text',
+    txt: 'i-lucide-file',
+    md: 'i-lucide-file',
+    docx: 'i-lucide-file',
+    html: 'i-lucide-code',
   }
-  return icons[fileType] || DocumentOutline
+  return icons[fileType] || 'i-lucide-file'
 }
 
-function getKBDropdownOptions(kb: KnowledgeBase) {
+function docStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    pending: '等待中',
+    processing: '处理中',
+    completed: '已完成',
+    failed: '失败',
+  }
+  return map[status] || status
+}
+
+function docStatusColor(status: string): 'success' | 'warning' | 'error' | 'neutral' {
+  const map: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+    pending: 'neutral',
+    processing: 'warning',
+    completed: 'success',
+    failed: 'error',
+  }
+  return map[status] || 'neutral'
+}
+
+function getKBMenuItems(kb: KnowledgeBase): DropdownMenuItem[] {
   return [
-    { label: '编辑', key: 'edit', icon: () => h(NIcon, { component: PencilOutline, size: 16 }) },
-    { label: '删除', key: 'delete', icon: () => h(NIcon, { component: TrashOutline, size: 16 }) },
+    {
+      label: '编辑',
+      icon: 'i-lucide-pencil',
+      onSelect: () => handleEdit(kb),
+    },
+    {
+      label: '删除',
+      icon: 'i-lucide-trash-2',
+      color: 'error' as const,
+      onSelect: () => askDelete(kb),
+    },
   ]
 }
 
@@ -458,17 +481,29 @@ function formatFileSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
+function getScoreColor(score: number): 'success' | 'warning' | 'neutral' {
+  if (score >= 0.7) return 'success'
+  if (score >= 0.5) return 'warning'
+  return 'neutral'
+}
+
+function validate() {
+  errors.name = form.name.trim() ? '' : '名称不能为空'
+  if (form.name.trim().length > 100) errors.name = '名称不能超过 100 个字符'
+  return !errors.name
+}
+
 const fetchKnowledgeBases = async () => {
   loading.value = true
   try {
     const res = await listKBs()
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
     knowledgeBases.value = res.data || []
   } catch {
-    message.error('获取知识库列表失败')
+    toast.add({ title: '获取知识库列表失败', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -479,25 +514,26 @@ const fetchDocuments = async (kbId: string) => {
   try {
     const res = await listDocs(kbId)
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
     documents.value = res.data || []
   } catch {
-    message.error('获取文档列表失败')
+    toast.add({ title: '获取文档列表失败', color: 'error' })
   } finally {
     docsLoading.value = false
   }
 }
 
-// 文档状态刷新
-const refreshInterval = ref<NodeJS.Timeout | null>(null)
+const refreshInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 const startDocRefresh = () => {
   stopDocRefresh()
-  // 每 3 秒刷新一次文档列表
   refreshInterval.value = setInterval(() => {
-    if (selectedKB.value && documents.value.some(d => d.status === 'pending' || d.status === 'processing')) {
+    if (
+      selectedKB.value &&
+      documents.value.some((d) => d.status === 'pending' || d.status === 'processing')
+    ) {
       fetchDocuments(selectedKB.value.id)
     }
   }, 3000)
@@ -510,12 +546,18 @@ const stopDocRefresh = () => {
   }
 }
 
+watch(drawerVisible, (val) => {
+  if (!val) stopDocRefresh()
+})
+
 const handleSelectKB = async (kb: KnowledgeBase) => {
   selectedKB.value = kb
   drawerVisible.value = true
+  drawerActiveTab.value = 'docs'
   await fetchDocuments(kb.id)
-  // 如果有正在处理的文档，启动自动刷新
-  const hasProcessing = documents.value.some(d => d.status === 'pending' || d.status === 'processing')
+  const hasProcessing = documents.value.some(
+    (d) => d.status === 'pending' || d.status === 'processing',
+  )
   if (hasProcessing) {
     startDocRefresh()
   }
@@ -535,44 +577,40 @@ const handleEdit = (kb: KnowledgeBase) => {
   form.description = kb.description || ''
   form.vector_db = kb.vector_db || 'chroma'
   form.embedding_model = kb.embedding_model || 'text-embedding-ada-002'
+  errors.name = ''
   dialogVisible.value = true
 }
 
-const handleDelete = async (kb: KnowledgeBase) => {
-  dialog.warning({
-    title: '删除确认',
-    content: `确定要删除知识库「${kb.name}」吗？删除后无法恢复。`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      const res = await deleteKB(kb.id)
-      if (res.error) {
-        message.error(res.error)
-        return
-      }
-      message.success('删除成功')
-      await fetchKnowledgeBases()
-    },
-  })
+const askDelete = (kb: KnowledgeBase) => {
+  deleting.value = kb
+  deleteVisible.value = true
 }
 
-const handleKBAction = (key: string, kb: KnowledgeBase) => {
-  if (key === 'edit') {
-    handleEdit(kb)
-  } else if (key === 'delete') {
-    handleDelete(kb)
+const confirmDelete = async () => {
+  if (!deleting.value) return
+  deletingLoading.value = true
+  try {
+    const res = await deleteKB(deleting.value.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: '删除成功', color: 'success' })
+    deleteVisible.value = false
+    await fetchKnowledgeBases()
+  } finally {
+    deletingLoading.value = false
   }
 }
 
 const handleUploadCancel = () => {
-  uploadFileList.value = []
+  uploadFiles.value = null
   uploadModalVisible.value = false
 }
 
-// 检索相关函数
 const handleSearch = async () => {
   if (!selectedKB.value || !searchQuery.value.trim()) {
-    message.warning('请输入检索关键词')
+    toast.add({ title: '请输入检索关键词', color: 'warning' })
     return
   }
 
@@ -588,7 +626,7 @@ const handleSearch = async () => {
     })
 
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
 
@@ -597,63 +635,66 @@ const handleSearch = async () => {
       searchDuration.value = res.data.duration_ms || 0
     }
   } catch {
-    message.error('检索失败')
+    toast.add({ title: '检索失败', color: 'error' })
   } finally {
     searchLoading.value = false
   }
 }
 
-const getScoreTagType = (score: number): 'success' | 'warning' | 'error' | 'info' | 'default' => {
-  if (score >= 0.7) return 'success'
-  if (score >= 0.5) return 'warning'
-  return 'default'
-}
-
 const handleUploadSubmit = async () => {
-  if (!selectedKB.value || uploadFileList.value.length === 0) return
+  if (!selectedKB.value || !uploadFiles.value?.length) return
 
   uploadLoading.value = true
   let successCount = 0
   let failCount = 0
 
-  for (const file of uploadFileList.value) {
-    if (file.file) {
-      const res = await uploadDoc(selectedKB.value!.id, file.file)
-      if (res.error) {
-        failCount++
-      } else {
-        successCount++
-      }
+  for (const file of uploadFiles.value) {
+    const res = await uploadDoc(selectedKB.value!.id, file)
+    if (res.error) {
+      failCount++
+    } else {
+      successCount++
     }
   }
 
   uploadLoading.value = false
 
   if (failCount === 0) {
-    message.success(`成功上传 ${successCount} 个文档`)
+    toast.add({ title: `成功上传 ${successCount} 个文档`, color: 'success' })
   } else {
-    message.warning(`成功 ${successCount} 个，失败 ${failCount} 个`)
+    toast.add({ title: `成功 ${successCount} 个，失败 ${failCount} 个`, color: 'warning' })
   }
 
   handleUploadCancel()
-  // 刷新文档列表
   if (selectedKB.value) {
     await fetchDocuments(selectedKB.value.id)
     await fetchKnowledgeBases()
+    startDocRefresh()
   }
 }
 
-const handleDeleteDoc = async (doc: Document) => {
-  if (!selectedKB.value) return
+const askDeleteDoc = (doc: Document) => {
+  deletingDoc.value = doc
+  deleteDocVisible.value = true
+}
 
-  const res = await deleteDoc(selectedKB.value!.id, doc.id)
-  if (res.error) {
-    message.error(res.error)
-    return
+const confirmDeleteDoc = async () => {
+  if (!selectedKB.value || !deletingDoc.value) return
+
+  deletingDocLoading.value = true
+  try {
+    const res = await deleteDoc(selectedKB.value!.id, deletingDoc.value.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: '删除成功', color: 'success' })
+    deleteDocVisible.value = false
+    await fetchDocuments(selectedKB.value!.id)
+    await fetchKnowledgeBases()
+  } finally {
+    deletingDocLoading.value = false
   }
-  message.success('删除成功')
-  await fetchDocuments(selectedKB.value!.id)
-  await fetchKnowledgeBases()
 }
 
 const handleReparseDoc = async (doc: Document) => {
@@ -661,23 +702,16 @@ const handleReparseDoc = async (doc: Document) => {
 
   const res = await reparseDoc(selectedKB.value!.id, doc.id)
   if (res.error) {
-    message.error(res.error)
+    toast.add({ title: res.error, color: 'error' })
     return
   }
-  message.success('文档已提交重新解析')
-  // 刷新文档列表并启动自动刷新
+  toast.add({ title: '文档已提交重新解析', color: 'success' })
   await fetchDocuments(selectedKB.value!.id)
   startDocRefresh()
 }
 
 const handleSubmit = async () => {
-  if (!formRef.value) return
-
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
+  if (!validate()) return
 
   submitting.value = true
   try {
@@ -690,10 +724,10 @@ const handleSubmit = async () => {
       }
       const res = await updateKB(editingId.value, input)
       if (res.error) {
-        message.error(res.error)
+        toast.add({ title: res.error, color: 'error' })
         return
       }
-      message.success('保存成功')
+      toast.add({ title: '保存成功', color: 'success' })
     } else {
       const input: CreateKBInput = {
         name: form.name,
@@ -703,15 +737,15 @@ const handleSubmit = async () => {
       }
       const res = await createKB(input)
       if (res.error) {
-        message.error(res.error)
+        toast.add({ title: res.error, color: 'error' })
         return
       }
-      message.success('创建成功')
+      toast.add({ title: '创建成功', color: 'success' })
     }
     dialogVisible.value = false
     await fetchKnowledgeBases()
   } catch {
-    message.error(isEditing.value ? '保存失败' : '创建失败')
+    toast.add({ title: isEditing.value ? '保存失败' : '创建失败', color: 'error' })
   } finally {
     submitting.value = false
   }
@@ -722,7 +756,7 @@ const resetForm = () => {
   form.description = ''
   form.vector_db = 'chroma'
   form.embedding_model = 'text-embedding-ada-002'
-  formRef.value?.restoreValidation()
+  errors.name = ''
 }
 
 onMounted(() => {
@@ -736,28 +770,58 @@ onUnmounted(() => {
 
 <style scoped>
 .knowledge-page {
-  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.page-header h2 {
+.page-title {
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cf-ink);
+}
+
+.state-box {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--cf-ink-soft);
+}
+
+.state-box--sm {
+  min-height: 160px;
+}
+
+.kb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
 }
 
 .kb-card {
+  border-radius: 12px;
+  padding: 16px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1.5px solid var(--cf-line);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .kb-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in srgb, var(--cf-accent) 35%, var(--cf-line));
 }
 
 .kb-header {
@@ -765,6 +829,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  gap: 8px;
 }
 
 .kb-name {
@@ -772,13 +837,15 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 1rem;
+  color: var(--cf-ink);
+  min-width: 0;
 }
 
 .kb-description {
-  color: #666;
-  font-size: 14px;
-  margin: 0 0 12px 0;
+  color: var(--cf-ink-soft);
+  font-size: 0.875rem;
+  margin: 0 0 12px;
   min-height: 40px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -791,8 +858,15 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
-  color: #999;
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  gap: 8px;
+}
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .meta-item {
@@ -801,53 +875,82 @@ onUnmounted(() => {
   gap: 4px;
 }
 
-.action-btns {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.drawer-header-actions {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--cf-line);
+  margin-bottom: 12px;
 }
 
-.action-btns :deep(.n-button) {
-  opacity: 0.75;
-  transition: opacity 0.2s, transform 0.15s;
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 8px;
 }
 
-.action-btns :deep(.n-button:hover) {
-  opacity: 1;
-  transform: scale(1.1);
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
 }
 
-.doc-list-container {
-  margin: -12px;
+.data-table th,
+.data-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--cf-line);
+  vertical-align: middle;
+}
+
+.data-table th {
+  color: var(--cf-ink-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.col-actions {
+  width: 96px;
 }
 
 .doc-name-cell {
   display: flex;
   align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
-.drawer-header {
+.doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cf-ink);
+}
+
+.muted {
+  color: var(--cf-ink-soft);
+}
+
+.action-btns {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  width: 100%;
-}
-
-.drawer-header-actions {
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
-  margin-bottom: 12px;
-}
-
-.tab-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 
 .search-panel {
   padding: 12px 0;
+}
+
+.search-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.search-hint {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  margin-left: 4px;
 }
 
 .search-results {
@@ -860,15 +963,17 @@ onUnmounted(() => {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--cf-line);
+  font-size: 0.875rem;
+  color: var(--cf-ink);
 }
 
 .result-item {
   padding: 12px;
   margin-bottom: 12px;
-  background: #f8f9fa;
+  background: color-mix(in srgb, var(--cf-ink) 3%, transparent);
   border-radius: 8px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--cf-line);
 }
 
 .result-header {
@@ -876,18 +981,55 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
+  gap: 8px;
 }
 
 .result-doc-name {
   font-weight: 600;
-  color: #333;
+  color: var(--cf-ink);
 }
 
 .result-content {
-  font-size: 14px;
-  color: #666;
+  font-size: 0.875rem;
+  color: var(--cf-ink-soft);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+}
+
+.field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-danger);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-text {
+  margin: 0;
+  color: var(--cf-ink-soft);
+  line-height: 1.5;
 }
 </style>
