@@ -1,21 +1,24 @@
 <template>
   <div class="models-page">
     <div class="page-header">
-      <h2>模型配置</h2>
+      <h1 class="page-title font-display">模型配置</h1>
+      <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
+        添加供应商
+      </UButton>
     </div>
 
     <!-- 当前生效配置 Banner -->
     <div v-if="activeProvider" class="active-banner">
       <div class="banner-left">
         <div class="banner-icon">
-          <n-icon :component="HardwareChipOutline" size="24" />
+          <UIcon name="i-lucide-cpu" class="size-6" />
         </div>
         <div class="banner-info">
           <div class="banner-title">
             当前生效配置
-            <n-tag :type="activeProvider.is_default ? 'info' : 'success'" size="small" :bordered="false">
+            <UBadge size="sm" variant="subtle" :color="activeProvider.is_default ? 'info' : 'success'">
               {{ activeProvider.is_default ? '默认' : '首个启用' }}
-            </n-tag>
+            </UBadge>
           </div>
           <div class="banner-desc">
             {{ getProviderMeta(activeProvider.provider)?.icon }}
@@ -32,210 +35,180 @@
         </div>
       </div>
       <div class="banner-actions">
-        <n-button size="small" @click="handleEdit(activeProvider)">
-          <template #icon>
-            <n-icon :component="PencilOutline" />
-          </template>
+        <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="handleEdit(activeProvider)">
           编辑
-        </n-button>
-        <n-button size="small" @click="handleTest(activeProvider.id)">
-          <template #icon>
-            <n-icon :component="RefreshOutline" />
-          </template>
+        </UButton>
+        <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-refresh-cw" @click="handleTest(activeProvider.id)">
           测试连接
-        </n-button>
+        </UButton>
       </div>
     </div>
 
     <!-- 无生效配置时的提示 -->
-    <div v-if="!activeProvider" class="no-active-banner">
+    <div v-else class="no-active-banner">
       当前没有生效的 AI 配置，请先
-      <n-button type="primary" size="small" @click="handleCreate">添加供应商</n-button>
+      <UButton color="primary" size="sm" @click="handleCreate">添加供应商</UButton>
     </div>
 
     <!-- 供应商列表 -->
-    <n-card class="provider-list-card">
-      <template #header>
-        <div class="card-header">
-          <div class="card-header-left">
-            <span>已配置的供应商</span>
-            <n-text depth="3" style="font-size: 12px">{{ providers.length }} 个</n-text>
-          </div>
-          <n-button type="primary" size="small" @click="handleCreate">
-            <template #icon>
-              <n-icon :component="AddOutline" />
-            </template>
-            添加供应商
-          </n-button>
+    <div class="panel cf-surface">
+      <div class="card-header">
+        <div class="card-header-left">
+          <span class="card-header-title">已配置的供应商</span>
+          <span class="card-header-count">{{ providers.length }} 个</span>
         </div>
-      </template>
-      <n-spin :show="loading">
-        <div v-if="providers.length > 0" class="provider-grid">
-          <div
-            v-for="p in providers"
-            :key="p.id"
-            class="provider-card"
-            :class="{
-              'is-enabled': p.is_enabled,
-              'is-default': p.is_default,
-              'is-error': p.status === 'error',
-            }"
-          >
-            <!-- Card header -->
-            <div class="provider-card-header">
-              <div class="provider-meta">
-                <div
-                  class="provider-icon-wrap"
-                  :style="{ background: getProviderMeta(p.provider)?.color + '18', color: getProviderMeta(p.provider)?.color }"
-                >
-                  {{ getProviderMeta(p.provider)?.icon }}
-                </div>
-                <div class="provider-title-wrap">
-                  <div class="provider-name-row">
-                    <span class="provider-name">{{ p.name }}</span>
-                    <n-tag
-                      v-if="p.is_default"
-                      type="warning"
-                      size="small"
-                      :bordered="false"
-                    >默认</n-tag>
-                    <n-tag
-                      v-else-if="p.is_enabled && !p.is_default"
-                      type="success"
-                      size="small"
-                      :bordered="false"
-                    >启用</n-tag>
-                  </div>
-                  <span class="provider-type-label">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
-                </div>
-              </div>
-              <n-dropdown :options="getDropdownOptions(p)" @select="(key) => handleAction(key, p)">
-                <n-button quaternary circle size="tiny" @click.stop>
-                  <template #icon>
-                    <n-icon :component="EllipsisHorizontalOutline" />
-                  </template>
-                </n-button>
-              </n-dropdown>
-            </div>
+      </div>
 
-            <!-- Card fields — 2 col grid -->
-            <div class="provider-card-body">
-              <div class="provider-fields-grid">
-                <div class="provider-field">
-                  <span class="field-label">默认模型</span>
-                  <n-text class="field-value">{{ p.default_model || '—' }}</n-text>
-                </div>
-                <div class="provider-field">
-                  <span class="field-label">状态</span>
-                  <span :class="['status-badge', p.status]">
-                    <span class="dot" />{{ statusLabel(p.status) }}
-                  </span>
-                </div>
+      <div v-if="loading" class="state-box">
+        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
+        <span>加载中…</span>
+      </div>
+
+      <div v-else-if="providers.length === 0" class="state-box">
+        <UIcon name="i-lucide-boxes" class="size-8 opacity-50" />
+        <p>暂无供应商配置，请点击上方添加</p>
+      </div>
+
+      <div v-else class="provider-grid">
+        <div
+          v-for="p in providers"
+          :key="p.id"
+          class="provider-card"
+          :class="{
+            'is-enabled': p.is_enabled,
+            'is-default': p.is_default,
+            'is-error': p.status === 'error',
+          }"
+        >
+          <div class="provider-card-header">
+            <div class="provider-meta">
+              <div
+                class="provider-icon-wrap"
+                :style="{ background: getProviderMeta(p.provider)?.color + '18', color: getProviderMeta(p.provider)?.color }"
+              >
+                {{ getProviderMeta(p.provider)?.icon }}
               </div>
-              <div class="provider-field provider-field--full">
-                <span class="field-label">Base URL</span>
-                <n-text class="field-value ellipsis" depth="3">{{ p.base_url || '—' }}</n-text>
-              </div>
-              <div v-if="p.last_test_at" class="provider-field provider-field--full">
-                <span class="field-label">最近测试</span>
-                <n-text class="field-value" depth="3" style="font-size: 12px">{{ formatDate(p.last_test_at) }}</n-text>
+              <div class="provider-title-wrap">
+                <div class="provider-name-row">
+                  <span class="provider-name">{{ p.name }}</span>
+                  <UBadge
+                    v-if="p.is_default"
+                    size="sm"
+                    variant="subtle"
+                    color="warning"
+                  >
+                    默认
+                  </UBadge>
+                  <UBadge
+                    v-else-if="p.is_enabled && !p.is_default"
+                    size="sm"
+                    variant="subtle"
+                    color="success"
+                  >
+                    启用
+                  </UBadge>
+                </div>
+                <span class="provider-type-label">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
               </div>
             </div>
+            <UTooltip text="删除">
+              <UButton
+                color="error"
+                variant="ghost"
+                size="sm"
+                icon="i-lucide-trash-2"
+                @click="askDelete(p)"
+              />
+            </UTooltip>
+          </div>
 
-            <!-- Error hint -->
-            <div v-if="p.status === 'error' && p.last_error" class="error-hint">
-              <n-icon :component="AlertCircleOutline" size="12" />
-              <span class="ellipsis">{{ p.last_error }}</span>
+          <div class="provider-card-body">
+            <div class="provider-fields-grid">
+              <div class="provider-field">
+                <span class="field-label">默认模型</span>
+                <span class="field-value">{{ p.default_model || '—' }}</span>
+              </div>
+              <div class="provider-field">
+                <span class="field-label">状态</span>
+                <span :class="['status-badge', p.status]">
+                  <span class="dot" />{{ statusLabel(p.status) }}
+                </span>
+              </div>
             </div>
+            <div class="provider-field provider-field--full">
+              <span class="field-label">Base URL</span>
+              <span class="field-value ellipsis muted">{{ p.base_url || '—' }}</span>
+            </div>
+            <div v-if="p.last_test_at" class="provider-field provider-field--full">
+              <span class="field-label">最近测试</span>
+              <span class="field-value muted">{{ formatDate(p.last_test_at) }}</span>
+            </div>
+          </div>
 
-            <!-- Card footer -->
-            <div class="provider-card-footer">
-              <div class="footer-left">
-                <n-tooltip :style="{ maxWidth: '300px' }">
-                  <template #trigger>
-                    <n-button
-                      size="small"
-                      quaternary
-                      circle
-                      @click="handleToggleEnable(p)"
-                    >
-                      <template #icon>
-                        <n-icon :component="PowerOutline" size="16" />
-                      </template>
-                    </n-button>
-                  </template>
-                </n-tooltip>
-              </div>
-              <div class="footer-right">
-                <n-tooltip v-if="!p.is_default" trigger="hover">
-                  <template #trigger>
-                    <n-button
-                      size="small"
-                      quaternary
-                      circle
-                      :loading="settingDefaultId === p.id"
-                      @click="handleSetDefault(p.id)"
-                    >
-                      <template #icon>
-                        <n-icon :component="StarOutline" size="16" />
-                      </template>
-                    </n-button>
-                  </template>
-                  设为默认
-                </n-tooltip>
-                <n-tooltip trigger="hover">
-                  <template #trigger>
-                    <n-button
-                      size="small"
-                      quaternary
-                      circle
-                      @click="handleTest(p.id)"
-                    >
-                      <template #icon>
-                        <n-icon :component="RefreshOutline" size="16" />
-                      </template>
-                    </n-button>
-                  </template>
-                  测试连接
-                </n-tooltip>
-                <n-tooltip trigger="hover">
-                  <template #trigger>
-                    <n-button
-                      size="small"
-                      quaternary
-                      circle
-                      @click="handleEdit(p)"
-                    >
-                      <template #icon>
-                        <n-icon :component="PencilOutline" size="16" />
-                      </template>
-                    </n-button>
-                  </template>
-                  编辑
-                </n-tooltip>
-              </div>
+          <div v-if="p.status === 'error' && p.last_error" class="error-hint">
+            <UIcon name="i-lucide-alert-circle" class="size-3 shrink-0" />
+            <span class="ellipsis">{{ p.last_error }}</span>
+          </div>
+
+          <div class="provider-card-footer">
+            <div class="footer-left">
+              <UTooltip :text="p.is_enabled ? '禁用' : '启用'">
+                <USwitch
+                  :model-value="p.is_enabled"
+                  size="sm"
+                  @update:model-value="handleToggleEnable(p)"
+                />
+              </UTooltip>
+            </div>
+            <div class="footer-right">
+              <UTooltip v-if="!p.is_default" text="设为默认">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-star"
+                  :loading="settingDefaultId === p.id"
+                  @click="handleSetDefault(p.id)"
+                />
+              </UTooltip>
+              <UTooltip text="测试连接">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-refresh-cw"
+                  @click="handleTest(p.id)"
+                />
+              </UTooltip>
+              <UTooltip text="编辑">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  icon="i-lucide-pencil"
+                  @click="handleEdit(p)"
+                />
+              </UTooltip>
             </div>
           </div>
         </div>
-
-        <n-empty v-else description="暂无供应商配置，请点击上方" />
-      </n-spin>
-    </n-card>
+      </div>
+    </div>
 
     <!-- 添加/编辑弹窗 -->
-    <n-modal
-      v-model:show="dialogVisible"
-      preset="card"
+    <UModal
+      v-model:open="dialogVisible"
       :title="isEditing ? '编辑供应商' : '添加供应商'"
-      style="width: 580px; max-width: 90vw"
-      :segmented="{ content: true, footer: true }"
+      :ui="{ content: 'sm:max-w-xl' }"
     >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
-        <!-- 供应商类型选择 -->
-        <n-form-item label="供应商类型" path="provider">
-          <n-grid :cols="4" :x-gap="8" :y-gap="8">
-            <n-gi v-for="[key, meta] in Object.entries(PROVIDER_META)" :key="key">
+      <template #body>
+        <form id="provider-form" class="form-grid" @submit.prevent="handleSubmit">
+          <div class="field">
+            <label class="field__label">供应商类型</label>
+            <div class="provider-type-grid">
               <div
+                v-for="[key, meta] in Object.entries(PROVIDER_META)"
+                :key="key"
                 class="provider-type-option"
                 :class="{ active: form.provider === key }"
                 @click="selectProvider(key)"
@@ -244,117 +217,147 @@
                 <span class="option-label" :class="meta.local ? 'local-hint' : ''">{{ meta.label }}</span>
                 <span v-if="meta.local" class="local-badge">本地</span>
               </div>
-            </n-gi>
-          </n-grid>
-        </n-form-item>
+            </div>
+            <p v-if="errors.provider" class="field__error">{{ errors.provider }}</p>
+          </div>
 
-        <n-form-item label="配置名称" path="name">
-          <n-input v-model:value="form.name" placeholder="例如：我的 OpenAI" />
-        </n-form-item>
+          <div class="field">
+            <label class="field__label">配置名称</label>
+            <UInput
+              v-model="form.name"
+              class="w-full"
+              placeholder="例如：我的 OpenAI"
+              :color="errors.name ? 'error' : undefined"
+              @update:model-value="errors.name = ''"
+            />
+            <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+          </div>
 
-        <n-form-item label="API Key" path="api_key">
-          <n-input
-            v-model:value="form.api_key"
-            type="password"
-            show-password-on="click"
-            placeholder="请输入 API Key"
-          />
-        </n-form-item>
+          <div class="field">
+            <label class="field__label">API Key</label>
+            <UInput
+              v-model="form.api_key"
+              class="w-full"
+              type="password"
+              placeholder="请输入 API Key"
+              :color="errors.api_key ? 'error' : undefined"
+              @update:model-value="errors.api_key = ''"
+            />
+            <p v-if="errors.api_key" class="field__error">{{ errors.api_key }}</p>
+          </div>
 
-        <n-form-item label="Base URL" path="base_url">
-          <n-input v-model:value="form.base_url" :placeholder="`默认：${form.provider ? PROVIDER_META[form.provider]?.defaultBaseURL : ''}`" />
-        </n-form-item>
+          <div class="field">
+            <label class="field__label">Base URL</label>
+            <UInput
+              v-model="form.base_url"
+              class="w-full"
+              :placeholder="`默认：${form.provider ? PROVIDER_META[form.provider]?.defaultBaseURL : ''}`"
+            />
+          </div>
 
-        <n-form-item label="默认模型" path="default_model">
-          <n-input v-model:value="form.default_model" placeholder="例如：gpt-4o" />
-        </n-form-item>
+          <div class="field">
+            <label class="field__label">默认模型</label>
+            <UInput v-model="form.default_model" class="w-full" placeholder="例如：gpt-4o" />
+          </div>
 
-        <!-- OpenRouter 专用字段 -->
-        <n-collapse-transition :show="form.provider === 'openrouter'">
-          <n-form-item label="Extra Headers" path="extra_headers">
-            <n-input
-              v-model:value="form.extra_headers_raw"
-              type="textarea"
-              :autosize="{ minRows: 2, maxRows: 4 }"
+          <div v-if="form.provider === 'openrouter'" class="field">
+            <label class="field__label">Extra Headers</label>
+            <UTextarea
+              v-model="form.extra_headers_raw"
+              class="w-full"
+              :rows="3"
               placeholder='{"HTTP-Referer": "https://your-site.com", "X-OpenRouter-Title": "Your App"}'
             />
-            <n-text depth="3" style="font-size: 12px; margin-top: 4px">
+            <p class="field__hint">
               JSON 格式，用于 OpenRouter 的 HTTP-Referer 和 X-OpenRouter-Title 等 Header
-            </n-text>
-          </n-form-item>
-        </n-collapse-transition>
+            </p>
+          </div>
 
-        <n-form-item label="优先级" path="priority">
-          <n-input-number v-model:value="form.priority" :min="0" :max="100" style="width: 100%" />
-          <n-text depth="3" style="font-size: 12px; margin-top: 4px">
-            数字越小优先级越高，多个启用时使用优先级最高的
-          </n-text>
-        </n-form-item>
-      </n-form>
+          <div class="field">
+            <label class="field__label">优先级</label>
+            <UInput
+              v-model.number="form.priority"
+              class="w-full"
+              type="number"
+              :min="0"
+              :max="100"
+            />
+            <p class="field__hint">数字越小优先级越高，多个启用时使用优先级最高的</p>
+          </div>
+        </form>
+      </template>
 
       <template #footer>
-        <n-space justify="end">
-          <n-button @click="dialogVisible = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleSubmit">
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="dialogVisible = false">取消</UButton>
+          <UButton form="provider-form" type="submit" color="primary" :loading="submitting">
             {{ isEditing ? '保存' : '添加' }}
-          </n-button>
-        </n-space>
+          </UButton>
+        </div>
       </template>
-    </n-modal>
+    </UModal>
 
     <!-- 测试结果弹窗 -->
-    <n-modal
-      v-model:show="testModalVisible"
-      preset="card"
-      title="连接测试结果"
-      style="width: 420px; max-width: 90vw"
-    >
-      <div class="test-result">
-        <div v-if="testLoading" class="test-loading">
-          <n-spin size="large" />
-          <n-text>正在测试连接...</n-text>
-        </div>
-        <div v-else-if="testResult" class="test-result-body">
-          <div class="result-icon" :class="testResult.success ? 'success' : 'error'">
-            <n-icon :component="testResult.success ? CheckmarkCircleOutline : AlertCircleOutline" size="48" />
+    <UModal v-model:open="testModalVisible" title="连接测试结果" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <div class="test-result">
+          <div v-if="testLoading" class="test-loading">
+            <UIcon name="i-lucide-loader-circle" class="size-10 animate-spin" />
+            <span>正在测试连接...</span>
           </div>
-          <n-text class="result-message">{{ testResult.message }}</n-text>
-          <n-text v-if="testResult.latency_ms" depth="3" style="font-size: 13px">
-            耗时 {{ testResult.latency_ms }}ms
-          </n-text>
+          <div v-else-if="testResult" class="test-result-body">
+            <div class="result-icon" :class="testResult.success ? 'success' : 'error'">
+              <UIcon
+                :name="testResult.success ? 'i-lucide-check-circle' : 'i-lucide-alert-circle'"
+                class="size-12"
+              />
+            </div>
+            <p class="result-message">{{ testResult.message }}</p>
+            <p v-if="testResult.latency_ms" class="result-latency">
+              耗时 {{ testResult.latency_ms }}ms
+            </p>
+          </div>
         </div>
-      </div>
-      <template #footer>
-        <n-space justify="center">
-          <n-button @click="testModalVisible = false">关闭</n-button>
-          <n-button type="primary" @click="reTest">重新测试</n-button>
-        </n-space>
       </template>
-    </n-modal>
+      <template #footer>
+        <div class="modal-actions modal-actions--center">
+          <UButton color="neutral" variant="outline" @click="testModalVisible = false">关闭</UButton>
+          <UButton color="primary" @click="reTest">重新测试</UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- 删除确认 -->
+    <UModal v-model:open="deleteVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="delete-text">
+          确定要删除供应商「{{ deleting?.name }}」吗？删除后无法恢复。
+        </p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
+          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import {
-  AddOutline,
-  PencilOutline,
-  EllipsisHorizontalOutline,
-  RefreshOutline,
-  HardwareChipOutline,
-  AlertCircleOutline,
-  CheckmarkCircleOutline,
-  StarOutline,
-  PowerOutline,
-} from '@/constants/icons'
-import { NButton, NIcon, NTag, NDropdown, NText, NCard, NSpin, NEmpty, NModal, NFormItem, NInput, NInputNumber, NForm, NCollapseTransition, NSpace, NTooltip, useMessage, useDialog } from 'naive-ui'
-import type { FormInst } from 'naive-ui'
-import { useProviders, PROVIDER_META, type AIProvider, type CreateProviderInput, type UpdateProviderInput, type TestResult } from '@/composables/useProviders'
+  useProviders,
+  PROVIDER_META,
+  type AIProvider,
+  type CreateProviderInput,
+  type UpdateProviderInput,
+  type TestResult,
+} from '@/composables/useProviders'
 
 definePageMeta({ layout: 'default' })
 
-const message = useMessage()
-const dialog = useDialog()
-const { list, get, getActive, create, update, remove, setDefault, test } = useProviders()
+const toast = useToast()
+const { list, getActive, create, update, remove, setDefault, test } = useProviders()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -363,9 +366,11 @@ const activeProvider = ref<AIProvider | null>(null)
 const dialogVisible = ref(false)
 const isEditing = ref(false)
 const editingId = ref('')
-const formRef = ref<FormInst>()
 
-const testingId = ref('')
+const deleteVisible = ref(false)
+const deletingLoading = ref(false)
+const deleting = ref<AIProvider | null>(null)
+
 const settingDefaultId = ref('')
 const testModalVisible = ref(false)
 const testLoading = ref(false)
@@ -382,11 +387,11 @@ const form = reactive({
   priority: 10,
 })
 
-const rules = {
-  provider: [{ required: true, message: '请选择供应商类型', trigger: 'change' }],
-  name: [{ required: true, message: '配置名称不能为空', trigger: 'blur' }],
-  api_key: [{ required: true, message: 'API Key 不能为空', trigger: 'blur' }],
-}
+const errors = reactive({
+  provider: '',
+  name: '',
+  api_key: '',
+})
 
 function getProviderMeta(key: string) {
   return PROVIDER_META[key]
@@ -409,19 +414,14 @@ function formatDate(dateStr: string): string {
 function selectProvider(key: string) {
   form.provider = key
   form.base_url = PROVIDER_META[key]?.defaultBaseURL || ''
+  errors.provider = ''
 }
 
-function getDropdownOptions(p: AIProvider) {
-  const opts = [
-    { label: '编辑', key: 'edit', icon: () => h(NIcon, { component: PencilOutline, size: 16 }) },
-    { label: '删除', key: 'delete', icon: () => h(NIcon, { component: AlertCircleOutline, size: 16 }) },
-  ]
-  return opts
-}
-
-function handleAction(key: string, p: AIProvider) {
-  if (key === 'edit') handleEdit(p)
-  else if (key === 'delete') handleDelete(p)
+function validate() {
+  errors.provider = form.provider ? '' : '请选择供应商类型'
+  errors.name = form.name.trim() ? '' : '配置名称不能为空'
+  errors.api_key = form.api_key.trim() ? '' : 'API Key 不能为空'
+  return !errors.provider && !errors.name && !errors.api_key
 }
 
 const handleCreate = () => {
@@ -449,25 +449,32 @@ const handleEdit = (p: AIProvider) => {
   } else {
     form.extra_headers_raw = ''
   }
+  errors.provider = ''
+  errors.name = ''
+  errors.api_key = ''
   dialogVisible.value = true
 }
 
-const handleDelete = async (p: AIProvider) => {
-  dialog.warning({
-    title: '删除确认',
-    content: `确定要删除供应商「${p.name}」吗？删除后无法恢复。`,
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      const res = await remove(p.id)
-      if (res.error) {
-        message.error(res.error)
-        return
-      }
-      message.success('删除成功')
-      await fetchAll()
-    },
-  })
+const askDelete = (p: AIProvider) => {
+  deleting.value = p
+  deleteVisible.value = true
+}
+
+const confirmDelete = async () => {
+  if (!deleting.value) return
+  deletingLoading.value = true
+  try {
+    const res = await remove(deleting.value.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: '删除成功', color: 'success' })
+    deleteVisible.value = false
+    await fetchAll()
+  } finally {
+    deletingLoading.value = false
+  }
 }
 
 const handleToggleEnable = async (p: AIProvider) => {
@@ -475,10 +482,10 @@ const handleToggleEnable = async (p: AIProvider) => {
   const input: UpdateProviderInput = { is_enabled: newEnabled }
   const res = await update(p.id, input)
   if (res.error) {
-    message.error(res.error)
+    toast.add({ title: res.error, color: 'error' })
     return
   }
-  message.success(newEnabled ? '已启用' : '已禁用')
+  toast.add({ title: newEnabled ? '已启用' : '已禁用', color: 'success' })
   await fetchAll()
 }
 
@@ -487,10 +494,10 @@ const handleSetDefault = async (id: string) => {
   try {
     const res = await setDefault(id)
     if (res.error) {
-      message.error(res.error)
+      toast.add({ title: res.error, color: 'error' })
       return
     }
-    message.success('已设为默认')
+    toast.add({ title: '已设为默认', color: 'success' })
     await fetchAll()
   } finally {
     settingDefaultId.value = ''
@@ -518,22 +525,16 @@ const reTest = async () => {
 }
 
 const handleSubmit = async () => {
-  if (!formRef.value) return
-  try {
-    await formRef.value.validate()
-  } catch {
-    return
-  }
+  if (!validate()) return
 
   submitting.value = true
   try {
-    // 解析 extra_headers
     let extraHeaders: Record<string, any> | undefined
     if (form.extra_headers_raw.trim()) {
       try {
         extraHeaders = JSON.parse(form.extra_headers_raw)
       } catch {
-        message.error('Extra Headers 格式错误，请输入有效的 JSON')
+        toast.add({ title: 'Extra Headers 格式错误，请输入有效的 JSON', color: 'error' })
         return
       }
     }
@@ -549,10 +550,10 @@ const handleSubmit = async () => {
       }
       const res = await update(editingId.value, input)
       if (res.error) {
-        message.error(res.error)
+        toast.add({ title: res.error, color: 'error' })
         return
       }
-      message.success('保存成功')
+      toast.add({ title: '保存成功', color: 'success' })
     } else {
       const input: CreateProviderInput = {
         provider: form.provider,
@@ -565,15 +566,15 @@ const handleSubmit = async () => {
       }
       const res = await create(input)
       if (res.error) {
-        message.error(res.error)
+        toast.add({ title: res.error, color: 'error' })
         return
       }
-      message.success('添加成功')
+      toast.add({ title: '添加成功', color: 'success' })
     }
     dialogVisible.value = false
     await fetchAll()
   } catch {
-    message.error(isEditing.value ? '保存失败' : '添加失败')
+    toast.add({ title: isEditing.value ? '保存失败' : '添加失败', color: 'error' })
   } finally {
     submitting.value = false
   }
@@ -587,7 +588,9 @@ const resetForm = () => {
   form.default_model = ''
   form.extra_headers_raw = ''
   form.priority = 10
-  formRef.value?.restoreValidation()
+  errors.provider = ''
+  errors.name = ''
+  errors.api_key = ''
 }
 
 const fetchAll = async () => {
@@ -595,13 +598,13 @@ const fetchAll = async () => {
   try {
     const [listRes, activeRes] = await Promise.all([list(), getActive()])
     if (listRes.error) {
-      message.error(listRes.error)
+      toast.add({ title: listRes.error, color: 'error' })
       return
     }
     providers.value = listRes.data || []
     activeProvider.value = activeRes.data || null
   } catch {
-    message.error('获取供应商列表失败')
+    toast.add({ title: '获取供应商列表失败', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -614,40 +617,45 @@ onMounted(() => {
 
 <style scoped>
 .models-page {
-  padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
-.page-header h2 {
+.page-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cf-ink);
 }
 
-/* Active Banner */
+/* Active Banner — teal/accent, not purple/indigo */
 .active-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--cf-accent) 0%, color-mix(in srgb, var(--cf-accent) 75%, #0d9488) 100%);
   border-radius: 12px;
   color: white;
   margin-bottom: 16px;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cf-accent) 35%, transparent);
 }
 
 .banner-left {
   display: flex;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 
 .banner-icon {
@@ -658,12 +666,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .banner-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .banner-title {
@@ -676,7 +686,7 @@ onMounted(() => {
 
 .banner-desc {
   font-size: 13px;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .banner-desc .separator {
@@ -685,33 +695,40 @@ onMounted(() => {
 }
 
 .banner-desc .last-test {
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .banner-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .no-active-banner {
-  padding: 32px;
-  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px;
+  background: var(--cf-surface, #fff);
   border-radius: 12px;
-  border: 1px dashed #d1d5db;
+  border: 1px dashed var(--cf-line);
   margin-bottom: 16px;
+  color: var(--cf-ink-soft);
   text-align: center;
 }
 
-/* Provider list */
-.provider-list-card {
-  margin-top: 8px;
+.panel {
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 220px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 500;
+  margin-bottom: 14px;
 }
 
 .card-header-left {
@@ -720,46 +737,62 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* Responsive grid — auto-fill, min 340px per card */
+.card-header-title {
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.card-header-count {
+  font-size: 12px;
+  color: var(--cf-ink-soft);
+}
+
+.state-box {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--cf-ink-soft);
+}
+
 .provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 16px;
 }
 
-/* Card */
 .provider-card {
-  background: white;
-  border: 1.5px solid #e5e7eb;
+  background: var(--cf-surface, #fff);
+  border: 1.5px solid var(--cf-line);
   border-radius: 12px;
   padding: 16px;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  cursor: default;
 }
 
 .provider-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
 .provider-card.is-enabled {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: color-mix(in srgb, var(--cf-accent) 35%, var(--cf-line));
+  background: color-mix(in srgb, var(--cf-accent) 6%, transparent);
 }
 
 .provider-card.is-error {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: color-mix(in srgb, var(--cf-danger) 40%, var(--cf-line));
+  background: color-mix(in srgb, var(--cf-danger) 6%, transparent);
 }
 
 .provider-card.is-default {
   border-color: #fde68a;
 }
 
-/* Card header */
 .provider-card-header {
   display: flex;
   align-items: flex-start;
@@ -801,6 +834,7 @@ onMounted(() => {
 .provider-name {
   font-weight: 600;
   font-size: 14px;
+  color: var(--cf-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -808,10 +842,9 @@ onMounted(() => {
 
 .provider-type-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
 }
 
-/* Card body */
 .provider-card-body {
   display: flex;
   flex-direction: column;
@@ -837,7 +870,7 @@ onMounted(() => {
 }
 
 .field-label {
-  color: #9ca3af;
+  color: var(--cf-ink-soft);
   width: 56px;
   flex-shrink: 0;
   padding-top: 1px;
@@ -845,7 +878,12 @@ onMounted(() => {
 
 .field-value {
   font-size: 12px;
+  color: var(--cf-ink);
   min-width: 0;
+}
+
+.muted {
+  color: var(--cf-ink-soft);
 }
 
 .ellipsis {
@@ -875,41 +913,33 @@ onMounted(() => {
 .status-badge.testing { color: #ca8a04; }
 .status-badge.testing .dot { background: #ca8a04; }
 
-/* Footer */
 .provider-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--cf-line);
   gap: 4px;
 }
 
-.footer-left {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
+.footer-left,
 .footer-right {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
-/* Error hint */
 .error-hint {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #dc2626;
-  background: #fef2f2;
+  color: var(--cf-danger);
+  background: color-mix(in srgb, var(--cf-danger) 8%, transparent);
   padding: 6px 8px;
   border-radius: 6px;
 }
 
-/* Status dot */
 .status-dot {
   display: inline-block;
   width: 7px;
@@ -921,31 +951,36 @@ onMounted(() => {
 .status-dot.error { background: #ef4444; }
 .status-dot.testing { background: #eab308; }
 
-/* Provider type selector */
+.provider-type-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
 .provider-type-option {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 10px 4px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--cf-line);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
-  background: white;
+  background: var(--cf-surface, #fff);
   position: relative;
 }
 
 .provider-type-option:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
+  border-color: color-mix(in srgb, var(--cf-accent) 50%, var(--cf-line));
+  background: color-mix(in srgb, var(--cf-accent) 8%, transparent);
   transform: translateY(-1px);
 }
 
 .provider-type-option.active {
-  border-color: #2563eb;
-  background: #eff6ff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: var(--cf-accent);
+  background: color-mix(in srgb, var(--cf-accent) 10%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-accent) 15%, transparent);
 }
 
 .option-icon {
@@ -955,12 +990,12 @@ onMounted(() => {
 .option-label {
   font-size: 11px;
   text-align: center;
-  color: #374151;
+  color: var(--cf-ink);
   line-height: 1.2;
 }
 
 .option-label.local-hint {
-  color: #64748b;
+  color: var(--cf-ink-soft);
   font-size: 10px;
 }
 
@@ -968,7 +1003,7 @@ onMounted(() => {
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #64748b;
+  background: var(--cf-ink-soft);
   color: white;
   font-size: 9px;
   padding: 1px 5px;
@@ -977,7 +1012,52 @@ onMounted(() => {
   letter-spacing: 0.02em;
 }
 
-/* Test result */
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+}
+
+.field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-danger);
+}
+
+.field__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--cf-ink-soft);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-actions--center {
+  justify-content: center;
+}
+
+.delete-text {
+  margin: 0;
+  color: var(--cf-ink-soft);
+  line-height: 1.5;
+}
+
 .test-result {
   display: flex;
   flex-direction: column;
@@ -991,6 +1071,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  color: var(--cf-ink-soft);
 }
 
 .test-result-body {
@@ -1005,6 +1086,25 @@ onMounted(() => {
 .result-icon.error { color: #dc2626; }
 
 .result-message {
+  margin: 0;
   font-size: 14px;
+  color: var(--cf-ink);
+}
+
+.result-latency {
+  margin: 0;
+  font-size: 13px;
+  color: var(--cf-ink-soft);
+}
+
+@media (max-width: 640px) {
+  .active-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .provider-type-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
