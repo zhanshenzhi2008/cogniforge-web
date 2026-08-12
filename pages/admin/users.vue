@@ -1,133 +1,218 @@
 <template>
   <div class="admin-users-page">
-    <n-card title="用户管理" class="content-card">
-      <!-- 搜索和筛选栏 -->
-      <n-space class="mb-4" justify="space-between">
-        <n-space>
-          <n-input
-            v-model:value="searchQuery"
+    <div class="page-header">
+      <h1 class="page-title font-display">用户管理</h1>
+      <UButton color="primary" icon="i-lucide-user-plus" @click="openCreateModal">
+        新建用户
+      </UButton>
+    </div>
+
+    <div class="panel cf-surface">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <UInput
+            v-model="searchQuery"
+            class="search-input"
             placeholder="搜索用户名/邮箱"
-            clearable
-            style="width: 300px"
-            @update:value="handleSearch"
-          >
-            <template #prefix>
-              <n-icon size="16">
-                <SearchOutline />
-              </n-icon>
-            </template>
-          </n-input>
-
-          <n-select
-            v-model:value="filterStatus"
-            :options="statusOptions"
-            placeholder="筛选状态"
-            clearable
-            style="width: 150px"
-            @update:value="handleSearch"
+            icon="i-lucide-search"
+            @update:model-value="handleSearch"
           />
-        </n-space>
+          <USelect
+            v-model="filterStatus"
+            class="status-filter"
+            :items="statusFilterOptions"
+            placeholder="筛选状态"
+            @update:model-value="handleSearch"
+          />
+        </div>
+      </div>
 
-        <n-button type="primary" @click="showCreateModal = true">
-          <template #icon>
-            <n-icon><PersonAddOutline /></n-icon>
-          </template>
-          新建用户
-        </n-button>
-      </n-space>
+      <div v-if="loading" class="state-box">
+        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
+        <span>加载中…</span>
+      </div>
 
-      <!-- 用户列表 -->
-      <n-data-table
-        :columns="columns"
-        :data="users"
-        :bordered="false"
-        :loading="loading"
-        :pagination="pagination"
-        :row-key="(row: any) => row.id"
-      />
+      <div v-else-if="pagedUsers.length === 0" class="state-box">
+        <UIcon name="i-lucide-users" class="size-8 opacity-50" />
+        <p>暂无用户</p>
+      </div>
 
-      <!-- 创建/编辑用户模态框 -->
-      <n-modal
-        v-model:show="showUserModal"
-        preset="card"
-        :title="isEditing ? '编辑用户' : '新建用户'"
-        style="width: 500px"
-        :segmented="{ content: 'soft', footer: 'soft' }"
-      >
-        <n-form
-          ref="userFormRef"
-          :model="userForm"
-          :rules="userRules"
-          label-placement="left"
-          label-width="100"
+      <div v-else class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>姓名</th>
+              <th>邮箱</th>
+              <th>角色</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in pagedUsers" :key="row.id">
+              <td class="name">{{ row.name }}</td>
+              <td class="muted">{{ row.email }}</td>
+              <td>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="row.role === 'admin' ? 'error' : 'info'"
+                >
+                  {{ row.role === 'admin' ? '管理员' : '用户' }}
+                </UBadge>
+              </td>
+              <td>
+                <UBadge size="sm" variant="subtle" :color="statusBadgeColor(row.status)">
+                  {{ statusLabel(row.status) }}
+                </UBadge>
+              </td>
+              <td class="muted">{{ formatDate(row.created_at) }}</td>
+              <td>
+                <div class="action-btns">
+                  <UButton color="primary" variant="ghost" size="sm" @click="handleEdit(row)">
+                    编辑
+                  </UButton>
+                  <template v-if="row.role !== 'admin' && row.id !== 'admin'">
+                    <UButton color="error" variant="ghost" size="sm" @click="askDelete(row)">
+                      删除
+                    </UButton>
+                    <UButton
+                      :color="row.status === 'active' ? 'warning' : 'success'"
+                      variant="ghost"
+                      size="sm"
+                      @click="handleStatusChange(row.id, row.status)"
+                    >
+                      {{ row.status === 'active' ? '禁用' : '启用' }}
+                    </UButton>
+                  </template>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="users.length > pageSize" class="pager">
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          :disabled="page <= 1"
+          @click="page--"
         >
-          <n-form-item label="邮箱" path="email">
-            <n-input
-              v-model:value="userForm.email"
+          上一页
+        </UButton>
+        <span class="pager-page">{{ page }} / {{ userTotalPages }}</span>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          :disabled="page >= userTotalPages"
+          @click="page++"
+        >
+          下一页
+        </UButton>
+      </div>
+    </div>
+
+    <UModal
+      v-model:open="showUserModal"
+      :title="isEditing ? '编辑用户' : '新建用户'"
+      :ui="{ content: 'sm:max-w-lg' }"
+    >
+      <template #body>
+        <form id="user-form" class="form-grid" @submit.prevent="handleUserSubmit">
+          <div class="field">
+            <label class="field__label">邮箱</label>
+            <UInput
+              v-model="userForm.email"
+              class="w-full"
               placeholder="请输入邮箱"
               :disabled="isEditing"
+              @update:model-value="errors.email = ''"
             />
-          </n-form-item>
+            <p v-if="errors.email" class="field__error">{{ errors.email }}</p>
+          </div>
 
-          <n-form-item label="姓名" path="name">
-            <n-input v-model:value="userForm.name" placeholder="请输入姓名" />
-          </n-form-item>
+          <div class="field">
+            <label class="field__label">姓名</label>
+            <UInput
+              v-model="userForm.name"
+              class="w-full"
+              placeholder="请输入姓名"
+              @update:model-value="errors.name = ''"
+            />
+            <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+          </div>
 
-          <n-form-item
-            v-if="!isEditing"
-            label="密码"
-            path="password"
-          >
-            <n-input
-              v-model:value="userForm.password"
+          <div v-if="!isEditing" class="field">
+            <label class="field__label">密码</label>
+            <UInput
+              v-model="userForm.password"
+              class="w-full"
               type="password"
               placeholder="请输入密码（至少6位）"
-              show-password-on="click"
+              @update:model-value="errors.password = ''"
             />
-          </n-form-item>
+            <p v-if="errors.password" class="field__error">{{ errors.password }}</p>
+          </div>
 
-          <n-form-item label="角色" path="role">
-            <n-select
-              v-model:value="userForm.role"
-              :options="roleOptions"
+          <div class="field">
+            <label class="field__label">角色</label>
+            <USelect
+              v-model="userForm.role"
+              class="w-full"
+              :items="roleOptions"
               placeholder="选择角色"
             />
-          </n-form-item>
+          </div>
 
-          <n-form-item label="状态" path="status">
-            <n-select
-              v-model:value="userForm.status"
-              :options="statusOptions"
+          <div class="field">
+            <label class="field__label">状态</label>
+            <USelect
+              v-model="userForm.status"
+              class="w-full"
+              :items="statusOptions"
               placeholder="选择状态"
             />
-          </n-form-item>
-        </n-form>
+          </div>
+        </form>
+      </template>
 
-        <template #footer>
-          <n-space justify="end">
-            <n-button @click="closeUserModal">取消</n-button>
-            <n-button
-              type="primary"
-              @click="handleUserSubmit"
-              :loading="submitting"
-            >
-              保存
-            </n-button>
-          </n-space>
-        </template>
-      </n-modal>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="closeUserModal">取消</UButton>
+          <UButton form="user-form" type="submit" color="primary" :loading="submitting">
+            保存
+          </UButton>
+        </div>
+      </template>
+    </UModal>
 
-      <!-- 状态更新确认模态框 -->
-      <n-modal
-        v-model:show="showStatusModal"
-        preset="dialog"
-        title="确认修改"
-        :content="`确定要${statusActionText}该用户吗？`"
-        positive-text="确认"
-        negative-text="取消"
-        @positive="handleStatusConfirm"
-      />
-    </n-card>
+    <UModal v-model:open="showStatusModal" title="确认修改" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="confirm-text">确定要{{ statusActionText }}该用户吗？</p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="showStatusModal = false">取消</UButton>
+          <UButton color="primary" @click="handleStatusConfirm">确认</UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="deleteVisible" title="确认删除" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="confirm-text">删除用户后无法恢复，确定要继续吗？</p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
+          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -137,22 +222,24 @@ definePageMeta({
   requiresAuth: true,
 })
 
-const message = useMessage()
-const userFormRef = ref()
+const toast = useToast()
 
-// 状态定义
 const loading = ref(false)
 const submitting = ref(false)
+const deletingLoading = ref(false)
 const users = ref<any[]>([])
 const searchQuery = ref('')
 const filterStatus = ref('')
 const showUserModal = ref(false)
 const showStatusModal = ref(false)
+const deleteVisible = ref(false)
 const isEditing = ref(false)
 const selectedUserId = ref('')
+const deletingUserId = ref('')
 const statusAction = ref<'enable' | 'disable' | 'lock'>('enable')
+const page = ref(1)
+const pageSize = 10
 
-// 用户表单
 const userForm = reactive({
   id: '',
   email: '',
@@ -162,7 +249,12 @@ const userForm = reactive({
   status: 'active',
 })
 
-// 选项配置
+const errors = reactive({
+  email: '',
+  name: '',
+  password: '',
+})
+
 const roleOptions = [
   { label: '普通用户', value: 'user' },
   { label: '管理员', value: 'admin' },
@@ -174,112 +266,18 @@ const statusOptions = [
   { label: '锁定', value: 'locked' },
 ]
 
-// 分页配置
-const pagination = {
-  pageSize: 10,
-}
-
-// 表格列定义
-const columns = [
-  {
-    title: '姓名',
-    key: 'name',
-    render(row: any) {
-      return row.name
-    },
-  },
-  {
-    title: '邮箱',
-    key: 'email',
-  },
-  {
-    title: '角色',
-    key: 'role',
-    render(row: any) {
-      const type = row.role === 'admin' ? 'error' : 'info'
-      const label = row.role === 'admin' ? '管理员' : '用户'
-      return h(NTag, { type }, { default: () => label })
-    },
-  },
-  {
-    title: '状态',
-    key: 'status',
-    render(row: any) {
-      const statusMap: Record<string, { type: any; label: string }> = {
-        active: { type: 'success', label: '正常' },
-        disabled: { type: 'warning', label: '禁用' },
-        locked: { type: 'error', label: '锁定' },
-      }
-      const status = statusMap[row.status] || { type: 'default', label: row.status }
-      return h(NTag, { type: status.type }, { default: () => status.label })
-    },
-  },
-  {
-    title: '创建时间',
-    key: 'created_at',
-    render(row: any) {
-      return new Date(row.created_at).toLocaleString('zh-CN')
-    },
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    render(row: any) {
-      const actions: any[] = [
-        h(
-          NButton,
-          {
-            size: 'small',
-            type: 'primary',
-            ghost: true,
-            onClick: () => handleEdit(row),
-          },
-          { default: () => '编辑' }
-        ),
-      ]
-
-      // 不是管理员且不是默认管理员才能删除
-      if (row.role !== 'admin' && row.id !== 'admin') {
-        actions.push(
-          h(
-            NButton,
-            {
-              size: 'small',
-              type: 'error',
-              ghost: true,
-              style: 'margin-left: 8px',
-              onClick: () => handleDelete(row.id),
-            },
-            { default: () => '删除' }
-          )
-        )
-      }
-
-      // 状态切换按钮
-      if (row.role !== 'admin' && row.id !== 'admin') {
-        const statusAction = row.status === 'active' ? '禁用' : '启用'
-        const statusType = row.status === 'active' ? 'warning' : 'success'
-        actions.push(
-          h(
-            NButton,
-            {
-              size: 'small',
-              type: statusType,
-              ghost: true,
-              style: 'margin-left: 8px',
-              onClick: () => handleStatusChange(row.id, row.status),
-            },
-            { default: () => statusAction }
-          )
-        )
-      }
-
-      return h(NSpace, {}, { default: () => actions })
-    },
-  },
+const statusFilterOptions = [
+  { label: '全部状态', value: '' },
+  ...statusOptions,
 ]
 
-// 状态变更文本
+const userTotalPages = computed(() => Math.max(1, Math.ceil(users.value.length / pageSize)))
+
+const pagedUsers = computed(() => {
+  const start = (page.value - 1) * pageSize
+  return users.value.slice(start, start + pageSize)
+})
+
 const statusActionText = computed(() => {
   switch (statusAction.value) {
     case 'enable':
@@ -293,7 +291,48 @@ const statusActionText = computed(() => {
   }
 })
 
-// 加载用户列表
+function formatDate(value: string) {
+  return new Date(value).toLocaleString('zh-CN')
+}
+
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    active: '正常',
+    disabled: '禁用',
+    locked: '锁定',
+  }
+  return map[status] || status
+}
+
+function statusBadgeColor(status: string): 'success' | 'warning' | 'error' | 'neutral' {
+  const map: Record<string, 'success' | 'warning' | 'error'> = {
+    active: 'success',
+    disabled: 'warning',
+    locked: 'error',
+  }
+  return map[status] || 'neutral'
+}
+
+function validateUserForm() {
+  errors.email = ''
+  errors.name = ''
+  errors.password = ''
+
+  if (!isEditing.value) {
+    if (!userForm.email.trim()) errors.email = '请输入邮箱'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userForm.email.trim())) {
+      errors.email = '邮箱格式不正确'
+    }
+    if (!userForm.password || userForm.password.length < 6) {
+      errors.password = '密码至少 6 位'
+    }
+  }
+
+  if (!userForm.name.trim()) errors.name = '请输入姓名'
+
+  return !errors.email && !errors.name && !errors.password
+}
+
 const fetchUsers = async () => {
   loading.value = true
   try {
@@ -304,27 +343,25 @@ const fetchUsers = async () => {
     const data = await $fetch('/api/v1/admin/users', {
       params,
     })
-    users.value = data.users || []
-  } catch (error: any) {
-    message.error('获取用户列表失败')
+    users.value = (data as any).users || []
+    page.value = 1
+  } catch {
+    toast.add({ title: '获取用户列表失败', color: 'error' })
   } finally {
     loading.value = false
   }
 }
 
-// 搜索处理
 const handleSearch = () => {
   fetchUsers()
 }
 
-// 打开创建模态框
 const openCreateModal = () => {
   isEditing.value = false
   resetUserForm()
   showUserModal.value = true
 }
 
-// 打开编辑模态框
 const handleEdit = (row: any) => {
   isEditing.value = true
   selectedUserId.value = row.id
@@ -333,16 +370,17 @@ const handleEdit = (row: any) => {
   userForm.name = row.name
   userForm.role = row.role
   userForm.status = row.status
+  errors.email = ''
+  errors.name = ''
+  errors.password = ''
   showUserModal.value = true
 }
 
-// 关闭用户模态框
 const closeUserModal = () => {
   showUserModal.value = false
   resetUserForm()
 }
 
-// 重置表单
 const resetUserForm = () => {
   userForm.id = ''
   userForm.email = ''
@@ -351,17 +389,16 @@ const resetUserForm = () => {
   userForm.role = 'user'
   userForm.status = 'active'
   selectedUserId.value = ''
-  nextTick(() => {
-    userFormRef.value?.restoreValidation()
-  })
+  errors.email = ''
+  errors.name = ''
+  errors.password = ''
 }
 
-// 提交用户表单
 const handleUserSubmit = async () => {
-  try {
-    await userFormRef.value?.validate()
-    submitting.value = true
+  if (!validateUserForm()) return
 
+  submitting.value = true
+  try {
     const payload: any = {
       name: userForm.name,
       role: userForm.role,
@@ -382,40 +419,39 @@ const handleUserSubmit = async () => {
       body: payload,
     })
 
-    message.success(isEditing.value ? '用户已更新' : '用户已创建')
+    toast.add({ title: isEditing.value ? '用户已更新' : '用户已创建', color: 'success' })
     closeUserModal()
     await fetchUsers()
   } catch (error: any) {
     if (error?.data?.message) {
-      message.error(error.data.message)
+      toast.add({ title: error.data.message, color: 'error' })
     }
   } finally {
     submitting.value = false
   }
 }
 
-// 删除用户
-const handleDelete = (userId: string) => {
-  dialog.warning({
-    title: '确认删除',
-    content: '删除用户后无法恢复，确定要继续吗？',
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      try {
-        await $fetch(`/api/v1/admin/users/${userId}`, {
-          method: 'DELETE',
-        })
-        message.success('用户已删除')
-        await fetchUsers()
-      } catch (error: any) {
-        message.error(error.data?.message || '删除失败')
-      }
-    },
-  })
+const askDelete = (row: any) => {
+  deletingUserId.value = row.id
+  deleteVisible.value = true
 }
 
-// 状态变更
+const confirmDelete = async () => {
+  deletingLoading.value = true
+  try {
+    await $fetch(`/api/v1/admin/users/${deletingUserId.value}`, {
+      method: 'DELETE',
+    })
+    toast.add({ title: '用户已删除', color: 'success' })
+    deleteVisible.value = false
+    await fetchUsers()
+  } catch (error: any) {
+    toast.add({ title: error.data?.message || '删除失败', color: 'error' })
+  } finally {
+    deletingLoading.value = false
+  }
+}
+
 const handleStatusChange = (userId: string, currentStatus: string) => {
   selectedUserId.value = userId
   if (currentStatus === 'active') {
@@ -426,27 +462,24 @@ const handleStatusChange = (userId: string, currentStatus: string) => {
   showStatusModal.value = true
 }
 
-// 确认状态变更
 const handleStatusConfirm = async () => {
   try {
-    const newStatus =
-      statusAction.value === 'enable' ? 'active' : 'disabled'
+    const newStatus = statusAction.value === 'enable' ? 'active' : 'disabled'
 
     await $fetch(`/api/v1/admin/users/${selectedUserId.value}/status`, {
       method: 'PATCH',
       body: { status: newStatus },
     })
 
-    message.success('状态已更新')
+    toast.add({ title: '状态已更新', color: 'success' })
     await fetchUsers()
   } catch (error: any) {
-    message.error(error.data?.message || '更新失败')
+    toast.add({ title: error.data?.message || '更新失败', color: 'error' })
   } finally {
     showStatusModal.value = false
   }
 }
 
-// 初始化
 onMounted(() => {
   fetchUsers()
 })
@@ -454,16 +487,158 @@ onMounted(() => {
 
 <style scoped>
 .admin-users-page {
-  padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 24px 20px 40px;
 }
 
-.content-card {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.mb-4 {
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cf-ink);
+}
+
+.panel {
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 220px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 6px;
+}
+
+.toolbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  width: 280px;
+}
+
+.status-filter {
+  width: 150px;
+}
+
+.state-box {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--cf-ink-soft);
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--cf-line);
+  vertical-align: middle;
+}
+
+.data-table th {
+  color: var(--cf-ink-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.col-actions {
+  width: 220px;
+}
+
+.name {
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.muted {
+  color: var(--cf-ink-soft);
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.pager-page {
+  font-size: 0.8125rem;
+  color: var(--cf-ink-soft);
+  min-width: 64px;
+  text-align: center;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+}
+
+.field__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-danger);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-text {
+  margin: 0;
+  color: var(--cf-ink-soft);
+  line-height: 1.5;
 }
 </style>
