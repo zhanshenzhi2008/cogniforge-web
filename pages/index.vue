@@ -7,12 +7,13 @@
       </p>
     </header>
 
-    <n-grid cols="1 600:2 960:4" :x-gap="16" :y-gap="16" responsive="screen">
-      <n-gi v-for="card in statCards" :key="card.label">
+    <n-grid :cols="24" :x-gap="16" :y-gap="16" class="stat-grid">
+      <n-gi v-for="card in statCards" :key="card.label" span="12 960:6">
         <n-card
           class="stat-card"
           hoverable
           :bordered="false"
+          size="small"
           @click="card.to && go(card.to)"
         >
           <div class="stat-content">
@@ -29,14 +30,8 @@
       </n-gi>
     </n-grid>
 
-    <n-grid
-      cols="1 900:5"
-      :x-gap="16"
-      :y-gap="16"
-      class="section-grid"
-      responsive="screen"
-    >
-      <n-gi :span="2">
+    <n-grid :cols="24" :x-gap="16" :y-gap="16" class="section-grid">
+      <n-gi span="24 900:10">
         <n-card :bordered="false" class="panel-card">
           <template #header>
             <div class="card-header">快速开始</div>
@@ -66,7 +61,7 @@
           </div>
         </n-card>
       </n-gi>
-      <n-gi :span="3">
+      <n-gi span="24 900:14">
         <n-card :bordered="false" class="panel-card panel-card--activity">
           <template #header>
             <div class="card-header">最近活动</div>
@@ -173,9 +168,11 @@ const quickActions = [
 
 <style scoped>
 .home-page {
-  max-width: 1200px;
+  max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
-  padding: 28px 20px 48px;
+  padding: 24px 20px 40px;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -184,17 +181,22 @@ const quickActions = [
 
 .page-title {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
   color: #0f172a;
   line-height: 1.3;
 }
 
 .page-subtitle {
-  margin: 6px 0 0;
-  font-size: 14px;
+  margin: 4px 0 0;
+  font-size: 13px;
   color: #64748b;
   line-height: 1.5;
+}
+
+.stat-grid,
+.section-grid {
+  width: 100%;
 }
 
 .section-grid {
@@ -235,10 +237,11 @@ const quickActions = [
 }
 
 .stat-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #0f172a;
-  line-height: 1.2;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
@@ -254,15 +257,24 @@ const quickActions = [
 }
 
 .panel-card {
-  min-height: 280px;
   height: 100%;
+  min-height: 268px;
+}
+
+.panel-card :deep(.n-card-header) {
+  padding-bottom: 8px;
+}
+
+.panel-card :deep(.n-card__content) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 52px);
 }
 
 .panel-card--activity :deep(.n-card__content) {
-  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
+  min-height: 196px;
 }
 
 .card-header {
@@ -275,6 +287,7 @@ const quickActions = [
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
 }
 
 .quick-item {
@@ -282,12 +295,14 @@ const quickActions = [
   align-items: center;
   gap: 12px;
   width: 100%;
+  flex: 1;
   padding: 12px 14px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #fff;
   cursor: pointer;
   text-align: left;
+  font: inherit;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
