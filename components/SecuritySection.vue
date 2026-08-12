@@ -1,15 +1,14 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="section-title">安全设置</h2>
+      <h2 class="section-title font-display">安全设置</h2>
       <p class="section-desc">管理您的账户密码和安全选项</p>
     </div>
 
-    <!-- 密码修改卡片 -->
-    <div class="content-card">
+    <div class="content-card cf-surface">
       <div class="card-header">
         <div class="card-icon password-icon">
-          <n-icon :component="KeyOutline" />
+          <UIcon name="i-lucide-key" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
           <h3>修改密码</h3>
@@ -20,127 +19,112 @@
       <div class="card-body">
         <div class="form-row">
           <label class="form-label">当前密码</label>
-          <n-input
-            v-model:value="form.old_password"
+          <UInput
+            v-model="form.old_password"
+            class="w-full"
             type="password"
             placeholder="请输入当前密码"
-            show-password-on="click"
-            size="small"
+            size="sm"
             @keyup.enter="handleSubmit"
           />
         </div>
 
         <div class="form-row">
           <label class="form-label">新密码</label>
-          <n-input
-            v-model:value="form.new_password"
+          <UInput
+            v-model="form.new_password"
+            class="w-full"
             type="password"
             placeholder="请输入新密码"
-            show-password-on="click"
-            size="small"
+            size="sm"
           />
-          <div class="password-strength-wrapper" v-if="form.new_password">
+          <div v-if="form.new_password" class="password-strength-wrapper">
             <PasswordStrength :password="form.new_password" />
           </div>
         </div>
 
         <div class="form-row">
           <label class="form-label">确认密码</label>
-          <n-input
-            v-model:value="form.confirm_password"
+          <UInput
+            v-model="form.confirm_password"
+            class="w-full"
             type="password"
             placeholder="请再次输入新密码"
-            show-password-on="click"
-            size="small"
+            size="sm"
             @keyup.enter="handleSubmit"
           />
         </div>
 
-        <div class="password-requirements" v-if="!isFormValid && form.new_password">
+        <div v-if="!isFormValid && form.new_password" class="password-requirements">
           <div class="requirement" :class="{ met: meetsLength }">
-            <n-icon :component="meetsLength ? CheckmarkCircle : CloseCircleOutline" />
+            <UIcon :name="meetsLength ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
             <span>8+字符</span>
           </div>
           <div class="requirement" :class="{ met: meetsUpper }">
-            <n-icon :component="meetsUpper ? CheckmarkCircle : CloseCircleOutline" />
+            <UIcon :name="meetsUpper ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
             <span>大写</span>
           </div>
           <div class="requirement" :class="{ met: meetsLower }">
-            <n-icon :component="meetsLower ? CheckmarkCircle : CloseCircleOutline" />
+            <UIcon :name="meetsLower ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
             <span>小写</span>
           </div>
           <div class="requirement" :class="{ met: meetsNumber }">
-            <n-icon :component="meetsNumber ? CheckmarkCircle : CloseCircleOutline" />
+            <UIcon :name="meetsNumber ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
             <span>数字</span>
           </div>
           <div class="requirement" :class="{ met: meetsSpecial }">
-            <n-icon :component="meetsSpecial ? CheckmarkCircle : CloseCircleOutline" />
+            <UIcon :name="meetsSpecial ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
             <span>特殊字符</span>
           </div>
         </div>
       </div>
 
       <div class="card-footer">
-        <n-button
-          type="primary"
-          size="small"
+        <UButton
+          color="primary"
+          size="sm"
           :loading="loading"
           :disabled="!canSubmit"
           @click="handleSubmit"
         >
           更新密码
-        </n-button>
+        </UButton>
       </div>
     </div>
 
-    <!-- 双因素认证卡片 -->
-    <div class="content-card disabled-card">
+    <div class="content-card disabled-card cf-surface">
       <div class="card-header">
         <div class="card-icon tfa-icon">
-          <n-icon :component="ShieldCheckmarkOutline" />
+          <UIcon name="i-lucide-shield-check" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
           <h3>双因素认证</h3>
           <p>启用后登录需要额外的验证码，增强账户安全</p>
         </div>
-        <n-tag type="warning" size="small">暂未开放</n-tag>
+        <UBadge color="warning" variant="subtle" size="sm">暂未开放</UBadge>
       </div>
     </div>
 
-    <!-- 活跃会话卡片 -->
-    <div class="content-card">
+    <div class="content-card cf-surface">
       <div class="card-header clickable" @click="goToSessions">
         <div class="card-icon sessions-icon">
-          <n-icon :component="LaptopOutline" />
+          <UIcon name="i-lucide-laptop" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
           <h3>活跃会话</h3>
           <p>查看和管理您登录的设备</p>
         </div>
-        <n-button quaternary type="primary" size="tiny">
+        <UButton color="primary" variant="ghost" size="xs" trailing-icon="i-lucide-chevron-right">
           查看全部
-          <template #icon>
-            <n-icon :component="ChevronForwardOutline" />
-          </template>
-        </n-button>
+        </UButton>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  KeyOutline,
-  ShieldCheckmarkOutline,
-  LaptopOutline,
-  ChevronForwardOutline,
-  CheckmarkCircle,
-  CloseCircleOutline,
-} from '@vicons/ionicons5'
-import { NIcon } from 'naive-ui'
-
 const router = useRouter()
-const message = useMessage()
+const toast = useToast()
 
 const loading = ref(false)
 
@@ -157,19 +141,21 @@ const meetsNumber = computed(() => /[0-9]/.test(form.new_password))
 const meetsSpecial = computed(() => /[^A-Za-z0-9]/.test(form.new_password))
 
 const isFormValid = computed(() =>
-  meetsLength.value &&
-  meetsUpper.value &&
-  meetsLower.value &&
-  meetsNumber.value &&
-  meetsSpecial.value
+  meetsLength.value
+  && meetsUpper.value
+  && meetsLower.value
+  && meetsNumber.value
+  && meetsSpecial.value,
 )
 
 const canSubmit = computed(() =>
-  form.old_password &&
-  form.new_password &&
-  form.confirm_password &&
-  form.new_password === form.confirm_password &&
-  isFormValid.value
+  Boolean(
+    form.old_password
+    && form.new_password
+    && form.confirm_password
+    && form.new_password === form.confirm_password
+    && isFormValid.value,
+  ),
 )
 
 const handleSubmit = async () => {
@@ -185,7 +171,7 @@ const handleSubmit = async () => {
       },
     })
 
-    message.success('密码修改成功，请使用新密码重新登录')
+    toast.add({ title: '密码修改成功，请使用新密码重新登录', color: 'success' })
 
     form.old_password = ''
     form.new_password = ''
@@ -197,7 +183,7 @@ const handleSubmit = async () => {
       router.push('/login')
     }, 1500)
   } catch (error: any) {
-    message.error(error.data?.message || '密码修改失败')
+    toast.add({ title: error.data?.message || '密码修改失败', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -231,20 +217,18 @@ const goToSessions = () => {
 .section-title {
   font-size: 18px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--cf-ink);
   margin: 0 0 4px 0;
 }
 
 .section-desc {
   font-size: 13px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 0;
 }
 
 .content-card {
-  background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
   overflow: hidden;
   margin-bottom: 12px;
 }
@@ -258,7 +242,7 @@ const goToSessions = () => {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cf-line);
 }
 
 .card-header.clickable {
@@ -267,7 +251,7 @@ const goToSessions = () => {
 }
 
 .card-header.clickable:hover {
-  background: #f8fafc;
+  background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
 }
 
 .card-icon {
@@ -280,21 +264,16 @@ const goToSessions = () => {
   flex-shrink: 0;
 }
 
-.card-icon :deep(.n-icon) {
-  font-size: 18px;
-  color: #ffffff;
-}
-
 .password-icon {
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, var(--cf-accent), var(--cf-accent-ink));
 }
 
 .tfa-icon {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, var(--cf-warn), color-mix(in oklab, var(--cf-warn) 70%, #000));
 }
 
 .sessions-icon {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--cf-ok), color-mix(in oklab, var(--cf-ok) 70%, #000));
 }
 
 .card-title-area {
@@ -304,13 +283,13 @@ const goToSessions = () => {
 .card-title-area h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--cf-ink);
   margin: 0;
 }
 
 .card-title-area p {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 2px 0 0 0;
 }
 
@@ -330,7 +309,7 @@ const goToSessions = () => {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--cf-ink);
   margin-bottom: 6px;
 }
 
@@ -343,7 +322,7 @@ const goToSessions = () => {
   flex-wrap: wrap;
   gap: 12px;
   padding: 12px;
-  background: #f8fafc;
+  background: color-mix(in oklab, var(--cf-bg-muted) 70%, transparent);
   border-radius: 6px;
   margin-top: 12px;
 }
@@ -353,21 +332,17 @@ const goToSessions = () => {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
 }
 
 .requirement.met {
-  color: #10b981;
-}
-
-.requirement :deep(.n-icon) {
-  font-size: 14px;
+  color: var(--cf-ok);
 }
 
 .card-footer {
   padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #f1f5f9;
+  background: color-mix(in oklab, var(--cf-bg-muted) 60%, transparent);
+  border-top: 1px solid var(--cf-line);
   display: flex;
   justify-content: flex-end;
 }

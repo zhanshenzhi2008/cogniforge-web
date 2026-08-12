@@ -1,31 +1,26 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="section-title">登录会话</h2>
+      <h2 class="section-title font-display">登录会话</h2>
       <p class="section-desc">查看和管理您的活跃登录会话</p>
     </div>
 
-    <!-- 当前会话 -->
-    <div class="content-card">
+    <div class="content-card cf-surface">
       <div class="card-header">
         <div class="card-icon current-icon">
-          <n-icon :component="LaptopOutline" />
+          <UIcon name="i-lucide-laptop" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
           <h3>当前设备</h3>
           <p>您正在使用的设备</p>
         </div>
-        <n-tag type="success" size="small" round>
-          <template #icon>
-            <n-icon :component="CheckmarkCircle" />
-          </template>
+        <UBadge color="success" variant="subtle" size="sm" icon="i-lucide-check-circle">
           当前会话
-        </n-tag>
+        </UBadge>
       </div>
     </div>
 
-    <!-- 会话列表 -->
-    <div class="content-card">
+    <div class="content-card cf-surface">
       <div class="card-header no-border">
         <div class="card-title-area">
           <h3>其他活跃会话</h3>
@@ -34,64 +29,65 @@
       </div>
 
       <div class="sessions-list">
-        <n-spin :show="loading">
-          <div v-if="sessions.length === 0 && !loading" class="empty-state">
-            <n-icon :component="CheckmarkCircleOutline" class="empty-icon" />
-            <p>没有其他活跃会话</p>
-          </div>
+        <div v-if="loading" class="state-box">
+          <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
+          <span>加载中…</span>
+        </div>
 
-          <TransitionGroup name="session-list" tag="div">
-            <div
-              v-for="(session, index) in sessions"
-              :key="session.id || `session-${index}`"
-              class="session-item"
-            >
-              <div class="session-icon">
-                <n-icon :component="getDeviceIcon(session.device)" />
+        <div v-else-if="sessions.length === 0" class="empty-state">
+          <UIcon name="i-lucide-circle-check" class="empty-icon size-9" />
+          <p>没有其他活跃会话</p>
+        </div>
+
+        <TransitionGroup v-else name="session-list" tag="div">
+          <div
+            v-for="(session, index) in sessions"
+            :key="session.id || `session-${index}`"
+            class="session-item"
+          >
+            <div class="session-icon">
+              <UIcon :name="getDeviceIcon(session.device)" class="size-[18px]" />
+            </div>
+            <div class="session-info">
+              <div class="session-device">
+                <span class="device-name">{{ session.device || '未知设备' }}</span>
+                <UBadge v-if="session.is_current" color="success" variant="subtle" size="sm">
+                  当前
+                </UBadge>
               </div>
-              <div class="session-info">
-                <div class="session-device">
-                  <span class="device-name">{{ session.device || '未知设备' }}</span>
-                  <n-tag v-if="session.is_current" type="success" size="tiny">当前</n-tag>
-                </div>
-                <div class="session-meta">
-                  <span class="meta-item">
-                    <n-icon :component="LocationOutline" />
-                    {{ session.location || '未知位置' }}
-                  </span>
-                  <span class="meta-item">
-                    <n-icon :component="TimeOutline" />
-                    {{ formatTime(session.last_used) }}
-                  </span>
-                  <span class="meta-item">
-                    IP: {{ session.ip_address || '未知' }}
-                  </span>
-                </div>
-              </div>
-              <div class="session-actions">
-                <n-popconfirm
-                  @positive-click="handleRevoke(session.id)"
-                  positive-text="撤销"
-                  negative-text="取消"
-                >
-                  <template #trigger>
-                    <n-button size="small" type="error" ghost :loading="revokingId === session.id">
-                      撤销
-                    </n-button>
-                  </template>
-                  确定要撤销此会话吗？
-                </n-popconfirm>
+              <div class="session-meta">
+                <span class="meta-item">
+                  <UIcon name="i-lucide-map-pin" class="size-3" />
+                  {{ session.location || '未知位置' }}
+                </span>
+                <span class="meta-item">
+                  <UIcon name="i-lucide-clock" class="size-3" />
+                  {{ formatTime(session.last_used) }}
+                </span>
+                <span class="meta-item">
+                  IP: {{ session.ip_address || '未知' }}
+                </span>
               </div>
             </div>
-          </TransitionGroup>
-        </n-spin>
+            <div class="session-actions">
+              <UButton
+                size="sm"
+                color="error"
+                variant="outline"
+                :loading="revokingId === session.id"
+                @click="askRevoke(session.id)"
+              >
+                撤销
+              </UButton>
+            </div>
+          </div>
+        </TransitionGroup>
       </div>
     </div>
 
-    <!-- 安全提示 -->
-    <div class="content-card security-tips">
+    <div class="content-card security-tips cf-surface">
       <div class="tips-header">
-        <n-icon :component="ShieldOutline" class="tips-icon" />
+        <UIcon name="i-lucide-shield" class="tips-icon size-4" />
         <h4>安全建议</h4>
       </div>
       <ul class="tips-list">
@@ -100,38 +96,40 @@
         <li>发现异常登录请立即修改密码并撤销所有会话</li>
       </ul>
     </div>
+
+    <UModal v-model:open="revokeVisible" title="撤销确认" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="confirm-text">确定要撤销此会话吗？撤销后该设备需要重新登录。</p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <UButton color="neutral" variant="outline" @click="revokeVisible = false">取消</UButton>
+          <UButton color="error" :loading="!!revokingId" @click="confirmRevoke">撤销</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  LaptopOutline,
-  TabletLandscapeOutline,
-  PhonePortraitOutline,
-  CheckmarkCircle,
-  CheckmarkCircleOutline,
-  LocationOutline,
-  TimeOutline,
-  ShieldOutline,
-} from '@vicons/ionicons5'
-import { NIcon } from 'naive-ui'
-
-const message = useMessage()
+const toast = useToast()
 
 const loading = ref(false)
 const sessions = ref<any[]>([])
 const revokingId = ref<string | null>(null)
+const revokeVisible = ref(false)
+const pendingRevokeId = ref<string | null>(null)
 
 const getDeviceIcon = (device: string) => {
-  if (!device) return LaptopOutline
+  if (!device) return 'i-lucide-laptop'
   const d = device.toLowerCase()
   if (d.includes('mobile') || d.includes('iphone') || d.includes('android')) {
-    return PhonePortraitOutline
+    return 'i-lucide-smartphone'
   }
   if (d.includes('tablet') || d.includes('ipad')) {
-    return TabletLandscapeOutline
+    return 'i-lucide-tablet'
   }
-  return LaptopOutline
+  return 'i-lucide-laptop'
 }
 
 const formatTime = (time: string) => {
@@ -157,10 +155,22 @@ const loadSessions = async () => {
     const data = await $fetch('/api/v1/settings/sessions')
     sessions.value = data || []
   } catch {
-    message.error('获取会话列表失败')
+    toast.add({ title: '获取会话列表失败', color: 'error' })
   } finally {
     loading.value = false
   }
+}
+
+const askRevoke = (sessionId: string) => {
+  pendingRevokeId.value = sessionId
+  revokeVisible.value = true
+}
+
+const confirmRevoke = async () => {
+  if (!pendingRevokeId.value) return
+  await handleRevoke(pendingRevokeId.value)
+  revokeVisible.value = false
+  pendingRevokeId.value = null
 }
 
 const handleRevoke = async (sessionId: string) => {
@@ -169,10 +179,10 @@ const handleRevoke = async (sessionId: string) => {
     await $fetch(`/api/v1/settings/sessions/${sessionId}`, {
       method: 'DELETE',
     })
-    message.success('会话已撤销')
+    toast.add({ title: '会话已撤销', color: 'success' })
     await loadSessions()
   } catch (error: any) {
-    message.error(error.data?.message || '撤销失败')
+    toast.add({ title: error.data?.message || '撤销失败', color: 'error' })
   } finally {
     revokingId.value = null
   }
@@ -206,20 +216,18 @@ onMounted(() => {
 .section-title {
   font-size: 18px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--cf-ink);
   margin: 0 0 4px 0;
 }
 
 .section-desc {
   font-size: 13px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 0;
 }
 
 .content-card {
-  background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
   overflow: hidden;
   margin-bottom: 12px;
 }
@@ -229,7 +237,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cf-line);
 }
 
 .card-header.no-border {
@@ -247,13 +255,8 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.card-icon :deep(.n-icon) {
-  font-size: 18px;
-  color: #ffffff;
-}
-
 .current-icon {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--cf-ok), color-mix(in oklab, var(--cf-ok) 70%, #000));
 }
 
 .card-title-area {
@@ -263,13 +266,13 @@ onMounted(() => {
 .card-title-area h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--cf-ink);
   margin: 0;
 }
 
 .card-title-area p {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 2px 0 0 0;
 }
 
@@ -277,18 +280,19 @@ onMounted(() => {
   padding: 0 16px 16px;
 }
 
+.state-box,
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 32px 16px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
 }
 
 .empty-icon {
-  font-size: 36px;
-  margin-bottom: 8px;
-  color: #10b981;
+  color: var(--cf-ok);
 }
 
 .session-item {
@@ -296,7 +300,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cf-line);
 }
 
 .session-item:last-child {
@@ -307,16 +311,12 @@ onMounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #f1f5f9;
+  background: color-mix(in oklab, var(--cf-bg-muted) 80%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.session-icon :deep(.n-icon) {
-  font-size: 18px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
 }
 
 .session-info {
@@ -334,7 +334,7 @@ onMounted(() => {
 .device-name {
   font-size: 13px;
   font-weight: 500;
-  color: #0f172a;
+  color: var(--cf-ink);
 }
 
 .session-meta {
@@ -348,11 +348,7 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: #64748b;
-}
-
-.meta-item :deep(.n-icon) {
-  font-size: 12px;
+  color: var(--cf-ink-soft);
 }
 
 .session-actions {
@@ -360,8 +356,8 @@ onMounted(() => {
 }
 
 .security-tips {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
+  background: color-mix(in oklab, var(--cf-ok) 8%, var(--cf-bg-elevated));
+  border-color: color-mix(in oklab, var(--cf-ok) 30%, var(--cf-line));
 }
 
 .tips-header {
@@ -369,25 +365,24 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 14px 16px;
-  border-bottom: 1px solid #dcfce7;
+  border-bottom: 1px solid color-mix(in oklab, var(--cf-ok) 20%, var(--cf-line));
 }
 
 .tips-icon {
-  font-size: 16px;
-  color: #16a34a;
+  color: var(--cf-ok);
 }
 
 .tips-header h4 {
   font-size: 13px;
   font-weight: 600;
-  color: #166534;
+  color: var(--cf-ok);
   margin: 0;
 }
 
 .tips-list {
   margin: 0;
   padding: 12px 16px 14px 40px;
-  color: #15803d;
+  color: color-mix(in oklab, var(--cf-ok) 85%, var(--cf-ink));
 }
 
 .tips-list li {
@@ -397,6 +392,19 @@ onMounted(() => {
 
 .tips-list li:last-child {
   margin-bottom: 0;
+}
+
+.confirm-text {
+  margin: 0;
+  color: var(--cf-ink-soft);
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
 }
 
 .session-list-enter-active,

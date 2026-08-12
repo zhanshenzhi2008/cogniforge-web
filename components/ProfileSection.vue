@@ -1,24 +1,22 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="section-title">个人资料</h2>
+      <h2 class="section-title font-display">个人资料</h2>
       <p class="section-desc">管理您的个人信息和公开资料</p>
     </div>
 
-    <div class="content-card">
-      <!-- 头像区域 -->
+    <div class="content-card cf-surface">
       <div class="avatar-section">
         <div class="avatar-wrapper">
-          <n-avatar
-            :size="64"
-            round
+          <UAvatar
             :src="form.avatar_url || undefined"
+            :alt="form.name || '用户'"
+            size="3xl"
+            :text="form.name?.charAt(0)?.toUpperCase() || 'U'"
             class="user-avatar"
-          >
-            <span class="avatar-fallback">{{ form.name?.charAt(0)?.toUpperCase() || 'U' }}</span>
-          </n-avatar>
+          />
           <div class="avatar-overlay" @click="triggerUpload">
-            <n-icon :component="CameraOutline" />
+            <UIcon name="i-lucide-camera" class="size-5 text-white" />
           </div>
         </div>
         <div class="avatar-info">
@@ -27,26 +25,23 @@
         </div>
       </div>
 
-      <!-- 隐藏的文件上传 -->
-      <n-upload
-        ref="uploadRef"
-        :custom-request="handleAvatarUpload"
-        :show-file-list="false"
+      <input
+        ref="fileInputRef"
+        type="file"
         accept="image/*"
-        :max-file-size="2 * 1024 * 1024"
+        class="hidden-input"
+        @change="handleAvatarChange"
       >
-        <button ref="uploadTrigger" style="display: none;"></button>
-      </n-upload>
 
-      <!-- 基本信息表单 -->
       <div class="form-section">
         <div class="form-row">
           <label class="form-label">姓名 <span class="required">*</span></label>
-          <n-input
-            v-model:value="form.name"
+          <UInput
+            v-model="form.name"
+            class="w-full"
             placeholder="请输入您的姓名"
-            size="small"
-            :status="nameError ? 'error' : undefined"
+            size="sm"
+            :color="nameError ? 'error' : 'neutral'"
             @blur="validateName"
           />
           <span v-if="nameError" class="error-text">{{ nameError }}</span>
@@ -54,10 +49,11 @@
 
         <div class="form-row">
           <label class="form-label">邮箱</label>
-          <n-input
-            v-model:value="form.email"
+          <UInput
+            v-model="form.email"
+            class="w-full"
             disabled
-            size="small"
+            size="sm"
           />
           <span class="hint-text">邮箱地址不可修改</span>
         </div>
@@ -65,29 +61,29 @@
         <div class="form-row">
           <label class="form-label">账户类型</label>
           <div class="role-display">
-            <n-tag :type="form.role === 'admin' ? 'error' : 'info'" size="small" round>
-              <template #icon>
-                <n-icon :component="form.role === 'admin' ? ShieldCheckmarkOutline : PersonOutline" />
-              </template>
+            <UBadge
+              size="sm"
+              variant="subtle"
+              :color="form.role === 'admin' ? 'error' : 'info'"
+              :icon="form.role === 'admin' ? 'i-lucide-shield-check' : 'i-lucide-user'"
+            >
               {{ form.role === 'admin' ? '管理员' : '普通用户' }}
-            </n-tag>
+            </UBadge>
           </div>
         </div>
       </div>
 
-      <!-- 操作按钮 -->
       <div class="form-actions">
-        <n-button size="small" @click="resetForm" :disabled="loading">
+        <UButton color="neutral" variant="outline" size="sm" :disabled="loading" @click="resetForm">
           重置
-        </n-button>
-        <n-button type="primary" size="small" @click="handleSubmit" :loading="loading">
+        </UButton>
+        <UButton color="primary" size="sm" :loading="loading" @click="handleSubmit">
           保存更改
-        </n-button>
+        </UButton>
       </div>
     </div>
 
-    <!-- 危险区域 -->
-    <div class="content-card danger-zone">
+    <div class="content-card danger-zone cf-surface">
       <div class="danger-header">
         <div class="danger-info">
           <h4>危险区域</h4>
@@ -100,9 +96,9 @@
             <h5>注销账户</h5>
             <p>永久删除您的账户和所有相关数据</p>
           </div>
-          <n-button type="error" ghost disabled size="small">
+          <UButton color="error" variant="outline" size="sm" disabled>
             暂未开放
-          </n-button>
+          </UButton>
         </div>
       </div>
     </div>
@@ -110,15 +106,11 @@
 </template>
 
 <script setup lang="ts">
-import { CameraOutline, ShieldCheckmarkOutline, PersonOutline } from '@vicons/ionicons5'
-import { NIcon } from 'naive-ui'
-
-const message = useMessage()
+const toast = useToast()
 const { user, fetchUser } = useAuth()
 
 const loading = ref(false)
-const uploadRef = ref()
-const uploadTrigger = ref()
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const nameError = ref('')
 
 const form = reactive({
@@ -143,33 +135,40 @@ const validateName = () => {
 }
 
 const triggerUpload = () => {
-  uploadTrigger.value?.click()
+  fileInputRef.value?.click()
 }
 
-const handleAvatarUpload = async (options: any) => {
-  const { file, onFinish, onError } = options
-  loading.value = true
+const handleAvatarChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
 
+  if (file.size > 2 * 1024 * 1024) {
+    toast.add({ title: '图片大小不能超过 2MB', color: 'error' })
+    input.value = ''
+    return
+  }
+
+  loading.value = true
   try {
     const formData = new FormData()
-    formData.append('avatar', file.file)
+    formData.append('avatar', file)
 
-    const response = await $fetch('/api/v1/settings/avatar', {
+    const response = await $fetch<{ avatar_url?: string }>('/api/v1/settings/avatar', {
       method: 'POST',
       body: formData,
     })
 
     if (response?.avatar_url) {
       form.avatar_url = response.avatar_url
-      message.success('头像上传成功')
+      toast.add({ title: '头像上传成功', color: 'success' })
       await fetchUser()
     }
-    onFinish()
   } catch (error: any) {
-    message.error(error.data?.message || '头像上传失败')
-    onError()
+    toast.add({ title: error.data?.message || '头像上传失败', color: 'error' })
   } finally {
     loading.value = false
+    input.value = ''
   }
 }
 
@@ -186,10 +185,10 @@ const handleSubmit = async () => {
       },
     })
 
-    message.success('个人资料已更新')
+    toast.add({ title: '个人资料已更新', color: 'success' })
     await fetchUser()
   } catch (error: any) {
-    message.error(error.data?.message || '更新失败')
+    toast.add({ title: error.data?.message || '更新失败', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -239,20 +238,18 @@ onMounted(() => {
 .section-title {
   font-size: 18px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--cf-ink);
   margin: 0 0 4px 0;
 }
 
 .section-desc {
   font-size: 13px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 0;
 }
 
 .content-card {
-  background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
   overflow: hidden;
   margin-bottom: 12px;
 }
@@ -262,7 +259,7 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   padding: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cf-line);
 }
 
 .avatar-wrapper {
@@ -271,19 +268,18 @@ onMounted(() => {
 }
 
 .user-avatar {
-  border: 2px solid #f1f5f9;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .avatar-wrapper:hover .user-avatar {
   transform: scale(1.02);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--cf-ink) 12%, transparent);
 }
 
 .avatar-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgb(0 0 0 / 0.5);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -293,32 +289,25 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.avatar-overlay :deep(.n-icon) {
-  font-size: 20px;
-  color: #ffffff;
-}
-
 .avatar-wrapper:hover .avatar-overlay {
   opacity: 1;
-}
-
-.avatar-fallback {
-  font-size: 24px;
-  font-weight: 600;
-  color: #64748b;
 }
 
 .avatar-info h4 {
   font-size: 13px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--cf-ink);
   margin: 0 0 2px 0;
 }
 
 .avatar-info p {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cf-ink-soft);
   margin: 0;
+}
+
+.hidden-input {
+  display: none;
 }
 
 .form-section {
@@ -337,24 +326,24 @@ onMounted(() => {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--cf-ink);
   margin-bottom: 6px;
 }
 
 .required {
-  color: #ef4444;
+  color: var(--cf-danger);
 }
 
 .hint-text {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--cf-ink-soft);
   margin-top: 4px;
   display: block;
 }
 
 .error-text {
   font-size: 11px;
-  color: #ef4444;
+  color: var(--cf-danger);
   margin-top: 4px;
   display: block;
 }
@@ -368,30 +357,30 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #f1f5f9;
+  background: color-mix(in oklab, var(--cf-bg-muted) 60%, transparent);
+  border-top: 1px solid var(--cf-line);
 }
 
 .danger-zone {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: color-mix(in oklab, var(--cf-danger) 35%, var(--cf-line));
+  background: color-mix(in oklab, var(--cf-danger) 8%, var(--cf-bg-elevated));
 }
 
 .danger-header {
   padding: 14px 16px;
-  border-bottom: 1px solid #fecaca;
+  border-bottom: 1px solid color-mix(in oklab, var(--cf-danger) 25%, var(--cf-line));
 }
 
 .danger-header h4 {
   font-size: 13px;
   font-weight: 600;
-  color: #991b1b;
+  color: var(--cf-danger);
   margin: 0 0 2px 0;
 }
 
 .danger-header p {
   font-size: 12px;
-  color: #b91c1c;
+  color: color-mix(in oklab, var(--cf-danger) 80%, var(--cf-ink-soft));
   margin: 0;
 }
 
@@ -403,18 +392,19 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .danger-item-info h5 {
   font-size: 13px;
   font-weight: 500;
-  color: #7f1d1d;
+  color: var(--cf-danger);
   margin: 0 0 2px 0;
 }
 
 .danger-item-info p {
   font-size: 12px;
-  color: #991b1b;
+  color: color-mix(in oklab, var(--cf-danger) 75%, var(--cf-ink-soft));
   margin: 0;
 }
 </style>
