@@ -1,104 +1,18 @@
 <template>
   <div class="playground-page">
     <div class="playground-container">
-      <!-- 左侧配置面板 -->
+      <!-- 左侧配置面板（桌面） -->
       <aside class="sidebar cf-surface">
-        <div class="sidebar-header">
-          <div class="header-logo">
-            <UIcon name="i-lucide-cpu" class="size-5" />
-          </div>
-          <div class="sidebar-title">
-            <span class="app-name font-display">CogniForge</span>
-            <span class="app-sub">AI Agent Platform</span>
-          </div>
-        </div>
-
-        <section class="config-block">
-          <div class="card-header">
-            <UIcon name="i-lucide-bot" class="size-4" />
-            <span>Agent</span>
-          </div>
-          <USelect
-            v-model="selectedAgent"
-            :items="agentOptions"
-            placeholder="选择 Agent"
-            value-key="value"
-            class="w-full"
-            @update:model-value="handleAgentChange"
-          />
-          <div v-if="selectedAgentInfo" class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">模型</span>
-              <UBadge size="sm" variant="subtle" color="primary">
-                {{ selectedAgentInfo.model }}
-              </UBadge>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">描述</span>
-              <p class="meta-desc">{{ selectedAgentInfo.description || '暂无描述' }}</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="config-block">
-          <div class="card-header">
-            <UIcon name="i-lucide-settings-2" class="size-4" />
-            <span>模型</span>
-          </div>
-          <USelect
-            v-model="selectedModel"
-            :items="modelOptions"
-            placeholder="选择模型"
-            value-key="value"
-            class="w-full"
-          />
-        </section>
-
-        <section class="config-block params-block">
-          <div class="card-header">
-            <UIcon name="i-lucide-sliders-horizontal" class="size-4" />
-            <span>参数</span>
-          </div>
-          <div class="param-row">
-            <div class="param-label">
-              <span>Temperature</span>
-              <UBadge size="sm" variant="subtle" color="warning">{{ params.temperature }}</UBadge>
-            </div>
-            <USlider
-              v-model="params.temperature"
-              :min="0"
-              :max="2"
-              :step="0.1"
-              color="primary"
-            />
-          </div>
-          <div class="param-row">
-            <div class="param-label">
-              <span>Max Tokens</span>
-              <UBadge size="sm" variant="subtle" color="warning">{{ params.max_tokens }}</UBadge>
-            </div>
-            <UInput
-              v-model.number="params.max_tokens"
-              type="number"
-              :min="1"
-              :max="8192"
-              size="sm"
-            />
-          </div>
-          <div class="param-row">
-            <div class="param-label">
-              <span>Top P</span>
-              <UBadge size="sm" variant="subtle" color="warning">{{ params.top_p }}</UBadge>
-            </div>
-            <USlider
-              v-model="params.top_p"
-              :min="0"
-              :max="1"
-              :step="0.05"
-              color="primary"
-            />
-          </div>
-        </section>
+        <PlaygroundConfigPanel
+          v-model:selected-agent="selectedAgent"
+          v-model:selected-model="selectedModel"
+          :selected-agent-info="selectedAgentInfo"
+          :agent-options="agentOptions"
+          :model-options="modelOptions"
+          :params="params"
+          show-brand
+          @agent-change="handleAgentChange"
+        />
       </aside>
 
       <!-- 右侧聊天区域 -->
@@ -111,15 +25,27 @@
             />
             <span>{{ currentTitle }}</span>
           </div>
-          <UButton
-            color="error"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-trash-2"
-            @click="clearMessages"
-          >
-            清空
-          </UButton>
+          <div class="chat-topbar-actions">
+            <UButton
+              class="config-toggle"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              icon="i-lucide-sliders-horizontal"
+              @click="configOpen = true"
+            >
+              参数
+            </UButton>
+            <UButton
+              color="error"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-trash-2"
+              @click="clearMessages"
+            >
+              清空
+            </UButton>
+          </div>
         </div>
 
         <div class="messages-wrapper">
@@ -195,6 +121,20 @@
         </div>
       </main>
     </div>
+
+    <USlideover v-model:open="configOpen" title="对话参数" :ui="{ content: 'max-w-sm w-full' }">
+      <template #body>
+        <PlaygroundConfigPanel
+          v-model:selected-agent="selectedAgent"
+          v-model:selected-model="selectedModel"
+          :selected-agent-info="selectedAgentInfo"
+          :agent-options="agentOptions"
+          :model-options="modelOptions"
+          :params="params"
+          @agent-change="handleAgentChange"
+        />
+      </template>
+    </USlideover>
   </div>
 </template>
 
@@ -247,6 +187,7 @@ const NONE_AGENT = '__none__'
 const selectedAgent = ref(NONE_AGENT)
 const selectedAgentInfo = ref<Agent | null>(null)
 const abortController = ref<AbortController | null>(null)
+const configOpen = ref(false)
 
 const suggestionChips = [
   '介绍一下你自己',
@@ -647,10 +588,22 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 12px 24px;
   border-bottom: 1px solid var(--cf-line);
   border-radius: 0;
   flex-shrink: 0;
+}
+
+.chat-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.config-toggle {
+  display: none;
 }
 
 .chat-title {
@@ -809,6 +762,21 @@ onMounted(async () => {
 
 @media (max-width: 900px) {
   .sidebar {
+    display: none;
+  }
+
+  .config-toggle {
+    display: inline-flex;
+  }
+
+  .chat-topbar,
+  .messages-wrapper,
+  .composer-area {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .composer-hint {
     display: none;
   }
 }

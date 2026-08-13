@@ -31,6 +31,7 @@
             trailing-icon="i-lucide-chevron-down"
             :label="user?.name || '用户'"
             icon="i-lucide-user-round"
+            class="user-menu-btn"
           />
         </UDropdownMenu>
 
@@ -47,12 +48,19 @@
 
     <USlideover v-model:open="mobileOpen" title="导航" side="right">
       <template #body>
-        <UNavigationMenu
-          :items="mobileNavItems"
-          orientation="vertical"
-          class="w-full"
-          @click="mobileOpen = false"
-        />
+        <div class="mobile-nav">
+          <UNavigationMenu
+            :items="mobileNavItems"
+            orientation="vertical"
+            class="w-full"
+          />
+          <div class="mobile-nav__divider" />
+          <UNavigationMenu
+            :items="mobileAccountItems"
+            orientation="vertical"
+            class="w-full"
+          />
+        </div>
       </template>
     </USlideover>
 
@@ -95,6 +103,40 @@ const mobileNavItems = computed<NavigationMenuItem[]>(() =>
     },
   })),
 )
+
+const mobileAccountItems = computed<NavigationMenuItem[]>(() => {
+  const items: NavigationMenuItem[] = [
+    {
+      label: '个人设置',
+      icon: 'i-lucide-settings',
+      to: '/settings',
+      onSelect: () => {
+        mobileOpen.value = false
+      },
+    },
+  ]
+  if (user.value?.role === 'admin') {
+    items.push(
+      {
+        label: '用户管理',
+        icon: 'i-lucide-users',
+        to: '/admin/users',
+        onSelect: () => {
+          mobileOpen.value = false
+        },
+      },
+      {
+        label: '角色权限',
+        icon: 'i-lucide-shield-check',
+        to: '/admin/roles',
+        onSelect: () => {
+          mobileOpen.value = false
+        },
+      },
+    )
+  }
+  return items
+})
 
 const themeMenuItems = computed<DropdownMenuItem[][]>(() => [
   themes.map((item) => ({
@@ -160,5 +202,23 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 <style scoped>
 .app-shell__main {
   min-height: calc(100vh - 4rem);
+}
+
+.mobile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-nav__divider {
+  height: 1px;
+  margin: 8px 0;
+  background: var(--cf-line);
+}
+
+@media (max-width: 640px) {
+  .user-menu-btn :deep(span) {
+    display: none;
+  }
 }
 </style>

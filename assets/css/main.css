@@ -169,3 +169,15 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* P6：列表页标题区窄屏换行，避免按钮挤出视口 */
+@media (max-width: 640px) {
+  .page-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+}

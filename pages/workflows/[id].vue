@@ -1,5 +1,10 @@
 <template>
   <div class="workflow-editor">
+    <div class="mobile-desktop-tip" role="status">
+      <UIcon name="i-lucide-monitor" class="size-4" />
+      <span>工作流画布建议在电脑上编辑；手机端仅便于查看。</span>
+      <UButton size="xs" color="neutral" variant="soft" to="/workflows">返回列表</UButton>
+    </div>
     <div class="editor-header">
       <UButton color="neutral" variant="outline" icon="i-lucide-arrow-left" @click="handleBack">
         返回
@@ -683,6 +688,22 @@ onMounted(() => {
   background: var(--cf-bg, #f8fafc);
 }
 
+.mobile-desktop-tip {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--cf-ink);
+  background: color-mix(in oklab, var(--cf-accent) 12%, transparent);
+  border-bottom: 1px solid var(--cf-line, #e2e8f0);
+}
+
+.mobile-desktop-tip span {
+  flex: 1;
+  min-width: 0;
+}
+
 .editor-header {
   display: flex;
   align-items: center;
@@ -962,5 +983,33 @@ onMounted(() => {
 .debug-log-message {
   color: var(--cf-ink, #334155);
   word-break: break-all;
+}
+
+@media (max-width: 900px) {
+  .mobile-desktop-tip {
+    display: flex;
+  }
+
+  .editor-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .editor-header h3 {
+    flex: 1 1 100%;
+    order: -1;
+    font-size: 15px;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .node-palette {
+    display: none;
+  }
 }
 </style>
