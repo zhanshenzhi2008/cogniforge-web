@@ -10,7 +10,7 @@ export interface AppNavItem {
 }
 
 export const APP_NAV_ITEMS: AppNavItem[] = [
-  { label: '控制台', key: 'dashboard', to: '/', roles: ['admin', 'user'] },
+  { label: 'Dashboard', key: 'dashboard', to: '/', roles: ['admin', 'user'] },
   { label: 'Playground', key: 'playground', to: '/playground', roles: ['admin', 'user'] },
   { label: 'Agent 管理', key: 'agents', to: '/agents', roles: ['admin', 'user'] },
   { label: '模型配置', key: 'models', to: '/models', roles: ['admin', 'user'] },

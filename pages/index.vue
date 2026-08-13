@@ -1,44 +1,47 @@
 <template>
-  <div class="home-page">
-    <header class="page-header">
-      <h1 class="page-title font-display">控制台</h1>
-      <p class="page-subtitle">
-        欢迎回来，{{ displayName }} · 今天也可以从这里开始工作
+  <div class="dashboard-page">
+    <header class="hero">
+      <h1 class="hero-title font-display">
+        Welcome back, {{ displayName }}.
+      </h1>
+      <p class="hero-sub">
+        Ship smarter with AI—your studio, your rules.
       </p>
     </header>
 
     <div class="stat-grid">
       <button
         v-for="card in statCards"
-        :key="card.label"
+        :key="card.key"
         type="button"
         class="stat-card cf-surface"
         @click="go(card.to)"
       >
-        <div class="stat-icon" :class="card.tone">
-          <UIcon :name="card.icon" class="size-5" />
+        <div class="stat-top">
+          <span class="stat-value">{{ card.value }}</span>
+          <span class="stat-icon">
+            <UIcon :name="card.icon" class="size-4" />
+          </span>
         </div>
-        <div class="stat-info">
-          <div class="stat-value">{{ card.value }}</div>
-          <div class="stat-label">{{ card.label }}</div>
-          <div class="stat-caption">{{ card.caption }}</div>
+        <div class="stat-label">{{ card.label }}</div>
+        <div class="stat-caption" :class="{ 'stat-caption--accent': card.accent }">
+          {{ card.caption }}
         </div>
       </button>
     </div>
 
     <div class="section-grid">
       <section class="panel cf-surface">
-        <h2 class="panel-title">快速开始</h2>
+        <h2 class="panel-title font-display">Next steps</h2>
         <div class="quick-list">
           <button
             v-for="item in quickActions"
             :key="item.to"
             type="button"
             class="quick-item"
-            :class="{ 'quick-item--primary': item.primary }"
             @click="go(item.to)"
           >
-            <span class="quick-icon" :class="item.tone">
+            <span class="quick-icon">
               <UIcon :name="item.icon" class="size-4" />
             </span>
             <span class="quick-text">
@@ -48,17 +51,25 @@
             <UIcon name="i-lucide-chevron-right" class="quick-chevron size-4" />
           </button>
         </div>
+        <UButton
+          color="primary"
+          class="cta-btn"
+          icon="i-lucide-flask-conical"
+          block
+          @click="go('/playground')"
+        >
+          Open Playground
+        </UButton>
       </section>
 
       <section class="panel panel--activity cf-surface">
-        <h2 class="panel-title">最近活动</h2>
+        <h2 class="panel-title font-display">Recent activity</h2>
         <div class="activity-empty">
-          <UIcon name="i-lucide-sparkles" class="activity-icon size-8" />
-          <p class="activity-title">暂无活动</p>
-          <p class="activity-hint">去 Playground 开始第一次对话</p>
-          <UButton color="primary" @click="go('/playground')">
-            体验 Playground
-          </UButton>
+          <div class="activity-empty__box">
+            <UIcon name="i-lucide-zap" class="activity-icon size-8" />
+            <p class="activity-title">No recent activity</p>
+            <p class="activity-hint">Your runs, edits, and events will show up here.</p>
+          </div>
         </div>
       </section>
     </div>
@@ -71,100 +82,161 @@ definePageMeta({
 })
 
 const { user } = useAuth()
-const displayName = computed(() => user.value?.name || '用户')
+const { list: listAgents } = useAgents()
+const { list: listWorkflows } = useWorkflows()
+const { listKBs } = useKnowledgeBases()
+const { get } = useApi()
+
+const displayName = computed(() => user.value?.name || 'there')
+
+const counts = reactive({
+  agents: 0,
+  flows: 0,
+  knowledge: 0,
+  keys: 0,
+})
+
+const loading = ref(true)
 
 function go(path: string) {
   void navigateTo(path)
 }
 
-const statCards = [
+const statCards = computed(() => [
   {
-    label: '对话次数',
-    value: '0',
-    caption: '全部',
-    tone: 'tone-teal',
-    icon: 'i-lucide-messages-square',
-    to: '/playground',
+    key: 'agents',
+    label: 'Agents',
+    value: loading.value ? '—' : String(counts.agents),
+    caption: counts.agents > 0 ? 'Ready to chat' : 'Create your first agent',
+    accent: counts.agents > 0,
+    icon: 'i-lucide-bot',
+    to: '/agents',
   },
   {
-    label: 'API 密钥',
-    value: '0',
-    caption: '全部',
-    tone: 'tone-green',
+    key: 'flows',
+    label: 'Flows',
+    value: loading.value ? '—' : String(counts.flows),
+    caption: counts.flows > 0 ? 'Orchestration ready' : 'Build a workflow',
+    accent: counts.flows > 0,
+    icon: 'i-lucide-git-branch',
+    to: '/workflows',
+  },
+  {
+    key: 'knowledge',
+    label: 'Knowledge Bases',
+    value: loading.value ? '—' : String(counts.knowledge),
+    caption: counts.knowledge > 0 ? 'Connected' : '— No changes',
+    accent: false,
+    icon: 'i-lucide-book-open',
+    to: '/knowledge',
+  },
+  {
+    key: 'keys',
+    label: 'API Keys',
+    value: loading.value ? '—' : String(counts.keys),
+    caption: counts.keys > 0 ? 'Active credentials' : 'Add a key to start',
+    accent: counts.keys > 0,
     icon: 'i-lucide-key-round',
     to: '/keys',
   },
-  {
-    label: 'Agents',
-    value: '0',
-    caption: '全部',
-    tone: 'tone-amber',
-    icon: 'i-lucide-bot',
-    to: '/agents',
-  },
-  {
-    label: '工作流',
-    value: '0',
-    caption: '全部',
-    tone: 'tone-rose',
-    icon: 'i-lucide-workflow',
-    to: '/workflows',
-  },
-]
+])
 
 const quickActions = [
   {
-    title: '体验 Playground',
-    desc: '马上试用模型对话',
+    title: 'Try the Playground',
+    desc: 'Chat with models and agents',
     to: '/playground',
-    primary: true,
-    tone: 'tone-teal',
-    icon: 'i-lucide-messages-square',
+    icon: 'i-lucide-zap',
   },
   {
-    title: '创建 Agent',
-    desc: '配置你的智能体',
-    to: '/agents',
-    primary: false,
-    tone: 'tone-amber',
-    icon: 'i-lucide-bot',
-  },
-  {
-    title: '创建工作流',
-    desc: '编排自动化流程',
+    title: 'Create a new Flow',
+    desc: 'Wire nodes into an automation',
     to: '/workflows',
-    primary: false,
-    tone: 'tone-rose',
-    icon: 'i-lucide-workflow',
+    icon: 'i-lucide-git-branch',
+  },
+  {
+    title: 'Add to Knowledge',
+    desc: 'Upload docs for retrieval',
+    to: '/knowledge',
+    icon: 'i-lucide-book-open',
+  },
+  {
+    title: 'Manage API Keys',
+    desc: 'Issue or revoke credentials',
+    to: '/keys',
+    icon: 'i-lucide-key-round',
   },
 ]
+
+async function loadCounts() {
+  loading.value = true
+  try {
+    const [agentsRes, flowsRes, kbRes, keysRes] = await Promise.all([
+      listAgents(),
+      listWorkflows(),
+      listKBs(),
+      get<{ keys?: unknown[]; data?: unknown[]; total?: number } | unknown[]>('/api/v1/keys'),
+    ])
+
+    if (!agentsRes.error && Array.isArray(agentsRes.data)) {
+      counts.agents = agentsRes.data.length
+    }
+    if (!flowsRes.error && Array.isArray(flowsRes.data)) {
+      counts.flows = flowsRes.data.length
+    }
+    if (!kbRes.error && Array.isArray(kbRes.data)) {
+      counts.knowledge = kbRes.data.length
+    }
+
+    if (!keysRes.error && keysRes.data) {
+      const raw = keysRes.data as any
+      if (Array.isArray(raw)) {
+        counts.keys = raw.length
+      } else if (Array.isArray(raw.keys)) {
+        counts.keys = raw.keys.length
+      } else if (Array.isArray(raw.data)) {
+        counts.keys = raw.data.length
+      } else if (typeof raw.total === 'number') {
+        counts.keys = raw.total
+      }
+    }
+  } catch {
+    // keep zeros on failure — dashboard stays usable
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  void loadCounts()
+})
 </script>
 
 <style scoped>
-.home-page {
+.dashboard-page {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
-  padding: 24px 20px 40px;
+  padding: 28px 20px 48px;
   box-sizing: border-box;
 }
 
-.page-header {
-  margin-bottom: 20px;
+.hero {
+  margin-bottom: 28px;
 }
 
-.page-title {
+.hero-title {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: clamp(1.75rem, 3.2vw, 2.35rem);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--cf-ink);
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
-.page-subtitle {
-  margin: 6px 0 0;
-  font-size: 0.875rem;
+.hero-sub {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
   color: var(--cf-ink-soft);
   line-height: 1.5;
 }
@@ -172,21 +244,22 @@ const quickActions = [
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 @media (min-width: 960px) {
   .stat-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
   }
 }
 
 .stat-card {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
-  padding: 16px;
+  padding: 18px 16px 16px;
   border-radius: 10px;
   cursor: pointer;
   text-align: left;
@@ -200,56 +273,44 @@ const quickActions = [
   border-color: color-mix(in oklab, var(--cf-accent) 35%, var(--cf-line));
 }
 
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+.stat-top {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: #fff;
-}
-
-.tone-teal {
-  background: var(--cf-accent);
-}
-
-.tone-green {
-  background: var(--cf-ok);
-}
-
-.tone-amber {
-  background: var(--cf-warn);
-}
-
-.tone-rose {
-  background: var(--cf-danger);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--cf-ink);
-  line-height: 1.15;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
+}
+
+.stat-icon {
+  color: var(--cf-accent);
+  opacity: 0.9;
+  margin-top: 4px;
 }
 
 .stat-label {
   font-size: 0.8125rem;
-  color: var(--cf-ink-soft);
-  margin-top: 2px;
+  font-weight: 500;
+  color: var(--cf-ink);
 }
 
 .stat-caption {
   font-size: 0.75rem;
   color: var(--cf-ink-soft);
-  opacity: 0.8;
-  margin-top: 2px;
+}
+
+.stat-caption--accent {
+  color: var(--cf-accent);
 }
 
 .section-grid {
-  margin-top: 16px;
+  margin-top: 18px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
@@ -264,22 +325,22 @@ const quickActions = [
 .panel {
   border-radius: 10px;
   padding: 18px 16px;
-  min-height: 268px;
+  min-height: 320px;
   display: flex;
   flex-direction: column;
 }
 
 .panel-title {
   margin: 0 0 14px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   color: var(--cf-ink);
 }
 
 .quick-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   flex: 1;
 }
 
@@ -288,24 +349,23 @@ const quickActions = [
   align-items: center;
   gap: 12px;
   width: 100%;
-  flex: 1;
-  padding: 12px 14px;
-  border: 1px solid var(--cf-line);
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--cf-bg-elevated) 80%, transparent);
+  padding: 12px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--cf-line);
+  border-radius: 0;
+  background: transparent;
   cursor: pointer;
   text-align: left;
   font: inherit;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease;
+}
+
+.quick-item:last-of-type {
+  border-bottom: 0;
 }
 
 .quick-item:hover {
-  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
-}
-
-.quick-item--primary {
-  border-color: color-mix(in oklab, var(--cf-accent) 35%, var(--cf-line));
-  background: color-mix(in oklab, var(--cf-accent-soft) 70%, transparent);
+  background: color-mix(in oklab, var(--cf-accent) 6%, transparent);
 }
 
 .quick-icon {
@@ -316,7 +376,8 @@ const quickActions = [
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #fff;
+  color: var(--cf-accent);
+  background: color-mix(in oklab, var(--cf-accent) 12%, transparent);
 }
 
 .quick-text {
@@ -343,6 +404,10 @@ const quickActions = [
   flex-shrink: 0;
 }
 
+.cta-btn {
+  margin-top: 14px;
+}
+
 .panel--activity {
   align-items: stretch;
 }
@@ -350,12 +415,21 @@ const quickActions = [
 .activity-empty {
   flex: 1;
   display: flex;
+  align-items: stretch;
+}
+
+.activity-empty__box {
+  flex: 1;
+  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   gap: 8px;
-  padding: 12px 0;
+  padding: 24px 16px;
+  border: 1px dashed var(--cf-line);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--cf-bg-elevated) 55%, transparent);
 }
 
 .activity-icon {
@@ -371,8 +445,31 @@ const quickActions = [
 }
 
 .activity-hint {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 0.8125rem;
   color: var(--cf-ink-soft);
+  max-width: 280px;
+}
+
+@media (max-width: 640px) {
+  .dashboard-page {
+    padding: 20px 16px 36px;
+  }
+
+  .hero {
+    margin-bottom: 20px;
+  }
+
+  .hero-sub {
+    font-size: 0.875rem;
+  }
+
+  .panel {
+    min-height: 0;
+  }
+
+  .panel--activity {
+    min-height: 220px;
+  }
 }
 </style>

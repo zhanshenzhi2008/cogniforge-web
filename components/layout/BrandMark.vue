@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink to="/" class="brand-mark" aria-label="CogniForge 控制台">
+  <NuxtLink to="/" class="brand-mark" aria-label="CogniForge Dashboard">
     <span class="brand-mark__word font-display">CogniForge</span>
   </NuxtLink>
 </template>
