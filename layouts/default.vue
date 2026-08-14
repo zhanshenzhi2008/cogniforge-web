@@ -1,18 +1,20 @@
 <template>
   <div class="app-shell min-h-screen">
-    <UHeader class="cf-surface! border-b border-[color:var(--cf-line)]">
+    <UHeader
+      :toggle="false"
+      class="cf-header cf-surface! border-b border-[color:var(--cf-line)]"
+    >
       <template #left>
         <LayoutBrandMark />
       </template>
 
-      <template #center>
-        <UNavigationMenu
-          :items="desktopNavItems"
-          class="hidden lg:flex"
-          highlight
-          color="primary"
-        />
-      </template>
+      <!-- UHeader center uses the default slot (not #center) -->
+      <UNavigationMenu
+        :items="desktopNavItems"
+        highlight
+        color="primary"
+        class="cf-header-nav"
+      />
 
       <template #right>
         <UDropdownMenu :items="themeMenuItems">
@@ -200,6 +202,12 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 </script>
 
 <style scoped>
+.cf-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
 .app-shell__main {
   min-height: calc(100vh - 4rem);
 }
