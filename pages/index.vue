@@ -8,7 +8,7 @@
         Ship smarter with AI—your studio, your rules.
       </p>
       <p class="hero-sub hero-sub--mobile">
-        Let’s keep building.
+        Let's keep building.
       </p>
     </header>
 
@@ -23,7 +23,7 @@
         <div class="stat-top">
           <span class="stat-value font-display">{{ card.value }}</span>
           <span class="stat-icon" aria-hidden="true">
-            <UIcon :name="card.icon" class="size-[18px]" />
+            <UIcon :name="card.icon" class="size-5" />
           </span>
         </div>
         <div class="stat-label">{{ card.label }}</div>
