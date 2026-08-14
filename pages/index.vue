@@ -2,10 +2,13 @@
   <div class="dashboard-page">
     <header class="hero">
       <h1 class="hero-title font-display">
-        Welcome back, {{ displayName }}.
+        Welcome back, {{ firstName }}.
       </h1>
-      <p class="hero-sub">
+      <p class="hero-sub hero-sub--desktop">
         Ship smarter with AI—your studio, your rules.
+      </p>
+      <p class="hero-sub hero-sub--mobile">
+        Let’s keep building.
       </p>
     </header>
 
@@ -14,24 +17,24 @@
         v-for="card in statCards"
         :key="card.key"
         type="button"
-        class="stat-card cf-surface"
+        class="stat-card"
         @click="go(card.to)"
       >
         <div class="stat-top">
-          <span class="stat-value">{{ card.value }}</span>
-          <span class="stat-icon">
-            <UIcon :name="card.icon" class="size-4" />
+          <span class="stat-value font-display">{{ card.value }}</span>
+          <span class="stat-icon" aria-hidden="true">
+            <UIcon :name="card.icon" class="size-[18px]" />
           </span>
         </div>
         <div class="stat-label">{{ card.label }}</div>
-        <div class="stat-caption" :class="{ 'stat-caption--accent': card.accent }">
+        <div class="stat-caption" :class="{ 'is-muted': !card.accent }">
           {{ card.caption }}
         </div>
       </button>
     </div>
 
     <div class="section-grid">
-      <section class="panel cf-surface">
+      <section class="panel panel--steps">
         <h2 class="panel-title font-display">Next steps</h2>
         <div class="quick-list">
           <button
@@ -41,7 +44,7 @@
             class="quick-item"
             @click="go(item.to)"
           >
-            <span class="quick-icon">
+            <span class="quick-icon" aria-hidden="true">
               <UIcon :name="item.icon" class="size-4" />
             </span>
             <span class="quick-text">
@@ -53,6 +56,7 @@
         </div>
         <UButton
           color="primary"
+          size="lg"
           class="cta-btn"
           icon="i-lucide-flask-conical"
           block
@@ -62,14 +66,12 @@
         </UButton>
       </section>
 
-      <section class="panel panel--activity cf-surface">
+      <section class="panel panel--activity">
         <h2 class="panel-title font-display">Recent activity</h2>
         <div class="activity-empty">
-          <div class="activity-empty__box">
-            <UIcon name="i-lucide-zap" class="activity-icon size-8" />
-            <p class="activity-title">No recent activity</p>
-            <p class="activity-hint">Your runs, edits, and events will show up here.</p>
-          </div>
+          <UIcon name="i-lucide-zap" class="activity-icon size-9" />
+          <p class="activity-title">No recent activity</p>
+          <p class="activity-hint">Your runs, edits, and events will show up here.</p>
         </div>
       </section>
     </div>
@@ -87,7 +89,10 @@ const { list: listWorkflows } = useWorkflows()
 const { listKBs } = useKnowledgeBases()
 const { get } = useApi()
 
-const displayName = computed(() => user.value?.name || 'there')
+const firstName = computed(() => {
+  const name = (user.value?.name || 'there').trim()
+  return name.split(/\s+/)[0] || 'there'
+})
 
 const counts = reactive({
   agents: 0,
@@ -107,7 +112,7 @@ const statCards = computed(() => [
     key: 'agents',
     label: 'Agents',
     value: loading.value ? '—' : String(counts.agents),
-    caption: counts.agents > 0 ? 'Ready to chat' : 'Create your first agent',
+    caption: counts.agents > 0 ? `↑ ${counts.agents} total` : 'Create your first',
     accent: counts.agents > 0,
     icon: 'i-lucide-bot',
     to: '/agents',
@@ -116,7 +121,7 @@ const statCards = computed(() => [
     key: 'flows',
     label: 'Flows',
     value: loading.value ? '—' : String(counts.flows),
-    caption: counts.flows > 0 ? 'Orchestration ready' : 'Build a workflow',
+    caption: counts.flows > 0 ? `↑ ${counts.flows} total` : 'Build a workflow',
     accent: counts.flows > 0,
     icon: 'i-lucide-git-branch',
     to: '/workflows',
@@ -126,7 +131,7 @@ const statCards = computed(() => [
     label: 'Knowledge Bases',
     value: loading.value ? '—' : String(counts.knowledge),
     caption: counts.knowledge > 0 ? 'Connected' : '— No changes',
-    accent: false,
+    accent: counts.knowledge > 0,
     icon: 'i-lucide-book-open',
     to: '/knowledge',
   },
@@ -134,7 +139,7 @@ const statCards = computed(() => [
     key: 'keys',
     label: 'API Keys',
     value: loading.value ? '—' : String(counts.keys),
-    caption: counts.keys > 0 ? 'Active credentials' : 'Add a key to start',
+    caption: counts.keys > 0 ? `↑ ${counts.keys} total` : 'Add a key to start',
     accent: counts.keys > 0,
     icon: 'i-lucide-key-round',
     to: '/keys',
@@ -201,7 +206,7 @@ async function loadCounts() {
       }
     }
   } catch {
-    // keep zeros on failure — dashboard stays usable
+    // keep zeros — dashboard stays usable
   } finally {
     loading.value = false
   }
@@ -214,31 +219,35 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-page {
-  max-width: 1400px;
+  max-width: 1120px;
   width: 100%;
   margin: 0 auto;
-  padding: 28px 20px 48px;
+  padding: 36px 28px 56px;
   box-sizing: border-box;
 }
 
 .hero {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .hero-title {
   margin: 0;
-  font-size: clamp(1.75rem, 3.2vw, 2.35rem);
+  font-size: clamp(2rem, 4vw, 2.75rem);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   color: var(--cf-ink);
-  line-height: 1.15;
+  line-height: 1.12;
 }
 
 .hero-sub {
-  margin: 10px 0 0;
-  font-size: 0.95rem;
+  margin: 12px 0 0;
+  font-size: 1rem;
   color: var(--cf-ink-soft);
   line-height: 1.5;
+}
+
+.hero-sub--mobile {
+  display: none;
 }
 
 .stat-grid {
@@ -250,27 +259,30 @@ onMounted(() => {
 @media (min-width: 960px) {
   .stat-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    gap: 16px;
   }
 }
 
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
-  padding: 18px 16px 16px;
-  border-radius: 10px;
+  padding: 20px 18px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-bg-elevated) 92%, white);
+  box-shadow: none;
   cursor: pointer;
   text-align: left;
   font: inherit;
   color: inherit;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in oklab, var(--cf-accent) 35%, var(--cf-line));
+  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
 }
 
 .stat-top {
@@ -278,63 +290,70 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  margin-bottom: 6px;
 }
 
 .stat-value {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--cf-ink);
-  line-height: 1.1;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 
 .stat-icon {
   color: var(--cf-accent);
-  opacity: 0.9;
-  margin-top: 4px;
+  margin-top: 2px;
+  opacity: 0.95;
 }
 
 .stat-label {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--cf-ink);
 }
 
 .stat-caption {
-  font-size: 0.75rem;
-  color: var(--cf-ink-soft);
-}
-
-.stat-caption--accent {
+  margin-top: 2px;
+  font-size: 0.78rem;
   color: var(--cf-accent);
 }
 
+.stat-caption.is-muted {
+  color: var(--cf-ink-soft);
+}
+
 .section-grid {
-  margin-top: 18px;
+  margin-top: 28px;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: 20px;
+  align-items: stretch;
 }
 
 @media (min-width: 900px) {
   .section-grid {
-    grid-template-columns: 5fr 7fr;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.35fr);
+    gap: 24px;
   }
 }
 
 .panel {
-  border-radius: 10px;
-  padding: 18px 16px;
-  min-height: 320px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-bg-elevated) 92%, white);
+  padding: 22px 20px 20px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .panel-title {
-  margin: 0 0 14px;
-  font-size: 1.15rem;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   color: var(--cf-ink);
 }
 
@@ -342,14 +361,15 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   flex: 1;
+  margin-top: 4px;
 }
 
 .quick-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  padding: 12px 4px;
+  padding: 14px 2px;
   border: 0;
   border-bottom: 1px solid var(--cf-line);
   border-radius: 0;
@@ -357,7 +377,7 @@ onMounted(() => {
   cursor: pointer;
   text-align: left;
   font: inherit;
-  transition: background 0.15s ease;
+  transition: background 0.12s ease;
 }
 
 .quick-item:last-of-type {
@@ -365,19 +385,18 @@ onMounted(() => {
 }
 
 .quick-item:hover {
-  background: color-mix(in oklab, var(--cf-accent) 6%, transparent);
+  background: color-mix(in oklab, var(--cf-accent) 5%, transparent);
 }
 
 .quick-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: var(--cf-accent);
-  background: color-mix(in oklab, var(--cf-accent) 12%, transparent);
+  background: transparent;
 }
 
 .quick-text {
@@ -389,87 +408,123 @@ onMounted(() => {
 }
 
 .quick-title {
-  font-size: 0.875rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--cf-ink);
 }
 
 .quick-desc {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--cf-ink-soft);
 }
 
 .quick-chevron {
-  color: var(--cf-ink-soft);
+  color: color-mix(in oklab, var(--cf-ink-soft) 80%, transparent);
   flex-shrink: 0;
 }
 
 .cta-btn {
-  margin-top: 14px;
+  margin-top: 16px;
+  font-weight: 600;
 }
 
 .panel--activity {
-  align-items: stretch;
+  min-height: 340px;
 }
 
 .activity-empty {
   flex: 1;
-  display: flex;
-  align-items: stretch;
-}
-
-.activity-empty__box {
-  flex: 1;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   gap: 8px;
-  padding: 24px 16px;
-  border: 1px dashed var(--cf-line);
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--cf-bg-elevated) 55%, transparent);
+  padding: 28px 20px;
+  border: 1px dashed color-mix(in oklab, var(--cf-line) 90%, var(--cf-ink-soft));
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--cf-bg) 35%, transparent);
 }
 
 .activity-icon {
   color: var(--cf-accent);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .activity-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--cf-ink);
 }
 
 .activity-hint {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.85rem;
   color: var(--cf-ink-soft);
-  max-width: 280px;
+  max-width: 260px;
+  line-height: 1.45;
 }
 
-@media (max-width: 640px) {
+/* Mobile: match cogniforge-ui-mobile — stats 2×2, next steps, no activity */
+@media (max-width: 899px) {
   .dashboard-page {
-    padding: 20px 16px 36px;
+    padding: 24px 16px 40px;
+    max-width: 560px;
   }
 
   .hero {
-    margin-bottom: 20px;
+    margin-bottom: 22px;
   }
 
-  .hero-sub {
-    font-size: 0.875rem;
+  .hero-title {
+    font-size: clamp(1.85rem, 7vw, 2.2rem);
   }
 
-  .panel {
-    min-height: 0;
+  .hero-sub--desktop {
+    display: none;
+  }
+
+  .hero-sub--mobile {
+    display: block;
+    font-size: 0.95rem;
+  }
+
+  .stat-grid {
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 16px 14px 14px;
+    border-radius: 10px;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .section-grid {
+    margin-top: 26px;
+  }
+
+  .panel--steps {
+    border: 0;
+    background: transparent;
+    padding: 0;
   }
 
   .panel--activity {
-    min-height: 220px;
+    display: none;
+  }
+
+  .quick-item {
+    padding: 16px 0;
+  }
+
+  .cta-btn {
+    margin-top: 20px;
+    border-radius: 10px;
   }
 }
 </style>
