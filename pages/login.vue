@@ -8,14 +8,13 @@
     <div class="auth-panel cf-surface">
       <form class="auth-form" @submit.prevent="handleLogin">
         <div class="field">
-          <label class="field__label" for="login-account">账号</label>
+          <label class="field__label" for="login-account">Email</label>
           <UInput
             id="login-account"
             v-model="form.account"
             class="w-full"
             size="lg"
-            placeholder="邮箱 / 用户名"
-            leading-icon="i-lucide-user"
+            placeholder="you@example.com"
             autocomplete="username"
             :color="errors.account ? 'error' : 'neutral'"
             :highlight="!!errors.account"
@@ -25,15 +24,14 @@
         </div>
 
         <div class="field">
-          <label class="field__label" for="login-password">密码</label>
+          <label class="field__label" for="login-password">Password</label>
           <UInput
             id="login-password"
             v-model="form.password"
             class="w-full"
             size="lg"
             type="password"
-            placeholder="密码"
-            leading-icon="i-lucide-lock"
+            placeholder="••••••••"
             autocomplete="current-password"
             :color="errors.password ? 'error' : 'neutral'"
             :highlight="!!errors.password"
@@ -51,13 +49,13 @@
           :loading="loading"
           :disabled="loading"
         >
-          登录
+          Sign in
         </UButton>
       </form>
 
       <div class="auth-footer">
-        <span class="auth-footer__muted">还没有账号？</span>
-        <UButton variant="link" color="primary" to="/register">立即注册</UButton>
+        <span class="auth-footer__muted">No account yet?</span>
+        <UButton variant="link" color="primary" to="/register">Create one</UButton>
       </div>
     </div>
   </div>
@@ -83,11 +81,11 @@ const errors = reactive({
 })
 
 function validate(): boolean {
-  errors.account = form.account.trim() ? '' : '请输入邮箱或用户名'
+  errors.account = form.account.trim() ? '' : 'Enter email or username'
   if (!form.password) {
-    errors.password = '请输入密码'
+    errors.password = 'Enter password'
   } else if (form.password.length < 6) {
-    errors.password = '密码至少 6 位'
+    errors.password = 'Password must be at least 6 characters'
   } else {
     errors.password = ''
   }
@@ -113,7 +111,7 @@ const handleLogin = async () => {
 
     if (res.data) {
       setAuth(res.data.token, res.data.user)
-      toast.add({ title: '登录成功', color: 'success' })
+      toast.add({ title: 'Signed in', color: 'success' })
       await router.push('/')
     }
   } finally {
@@ -128,7 +126,7 @@ const handleLogin = async () => {
   max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 32px;
 }
 
 .auth-brand {
@@ -137,16 +135,16 @@ const handleLogin = async () => {
 
 .auth-brand__title {
   margin: 0;
-  font-size: clamp(2.4rem, 6vw, 3.2rem);
+  font-size: clamp(2.6rem, 7vw, 3.4rem);
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
   color: var(--cf-ink);
-  line-height: 1.05;
+  line-height: 1.02;
 }
 
 .auth-brand__tagline {
-  margin: 10px 0 0;
-  font-size: 0.95rem;
+  margin: 12px 0 0;
+  font-size: 1rem;
   color: var(--cf-ink-soft);
 }
 
@@ -186,7 +184,7 @@ const handleLogin = async () => {
 }
 
 .auth-submit {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .auth-footer {

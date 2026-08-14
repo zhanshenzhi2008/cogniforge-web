@@ -11,13 +11,13 @@ export interface AppNavItem {
 
 export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Dashboard', key: 'dashboard', to: '/', roles: ['admin', 'user'] },
-  { label: 'Playground', key: 'playground', to: '/playground', roles: ['admin', 'user'] },
-  { label: 'Agent 管理', key: 'agents', to: '/agents', roles: ['admin', 'user'] },
-  { label: '模型配置', key: 'models', to: '/models', roles: ['admin', 'user'] },
-  { label: '工作流', key: 'workflows', to: '/workflows', roles: ['admin', 'user'] },
-  { label: '知识库', key: 'knowledge', to: '/knowledge', roles: ['admin', 'user'] },
-  { label: 'API 密钥', key: 'keys', to: '/keys', roles: ['admin', 'user'] },
-  { label: '监控中心', key: 'monitor', to: '/monitor', roles: ['admin'] },
+  { label: 'Play', key: 'playground', to: '/playground', roles: ['admin', 'user'] },
+  { label: 'Agents', key: 'agents', to: '/agents', roles: ['admin', 'user'] },
+  { label: 'Models', key: 'models', to: '/models', roles: ['admin', 'user'] },
+  { label: 'Flows', key: 'workflows', to: '/workflows', roles: ['admin', 'user'] },
+  { label: 'Knowledge', key: 'knowledge', to: '/knowledge', roles: ['admin', 'user'] },
+  { label: 'Keys', key: 'keys', to: '/keys', roles: ['admin', 'user'] },
+  { label: 'Monitor', key: 'monitor', to: '/monitor', roles: ['admin'] },
 ]
 
 export function filterNavItems(role: string | undefined | null): AppNavItem[] {

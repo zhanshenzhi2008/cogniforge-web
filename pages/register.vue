@@ -2,7 +2,7 @@
   <div class="auth-page">
     <div class="auth-brand">
       <h1 class="auth-brand__title font-display">CogniForge</h1>
-      <p class="auth-brand__tagline">创建账号，开始锻造 Agent</p>
+      <p class="auth-brand__tagline">Forge your agents.</p>
     </div>
 
     <div class="auth-panel cf-surface">

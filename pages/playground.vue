@@ -19,11 +19,10 @@
       <main class="chat-area">
         <div class="chat-topbar cf-surface">
           <div class="chat-title">
-            <UIcon
-              :name="selectedAgent !== NONE_AGENT ? 'i-lucide-sparkles' : 'i-lucide-messages-square'"
-              class="size-5 title-icon"
-            />
-            <span>{{ currentTitle }}</span>
+            <div class="chat-title-text">
+              <span class="chat-title-main">AI Playground</span>
+              <span class="chat-title-sub">{{ currentTitle }}</span>
+            </div>
           </div>
           <div class="chat-topbar-actions">
             <UButton
@@ -34,7 +33,7 @@
               icon="i-lucide-sliders-horizontal"
               @click="configOpen = true"
             >
-              参数
+              Params
             </UButton>
             <UButton
               color="error"
@@ -43,7 +42,7 @@
               icon="i-lucide-trash-2"
               @click="clearMessages"
             >
-              清空
+              Clear
             </UButton>
           </div>
         </div>
@@ -610,9 +609,29 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.chat-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chat-title-main {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--cf-ink);
+  letter-spacing: -0.01em;
+}
+
+.chat-title-sub {
+  font-size: 12px;
+  color: var(--cf-ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .title-icon {
