@@ -45,7 +45,7 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         {
           rel: 'stylesheet',
-          href: 'https://fonts.bunny.net/css?family=ibm-plex-sans:400,500,600|jetbrains-mono:400,500|syne:600,700&display=swap',
+          href: 'https://fonts.bunny.net/css?family=ibm-plex-sans:400,500,600|jetbrains-mono:400,500|source-serif-4:600,700|syne:600,700&display=swap',
         },
       ],
     },

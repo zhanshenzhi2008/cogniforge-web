@@ -93,7 +93,7 @@ html[data-theme="glass"] {
 
 @theme static {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Syne", "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-display: "Source Serif 4", "Syne", "IBM Plex Sans", ui-serif, Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --color-primary-50: #e7f8f4;
   --color-primary-100: #d8f3ee;
