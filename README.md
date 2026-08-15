@@ -12,6 +12,10 @@ CogniForge 前端控制台。
 
 Aurora（默认）/ Ink Night / Citrus / Glass — 顶栏调色盘或设置页切换。
 
+## 语言
+
+简体中文 / English。顶栏地球图标、登录页右上角、或设置 → Preferences。选择会记在浏览器里；登录后同步到现有 `PUT /api/v1/settings` 的 `language` 字段。地址栏路径不变。
+
 ## Getting Started
 
 ```bash

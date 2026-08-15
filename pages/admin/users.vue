@@ -2,12 +2,17 @@
   <div class="cf-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Users</h1>
-        <p class="cf-page-sub">Manage accounts and access.</p>
+        <h1 class="cf-page-title">{{ t('users.title') }}</h1>
+        <p class="cf-page-sub">{{ t('users.sub') }}</p>
       </div>
-      <UButton color="primary" icon="i-lucide-user-plus" @click="openCreateModal">
-        新建用户
-      </UButton>
+      <CfButton tone="primary" icon="i-lucide-user-plus" @click="openCreateModal">
+        {{ t('users.new') }}
+      </CfButton>
+    </div>
+
+    <div class="list-toolbar">
+      <span class="list-count">{{ t('users.count', { n: users.length }) }}</span>
+      <span class="list-hint">{{ t('common.hintDblclickEdit') }}</span>
     </div>
 
     <div class="cf-panel">
@@ -16,7 +21,7 @@
           <UInput
             v-model="searchQuery"
             class="search-input"
-            placeholder="搜索用户名/邮箱"
+            :placeholder="t('users.searchPh')"
             icon="i-lucide-search"
             @update:model-value="handleSearch"
           />
@@ -24,7 +29,7 @@
             v-model="filterStatus"
             class="status-filter"
             :items="statusFilterOptions"
-            placeholder="筛选状态"
+            :placeholder="t('users.filterStatus')"
             @update:model-value="handleSearch"
           />
         </div>
@@ -32,28 +37,33 @@
 
       <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>加载中…</span>
+        <span>{{ t('common.loading') }}</span>
       </div>
 
       <div v-else-if="pagedUsers.length === 0" class="cf-state">
         <UIcon name="i-lucide-users" class="size-8 opacity-50" />
-        <p>暂无用户</p>
+        <p>{{ t('users.empty') }}</p>
       </div>
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
-              <th>姓名</th>
-              <th>邮箱</th>
-              <th>角色</th>
-              <th>状态</th>
-              <th>创建时间</th>
-              <th class="cf-col-actions">操作</th>
+              <th>{{ t('users.name') }}</th>
+              <th>{{ t('common.email') }}</th>
+              <th>{{ t('users.role') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('common.createdAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in pagedUsers" :key="row.id">
+            <tr
+              v-for="row in pagedUsers"
+              :key="row.id"
+              class="list-row"
+              @dblclick="handleEdit(row)"
+            >
               <td class="name">{{ row.name }}</td>
               <td class="cf-muted">{{ row.email }}</td>
               <td>
@@ -62,7 +72,7 @@
                   variant="subtle"
                   :color="row.role === 'admin' ? 'error' : 'info'"
                 >
-                  {{ row.role === 'admin' ? '管理员' : '用户' }}
+                  {{ row.role === 'admin' ? t('role.admin') : t('role.user') }}
                 </UBadge>
               </td>
               <td>
@@ -70,24 +80,28 @@
                   {{ statusLabel(row.status) }}
                 </UBadge>
               </td>
-              <td class="cf-muted">{{ formatDate(row.created_at) }}</td>
-              <td>
+              <td class="cf-muted">{{ d(row.created_at) }}</td>
+              <td @dblclick.stop>
                 <div class="action-btns">
-                  <UButton color="primary" variant="ghost" size="sm" @click="handleEdit(row)">
-                    编辑
-                  </UButton>
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(row)"
+                  />
                   <template v-if="row.role !== 'admin' && row.id !== 'admin'">
-                    <UButton color="error" variant="ghost" size="sm" @click="askDelete(row)">
-                      删除
-                    </UButton>
-                    <UButton
-                      :color="row.status === 'active' ? 'warning' : 'success'"
-                      variant="ghost"
-                      size="sm"
+                    <CfButton
+                      :tone="row.status === 'active' ? 'icon' : 'icon-accent'"
+                      :icon="row.status === 'active' ? 'i-lucide-ban' : 'i-lucide-check'"
+                      :tip="row.status === 'active' ? t('users.actionDisable') : t('users.actionEnable')"
                       @click="handleStatusChange(row.id, row.status)"
-                    >
-                      {{ row.status === 'active' ? '禁用' : '启用' }}
-                    </UButton>
+                    />
+                    <CfButton
+                      tone="icon-danger"
+                      icon="i-lucide-trash-2"
+                      :tip="t('common.delete')"
+                      @click="askDelete(row)"
+                    />
                   </template>
                 </div>
               </td>
@@ -97,41 +111,39 @@
       </div>
 
       <div v-if="users.length > pageSize" class="pager">
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
+        <CfButton
+          tone="secondary"
+          icon="i-lucide-chevron-left"
           :disabled="page <= 1"
           @click="page--"
         >
-          上一页
-        </UButton>
+          {{ t('common.prev') }}
+        </CfButton>
         <span class="pager-page">{{ page }} / {{ userTotalPages }}</span>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
+        <CfButton
+          tone="secondary"
+          icon="i-lucide-chevron-right"
           :disabled="page >= userTotalPages"
           @click="page++"
         >
-          下一页
-        </UButton>
+          {{ t('common.next') }}
+        </CfButton>
       </div>
     </div>
 
     <UModal
       v-model:open="showUserModal"
-      :title="isEditing ? '编辑用户' : '新建用户'"
+      :title="isEditing ? t('users.editTitle') : t('users.createTitle')"
       :ui="{ content: 'sm:max-w-lg' }"
     >
       <template #body>
         <form id="user-form" class="form-grid" @submit.prevent="handleUserSubmit">
           <div class="field">
-            <label class="field__label">邮箱</label>
+            <label class="field__label">{{ t('common.email') }}</label>
             <UInput
               v-model="userForm.email"
               class="w-full"
-              placeholder="请输入邮箱"
+              :placeholder="t('users.emailPh')"
               :disabled="isEditing"
               @update:model-value="errors.email = ''"
             />
@@ -139,45 +151,45 @@
           </div>
 
           <div class="field">
-            <label class="field__label">姓名</label>
+            <label class="field__label">{{ t('users.name') }}</label>
             <UInput
               v-model="userForm.name"
               class="w-full"
-              placeholder="请输入姓名"
+              :placeholder="t('users.namePh')"
               @update:model-value="errors.name = ''"
             />
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
           </div>
 
           <div v-if="!isEditing" class="field">
-            <label class="field__label">密码</label>
+            <label class="field__label">{{ t('common.password') }}</label>
             <UInput
               v-model="userForm.password"
               class="w-full"
               type="password"
-              placeholder="请输入密码（至少6位）"
+              :placeholder="t('users.passwordPh')"
               @update:model-value="errors.password = ''"
             />
             <p v-if="errors.password" class="field__error">{{ errors.password }}</p>
           </div>
 
           <div class="field">
-            <label class="field__label">角色</label>
+            <label class="field__label">{{ t('users.role') }}</label>
             <USelect
               v-model="userForm.role"
               class="w-full"
               :items="roleOptions"
-              placeholder="选择角色"
+              :placeholder="t('users.pickRole')"
             />
           </div>
 
           <div class="field">
-            <label class="field__label">状态</label>
+            <label class="field__label">{{ t('common.status') }}</label>
             <USelect
               v-model="userForm.status"
               class="w-full"
               :items="statusOptions"
-              placeholder="选择状态"
+              :placeholder="t('users.pickStatus')"
             />
           </div>
         </form>
@@ -185,34 +197,54 @@
 
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="closeUserModal">取消</UButton>
-          <UButton form="user-form" type="submit" color="primary" :loading="submitting">
-            保存
-          </UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="closeUserModal">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              form="user-form"
+              type="submit"
+              tone="primary"
+              :icon="isEditing ? 'i-lucide-check' : 'i-lucide-user-plus'"
+              :loading="submitting"
+            >
+              {{ isEditing ? t('common.save') : t('common.create') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
-    <UModal v-model:open="showStatusModal" title="确认修改" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="showStatusModal" :title="t('users.confirmStatusTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
-        <p class="confirm-text">确定要{{ statusActionText }}该用户吗？</p>
+        <p class="confirm-text">{{ t('users.confirmStatus', { action: statusActionText }) }}</p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="showStatusModal = false">取消</UButton>
-          <UButton color="primary" @click="handleStatusConfirm">确认</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="showStatusModal = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="primary" icon="i-lucide-check" @click="handleStatusConfirm">{{ t('common.confirm') }}</CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
-    <UModal v-model:open="deleteVisible" title="确认删除" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="deleteVisible" :title="t('users.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
-        <p class="confirm-text">删除用户后无法恢复，确定要继续吗？</p>
+        <p class="confirm-text">{{ t('users.deleteText') }}</p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
-          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-trash-2"
+              :loading="deletingLoading"
+              @click="confirmDelete"
+            >
+              {{ t('common.delete') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -226,6 +258,7 @@ definePageMeta({
 })
 
 const toast = useToast()
+const { t, d } = useLocale()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -258,23 +291,23 @@ const errors = reactive({
   password: '',
 })
 
-const roleOptions = [
-  { label: '普通用户', value: 'user' },
-  { label: '管理员', value: 'admin' },
-]
+const roleOptions = computed(() => [
+  { label: t('role.user'), value: 'user' },
+  { label: t('role.admin'), value: 'admin' },
+])
 
-const statusOptions = [
-  { label: '正常', value: 'active' },
-  { label: '禁用', value: 'disabled' },
-  { label: '锁定', value: 'locked' },
-]
+const statusOptions = computed(() => [
+  { label: t('status.active'), value: 'active' },
+  { label: t('status.disabled'), value: 'disabled' },
+  { label: t('status.locked'), value: 'locked' },
+])
 
 /** USelect forbids empty-string item values. */
 const STATUS_ALL = 'all'
-const statusFilterOptions = [
-  { label: '全部状态', value: STATUS_ALL },
-  ...statusOptions,
-]
+const statusFilterOptions = computed(() => [
+  { label: t('status.all'), value: STATUS_ALL },
+  ...statusOptions.value,
+])
 
 const userTotalPages = computed(() => Math.max(1, Math.ceil(users.value.length / pageSize)))
 
@@ -286,25 +319,21 @@ const pagedUsers = computed(() => {
 const statusActionText = computed(() => {
   switch (statusAction.value) {
     case 'enable':
-      return '启用'
+      return t('users.actionEnable')
     case 'disable':
-      return '禁用'
+      return t('users.actionDisable')
     case 'lock':
-      return '锁定'
+      return t('users.actionLock')
     default:
-      return '修改'
+      return t('users.actionChange')
   }
 })
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString('zh-CN')
-}
-
 function statusLabel(status: string) {
   const map: Record<string, string> = {
-    active: '正常',
-    disabled: '禁用',
-    locked: '锁定',
+    active: t('status.active'),
+    disabled: t('status.disabled'),
+    locked: t('status.locked'),
   }
   return map[status] || status
 }
@@ -324,16 +353,16 @@ function validateUserForm() {
   errors.password = ''
 
   if (!isEditing.value) {
-    if (!userForm.email.trim()) errors.email = '请输入邮箱'
+    if (!userForm.email.trim()) errors.email = t('users.needEmail')
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userForm.email.trim())) {
-      errors.email = '邮箱格式不正确'
+      errors.email = t('users.badEmail')
     }
     if (!userForm.password || userForm.password.length < 6) {
-      errors.password = '密码至少 6 位'
+      errors.password = t('auth.passwordMin')
     }
   }
 
-  if (!userForm.name.trim()) errors.name = '请输入姓名'
+  if (!userForm.name.trim()) errors.name = t('users.needName')
 
   return !errors.email && !errors.name && !errors.password
 }
@@ -351,7 +380,7 @@ const fetchUsers = async () => {
     users.value = (data as any).users || []
     page.value = 1
   } catch {
-    toast.add({ title: '获取用户列表失败', color: 'error' })
+    toast.add({ title: t('users.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -424,7 +453,7 @@ const handleUserSubmit = async () => {
       body: payload,
     })
 
-    toast.add({ title: isEditing.value ? '用户已更新' : '用户已创建', color: 'success' })
+    toast.add({ title: isEditing.value ? t('users.updated') : t('users.created'), color: 'success' })
     closeUserModal()
     await fetchUsers()
   } catch (error: any) {
@@ -447,11 +476,11 @@ const confirmDelete = async () => {
     await $fetch(`/api/v1/admin/users/${deletingUserId.value}`, {
       method: 'DELETE',
     })
-    toast.add({ title: '用户已删除', color: 'success' })
+    toast.add({ title: t('users.deleted'), color: 'success' })
     deleteVisible.value = false
     await fetchUsers()
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '删除失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('common.deleteFail'), color: 'error' })
   } finally {
     deletingLoading.value = false
   }
@@ -476,10 +505,10 @@ const handleStatusConfirm = async () => {
       body: { status: newStatus },
     })
 
-    toast.add({ title: '状态已更新', color: 'success' })
+    toast.add({ title: t('users.statusUpdated'), color: 'success' })
     await fetchUsers()
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '更新失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('common.updateFail'), color: 'error' })
   } finally {
     showStatusModal.value = false
   }
@@ -569,10 +598,11 @@ onMounted(() => {
   color: var(--cf-danger);
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .confirm-text {

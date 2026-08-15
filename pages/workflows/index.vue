@@ -2,44 +2,54 @@
   <div class="cf-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Flows</h1>
-        <p class="cf-page-sub">Orchestrate automations on the canvas.</p>
+        <h1 class="cf-page-title">{{ t('flows.title') }}</h1>
+        <p class="cf-page-sub">{{ t('flows.sub') }}</p>
       </div>
-      <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
-        New Flow
-      </UButton>
+      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+        {{ t('flows.new') }}
+      </CfButton>
+    </div>
+
+    <div class="list-toolbar">
+      <span class="list-count">{{ t('flows.count', { n: workflows.length }) }}</span>
+      <span class="list-hint">{{ t('flows.hint') }}</span>
     </div>
 
     <div class="cf-panel">
       <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>Loading…</span>
+        <span>{{ t('common.loading') }}</span>
       </div>
 
       <div v-else-if="workflows.length === 0" class="cf-state">
         <UIcon name="i-lucide-git-branch" class="size-8 opacity-50" />
-        <p>No flows yet. Create one to get started.</p>
+        <p>{{ t('flows.empty') }}</p>
       </div>
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
-              <th>名称</th>
-              <th>描述</th>
-              <th>版本</th>
-              <th>创建时间</th>
-              <th class="cf-col-actions">操作</th>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('flows.version') }}</th>
+              <th>{{ t('common.createdAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="workflow in workflows" :key="workflow.id">
+            <tr
+              v-for="workflow in workflows"
+              :key="workflow.id"
+              :title="t('flows.hint')"
+              @dblclick="openCanvas(workflow)"
+            >
               <td>
                 <div class="workflow-name">
                   <a
                     :href="`/workflows/${encodeURIComponent(workflow.id)}`"
                     class="name-link"
-                    @click.prevent="navigateTo(`/workflows/${encodeURIComponent(workflow.id)}`)"
+                    @click.prevent="openCanvas(workflow)"
                   >
                     {{ workflow.name }}
                   </a>
@@ -54,36 +64,27 @@
               </td>
               <td class="cf-muted">{{ workflow.description || '—' }}</td>
               <td class="cf-muted">v{{ workflow.version }}</td>
-              <td class="cf-muted">{{ formatDate(workflow.created_at) }}</td>
-              <td>
+              <td class="cf-muted">{{ d(workflow.created_at) }}</td>
+              <td @dblclick.stop>
                 <div class="action-btns">
-                  <UTooltip text="画布">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      icon="i-lucide-external-link"
-                      size="sm"
-                      @click="navigateTo(`/workflows/${encodeURIComponent(workflow.id)}`)"
-                    />
-                  </UTooltip>
-                  <UTooltip text="执行">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      icon="i-lucide-rocket"
-                      size="sm"
-                      @click="handleExecute(workflow)"
-                    />
-                  </UTooltip>
-                  <UTooltip text="删除">
-                    <UButton
-                      color="error"
-                      variant="ghost"
-                      icon="i-lucide-trash-2"
-                      size="sm"
-                      @click="askDelete(workflow)"
-                    />
-                  </UTooltip>
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-external-link"
+                    :tip="t('flows.canvas')"
+                    @click="openCanvas(workflow)"
+                  />
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-rocket"
+                    :tip="t('flows.run')"
+                    @click="handleExecute(workflow)"
+                  />
+                  <CfButton
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="askDelete(workflow)"
+                  />
                 </div>
               </td>
             </tr>
@@ -94,24 +95,24 @@
 
     <UModal
       v-model:open="dialogVisible"
-      title="创建工作流"
+      :title="t('flows.createTitle')"
       :ui="{ content: 'sm:max-w-lg' }"
     >
       <template #body>
         <form id="workflow-form" class="form-grid" @submit.prevent="handleSubmit">
           <div class="field">
-            <label class="field__label">名称</label>
-            <UInput v-model="form.name" class="w-full" placeholder="请输入工作流名称" />
+            <label class="field__label">{{ t('common.name') }}</label>
+            <UInput v-model="form.name" class="w-full" :placeholder="t('flows.namePh')" />
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
           </div>
 
           <div class="field">
-            <label class="field__label">描述</label>
+            <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
               v-model="form.description"
               class="w-full"
               :rows="2"
-              placeholder="请输入描述（可选）"
+              :placeholder="t('common.optionalDesc')"
             />
           </div>
         </form>
@@ -119,24 +120,42 @@
 
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="dialogVisible = false">取消</UButton>
-          <UButton form="workflow-form" type="submit" color="primary" :loading="submitting">
-            创建
-          </UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="dialogVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              form="workflow-form"
+              type="submit"
+              tone="primary"
+              icon="i-lucide-plus"
+              :loading="submitting"
+            >
+              {{ t('common.create') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
-    <UModal v-model:open="deleteVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
-          确定要删除工作流「{{ deleting?.name }}」吗？此操作不可恢复。
+          {{ t('flows.deleteText', { name: deleting?.name ?? '' }) }}
         </p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
-          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-trash-2"
+              :loading="deletingLoading"
+              @click="confirmDelete"
+            >
+              {{ t('common.delete') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -150,10 +169,11 @@ definePageMeta({
   layout: 'default',
 })
 
-/** 与 [id].vue 中一致：仅用于本地验证动态路由 + 画布能否渲染 */
+/** Same as the list page: local-only check that the dynamic route + canvas render. */
 const CANVAS_SMOKE_ID = '__canvas_smoke__'
 
 const toast = useToast()
+const { t, d } = useLocale()
 const { list, create, remove, execute } = useWorkflows()
 
 const openSmokeTest = () => {
@@ -163,7 +183,7 @@ const openSmokeTest = () => {
 const openFirstWorkflow = () => {
   const id = workflows.value[0]?.id
   if (!id) {
-    toast.add({ title: '列表为空', color: 'warning' })
+    toast.add({ title: t('flows.listEmpty'), color: 'warning' })
     return
   }
   navigateTo(`/workflows/${encodeURIComponent(id)}`)
@@ -183,10 +203,6 @@ const form = reactive({
 })
 const errors = reactive({ name: '' })
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString('zh-CN')
-}
-
 function statusColor(status: string): 'neutral' | 'success' | 'warning' {
   switch (status) {
     case 'published': return 'success'
@@ -197,17 +213,15 @@ function statusColor(status: string): 'neutral' | 'success' | 'warning' {
 }
 
 function statusText(status: string) {
-  switch (status) {
-    case 'draft': return '草稿'
-    case 'published': return '已发布'
-    case 'archived': return '已归档'
-    default: return status
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return t(`status.${status}`)
   }
+  return status
 }
 
 function validate() {
-  errors.name = form.name.trim() ? '' : '名称不能为空'
-  if (form.name.trim().length > 100) errors.name = '名称不能超过 100 个字符'
+  errors.name = form.name.trim() ? '' : t('common.nameRequired')
+  if (form.name.trim().length > 100) errors.name = t('common.nameTooLong')
   return !errors.name
 }
 
@@ -221,7 +235,7 @@ const fetchWorkflows = async () => {
     }
     workflows.value = res.data || []
   } catch {
-    toast.add({ title: '获取工作流列表失败', color: 'error' })
+    toast.add({ title: t('flows.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -234,13 +248,17 @@ const handleCreate = () => {
   dialogVisible.value = true
 }
 
+const openCanvas = (workflow: Workflow) => {
+  navigateTo(`/workflows/${encodeURIComponent(workflow.id)}`)
+}
+
 const handleExecute = async (workflow: Workflow) => {
   const res = await execute(workflow.id)
   if (res.error) {
     toast.add({ title: res.error, color: 'error' })
     return
   }
-  toast.add({ title: `工作流已启动，执行ID: ${res.executionId}`, color: 'success' })
+  toast.add({ title: t('flows.started', { id: res.executionId }), color: 'success' })
 }
 
 const askDelete = (workflow: Workflow) => {
@@ -257,7 +275,7 @@ const confirmDelete = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: '删除成功', color: 'success' })
+    toast.add({ title: t('common.deleteOk'), color: 'success' })
     deleteVisible.value = false
     await fetchWorkflows()
   } finally {
@@ -277,11 +295,11 @@ const handleSubmit = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: '创建成功', color: 'success' })
+    toast.add({ title: t('common.createOk'), color: 'success' })
     dialogVisible.value = false
     await fetchWorkflows()
   } catch {
-    toast.add({ title: '创建失败', color: 'error' })
+    toast.add({ title: t('common.createFail'), color: 'error' })
   } finally {
     submitting.value = false
   }
@@ -293,6 +311,21 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+.list-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+}
+
+.list-hint {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  opacity: 0.85;
+}
+
 .workflow-name {
   display: flex;
   align-items: center;
@@ -341,15 +374,15 @@ onMounted(() => {
   color: var(--cf-danger);
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-left: auto;
 }
 
 .delete-text {
-  margin: 0 0 16px;
+  margin: 0;
   color: var(--cf-ink-soft);
   line-height: 1.5;
 }

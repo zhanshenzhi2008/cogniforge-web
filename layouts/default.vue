@@ -21,13 +21,15 @@
       </nav>
 
       <template #right>
+        <LanguageSwitch />
+
         <UDropdownMenu :items="chromeMenuItems">
           <UButton
             color="neutral"
             variant="ghost"
             icon="i-lucide-palette"
             size="sm"
-            aria-label="主题与导航样式"
+            :aria-label="t('nav.themeAndNav')"
             class="cf-icon-btn"
           />
         </UDropdownMenu>
@@ -46,19 +48,18 @@
           </button>
         </UDropdownMenu>
 
-        <UButton
-          class="lg:hidden cf-icon-btn"
-          color="neutral"
-          variant="ghost"
-          icon="i-lucide-menu"
-          size="sm"
-          aria-label="打开导航菜单"
-          @click="mobileOpen = true"
-        />
+        <div class="lg:hidden">
+          <CfButton
+            tone="icon"
+            icon="i-lucide-menu"
+            :tip="t('nav.openMenu')"
+            @click="mobileOpen = true"
+          />
+        </div>
       </template>
     </UHeader>
 
-    <USlideover v-model:open="mobileOpen" title="导航" side="right">
+    <USlideover v-model:open="mobileOpen" :title="t('nav.mobile')" side="right">
       <template #body>
         <div class="mobile-nav">
           <nav class="mobile-nav__list" aria-label="Mobile primary">
@@ -105,9 +106,17 @@ const toast = useToast()
 const { user, clearAuth } = useAuth()
 const { theme, themes, setTheme } = useTheme()
 const { navStyle, navStyles, setNavStyle, init: initNavStyle } = useNavStyle()
+const { t, applyFromSettings } = useLocale()
 
-onMounted(() => {
+onMounted(async () => {
   initNavStyle()
+  try {
+    const { get } = useApi()
+    const res = await get<{ language?: string }>('/api/v1/settings')
+    if (res.data?.language) applyFromSettings(res.data.language)
+  } catch {
+    // keep local/browser locale
+  }
 })
 
 const mobileOpen = ref(false)
@@ -115,7 +124,7 @@ const mobileOpen = ref(false)
 const visibleNav = computed(() => filterNavItems(user.value?.role))
 const activeKey = computed(() => resolveActiveNavKey(route.path))
 
-const displayName = computed(() => user.value?.name || '用户')
+const displayName = computed(() => user.value?.name || t('nav.userFallback'))
 const userInitials = computed(() => {
   const name = displayName.value.trim()
   if (!name) return '?'
@@ -129,7 +138,7 @@ const userInitials = computed(() => {
 const desktopNavItems = computed(() =>
   visibleNav.value.map((item) => ({
     key: item.key,
-    label: item.label,
+    label: t(`nav.${item.key}`),
     to: item.to,
     active: activeKey.value === item.key,
   })),
@@ -138,11 +147,11 @@ const desktopNavItems = computed(() =>
 const mobileNavItems = desktopNavItems
 
 const mobileAccountLinks = computed(() => {
-  const items = [{ label: '个人设置', to: '/settings' }]
+  const items = [{ label: t('nav.settings'), to: '/settings' }]
   if (user.value?.role === 'admin') {
     items.push(
-      { label: '用户管理', to: '/admin/users' },
-      { label: '角色权限', to: '/admin/roles' },
+      { label: t('nav.users'), to: '/admin/users' },
+      { label: t('nav.roles'), to: '/admin/roles' },
     )
   }
   return items
@@ -150,8 +159,8 @@ const mobileAccountLinks = computed(() => {
 
 const chromeMenuItems = computed<DropdownMenuItem[][]>(() => [
   themes.map((item) => ({
-    label: item.label,
-    description: item.description,
+    label: t(`theme.${item.id}.label`),
+    description: t(`theme.${item.id}.desc`),
     type: 'checkbox' as const,
     checked: theme.value === item.id,
     onSelect: (e: Event) => {
@@ -160,15 +169,15 @@ const chromeMenuItems = computed<DropdownMenuItem[][]>(() => [
     },
   })),
   navStyles.map((item) => ({
-    label: item.label,
-    description: item.description,
+    label: t(`navStyle.${item.id}.label`),
+    description: t(`navStyle.${item.id}.desc`),
     type: 'checkbox' as const,
     checked: navStyle.value === item.id,
     onSelect: (e: Event) => {
       e.preventDefault()
       setNavStyle(item.id)
       toast.add({
-        title: item.id === 'island' ? '已切换：悬浮岛' : '已切换：安静编辑室',
+        title: item.id === 'island' ? t('navStyle.switchedIsland') : t('navStyle.switchedEditorial'),
         color: 'success',
       })
     },
@@ -179,7 +188,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   const isAdmin = user.value?.role === 'admin'
   const primary: DropdownMenuItem[] = [
     {
-      label: '个人设置',
+      label: t('nav.settings'),
       icon: 'i-lucide-settings',
       to: '/settings',
     },
@@ -188,12 +197,12 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   const admin: DropdownMenuItem[] = isAdmin
     ? [
         {
-          label: '用户管理',
+          label: t('nav.users'),
           icon: 'i-lucide-users',
           to: '/admin/users',
         },
         {
-          label: '角色权限',
+          label: t('nav.roles'),
           icon: 'i-lucide-shield-check',
           to: '/admin/roles',
         },
@@ -202,7 +211,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 
   const logout: DropdownMenuItem[] = [
     {
-      label: '退出登录',
+      label: t('nav.logout'),
       icon: 'i-lucide-log-out',
       onSelect: async () => {
         try {
@@ -212,7 +221,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
           // 即使 API 失败也清除本地状态
         } finally {
           clearAuth()
-          toast.add({ title: '已退出登录', color: 'success' })
+          toast.add({ title: t('nav.loggedOut'), color: 'success' })
           await router.push('/login')
         }
       },

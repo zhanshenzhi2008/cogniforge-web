@@ -1,19 +1,19 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="cf-section-title">Preferences</h2>
-      <p class="cf-section-desc">Theme and display preferences.</p>
+      <h2 class="cf-section-title">{{ t('pref.title') }}</h2>
+      <p class="cf-section-desc">{{ t('pref.sub') }}</p>
     </div>
 
     <div class="content-card cf-surface">
       <div class="setting-item setting-item--column">
         <div class="setting-info">
-          <span class="setting-label">外观主题</span>
-          <span class="setting-hint">选择极光 / 墨夜 / 青柠 / 玻璃四种配色</span>
+          <span class="setting-label">{{ t('pref.theme') }}</span>
+          <span class="setting-hint">{{ t('pref.themeHint') }}</span>
         </div>
         <div class="theme-selector">
           <button
-            v-for="option in themes"
+            v-for="option in themedThemes"
             :key="option.id"
             type="button"
             class="theme-option"
@@ -40,21 +40,22 @@
     <div class="content-card cf-surface">
       <div class="setting-item">
         <div class="setting-info">
-          <span class="setting-label">界面语言</span>
+          <span class="setting-label">{{ t('pref.language') }}</span>
         </div>
-        <USelect
-          v-model="currentLanguage"
-          class="w-40"
-          size="sm"
-          :items="languageOptions"
-        />
+          <USelect
+            :model-value="locale"
+            class="w-40"
+            size="sm"
+            :items="languageOptions"
+            @update:model-value="onLanguageChange"
+          />
       </div>
     </div>
 
     <div class="content-card cf-surface">
       <div class="setting-item">
         <div class="setting-info">
-          <span class="setting-label">时区</span>
+          <span class="setting-label">{{ t('pref.timezone') }}</span>
         </div>
         <USelect
           v-model="currentTimezone"
@@ -68,15 +69,15 @@
     <div class="content-card cf-surface">
       <div class="setting-item">
         <div class="setting-info">
-          <span class="setting-label">邮件通知</span>
-          <span class="setting-hint">接收重要更新邮件</span>
+          <span class="setting-label">{{ t('pref.emailNotify') }}</span>
+          <span class="setting-hint">{{ t('pref.emailHint') }}</span>
         </div>
         <USwitch v-model="emailNotifications" size="sm" />
       </div>
       <div class="setting-item">
         <div class="setting-info">
-          <span class="setting-label">浏览器通知</span>
-          <span class="setting-hint">实时推送消息通知</span>
+          <span class="setting-label">{{ t('pref.browserNotify') }}</span>
+          <span class="setting-hint">{{ t('pref.browserHint') }}</span>
         </div>
         <USwitch v-model="browserNotifications" size="sm" />
       </div>
@@ -86,19 +87,27 @@
 
 <script setup lang="ts">
 import type { CfThemeId } from '~/composables/useTheme'
+import type { LocaleCode } from '~/composables/useLocale'
 
 const toast = useToast()
 const { theme, themes, setTheme } = useTheme()
+const { locale, locales, t, setLocale, applyFromSettings } = useLocale()
 
-const currentLanguage = ref('zh-CN')
 const currentTimezone = ref('Asia/Shanghai')
 const emailNotifications = ref(true)
 const browserNotifications = ref(false)
 
-const languageOptions = [
-  { label: '简体中文', value: 'zh-CN' },
-  { label: 'English', value: 'en-US' },
-]
+const themedThemes = computed(() =>
+  themes.map((item) => ({
+    ...item,
+    label: t(`theme.${item.id}.label`),
+    description: t(`theme.${item.id}.desc`),
+  })),
+)
+
+const languageOptions = computed(() =>
+  locales.map((item) => ({ label: item.nativeLabel, value: item.code })),
+)
 
 const timezoneOptions = [
   { label: 'Asia/Shanghai (UTC+8)', value: 'Asia/Shanghai' },
@@ -109,18 +118,25 @@ const timezoneOptions = [
 
 const handleThemeChange = (id: CfThemeId) => {
   setTheme(id)
-  toast.add({ title: '主题已切换', color: 'success' })
+  toast.add({ title: t('theme.switched'), color: 'success' })
+}
+
+function onLanguageChange(value: string | number | boolean | undefined | null) {
+  const code = String(value)
+  if (code === 'zh-CN' || code === 'en-US') {
+    setLocale(code as LocaleCode)
+    toast.add({ title: t('locale.changed'), color: 'success' })
+  }
 }
 
 onMounted(async () => {
   try {
-    const data = await $fetch('/api/v1/settings')
-    if (data) {
-      currentLanguage.value = (data as any).language || 'zh-CN'
-      currentTimezone.value = (data as any).timezone || 'Asia/Shanghai'
-    }
+    const { get } = useApi()
+    const res = await get<{ language?: string; timezone?: string }>('/api/v1/settings')
+    if (res.data?.language) applyFromSettings(res.data.language)
+    if (res.data?.timezone) currentTimezone.value = res.data.timezone
   } catch {
-    // 使用默认值
+    // keep local defaults
   }
 })
 </script>

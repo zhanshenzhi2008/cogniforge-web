@@ -26,6 +26,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t } = useLocale()
 
 const MIN_LENGTH = 8
 const HAS_UPPER = /[A-Z]/
@@ -66,17 +67,17 @@ const strengthColor = computed(() => {
 const strengthText = computed(() => {
   switch (strengthLevel.value) {
     case 0:
-      return '未输入'
+      return t('pwd.empty')
     case 1:
-      return '很弱'
+      return t('pwd.weak')
     case 2:
-      return '较弱'
+      return t('pwd.fair')
     case 3:
-      return '良好'
+      return t('pwd.good')
     case 4:
-      return '强'
+      return t('pwd.strong')
     default:
-      return '未输入'
+      return t('pwd.empty')
   }
 })
 
@@ -99,25 +100,25 @@ const remainingHint = computed(() => {
   const unmet: string[] = []
 
   if (props.password.length < MIN_LENGTH) {
-    unmet.push(`至少${MIN_LENGTH}位`)
+    unmet.push(t('pwd.needLen', { n: MIN_LENGTH }))
   }
   if (!HAS_UPPER.test(props.password)) {
-    unmet.push('大写字母')
+    unmet.push(t('pwd.needUpper'))
   }
   if (!HAS_LOWER.test(props.password)) {
-    unmet.push('小写字母')
+    unmet.push(t('pwd.needLower'))
   }
   if (!HAS_DIGIT.test(props.password)) {
-    unmet.push('数字')
+    unmet.push(t('pwd.needDigit'))
   }
   if (!HAS_SPECIAL.test(props.password)) {
-    unmet.push('特殊字符')
+    unmet.push(t('pwd.needSpecial'))
   }
 
   if (unmet.length === 0) {
     return ''
   }
-  return `缺少：${unmet.slice(0, 2).join('、')}${unmet.length > 2 ? '...' : ''}`
+  return t('pwd.missing', { list: unmet.slice(0, 2).join(', ') + (unmet.length > 2 ? '...' : '') })
 })
 </script>
 

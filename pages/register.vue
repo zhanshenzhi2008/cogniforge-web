@@ -1,20 +1,28 @@
 <template>
   <div class="auth-page">
     <div class="auth-brand">
+      <img
+        class="auth-brand__logo"
+        src="/favicon.svg?v=hd1"
+        width="80"
+        height="80"
+        alt="lonely √3"
+        decoding="async"
+      >
       <h1 class="auth-brand__title font-display">CogniForge</h1>
-      <p class="auth-brand__tagline">Forge your agents.</p>
+      <p class="auth-brand__tagline">{{ t('auth.tagline') }}</p>
     </div>
 
     <div class="auth-panel cf-surface">
       <form class="auth-form" @submit.prevent="handleRegister">
         <div class="field">
-          <label class="field__label" for="reg-name">用户名</label>
+          <label class="field__label" for="reg-name">{{ t('auth.username') }}</label>
           <UInput
             id="reg-name"
             v-model="form.name"
             class="w-full"
             size="lg"
-            placeholder="用户名"
+            :placeholder="t('auth.placeholderName')"
             leading-icon="i-lucide-user"
             autocomplete="nickname"
             :color="errors.name ? 'error' : 'neutral'"
@@ -25,14 +33,14 @@
         </div>
 
         <div class="field">
-          <label class="field__label" for="reg-email">邮箱</label>
+          <label class="field__label" for="reg-email">{{ t('auth.email') }}</label>
           <UInput
             id="reg-email"
             v-model="form.email"
             class="w-full"
             size="lg"
             type="email"
-            placeholder="邮箱"
+            :placeholder="t('auth.placeholderEmail')"
             leading-icon="i-lucide-mail"
             autocomplete="email"
             :color="errors.email ? 'error' : 'neutral'"
@@ -43,14 +51,14 @@
         </div>
 
         <div class="field">
-          <label class="field__label" for="reg-password">密码</label>
+          <label class="field__label" for="reg-password">{{ t('auth.password') }}</label>
           <UInput
             id="reg-password"
             v-model="form.password"
             class="w-full"
             size="lg"
             type="password"
-            placeholder="密码"
+            placeholder="••••••••"
             leading-icon="i-lucide-lock"
             autocomplete="new-password"
             :color="errors.password ? 'error' : 'neutral'"
@@ -61,14 +69,14 @@
         </div>
 
         <div class="field">
-          <label class="field__label" for="reg-confirm">确认密码</label>
+          <label class="field__label" for="reg-confirm">{{ t('auth.confirmPassword') }}</label>
           <UInput
             id="reg-confirm"
             v-model="form.confirmPassword"
             class="w-full"
             size="lg"
             type="password"
-            placeholder="确认密码"
+            placeholder="••••••••"
             leading-icon="i-lucide-shield-check"
             autocomplete="new-password"
             :color="errors.confirmPassword ? 'error' : 'neutral'"
@@ -78,22 +86,22 @@
           <p v-if="errors.confirmPassword" class="field__error">{{ errors.confirmPassword }}</p>
         </div>
 
-        <UButton
+        <CfButton
           type="submit"
+          tone="primary"
+          icon="i-lucide-user-plus"
           block
-          size="lg"
-          color="primary"
           class="auth-submit"
           :loading="loading"
           :disabled="loading"
         >
-          注册
-        </UButton>
+          {{ t('auth.createAccount') }}
+        </CfButton>
       </form>
 
       <div class="auth-footer">
-        <span class="auth-footer__muted">已有账号？</span>
-        <UButton variant="link" color="primary" to="/login">立即登录</UButton>
+        <span class="auth-footer__muted">{{ t('auth.hasAccount') }}</span>
+        <UButton variant="link" color="primary" to="/login">{{ t('auth.signIn') }}</UButton>
       </div>
     </div>
   </div>
@@ -106,6 +114,7 @@ definePageMeta({
 
 const toast = useToast()
 const { setAuth } = useAuth()
+const { t, syncToRemote } = useLocale()
 
 const loading = ref(false)
 const form = reactive({
@@ -124,34 +133,34 @@ const errors = reactive({
 function validate(): boolean {
   const name = form.name.trim()
   if (!name) {
-    errors.name = '请输入用户名'
+    errors.name = t('auth.enterUsername')
   } else if (name.length < 2 || name.length > 20) {
-    errors.name = '用户名长度在 2 到 20 个字符'
+    errors.name = t('auth.usernameLen')
   } else {
     errors.name = ''
   }
 
   const email = form.email.trim()
   if (!email) {
-    errors.email = '请输入邮箱'
+    errors.email = t('auth.enterEmail')
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.email = '请输入正确的邮箱格式'
+    errors.email = t('auth.invalidEmail')
   } else {
     errors.email = ''
   }
 
   if (!form.password) {
-    errors.password = '请输入密码'
+    errors.password = t('auth.enterPassword')
   } else if (form.password.length < 6) {
-    errors.password = '密码至少 6 位'
+    errors.password = t('auth.passwordMin')
   } else {
     errors.password = ''
   }
 
   if (!form.confirmPassword) {
-    errors.confirmPassword = '请确认密码'
+    errors.confirmPassword = t('auth.confirmRequired')
   } else if (form.confirmPassword !== form.password) {
-    errors.confirmPassword = '两次输入的密码不一致'
+    errors.confirmPassword = t('auth.passwordMismatch')
   } else {
     errors.confirmPassword = ''
   }
@@ -178,12 +187,13 @@ const handleRegister = async () => {
 
     if (res.data) {
       setAuth(res.data.token, res.data.user)
-      toast.add({ title: '注册成功', color: 'success' })
+      syncToRemote()
+      toast.add({ title: t('auth.created'), color: 'success' })
       await navigateTo('/')
     }
   } catch (error: any) {
     toast.add({
-      title: error.data?.error || error.data?.message || '注册失败',
+      title: error.data?.error || error.data?.message || t('auth.createFail'),
       color: 'error',
     })
   } finally {
@@ -203,6 +213,14 @@ const handleRegister = async () => {
 
 .auth-brand {
   text-align: center;
+}
+
+.auth-brand__logo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 14px;
+  border-radius: 18px;
 }
 
 .auth-brand__title {

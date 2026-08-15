@@ -1,8 +1,8 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="cf-section-title">Sessions</h2>
-      <p class="cf-section-desc">Review and revoke active logins.</p>
+      <h2 class="cf-section-title">{{ t('sessions.title') }}</h2>
+      <p class="cf-section-desc">{{ t('sessions.sub') }}</p>
     </div>
 
     <div class="content-card cf-surface">
@@ -11,11 +11,11 @@
           <UIcon name="i-lucide-laptop" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
-          <h3>当前设备</h3>
-          <p>您正在使用的设备</p>
+          <h3>{{ t('sessions.thisDevice') }}</h3>
+          <p>{{ t('sessions.thisHint') }}</p>
         </div>
         <UBadge color="success" variant="subtle" size="sm" icon="i-lucide-check-circle">
-          当前会话
+          {{ t('sessions.current') }}
         </UBadge>
       </div>
     </div>
@@ -23,20 +23,20 @@
     <div class="content-card cf-surface">
       <div class="card-header no-border">
         <div class="card-title-area">
-          <h3>其他活跃会话</h3>
-          <p>在其他设备上的登录状态，点击可撤销</p>
+          <h3>{{ t('sessions.others') }}</h3>
+          <p>{{ t('sessions.othersHint') }}</p>
         </div>
       </div>
 
       <div class="sessions-list">
         <div v-if="loading" class="state-box">
           <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-          <span>加载中…</span>
+          <span>{{ t('common.loading') }}</span>
         </div>
 
         <div v-else-if="sessions.length === 0" class="empty-state">
           <UIcon name="i-lucide-circle-check" class="empty-icon size-9" />
-          <p>没有其他活跃会话</p>
+          <p>{{ t('sessions.empty') }}</p>
         </div>
 
         <TransitionGroup v-else name="session-list" tag="div">
@@ -50,35 +50,33 @@
             </div>
             <div class="session-info">
               <div class="session-device">
-                <span class="device-name">{{ session.device || '未知设备' }}</span>
+                <span class="device-name">{{ session.device || t('sessions.unknownDevice') }}</span>
                 <UBadge v-if="session.is_current" color="success" variant="subtle" size="sm">
-                  当前
+                  {{ t('sessions.currentShort') }}
                 </UBadge>
               </div>
               <div class="session-meta">
                 <span class="meta-item">
                   <UIcon name="i-lucide-map-pin" class="size-3" />
-                  {{ session.location || '未知位置' }}
+                  {{ session.location || t('sessions.unknownLocation') }}
                 </span>
                 <span class="meta-item">
                   <UIcon name="i-lucide-clock" class="size-3" />
                   {{ formatTime(session.last_used) }}
                 </span>
                 <span class="meta-item">
-                  IP: {{ session.ip_address || '未知' }}
+                  IP: {{ session.ip_address || t('common.unknown') }}
                 </span>
               </div>
             </div>
             <div class="session-actions">
-              <UButton
-                size="sm"
-                color="error"
-                variant="outline"
+              <CfButton
+                tone="icon-danger"
+                icon="i-lucide-ban"
+                :tip="t('sessions.revoke')"
                 :loading="revokingId === session.id"
                 @click="askRevoke(session.id)"
-              >
-                撤销
-              </UButton>
+              />
             </div>
           </div>
         </TransitionGroup>
@@ -88,23 +86,33 @@
     <div class="content-card security-tips cf-surface">
       <div class="tips-header">
         <UIcon name="i-lucide-shield" class="tips-icon size-4" />
-        <h4>安全建议</h4>
+        <h4>{{ t('sessions.tips') }}</h4>
       </div>
       <ul class="tips-list">
-        <li>定期检查活跃会话，及时撤销不认识的设备</li>
-        <li>不要在公共设备上保持登录状态</li>
-        <li>发现异常登录请立即修改密码并撤销所有会话</li>
+        <li>{{ t('sessions.tip1') }}</li>
+        <li>{{ t('sessions.tip2') }}</li>
+        <li>{{ t('sessions.tip3') }}</li>
       </ul>
     </div>
 
-    <UModal v-model:open="revokeVisible" title="撤销确认" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="revokeVisible" :title="t('sessions.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
-        <p class="confirm-text">确定要撤销此会话吗？撤销后该设备需要重新登录。</p>
+        <p class="confirm-text">{{ t('sessions.revokeText') }}</p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="revokeVisible = false">取消</UButton>
-          <UButton color="error" :loading="!!revokingId" @click="confirmRevoke">撤销</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="revokeVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-ban"
+              :loading="!!revokingId"
+              @click="confirmRevoke"
+            >
+              {{ t('sessions.revoke') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -113,6 +121,7 @@
 
 <script setup lang="ts">
 const toast = useToast()
+const { t, d } = useLocale()
 
 const loading = ref(false)
 const sessions = ref<any[]>([])
@@ -122,18 +131,18 @@ const pendingRevokeId = ref<string | null>(null)
 
 const getDeviceIcon = (device: string) => {
   if (!device) return 'i-lucide-laptop'
-  const d = device.toLowerCase()
-  if (d.includes('mobile') || d.includes('iphone') || d.includes('android')) {
+  const name = device.toLowerCase()
+  if (name.includes('mobile') || name.includes('iphone') || name.includes('android')) {
     return 'i-lucide-smartphone'
   }
-  if (d.includes('tablet') || d.includes('ipad')) {
+  if (name.includes('tablet') || name.includes('ipad')) {
     return 'i-lucide-tablet'
   }
   return 'i-lucide-laptop'
 }
 
 const formatTime = (time: string) => {
-  if (!time) return '未知'
+  if (!time) return t('common.unknown')
   const date = new Date(time)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
@@ -142,11 +151,11 @@ const formatTime = (time: string) => {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
 
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes} 分钟前`
-  if (hours < 24) return `${hours} 小时前`
-  if (days < 7) return `${days} 天前`
-  return date.toLocaleDateString('zh-CN')
+  if (minutes < 1) return t('common.justNow')
+  if (minutes < 60) return t('common.minutesAgo', { n: minutes })
+  if (hours < 24) return t('common.hoursAgo', { n: hours })
+  if (days < 7) return t('common.daysAgo', { n: days })
+  return d(date)
 }
 
 const loadSessions = async () => {
@@ -155,7 +164,7 @@ const loadSessions = async () => {
     const data = await $fetch('/api/v1/settings/sessions')
     sessions.value = data || []
   } catch {
-    toast.add({ title: '获取会话列表失败', color: 'error' })
+    toast.add({ title: t('sessions.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -179,10 +188,10 @@ const handleRevoke = async (sessionId: string) => {
     await $fetch(`/api/v1/settings/sessions/${sessionId}`, {
       method: 'DELETE',
     })
-    toast.add({ title: '会话已撤销', color: 'success' })
+    toast.add({ title: t('sessions.revoked'), color: 'success' })
     await loadSessions()
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '撤销失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('sessions.revokeFail'), color: 'error' })
   } finally {
     revokingId.value = null
   }
@@ -387,11 +396,11 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
-  width: 100%;
+  margin-left: auto;
 }
 
 .session-list-enter-active,

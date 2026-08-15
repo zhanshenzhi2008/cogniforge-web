@@ -2,75 +2,83 @@
   <div class="cf-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Monitor</h1>
-        <p class="cf-page-sub">Request logs and usage.</p>
+        <h1 class="cf-page-title">{{ t('monitor.title') }}</h1>
+        <p class="cf-page-sub">{{ t('monitor.sub') }}</p>
       </div>
     </div>
 
     <div class="stat-grid">
       <div class="stat-card cf-surface">
         <div class="stat-value font-display">{{ stats?.total_requests || 0 }}</div>
-        <div class="stat-label">总请求数</div>
+        <div class="stat-label">{{ t('monitor.total') }}</div>
       </div>
       <div class="stat-card cf-surface">
         <div class="stat-value font-display">{{ stats?.avg_duration || 0 }}ms</div>
-        <div class="stat-label">平均耗时</div>
+        <div class="stat-label">{{ t('monitor.avg') }}</div>
       </div>
       <div class="stat-card cf-surface">
         <div class="stat-value font-display">{{ stats?.error_requests || 0 }}</div>
-        <div class="stat-label">错误请求</div>
+        <div class="stat-label">{{ t('monitor.errors') }}</div>
       </div>
       <div class="stat-card cf-surface">
         <div class="stat-value font-display error-rate">{{ (stats?.error_rate || 0).toFixed(2) }}%</div>
-        <div class="stat-label">错误率</div>
+        <div class="stat-label">{{ t('monitor.errorRate') }}</div>
       </div>
     </div>
 
     <div class="cf-panel">
       <div class="panel-header">
-        <h2 class="panel-title">Request logs</h2>
+        <div>
+          <h2 class="panel-title">{{ t('monitor.logs') }}</h2>
+          <p class="list-hint">{{ t('common.hintDblclickDetail') }}</p>
+        </div>
         <div class="filters">
           <USelect
             v-model="filterMethod"
             class="filter-method"
             :items="methodOptions"
-            placeholder="请求方法"
+            :placeholder="t('monitor.methodPh')"
           />
           <UInput
             v-model="filterPath"
             class="filter-path"
-            placeholder="请求路径"
+            :placeholder="t('monitor.pathPh')"
           />
-          <UButton color="primary" @click="handleSearch">搜索</UButton>
+          <CfButton tone="primary" icon="i-lucide-search" @click="handleSearch">{{ t('common.search') }}</CfButton>
         </div>
       </div>
 
       <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>加载中…</span>
+        <span>{{ t('common.loading') }}</span>
       </div>
 
       <div v-else-if="logs.length === 0" class="cf-state">
         <UIcon name="i-lucide-activity" class="size-8 opacity-50" />
-        <p>暂无请求日志</p>
+        <p>{{ t('monitor.empty') }}</p>
       </div>
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
-              <th>时间</th>
-              <th>方法</th>
-              <th>路径</th>
-              <th>状态</th>
-              <th>耗时</th>
-              <th>IP</th>
-              <th class="cf-col-actions">操作</th>
+              <th>{{ t('monitor.time') }}</th>
+              <th>{{ t('monitor.method') }}</th>
+              <th>{{ t('monitor.path') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('monitor.duration') }}</th>
+              <th>{{ t('monitor.ip') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in logs" :key="row.id">
-              <td class="cf-muted">{{ formatDate(row.created_at) }}</td>
+            <tr
+              v-for="row in logs"
+              :key="row.id"
+              class="list-row"
+              @dblclick="openLogDetail(row)"
+            >
+              <td class="cf-muted">{{ d(row.created_at) }}</td>
               <td>
                 <UBadge size="sm" variant="subtle" :color="methodColor(row.method)">
                   {{ row.method }}
@@ -84,10 +92,13 @@
               </td>
               <td class="cf-muted">{{ row.duration }}ms</td>
               <td class="cf-muted">{{ row.ip }}</td>
-              <td>
-                <UButton color="primary" variant="ghost" size="sm" @click="openLogDetail(row)">
-                  详情
-                </UButton>
+              <td @dblclick.stop>
+                <CfButton
+                  tone="icon"
+                  icon="i-lucide-file-text"
+                  :tip="t('common.detail')"
+                  @click="openLogDetail(row)"
+                />
               </td>
             </tr>
           </tbody>
@@ -95,7 +106,7 @@
       </div>
 
       <div v-if="total > 0" class="pager">
-        <span class="pager-info">共 {{ total }} 条</span>
+        <span class="pager-info">{{ t('common.pagerTotal', { n: total }) }}</span>
         <div class="pager-controls">
           <USelect
             v-model="pageSize"
@@ -103,38 +114,36 @@
             :items="pageSizeOptions"
             @update:model-value="handlePageSizeChange"
           />
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
+          <CfButton
+            tone="secondary"
+            icon="i-lucide-chevron-left"
             :disabled="page <= 1"
             @click="goPage(page - 1)"
           >
-            上一页
-          </UButton>
+            {{ t('common.prev') }}
+          </CfButton>
           <span class="pager-page">{{ page }} / {{ totalPages || 1 }}</span>
-          <UButton
-            color="neutral"
-            variant="outline"
-            size="sm"
+          <CfButton
+            tone="secondary"
+            icon="i-lucide-chevron-right"
             :disabled="page >= totalPages"
             @click="goPage(page + 1)"
           >
-            下一页
-          </UButton>
+            {{ t('common.next') }}
+          </CfButton>
         </div>
       </div>
     </div>
 
     <UModal
       v-model:open="showLogDetail"
-      title="日志详情"
+      :title="t('monitor.logDetail')"
       :ui="{ content: 'sm:max-w-3xl' }"
     >
       <template #body>
         <div v-if="selectedLog" class="detail-grid">
           <div class="detail-item">
-            <span class="detail-label">请求ID</span>
+            <span class="detail-label">{{ t('monitor.requestId') }}</span>
             <span class="detail-value">{{ selectedLog.id }}</span>
           </div>
           <div class="detail-item">
@@ -142,7 +151,7 @@
             <span class="detail-value">{{ selectedLog.trace_id }}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">方法</span>
+            <span class="detail-label">{{ t('monitor.method') }}</span>
             <span class="detail-value">
               <UBadge size="sm" variant="subtle" :color="methodColor(selectedLog.method)">
                 {{ selectedLog.method }}
@@ -150,11 +159,11 @@
             </span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">路径</span>
+            <span class="detail-label">{{ t('monitor.path') }}</span>
             <span class="detail-value">{{ selectedLog.path }}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">状态码</span>
+            <span class="detail-label">{{ t('monitor.statusCode') }}</span>
             <span class="detail-value">
               <UBadge size="sm" variant="subtle" :color="statusColor(selectedLog.status_code)">
                 {{ selectedLog.status_code }}
@@ -162,36 +171,31 @@
             </span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">耗时</span>
+            <span class="detail-label">{{ t('monitor.duration') }}</span>
             <span class="detail-value">{{ selectedLog.duration }}ms</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">IP地址</span>
+            <span class="detail-label">{{ t('monitor.ip') }}</span>
             <span class="detail-value">{{ selectedLog.ip }}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">时间</span>
-            <span class="detail-value">{{ formatDate(selectedLog.created_at) }}</span>
+            <span class="detail-label">{{ t('monitor.time') }}</span>
+            <span class="detail-value">{{ d(selectedLog.created_at) }}</span>
           </div>
           <div class="detail-item detail-item--full">
-            <span class="detail-label">请求体</span>
-            <pre class="code-block">{{ selectedLog.request_body || '无' }}</pre>
+            <span class="detail-label">{{ t('monitor.body') }}</span>
+            <pre class="code-block">{{ selectedLog.request_body || t('common.none') }}</pre>
           </div>
           <div class="detail-item detail-item--full">
-            <span class="detail-label">错误信息</span>
+            <span class="detail-label">{{ t('monitor.error') }}</span>
             <UAlert
               v-if="selectedLog.error"
               color="error"
               variant="subtle"
               :title="selectedLog.error"
             />
-            <span v-else class="cf-muted">无</span>
+            <span v-else class="cf-muted">{{ t('common.none') }}</span>
           </div>
-        </div>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="showLogDetail = false">关闭</UButton>
         </div>
       </template>
     </UModal>
@@ -206,6 +210,7 @@ definePageMeta({
 })
 
 const { listRequestLogs, getUsageStats } = useMonitor()
+const { t, d } = useLocale()
 
 const logs = ref<RequestLog[]>([])
 const stats = ref<UsageStats | null>(null)
@@ -222,20 +227,17 @@ const pageSize = ref(20)
 const total = ref(0)
 const totalPages = ref(0)
 
-const methodOptions = [
-  { label: '全部方法', value: METHOD_ALL },
+const methodOptions = computed(() => [
+  { label: t('monitor.allMethods'), value: METHOD_ALL },
   { label: 'GET', value: 'GET' },
   { label: 'POST', value: 'POST' },
   { label: 'PUT', value: 'PUT' },
   { label: 'DELETE', value: 'DELETE' },
-]
+])
 
-const pageSizeOptions = [
-  { label: '10 条/页', value: 10 },
-  { label: '20 条/页', value: 20 },
-  { label: '50 条/页', value: 50 },
-  { label: '100 条/页', value: 100 },
-]
+const pageSizeOptions = computed(() =>
+  [10, 20, 50, 100].map(n => ({ label: t('monitor.perPage', { n }), value: n })),
+)
 
 function methodColor(method: string): 'success' | 'info' | 'warning' | 'error' | 'neutral' {
   const map: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
@@ -252,18 +254,6 @@ function statusColor(code: number): 'success' | 'warning' | 'error' | 'info' {
   if (code >= 400 && code < 500) return 'warning'
   if (code >= 500) return 'error'
   return 'info'
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
 }
 
 function openLogDetail(row: RequestLog) {
@@ -384,6 +374,10 @@ onMounted(() => {
   color: var(--cf-ink);
 }
 
+.panel-header .list-hint {
+  margin: 4px 0 0;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -481,9 +475,10 @@ onMounted(() => {
   font-family: var(--font-mono);
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 </style>

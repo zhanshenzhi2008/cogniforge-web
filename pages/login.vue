@@ -1,20 +1,28 @@
 <template>
   <div class="auth-page">
     <div class="auth-brand">
+      <img
+        class="auth-brand__logo"
+        src="/favicon.svg?v=hd1"
+        width="80"
+        height="80"
+        alt="lonely √3"
+        decoding="async"
+      >
       <h1 class="auth-brand__title font-display">CogniForge</h1>
-      <p class="auth-brand__tagline">Forge your agents.</p>
+      <p class="auth-brand__tagline">{{ t('auth.tagline') }}</p>
     </div>
 
     <div class="auth-panel cf-surface">
       <form class="auth-form" @submit.prevent="handleLogin">
         <div class="field">
-          <label class="field__label" for="login-account">Email</label>
+          <label class="field__label" for="login-account">{{ t('auth.account') }}</label>
           <UInput
             id="login-account"
             v-model="form.account"
             class="w-full"
             size="lg"
-            placeholder="you@example.com"
+            :placeholder="t('auth.placeholderEmail')"
             autocomplete="username"
             :color="errors.account ? 'error' : 'neutral'"
             :highlight="!!errors.account"
@@ -24,7 +32,7 @@
         </div>
 
         <div class="field">
-          <label class="field__label" for="login-password">Password</label>
+          <label class="field__label" for="login-password">{{ t('auth.password') }}</label>
           <UInput
             id="login-password"
             v-model="form.password"
@@ -40,22 +48,22 @@
           <p v-if="errors.password" class="field__error">{{ errors.password }}</p>
         </div>
 
-        <UButton
+        <CfButton
           type="submit"
+          tone="primary"
+          icon="i-lucide-log-in"
           block
-          size="lg"
-          color="primary"
           class="auth-submit"
           :loading="loading"
           :disabled="loading"
         >
-          Sign in
-        </UButton>
+          {{ t('auth.signIn') }}
+        </CfButton>
       </form>
 
       <div class="auth-footer">
-        <span class="auth-footer__muted">No account yet?</span>
-        <UButton variant="link" color="primary" to="/register">Create one</UButton>
+        <span class="auth-footer__muted">{{ t('auth.noAccount') }}</span>
+        <UButton variant="link" color="primary" to="/register">{{ t('auth.createOne') }}</UButton>
       </div>
     </div>
   </div>
@@ -69,6 +77,7 @@ definePageMeta({
 const toast = useToast()
 const router = useRouter()
 const { setAuth } = useAuth()
+const { t, syncToRemote } = useLocale()
 
 const loading = ref(false)
 const form = reactive({
@@ -81,11 +90,11 @@ const errors = reactive({
 })
 
 function validate(): boolean {
-  errors.account = form.account.trim() ? '' : 'Enter email or username'
+  errors.account = form.account.trim() ? '' : t('auth.enterEmailOrUser')
   if (!form.password) {
-    errors.password = 'Enter password'
+    errors.password = t('auth.enterPassword')
   } else if (form.password.length < 6) {
-    errors.password = 'Password must be at least 6 characters'
+    errors.password = t('auth.passwordMin')
   } else {
     errors.password = ''
   }
@@ -111,7 +120,8 @@ const handleLogin = async () => {
 
     if (res.data) {
       setAuth(res.data.token, res.data.user)
-      toast.add({ title: 'Signed in', color: 'success' })
+      syncToRemote()
+      toast.add({ title: t('auth.signedIn'), color: 'success' })
       await router.push('/')
     }
   } finally {
@@ -131,6 +141,14 @@ const handleLogin = async () => {
 
 .auth-brand {
   text-align: center;
+}
+
+.auth-brand__logo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 14px;
+  border-radius: 18px;
 }
 
 .auth-brand__title {

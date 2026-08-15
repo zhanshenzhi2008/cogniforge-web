@@ -1,8 +1,8 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="cf-section-title">Profile</h2>
-      <p class="cf-section-desc">Your name, avatar, and public details.</p>
+      <h2 class="cf-section-title">{{ t('profile.title') }}</h2>
+      <p class="cf-section-desc">{{ t('profile.sub') }}</p>
     </div>
 
     <div class="content-card cf-surface">
@@ -10,7 +10,7 @@
         <div class="avatar-wrapper">
           <UAvatar
             :src="form.avatar_url || undefined"
-            :alt="form.name || '用户'"
+            :alt="form.name || t('common.user')"
             size="3xl"
             :text="form.name?.charAt(0)?.toUpperCase() || 'U'"
             class="user-avatar"
@@ -20,8 +20,8 @@
           </div>
         </div>
         <div class="avatar-info">
-          <h4>您的头像</h4>
-          <p>点击头像上传新照片</p>
+          <h4>{{ t('profile.avatar') }}</h4>
+          <p>{{ t('profile.avatarHint') }}</p>
         </div>
       </div>
 
@@ -35,11 +35,11 @@
 
       <div class="form-section">
         <div class="form-row">
-          <label class="form-label">姓名 <span class="required">*</span></label>
+          <label class="form-label">{{ t('profile.name') }} <span class="required">*</span></label>
           <UInput
             v-model="form.name"
             class="w-full"
-            placeholder="请输入您的姓名"
+            :placeholder="t('profile.namePh')"
             size="sm"
             :color="nameError ? 'error' : 'neutral'"
             @blur="validateName"
@@ -48,18 +48,18 @@
         </div>
 
         <div class="form-row">
-          <label class="form-label">邮箱</label>
+          <label class="form-label">{{ t('common.email') }}</label>
           <UInput
             v-model="form.email"
             class="w-full"
             disabled
             size="sm"
           />
-          <span class="hint-text">邮箱地址不可修改</span>
+          <span class="hint-text">{{ t('profile.emailLocked') }}</span>
         </div>
 
         <div class="form-row">
-          <label class="form-label">账户类型</label>
+          <label class="form-label">{{ t('profile.accountType') }}</label>
           <div class="role-display">
             <UBadge
               size="sm"
@@ -67,38 +67,38 @@
               :color="form.role === 'admin' ? 'error' : 'info'"
               :icon="form.role === 'admin' ? 'i-lucide-shield-check' : 'i-lucide-user'"
             >
-              {{ form.role === 'admin' ? '管理员' : '普通用户' }}
+              {{ form.role === 'admin' ? t('role.admin') : t('role.user') }}
             </UBadge>
           </div>
         </div>
       </div>
 
       <div class="form-actions">
-        <UButton color="neutral" variant="outline" size="sm" :disabled="loading" @click="resetForm">
-          重置
-        </UButton>
-        <UButton color="primary" size="sm" :loading="loading" @click="handleSubmit">
-          保存更改
-        </UButton>
+        <CfButton tone="secondary" icon="i-lucide-rotate-ccw" :disabled="loading" @click="resetForm">
+          {{ t('common.reset') }}
+        </CfButton>
+        <CfButton tone="primary" icon="i-lucide-check" :loading="loading" @click="handleSubmit">
+          {{ t('profile.save') }}
+        </CfButton>
       </div>
     </div>
 
     <div class="content-card danger-zone cf-surface">
       <div class="danger-header">
         <div class="danger-info">
-          <h4>危险区域</h4>
-          <p>以下操作不可逆，请谨慎操作</p>
+          <h4>{{ t('profile.danger') }}</h4>
+          <p>{{ t('profile.dangerHint') }}</p>
         </div>
       </div>
       <div class="danger-actions">
         <div class="danger-item">
           <div class="danger-item-info">
-            <h5>注销账户</h5>
-            <p>永久删除您的账户和所有相关数据</p>
+            <h5>{{ t('profile.deleteAccount') }}</h5>
+            <p>{{ t('profile.deleteHint') }}</p>
           </div>
-          <UButton color="error" variant="outline" size="sm" disabled>
-            暂未开放
-          </UButton>
+          <CfButton tone="danger" icon="i-lucide-user-x" disabled>
+            {{ t('profile.unavailable') }}
+          </CfButton>
         </div>
       </div>
     </div>
@@ -108,6 +108,7 @@
 <script setup lang="ts">
 const toast = useToast()
 const { user, fetchUser } = useAuth()
+const { t } = useLocale()
 
 const loading = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -123,11 +124,11 @@ const form = reactive({
 
 const validateName = () => {
   if (!form.name?.trim()) {
-    nameError.value = '请输入姓名'
+    nameError.value = t('profile.needName')
     return false
   }
   if (form.name.length < 2) {
-    nameError.value = '姓名长度不能少于2个字符'
+    nameError.value = t('profile.nameMin')
     return false
   }
   nameError.value = ''
@@ -144,7 +145,7 @@ const handleAvatarChange = async (event: Event) => {
   if (!file) return
 
   if (file.size > 2 * 1024 * 1024) {
-    toast.add({ title: '图片大小不能超过 2MB', color: 'error' })
+    toast.add({ title: t('profile.imageTooBig'), color: 'error' })
     input.value = ''
     return
   }
@@ -161,11 +162,11 @@ const handleAvatarChange = async (event: Event) => {
 
     if (response?.avatar_url) {
       form.avatar_url = response.avatar_url
-      toast.add({ title: '头像上传成功', color: 'success' })
+      toast.add({ title: t('profile.avatarOk'), color: 'success' })
       await fetchUser()
     }
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '头像上传失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('profile.avatarFail'), color: 'error' })
   } finally {
     loading.value = false
     input.value = ''
@@ -185,10 +186,10 @@ const handleSubmit = async () => {
       },
     })
 
-    toast.add({ title: '个人资料已更新', color: 'success' })
+    toast.add({ title: t('profile.updated'), color: 'success' })
     await fetchUser()
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '更新失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('common.updateFail'), color: 'error' })
   } finally {
     loading.value = false
   }

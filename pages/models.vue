@@ -1,235 +1,334 @@
 <template>
-  <div class="cf-page">
+  <div class="cf-page models-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Models</h1>
-        <p class="cf-page-sub">Providers and default models.</p>
+        <h1 class="cf-page-title">{{ t('models.title') }}</h1>
+        <p class="cf-page-sub">{{ t('models.sub') }}</p>
       </div>
-      <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
-        Add provider
-      </UButton>
-    </div>
-
-    <!-- 当前生效配置 Banner -->
-    <div v-if="activeProvider" class="active-banner">
-      <div class="banner-left">
-        <div class="banner-icon">
-          <UIcon name="i-lucide-cpu" class="size-6" />
+      <div class="header-actions">
+        <div class="view-toggle" role="group" :aria-label="t('models.viewMode')">
+          <CfButton
+            :tone="viewMode === 'card' ? 'icon-accent' : 'icon'"
+            icon="i-lucide-layout-grid"
+            :tip="t('models.cards')"
+            @click="setViewMode('card')"
+          />
+          <CfButton
+            :tone="viewMode === 'list' ? 'icon-accent' : 'icon'"
+            icon="i-lucide-list"
+            :tip="t('models.list')"
+            @click="setViewMode('list')"
+          />
         </div>
-        <div class="banner-info">
-          <div class="banner-title">
-            当前生效配置
-            <UBadge size="sm" variant="subtle" :color="activeProvider.is_default ? 'info' : 'success'">
-              {{ activeProvider.is_default ? '默认' : '首个启用' }}
-            </UBadge>
-          </div>
-          <div class="banner-desc">
-            {{ getProviderMeta(activeProvider.provider)?.icon }}
-            {{ activeProvider.name }}
-            <span class="separator">·</span>
-            {{ activeProvider.default_model }}
-            <span class="separator">·</span>
-            <span :class="['status-dot', activeProvider.status]" />
-            {{ statusLabel(activeProvider.status) }}
-            <span v-if="activeProvider.last_test_at" class="last-test">
-              · 测试于 {{ formatDate(activeProvider.last_test_at) }}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="banner-actions">
-        <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-pencil" @click="handleEdit(activeProvider)">
-          编辑
-        </UButton>
-        <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-refresh-cw" @click="handleTest(activeProvider.id)">
-          测试连接
-        </UButton>
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('models.add') }}
+        </CfButton>
       </div>
     </div>
 
-    <!-- 无生效配置时的提示 -->
-    <div v-else class="no-active-banner">
-      当前没有生效的 AI 配置，请先
-      <UButton color="primary" size="sm" @click="handleCreate">Add provider</UButton>
+    <!-- Active provider — one-line strip -->
+    <div v-if="activeProvider" class="active-strip">
+      <span class="active-strip-label">{{ t('models.active') }}</span>
+      <span class="active-strip-icon">{{ getProviderMeta(activeProvider.provider)?.icon }}</span>
+      <span class="active-strip-name">{{ activeProvider.name }}</span>
+      <span class="active-strip-sep">·</span>
+      <span class="active-strip-model">{{ activeProvider.default_model }}</span>
+      <span class="active-strip-sep">·</span>
+      <span :class="['status-badge', activeProvider.status]">
+        <span class="dot" />{{ statusLabel(activeProvider.status) }}
+      </span>
+      <UBadge
+        size="sm"
+        variant="subtle"
+        :color="activeProvider.is_default ? 'warning' : 'success'"
+        class="active-strip-badge"
+      >
+        {{ activeProvider.is_default ? t('models.default') : t('models.firstEnabled') }}
+      </UBadge>
+      <div class="active-strip-actions">
+        <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(activeProvider)" />
+        <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(activeProvider.id)" />
+      </div>
     </div>
 
-    <!-- 供应商列表 -->
-    <div class="cf-panel">
-      <div class="card-header">
-        <div class="card-header-left">
-          <span class="card-header-title">已配置的供应商</span>
-          <span class="card-header-count">{{ providers.length }} 个</span>
-        </div>
-      </div>
+    <div v-else class="no-active-strip">
+      {{ t('models.noActive') }}
+      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">{{ t('models.add') }}</CfButton>
+    </div>
 
-      <div v-if="loading" class="cf-state">
+    <div class="list-toolbar">
+      <span class="list-count">{{ t('models.count', { n: providers.length }) }}</span>
+      <span class="list-hint">{{ t('models.hint') }}</span>
+    </div>
+
+    <div v-if="loading" class="cf-panel">
+      <div class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>加载中…</span>
+        <span>{{ t('common.loading') }}</span>
       </div>
+    </div>
 
-      <div v-else-if="providers.length === 0" class="cf-state">
+    <div v-else-if="providers.length === 0" class="cf-panel">
+      <div class="cf-state">
         <UIcon name="i-lucide-boxes" class="size-8 opacity-50" />
-        <p>暂无供应商配置，请点击上方添加</p>
+        <p>{{ t('models.empty') }}</p>
       </div>
+    </div>
 
-      <div v-else class="provider-grid">
-        <div
-          v-for="p in providers"
-          :key="p.id"
-          class="provider-card"
-          :class="{
-            'is-enabled': p.is_enabled,
-            'is-default': p.is_default,
-            'is-error': p.status === 'error',
-          }"
-        >
-          <div class="provider-card-header">
-            <div class="provider-meta">
-              <div
-                class="provider-icon-wrap"
-                :style="{ background: getProviderMeta(p.provider)?.color + '18', color: getProviderMeta(p.provider)?.color }"
-              >
-                {{ getProviderMeta(p.provider)?.icon }}
+    <!-- Card view (default): compact 3–4+ columns -->
+    <div v-else-if="viewMode === 'card'" class="provider-grid">
+      <div
+        v-for="p in providers"
+        :key="p.id"
+        class="provider-card"
+        :class="{
+          'is-enabled': p.is_enabled,
+          'is-default': p.is_default,
+          'is-error': p.status === 'error',
+        }"
+        :title="t('models.hint')"
+        @dblclick="handleView(p)"
+      >
+        <div class="provider-card-top">
+          <div class="provider-cell">
+            <span
+              class="provider-icon"
+              :style="{ background: getProviderMeta(p.provider)?.color + '18', color: getProviderMeta(p.provider)?.color }"
+            >
+              {{ getProviderMeta(p.provider)?.icon }}
+            </span>
+            <div class="provider-cell-text">
+              <div class="provider-name-row">
+                <span class="provider-name" :title="p.name">{{ p.name }}</span>
+                <UBadge v-if="p.is_default" size="sm" variant="subtle" color="warning">{{ t('models.default') }}</UBadge>
               </div>
-              <div class="provider-title-wrap">
-                <div class="provider-name-row">
-                  <span class="provider-name">{{ p.name }}</span>
-                  <UBadge
-                    v-if="p.is_default"
-                    size="sm"
-                    variant="subtle"
-                    color="warning"
-                  >
-                    默认
-                  </UBadge>
-                  <UBadge
-                    v-else-if="p.is_enabled && !p.is_default"
-                    size="sm"
-                    variant="subtle"
-                    color="success"
-                  >
-                    启用
-                  </UBadge>
-                </div>
-                <span class="provider-type-label">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
-              </div>
+              <span class="provider-type">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
             </div>
-            <UTooltip text="删除">
-              <UButton
-                color="error"
-                variant="ghost"
-                size="sm"
-                icon="i-lucide-trash-2"
-                @click="askDelete(p)"
-              />
-            </UTooltip>
           </div>
+        </div>
 
-          <div class="provider-card-body">
-            <div class="provider-fields-grid">
-              <div class="provider-field">
-                <span class="field-label">默认模型</span>
-                <span class="field-value">{{ p.default_model || '—' }}</span>
-              </div>
-              <div class="provider-field">
-                <span class="field-label">状态</span>
-                <span :class="['status-badge', p.status]">
+        <div class="provider-card-meta">
+          <code class="model-code" :title="p.default_model || ''">{{ p.default_model || '—' }}</code>
+          <span :class="['status-badge', p.status]" :title="p.status === 'error' ? p.last_error || '' : undefined">
+            <span class="dot" />{{ statusLabel(p.status) }}
+          </span>
+        </div>
+        <div class="provider-card-url cf-muted" :title="p.base_url || ''">{{ p.base_url || '—' }}</div>
+
+        <div class="provider-card-footer" @dblclick.stop>
+          <USwitch
+            :model-value="p.is_enabled"
+            size="sm"
+            @update:model-value="handleToggleEnable(p)"
+          />
+          <div class="action-btns">
+            <CfButton
+              v-if="!p.is_default"
+              tone="icon"
+              icon="i-lucide-star"
+              :tip="t('models.setDefault')"
+              :loading="settingDefaultId === p.id"
+              @click="handleSetDefault(p.id)"
+            />
+            <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(p.id)" />
+            <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(p)" />
+            <CfButton tone="icon-danger" icon="i-lucide-trash-2" :tip="t('common.delete')" @click="askDelete(p)" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('models.provider') }}</th>
+              <th>{{ t('common.model') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>Base URL</th>
+              <th>{{ t('models.enable') }}</th>
+              <th class="cf-col-actions actions-col">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="p in providers"
+              :key="p.id"
+              class="list-row"
+              :class="{
+                'row-default': p.is_default,
+                'row-error': p.status === 'error',
+              }"
+              :title="t('models.hint')"
+              @dblclick="handleView(p)"
+            >
+              <td>
+                <div class="provider-cell">
+                  <span
+                    class="provider-icon"
+                    :style="{ background: getProviderMeta(p.provider)?.color + '18', color: getProviderMeta(p.provider)?.color }"
+                  >
+                    {{ getProviderMeta(p.provider)?.icon }}
+                  </span>
+                  <div class="provider-cell-text">
+                    <div class="provider-name-row">
+                      <span class="provider-name">{{ p.name }}</span>
+                      <UBadge v-if="p.is_default" size="sm" variant="subtle" color="warning">{{ t('models.default') }}</UBadge>
+                    </div>
+                    <span class="provider-type">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <code class="model-code">{{ p.default_model || '—' }}</code>
+              </td>
+              <td>
+                <span :class="['status-badge', p.status]" :title="p.status === 'error' ? p.last_error || '' : undefined">
                   <span class="dot" />{{ statusLabel(p.status) }}
                 </span>
-              </div>
-            </div>
-            <div class="provider-field provider-field--full">
-              <span class="field-label">Base URL</span>
-              <span class="field-value ellipsis cf-muted">{{ p.base_url || '—' }}</span>
-            </div>
-            <div v-if="p.last_test_at" class="provider-field provider-field--full">
-              <span class="field-label">最近测试</span>
-              <span class="field-value cf-muted">{{ formatDate(p.last_test_at) }}</span>
-            </div>
-          </div>
-
-          <div v-if="p.status === 'error' && p.last_error" class="error-hint">
-            <UIcon name="i-lucide-alert-circle" class="size-3 shrink-0" />
-            <span class="ellipsis">{{ p.last_error }}</span>
-          </div>
-
-          <div class="provider-card-footer">
-            <div class="footer-left">
-              <UTooltip :text="p.is_enabled ? '禁用' : '启用'">
+              </td>
+              <td class="cf-muted url-cell" :title="p.base_url || ''">{{ p.base_url || '—' }}</td>
+              <td @dblclick.stop>
                 <USwitch
                   :model-value="p.is_enabled"
                   size="sm"
                   @update:model-value="handleToggleEnable(p)"
                 />
-              </UTooltip>
-            </div>
-            <div class="footer-right">
-              <UTooltip v-if="!p.is_default" text="设为默认">
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-lucide-star"
-                  :loading="settingDefaultId === p.id"
-                  @click="handleSetDefault(p.id)"
-                />
-              </UTooltip>
-              <UTooltip text="测试连接">
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-lucide-refresh-cw"
-                  @click="handleTest(p.id)"
-                />
-              </UTooltip>
-              <UTooltip text="编辑">
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="sm"
-                  icon="i-lucide-pencil"
-                  @click="handleEdit(p)"
-                />
-              </UTooltip>
-            </div>
-          </div>
-        </div>
+              </td>
+              <td @dblclick.stop>
+                <div class="action-btns">
+                  <CfButton
+                    v-if="!p.is_default"
+                    tone="icon"
+                    icon="i-lucide-star"
+                    :tip="t('models.setDefault')"
+                    :loading="settingDefaultId === p.id"
+                    @click="handleSetDefault(p.id)"
+                  />
+                  <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(p.id)" />
+                  <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(p)" />
+                  <CfButton tone="icon-danger" icon="i-lucide-trash-2" :tip="t('common.delete')" @click="askDelete(p)" />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- 添加/编辑弹窗 -->
+    <!-- Add / view / edit (same modal) -->
     <UModal
       v-model:open="dialogVisible"
-      :title="isEditing ? '编辑供应商' : '添加供应商'"
+      :title="dialogTitle"
+      :description="dialogDescription"
       :ui="{ content: 'sm:max-w-xl' }"
     >
       <template #body>
-        <form id="provider-form" class="form-grid" @submit.prevent="handleSubmit">
+        <!-- View: read-only detail sheet -->
+        <div v-if="dialogMode === 'view' && viewingProvider" class="detail-sheet">
+          <div class="detail-hero">
+            <span
+              class="detail-hero-icon"
+              :style="{
+                background: getProviderMeta(viewingProvider.provider)?.color + '18',
+                color: getProviderMeta(viewingProvider.provider)?.color,
+              }"
+            >
+              {{ getProviderMeta(viewingProvider.provider)?.icon }}
+            </span>
+            <div class="detail-hero-text">
+              <div class="detail-hero-name">{{ viewingProvider.name }}</div>
+              <div class="detail-hero-sub">
+                {{ getProviderMeta(viewingProvider.provider)?.label || viewingProvider.provider }}
+                <span class="active-strip-sep">·</span>
+                <span :class="['status-badge', viewingProvider.status]">
+                  <span class="dot" />{{ statusLabel(viewingProvider.status) }}
+                </span>
+              </div>
+              <div class="detail-hero-badges">
+                <UBadge v-if="viewingProvider.is_default" size="sm" variant="subtle" color="warning">{{ t('models.default') }}</UBadge>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="viewingProvider.is_enabled ? 'success' : 'neutral'"
+                >
+                  {{ viewingProvider.is_enabled ? t('models.enabledOn') : t('models.enabledOff') }}
+                </UBadge>
+              </div>
+            </div>
+          </div>
+
+          <dl class="detail-list">
+            <div class="detail-row">
+              <dt>{{ t('models.defaultModel') }}</dt>
+              <dd><code class="model-code">{{ viewingProvider.default_model || '—' }}</code></dd>
+            </div>
+            <div class="detail-row">
+              <dt>Base URL</dt>
+              <dd class="detail-mono">{{ viewingProvider.base_url || '—' }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>API Key</dt>
+              <dd class="detail-mono">{{ maskApiKey(viewingProvider.api_key) }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('models.priority') }}</dt>
+              <dd>{{ viewingProvider.priority }}</dd>
+            </div>
+            <div v-if="viewingProvider.extra_headers" class="detail-row detail-row--block">
+              <dt>Extra Headers</dt>
+              <dd>
+                <pre class="detail-pre">{{ formatExtraHeaders(viewingProvider.extra_headers) }}</pre>
+              </dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('models.lastTest') }}</dt>
+              <dd>{{ d(viewingProvider.last_test_at) }}</dd>
+            </div>
+            <div v-if="viewingProvider.status === 'error' && viewingProvider.last_error" class="detail-row detail-row--block">
+              <dt>{{ t('models.lastError') }}</dt>
+              <dd class="detail-error">{{ viewingProvider.last_error }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('common.createdAt') }}</dt>
+              <dd>{{ d(viewingProvider.created_at) }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('common.updatedAt') }}</dt>
+              <dd>{{ d(viewingProvider.updated_at) }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- Create / Edit form -->
+        <form v-else id="provider-form" class="form-grid" @submit.prevent="handleSubmit">
           <div class="field">
-            <label class="field__label">供应商类型</label>
-            <div class="provider-type-grid">
+            <label class="field__label">{{ t('models.providerType') }}</label>
+            <div class="provider-type-grid" :class="{ 'is-locked': dialogMode === 'edit' }">
               <div
                 v-for="[key, meta] in Object.entries(PROVIDER_META)"
                 :key="key"
                 class="provider-type-option"
-                :class="{ active: form.provider === key }"
-                @click="selectProvider(key)"
+                :class="{ active: form.provider === key, disabled: dialogMode === 'edit' && form.provider !== key }"
+                @click="dialogMode === 'create' && selectProvider(key)"
               >
                 <span class="option-icon">{{ meta.icon }}</span>
                 <span class="option-label" :class="meta.local ? 'local-hint' : ''">{{ meta.label }}</span>
-                <span v-if="meta.local" class="local-badge">本地</span>
+                <span v-if="meta.local" class="local-badge">{{ t('models.local') }}</span>
               </div>
             </div>
             <p v-if="errors.provider" class="field__error">{{ errors.provider }}</p>
+            <p v-if="dialogMode === 'edit'" class="field__hint">{{ t('models.typeLocked') }}</p>
           </div>
 
           <div class="field">
-            <label class="field__label">配置名称</label>
+            <label class="field__label">{{ t('models.configName') }}</label>
             <UInput
               v-model="form.name"
               class="w-full"
-              placeholder="例如：我的 OpenAI"
+              :placeholder="t('models.configNamePh')"
               :color="errors.name ? 'error' : undefined"
               @update:model-value="errors.name = ''"
             />
@@ -242,7 +341,7 @@
               v-model="form.api_key"
               class="w-full"
               type="password"
-              placeholder="请输入 API Key"
+              :placeholder="dialogMode === 'edit' ? t('models.keyKeep') : t('models.keyPh')"
               :color="errors.api_key ? 'error' : undefined"
               @update:model-value="errors.api_key = ''"
             />
@@ -254,13 +353,13 @@
             <UInput
               v-model="form.base_url"
               class="w-full"
-              :placeholder="`默认：${form.provider ? PROVIDER_META[form.provider]?.defaultBaseURL : ''}`"
+              :placeholder="t('models.baseDefault', { url: form.provider ? PROVIDER_META[form.provider]?.defaultBaseURL : '' })"
             />
           </div>
 
           <div class="field">
-            <label class="field__label">默认模型</label>
-            <UInput v-model="form.default_model" class="w-full" placeholder="例如：gpt-4o" />
+            <label class="field__label">{{ t('models.defaultModel') }}</label>
+            <UInput v-model="form.default_model" class="w-full" :placeholder="t('models.modelPh')" />
           </div>
 
           <div v-if="form.provider === 'openrouter'" class="field">
@@ -272,12 +371,12 @@
               placeholder='{"HTTP-Referer": "https://your-site.com", "X-OpenRouter-Title": "Your App"}'
             />
             <p class="field__hint">
-              JSON 格式，用于 OpenRouter 的 HTTP-Referer 和 X-OpenRouter-Title 等 Header
+              {{ t('models.headersHint') }}
             </p>
           </div>
 
           <div class="field">
-            <label class="field__label">优先级</label>
+            <label class="field__label">{{ t('models.priority') }}</label>
             <UInput
               v-model.number="form.priority"
               class="w-full"
@@ -285,28 +384,62 @@
               :min="0"
               :max="100"
             />
-            <p class="field__hint">数字越小优先级越高，多个启用时使用优先级最高的</p>
+            <p class="field__hint">{{ t('models.priorityHint') }}</p>
           </div>
         </form>
       </template>
 
       <template #footer>
-        <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="dialogVisible = false">取消</UButton>
-          <UButton form="provider-form" type="submit" color="primary" :loading="submitting">
-            {{ isEditing ? '保存' : '添加' }}
-          </UButton>
+        <div class="modal-actions" :class="{ 'modal-actions--view': dialogMode === 'view' }">
+          <template v-if="dialogMode === 'view'">
+            <div class="modal-actions__right">
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-refresh-cw"
+                @click="viewingProvider && handleTest(viewingProvider.id)"
+              >
+                {{ t('models.test') }}
+              </CfButton>
+              <CfButton tone="primary" icon="i-lucide-pencil" @click="enterEditFromView">
+                {{ t('common.edit') }}
+              </CfButton>
+            </div>
+          </template>
+          <template v-else>
+            <div class="modal-actions__left">
+              <CfButton
+                v-if="dialogMode === 'edit'"
+                tone="secondary"
+                icon="i-lucide-arrow-left"
+                @click="dialogMode = 'view'"
+              >
+                {{ t('common.detail') }}
+              </CfButton>
+            </div>
+            <div class="modal-actions__right">
+              <CfButton tone="secondary" icon="i-lucide-x" @click="dialogVisible = false">{{ t('common.cancel') }}</CfButton>
+              <CfButton
+                form="provider-form"
+                type="submit"
+                tone="primary"
+                :icon="dialogMode === 'edit' ? 'i-lucide-check' : 'i-lucide-plus'"
+                :loading="submitting"
+              >
+                {{ dialogMode === 'edit' ? t('common.save') : t('common.add') }}
+              </CfButton>
+            </div>
+          </template>
         </div>
       </template>
     </UModal>
 
-    <!-- 测试结果弹窗 -->
-    <UModal v-model:open="testModalVisible" title="连接测试结果" :ui="{ content: 'sm:max-w-md' }">
+    <!-- Connection test result -->
+    <UModal v-model:open="testModalVisible" :title="t('models.testTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <div class="test-result">
           <div v-if="testLoading" class="test-loading">
             <UIcon name="i-lucide-loader-circle" class="size-10 animate-spin" />
-            <span>正在测试连接...</span>
+            <span>{{ t('models.testing') }}</span>
           </div>
           <div v-else-if="testResult" class="test-result-body">
             <div class="result-icon" :class="testResult.success ? 'success' : 'error'">
@@ -317,30 +450,35 @@
             </div>
             <p class="result-message">{{ testResult.message }}</p>
             <p v-if="testResult.latency_ms" class="result-latency">
-              耗时 {{ testResult.latency_ms }}ms
+              {{ t('models.latency', { ms: testResult.latency_ms }) }}
             </p>
           </div>
         </div>
       </template>
       <template #footer>
-        <div class="modal-actions modal-actions--center">
-          <UButton color="neutral" variant="outline" @click="testModalVisible = false">关闭</UButton>
-          <UButton color="primary" @click="reTest">重新测试</UButton>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="primary" icon="i-lucide-refresh-cw" @click="reTest">{{ t('models.retest') }}</CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
-    <!-- 删除确认 -->
-    <UModal v-model:open="deleteVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+    <!-- Delete confirm -->
+    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
-          确定要删除供应商「{{ deleting?.name }}」吗？删除后无法恢复。
+          {{ t('models.deleteText', { name: deleting?.name ?? '' }) }}
         </p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
-          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="danger" strong icon="i-lucide-trash-2" :loading="deletingLoading" @click="confirmDelete">
+              {{ t('common.delete') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -360,6 +498,7 @@ import {
 definePageMeta({ layout: 'default' })
 
 const toast = useToast()
+const { t, d } = useLocale()
 const { list, getActive, create, update, remove, setDefault, test } = useProviders()
 
 const loading = ref(false)
@@ -367,8 +506,32 @@ const submitting = ref(false)
 const providers = ref<AIProvider[]>([])
 const activeProvider = ref<AIProvider | null>(null)
 const dialogVisible = ref(false)
-const isEditing = ref(false)
+const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const editingId = ref('')
+const viewingProvider = ref<AIProvider | null>(null)
+
+type ModelsViewMode = 'card' | 'list'
+const VIEW_STORAGE_KEY = 'cf-models-view'
+const viewMode = ref<ModelsViewMode>('card')
+
+const dialogTitle = computed(() => {
+  if (dialogMode.value === 'create') return t('models.createTitle')
+  if (dialogMode.value === 'view') return t('models.viewTitle')
+  return t('models.editTitle')
+})
+
+const dialogDescription = computed(() => {
+  if (dialogMode.value === 'create') return t('models.createDesc')
+  if (dialogMode.value === 'view') return t('models.viewDesc')
+  return t('models.editDesc')
+})
+
+function setViewMode(mode: ModelsViewMode) {
+  viewMode.value = mode
+  if (import.meta.client) {
+    localStorage.setItem(VIEW_STORAGE_KEY, mode)
+  }
+}
 
 const deleteVisible = ref(false)
 const deletingLoading = ref(false)
@@ -401,17 +564,26 @@ function getProviderMeta(key: string) {
 }
 
 function statusLabel(status: string): string {
-  const map: Record<string, string> = {
-    active: '正常',
-    error: '异常',
-    testing: '测试中',
+  if (status === 'active' || status === 'error' || status === 'testing') {
+    return t(`status.${status}`)
   }
-  return map[status] || status
+  return status
 }
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleString('zh-CN')
+function maskApiKey(key?: string) {
+  if (!key) return '—'
+  if (/[*•]/.test(key)) return key
+  if (key.length <= 8) return '••••••••'
+  return `${key.slice(0, 3)}••••${key.slice(-4)}`
+}
+
+function formatExtraHeaders(headers: Record<string, any> | null) {
+  if (!headers) return '—'
+  try {
+    return JSON.stringify(headers, null, 2)
+  } catch {
+    return String(headers)
+  }
 }
 
 function selectProvider(key: string) {
@@ -421,25 +593,20 @@ function selectProvider(key: string) {
 }
 
 function validate() {
-  errors.provider = form.provider ? '' : '请选择供应商类型'
-  errors.name = form.name.trim() ? '' : '配置名称不能为空'
-  errors.api_key = form.api_key.trim() ? '' : 'API Key 不能为空'
+  errors.provider = form.provider ? '' : t('models.needType')
+  errors.name = form.name.trim() ? '' : t('models.needName')
+  if (dialogMode.value === 'create') {
+    errors.api_key = form.api_key.trim() ? '' : t('models.needKey')
+  } else {
+    errors.api_key = ''
+  }
   return !errors.provider && !errors.name && !errors.api_key
 }
 
-const handleCreate = () => {
-  isEditing.value = false
-  editingId.value = ''
-  resetForm()
-  dialogVisible.value = true
-}
-
-const handleEdit = (p: AIProvider) => {
-  isEditing.value = true
-  editingId.value = p.id
+function fillFormFromProvider(p: AIProvider) {
   form.provider = p.provider
   form.name = p.name
-  form.api_key = p.api_key || ''
+  form.api_key = ''
   form.base_url = p.base_url || ''
   form.default_model = p.default_model || ''
   form.priority = p.priority
@@ -455,7 +622,36 @@ const handleEdit = (p: AIProvider) => {
   errors.provider = ''
   errors.name = ''
   errors.api_key = ''
+}
+
+const handleCreate = () => {
+  dialogMode.value = 'create'
+  editingId.value = ''
+  viewingProvider.value = null
+  resetForm()
   dialogVisible.value = true
+}
+
+const handleView = (p: AIProvider) => {
+  dialogMode.value = 'view'
+  viewingProvider.value = p
+  editingId.value = p.id
+  fillFormFromProvider(p)
+  dialogVisible.value = true
+}
+
+const handleEdit = (p: AIProvider) => {
+  dialogMode.value = 'edit'
+  viewingProvider.value = p
+  editingId.value = p.id
+  fillFormFromProvider(p)
+  dialogVisible.value = true
+}
+
+const enterEditFromView = () => {
+  if (!viewingProvider.value) return
+  dialogMode.value = 'edit'
+  fillFormFromProvider(viewingProvider.value)
 }
 
 const askDelete = (p: AIProvider) => {
@@ -472,7 +668,7 @@ const confirmDelete = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: '删除成功', color: 'success' })
+    toast.add({ title: t('common.deleteOk'), color: 'success' })
     deleteVisible.value = false
     await fetchAll()
   } finally {
@@ -488,7 +684,7 @@ const handleToggleEnable = async (p: AIProvider) => {
     toast.add({ title: res.error, color: 'error' })
     return
   }
-  toast.add({ title: newEnabled ? '已启用' : '已禁用', color: 'success' })
+  toast.add({ title: newEnabled ? t('models.enabledToast') : t('models.disabledToast'), color: 'success' })
   await fetchAll()
 }
 
@@ -500,7 +696,7 @@ const handleSetDefault = async (id: string) => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: '已设为默认', color: 'success' })
+    toast.add({ title: t('models.defaultToast'), color: 'success' })
     await fetchAll()
   } finally {
     settingDefaultId.value = ''
@@ -537,12 +733,12 @@ const handleSubmit = async () => {
       try {
         extraHeaders = JSON.parse(form.extra_headers_raw)
       } catch {
-        toast.add({ title: 'Extra Headers 格式错误，请输入有效的 JSON', color: 'error' })
+        toast.add({ title: t('models.headersBad'), color: 'error' })
         return
       }
     }
 
-    if (isEditing.value) {
+    if (dialogMode.value === 'edit') {
       const input: UpdateProviderInput = {
         name: form.name,
         base_url: form.base_url,
@@ -556,7 +752,7 @@ const handleSubmit = async () => {
         toast.add({ title: res.error, color: 'error' })
         return
       }
-      toast.add({ title: '保存成功', color: 'success' })
+      toast.add({ title: t('common.saveOk'), color: 'success' })
     } else {
       const input: CreateProviderInput = {
         provider: form.provider,
@@ -572,12 +768,12 @@ const handleSubmit = async () => {
         toast.add({ title: res.error, color: 'error' })
         return
       }
-      toast.add({ title: '添加成功', color: 'success' })
+      toast.add({ title: t('models.addOk'), color: 'success' })
     }
     dialogVisible.value = false
     await fetchAll()
   } catch {
-    toast.add({ title: isEditing.value ? '保存失败' : '添加失败', color: 'error' })
+    toast.add({ title: dialogMode.value === 'edit' ? t('common.saveFail') : t('models.addFail'), color: 'error' })
   } finally {
     submitting.value = false
   }
@@ -607,261 +803,422 @@ const fetchAll = async () => {
     providers.value = listRes.data || []
     activeProvider.value = activeRes.data || null
   } catch {
-    toast.add({ title: '获取供应商列表失败', color: 'error' })
+    toast.add({ title: t('models.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
 }
 
 onMounted(() => {
+  if (import.meta.client) {
+    const saved = localStorage.getItem(VIEW_STORAGE_KEY)
+    if (saved === 'card' || saved === 'list') {
+      viewMode.value = saved
+    }
+  }
   fetchAll()
 })
 </script>
 
 <style scoped>
-/* Active Banner — teal/accent, not purple/indigo */
-.active-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, var(--cf-accent) 0%, color-mix(in srgb, var(--cf-accent) 75%, #0d9488) 100%);
-  border-radius: 12px;
-  color: white;
-  margin-bottom: 16px;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--cf-accent) 35%, transparent);
+.models-page {
+  max-width: 1360px;
 }
 
-.banner-left {
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.banner-icon {
-  width: 44px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.banner-info {
-  display: flex;
-  flex-direction: column;
+.view-toggle {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
-  min-width: 0;
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--cf-line);
+  background: var(--cf-nav-surface, var(--cf-bg-elevated));
 }
 
-.banner-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.banner-desc {
-  font-size: 13px;
-  opacity: 0.9;
-}
-
-.banner-desc .separator {
-  margin: 0 4px;
-  opacity: 0.5;
-}
-
-.banner-desc .last-test {
-  opacity: 0.75;
-}
-
-.banner-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.no-active-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 28px;
-  background: var(--cf-surface, #fff);
-  border-radius: 12px;
-  border: 1px dashed var(--cf-line);
-  margin-bottom: 16px;
+.list-count {
+  font-size: 0.8rem;
   color: var(--cf-ink-soft);
-  text-align: center;
+  letter-spacing: 0.01em;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-  padding: 10px 10px 0;
-}
-
-.card-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-header-title {
-  font-weight: 600;
-  color: var(--cf-ink);
-}
-
-.card-header-count {
-  font-size: 12px;
+.list-hint {
+  font-size: 0.75rem;
   color: var(--cf-ink-soft);
+  opacity: 0.85;
 }
 
 .provider-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 16px;
-  padding: 0 10px 10px;
-}
-
-.provider-card {
-  background: var(--cf-surface, #fff);
-  border: 1.5px solid var(--cf-line);
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
 }
 
+.provider-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: var(--cf-nav-surface, var(--cf-bg-elevated));
+  min-width: 0;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
 .provider-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in oklab, var(--cf-accent) 35%, var(--cf-line));
+  transform: translateY(-1px);
+}
+
+.provider-card:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 2px;
+}
+
+.list-row {
+  cursor: pointer;
+}
+
+.detail-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detail-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-accent) 6%, var(--cf-nav-surface, var(--cf-bg-elevated)));
+}
+
+.detail-hero-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.detail-hero-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-hero-name {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cf-ink);
+  line-height: 1.2;
+}
+
+.detail-hero-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--cf-ink-soft);
+}
+
+.detail-hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.detail-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--cf-line);
+  align-items: start;
+}
+
+.detail-row:last-child {
+  border-bottom: 0;
+}
+
+.detail-row dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+  padding-top: 2px;
+}
+
+.detail-row dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--cf-ink);
+  min-width: 0;
+  word-break: break-word;
+}
+
+.detail-row--block {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.detail-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.detail-pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--cf-ink);
+}
+
+.detail-error {
+  color: var(--cf-danger);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.provider-type-grid.is-locked .provider-type-option.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.provider-type-grid.is-locked .provider-type-option:not(.active) {
+  cursor: default;
 }
 
 .provider-card.is-enabled {
-  border-color: color-mix(in srgb, var(--cf-accent) 35%, var(--cf-line));
-  background: color-mix(in srgb, var(--cf-accent) 6%, transparent);
-}
-
-.provider-card.is-error {
-  border-color: color-mix(in srgb, var(--cf-danger) 40%, var(--cf-line));
-  background: color-mix(in srgb, var(--cf-danger) 6%, transparent);
+  border-color: color-mix(in oklab, var(--cf-accent) 28%, var(--cf-line));
 }
 
 .provider-card.is-default {
-  border-color: #fde68a;
+  box-shadow: inset 3px 0 0 var(--cf-accent);
 }
 
-.provider-card-header {
+.provider-card.is-error {
+  border-color: color-mix(in oklab, var(--cf-danger) 35%, var(--cf-line));
+  background: color-mix(in oklab, var(--cf-danger) 4%, var(--cf-nav-surface, var(--cf-bg-elevated)));
+}
+
+.provider-card-top {
+  min-width: 0;
+}
+
+.provider-card-meta {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
-.provider-meta {
+.provider-card-meta .model-code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.provider-card-url {
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--cf-line);
+}
+
+.active-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--cf-accent) 28%, var(--cf-line));
+  background: color-mix(in oklab, var(--cf-accent) 8%, var(--cf-nav-surface, var(--cf-bg-elevated)));
+  font-size: 0.875rem;
+}
+
+.active-strip-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cf-accent-ink, var(--cf-accent));
+}
+
+.active-strip-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.active-strip-name {
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.active-strip-model {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--cf-ink);
+}
+
+.active-strip-sep {
+  color: var(--cf-ink-soft);
+  opacity: 0.55;
+}
+
+.active-strip-badge {
+  margin-left: 2px;
+}
+
+.active-strip-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.no-active-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px dashed var(--cf-line);
+  color: var(--cf-ink-soft);
+  font-size: 0.875rem;
+}
+
+.provider-cell {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
 
-.provider-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
+.provider-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
-.provider-title-wrap {
+.provider-cell-text {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  gap: 1px;
 }
 
 .provider-name-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 
 .provider-name {
   font-weight: 600;
-  font-size: 14px;
   color: var(--cf-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.provider-type-label {
-  font-size: 12px;
+.provider-type {
+  font-size: 0.75rem;
   color: var(--cf-ink-soft);
 }
 
-.provider-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.provider-fields-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.provider-field {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  font-size: 12px;
-  min-width: 0;
-}
-
-.provider-field--full {
-  grid-column: 1 / -1;
-}
-
-.field-label {
-  color: var(--cf-ink-soft);
-  width: 56px;
-  flex-shrink: 0;
-  padding-top: 1px;
-}
-
-.field-value {
-  font-size: 12px;
+.model-code {
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: var(--cf-ink);
-  min-width: 0;
+  background: transparent;
 }
 
-.ellipsis {
+.url-cell {
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.actions-col {
+  width: 168px;
+}
+
+.row-default td:first-child {
+  box-shadow: inset 3px 0 0 var(--cf-accent);
+}
+
+.row-error td {
+  background: color-mix(in oklab, var(--cf-danger) 4%, transparent);
 }
 
 .status-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .status-badge .dot {
@@ -876,44 +1233,6 @@ onMounted(() => {
 .status-badge.error .dot { background: #dc2626; }
 .status-badge.testing { color: #ca8a04; }
 .status-badge.testing .dot { background: #ca8a04; }
-
-.provider-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px solid var(--cf-line);
-  gap: 4px;
-}
-
-.footer-left,
-.footer-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.error-hint {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--cf-danger);
-  background: color-mix(in srgb, var(--cf-danger) 8%, transparent);
-  padding: 6px 8px;
-  border-radius: 6px;
-}
-
-.status-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.status-dot.active { background: #22c55e; }
-.status-dot.error { background: #ef4444; }
-.status-dot.testing { background: #eab308; }
 
 .provider-type-grid {
   display: grid;
@@ -1006,14 +1325,18 @@ onMounted(() => {
   color: var(--cf-ink-soft);
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
-.modal-actions--center {
-  justify-content: center;
+.modal-actions__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
 }
 
 .delete-text {
@@ -1062,13 +1385,33 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .active-banner {
-    flex-direction: column;
-    align-items: flex-start;
+  .active-strip-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .provider-grid {
+    grid-template-columns: 1fr;
   }
 
   .provider-type-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .url-cell {
+    max-width: 120px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .provider-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1400px) {
+  .provider-grid {
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 </style>

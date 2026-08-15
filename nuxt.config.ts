@@ -42,7 +42,10 @@ export default defineNuxtConfig({
         { name: 'description', content: 'AI Agent Platform' },
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg?v=hd1' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png?v=hd1' },
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16.png?v=hd1' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png?v=hd1' },
         {
           rel: 'stylesheet',
           href: 'https://fonts.bunny.net/css?family=ibm-plex-sans:400,500,600|jetbrains-mono:400,500|source-serif-4:600,700|syne:600,700&display=swap',

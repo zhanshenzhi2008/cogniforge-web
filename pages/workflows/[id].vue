@@ -2,13 +2,15 @@
   <div class="workflow-editor">
     <div class="mobile-desktop-tip" role="status">
       <UIcon name="i-lucide-monitor" class="size-4" />
-      <span>工作流画布建议在电脑上编辑；手机端仅便于查看。</span>
-      <UButton size="xs" color="neutral" variant="soft" to="/workflows">返回列表</UButton>
+      <span>{{ t('editor.mobileTip') }}</span>
+      <CfButton tone="secondary" icon="i-lucide-arrow-left" @click="navigateTo('/workflows')">
+        {{ t('editor.backList') }}
+      </CfButton>
     </div>
     <div class="editor-header">
-      <UButton color="neutral" variant="outline" icon="i-lucide-arrow-left" @click="handleBack">
-        返回
-      </UButton>
+      <CfButton tone="secondary" icon="i-lucide-arrow-left" @click="handleBack">
+        {{ t('common.back') }}
+      </CfButton>
       <h3>{{ workflowName }}</h3>
       <UBadge
         v-if="currentWorkflow"
@@ -19,49 +21,48 @@
         {{ statusText(currentWorkflow.status) }}
       </UBadge>
       <UBadge v-else-if="isSmokeTest" size="sm" variant="subtle" color="warning">
-        路由测试
+        {{ t('editor.routeTest') }}
       </UBadge>
       <div class="header-actions">
-        <UButton
-          color="neutral"
-          variant="outline"
+        <CfButton
+          tone="secondary"
           icon="i-lucide-pencil"
           :disabled="isSmokeTest"
           @click="editPopoverShow = true"
         >
-          编辑
-        </UButton>
-        <UButton
-          color="neutral"
-          variant="outline"
+          {{ t('common.edit') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
+          icon="i-lucide-check"
           :disabled="isSmokeTest"
           :loading="saving"
           @click="handleSave"
         >
-          保存
-        </UButton>
-        <UButton
-          color="neutral"
-          variant="outline"
+          {{ t('common.save') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
           icon="i-lucide-bug"
           @click="showDebugPanel = !showDebugPanel"
         >
-          调试
-        </UButton>
-        <UButton
-          color="primary"
+          {{ t('editor.debug') }}
+        </CfButton>
+        <CfButton
+          tone="primary"
+          icon="i-lucide-play"
           :disabled="isSmokeTest"
           :loading="executing"
           @click="handleExecute"
         >
-          执行
-        </UButton>
+          {{ t('editor.run') }}
+        </CfButton>
       </div>
     </div>
 
     <div class="editor-container">
       <div class="node-palette">
-        <div class="palette-title">节点</div>
+        <div class="palette-title">{{ t('editor.nodes') }}</div>
         <div
           v-for="type in nodeTypes"
           :key="type"
@@ -85,7 +86,7 @@
             @edges-change="handleEdgesChange"
           />
           <template #fallback>
-            <div class="canvas-loading">加载画布中...</div>
+            <div class="canvas-loading">{{ t('editor.loading') }}</div>
           </template>
         </ClientOnly>
       </div>
@@ -93,97 +94,111 @@
 
     <UModal
       v-model:open="editPopoverShow"
-      title="编辑基本信息"
+      :title="t('editor.editInfo')"
       :ui="{ content: 'sm:max-w-md' }"
     >
       <template #body>
         <div class="form-grid">
           <div class="field">
-            <label class="field__label">名称</label>
-            <UInput v-model="workflowBasicInfo.name" class="w-full" placeholder="工作流名称" />
+            <label class="field__label">{{ t('common.name') }}</label>
+            <UInput v-model="workflowBasicInfo.name" class="w-full" :placeholder="t('editor.namePh')" />
           </div>
           <div class="field">
-            <label class="field__label">描述</label>
+            <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
               v-model="workflowBasicInfo.description"
               class="w-full"
               :rows="3"
-              placeholder="工作流描述"
+              :placeholder="t('editor.descPh')"
             />
           </div>
         </div>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" size="sm" @click="handleCancelEdit">取消</UButton>
-          <UButton color="primary" size="sm" :loading="savingBasic" @click="handleSaveBasic">保存</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="handleCancelEdit">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="primary"
+              icon="i-lucide-check"
+              :loading="savingBasic"
+              @click="handleSaveBasic"
+            >
+              {{ t('common.save') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
     <USlideover
       v-model:open="configDrawer"
-      :title="selectedNode ? `配置 ${getNodeLabel(selectedNode.type)}` : '节点配置'"
+      :title="selectedNode ? t('editor.configType', { name: getNodeLabel(selectedNode.type) }) : t('editor.nodeConfig')"
       :ui="{ content: 'max-w-md w-full' }"
     >
       <template #body>
         <div v-if="selectedNode" class="form-grid">
           <div class="field">
-            <label class="field__label">节点名称</label>
-            <UInput v-model="nodeConfig.name" class="w-full" placeholder="请输入节点名称" />
+            <label class="field__label">{{ t('editor.nodeName') }}</label>
+            <UInput v-model="nodeConfig.name" class="w-full" :placeholder="t('editor.nodeNamePh')" />
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field">
-            <label class="field__label">模型</label>
+            <label class="field__label">{{ t('common.model') }}</label>
             <USelect
               v-model="nodeConfig.model"
               class="w-full"
               :items="modelOptions"
-              placeholder="请选择模型"
+              :placeholder="t('editor.pickModel')"
               value-key="value"
             />
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field">
-            <label class="field__label">系统提示</label>
+            <label class="field__label">{{ t('agents.systemPrompt') }}</label>
             <UTextarea
               v-model="nodeConfig.systemPrompt"
               class="w-full"
               :rows="5"
-              placeholder="定义 Agent 的角色和行为..."
+              :placeholder="t('agents.systemPh')"
             />
           </div>
 
           <div v-if="selectedNode.type === 'condition'" class="field">
-            <label class="field__label">描述</label>
+            <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
               v-model="nodeConfig.description"
               class="w-full"
               :rows="3"
-              placeholder="条件描述..."
+              :placeholder="t('editor.conditionPh')"
             />
           </div>
 
           <div v-if="selectedNode.type === 'search'" class="field">
-            <label class="field__label">搜索词</label>
-            <UInput v-model="nodeConfig.query" class="w-full" placeholder="搜索关键词..." />
+            <label class="field__label">{{ t('editor.query') }}</label>
+            <UInput v-model="nodeConfig.query" class="w-full" :placeholder="t('editor.queryPh')" />
           </div>
 
           <div v-if="selectedNode.type === 'input' || selectedNode.type === 'output'" class="field">
-            <label class="field__label">变量名</label>
-            <UInput v-model="nodeConfig.variable" class="w-full" placeholder="变量名称..." />
+            <label class="field__label">{{ t('editor.variable') }}</label>
+            <UInput v-model="nodeConfig.variable" class="w-full" :placeholder="t('editor.variablePh')" />
           </div>
         </div>
       </template>
 
       <template #footer>
         <div class="drawer-footer">
-          <UButton color="error" variant="outline" :disabled="!selectedNode" @click="handleDeleteNode">
-            删除节点
-          </UButton>
+          <CfButton
+            tone="danger"
+            icon="i-lucide-trash-2"
+            :disabled="!selectedNode"
+            @click="handleDeleteNode"
+          >
+            {{ t('editor.deleteNode') }}
+          </CfButton>
           <div class="drawer-footer-right">
-            <UButton color="neutral" variant="outline" @click="configDrawer = false">取消</UButton>
-            <UButton color="primary" @click="saveNodeConfig">保存</UButton>
+            <CfButton tone="secondary" icon="i-lucide-x" @click="configDrawer = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="primary" icon="i-lucide-check" @click="saveNodeConfig">{{ t('common.save') }}</CfButton>
           </div>
         </div>
       </template>
@@ -197,7 +212,7 @@ import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
 
-/** 与列表页「测试画布」按钮一致：不调后端，只验证动态路由 + Vue Flow */
+/** Same as the list page smoke button: skip the API, only verify the dynamic route + Vue Flow. */
 const CANVAS_SMOKE_ID = '__canvas_smoke__'
 
 definePageMeta({
@@ -206,7 +221,9 @@ definePageMeta({
 
 const route = useRoute()
 const toast = useToast()
+const { t } = useLocale()
 const { get, update, execute, listExecutions, getExecution, cancelExecution, debug } = useWorkflows()
+const { list: listModels } = useModels()
 
 const canvasRef = ref<HTMLElement>()
 
@@ -217,7 +234,7 @@ const workflowId = computed(() => {
 
 const isSmokeTest = computed(() => workflowId.value === CANVAS_SMOKE_ID)
 
-const workflowName = ref('新工作流')
+const workflowName = ref(t('editor.newName'))
 
 const saving = ref(false)
 const savingBasic = ref(false)
@@ -236,7 +253,7 @@ const edges = ref<any[]>([])
 
 const nodeConfig = reactive({
   name: '',
-  model: 'gpt-4o',
+  model: '',
   systemPrompt: '',
   description: '',
   query: '',
@@ -254,12 +271,8 @@ const debugPollInterval = ref<number | null>(null)
 
 const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay']
 
-const modelOptions = [
-  { label: 'GPT-4o', value: 'gpt-4o' },
-  { label: 'GPT-4o-mini', value: 'gpt-4o-mini' },
-  { label: 'Claude 3.5 Sonnet', value: 'claude-3.5-sonnet' },
-  { label: 'Claude 3 Haiku', value: 'claude-3-haiku' },
-]
+const modelOptions = ref<{ label: string; value: string }[]>([])
+const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
 
 const getNodeIcon = (type: string) => {
   const icons: Record<string, string> = {
@@ -280,26 +293,12 @@ const getNodeIcon = (type: string) => {
 }
 
 const getNodeLabel = (type: string) => {
-  const labels: Record<string, string> = {
-    start: '开始',
-    end: '结束',
-    llm: 'LLM 节点',
-    agent: 'Agent 节点',
-    condition: '条件分支',
-    loop: '循环节点',
-    http: 'HTTP 请求',
-    code: '代码执行',
-    delay: '延时节点',
-    search: '搜索节点',
-    input: '输入节点',
-    output: '输出节点',
-  }
-  return labels[type] || type
+  return t(`editor.node.${type}`)
 }
 
 const loadWorkflow = async () => {
   if (!workflowId.value) {
-    toast.add({ title: '缺少工作流 ID', color: 'warning' })
+    toast.add({ title: t('editor.missingId'), color: 'warning' })
     return
   }
 
@@ -308,15 +307,15 @@ const loadWorkflow = async () => {
   edges.value = []
 
   if (isSmokeTest.value) {
-    workflowName.value = '画布渲染测试（不调接口）'
+    workflowName.value = t('editor.smokeName')
     workflowBasicInfo.name = workflowName.value
-    workflowBasicInfo.description = '用于验证 /workflows/:id 与 Vue Flow 是否正常'
+    workflowBasicInfo.description = t('editor.smokeDesc')
     nodes.value = [
       {
         id: 'smoke-llm',
         type: 'llm',
         position: { x: 120, y: 80 },
-        data: { label: '测试 LLM 节点' },
+        data: { label: t('editor.smokeNode') },
       },
     ]
     edges.value = []
@@ -381,12 +380,10 @@ const statusType = (status: string) => {
 }
 
 const statusText = (status: string) => {
-  switch (status) {
-    case 'draft': return '草稿'
-    case 'published': return '已发布'
-    case 'archived': return '已归档'
-    default: return status
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return t(`status.${status}`)
   }
+  return status
 }
 
 const handleCancelEdit = () => {
@@ -395,7 +392,7 @@ const handleCancelEdit = () => {
 
 const handleSaveBasic = async () => {
   if (isSmokeTest.value) {
-    toast.add({ title: '测试路由下不调用保存接口', color: 'info' })
+    toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
     return
   }
   savingBasic.value = true
@@ -413,10 +410,10 @@ const handleSaveBasic = async () => {
       currentWorkflow.value.name = workflowBasicInfo.name
       currentWorkflow.value.description = workflowBasicInfo.description
     }
-    toast.add({ title: '基本信息已保存', color: 'success' })
+    toast.add({ title: t('editor.infoSaved'), color: 'success' })
     editPopoverShow.value = false
   } catch {
-    toast.add({ title: '保存失败', color: 'error' })
+    toast.add({ title: t('common.saveFail'), color: 'error' })
   } finally {
     savingBasic.value = false
   }
@@ -461,7 +458,7 @@ const addNode = (type: string) => {
 const handleNodeClick = (event: any) => {
   selectedNode.value = event.node
   nodeConfig.name = event.node.data?.label || ''
-  nodeConfig.model = event.node.data?.model || 'gpt-4o'
+  nodeConfig.model = event.node.data?.model || firstConfiguredModel()
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
@@ -490,7 +487,7 @@ const saveNodeConfig = () => {
     }
   }
 
-  toast.add({ title: '节点配置已保存', color: 'success' })
+  toast.add({ title: t('editor.nodeSaved'), color: 'success' })
   configDrawer.value = false
 }
 
@@ -500,12 +497,12 @@ const handleDeleteNode = () => {
   edges.value = edges.value.filter(e => e.source !== selectedNode.value.id && e.target !== selectedNode.value.id)
   selectedNode.value = null
   configDrawer.value = false
-  toast.add({ title: '节点已删除', color: 'success' })
+  toast.add({ title: t('editor.nodeDeleted'), color: 'success' })
 }
 
 const handleSave = async () => {
   if (isSmokeTest.value) {
-    toast.add({ title: '测试路由下不调用保存接口', color: 'info' })
+    toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
     return
   }
   saving.value = true
@@ -541,9 +538,9 @@ const handleSave = async () => {
       return
     }
 
-    toast.add({ title: '工作流已保存', color: 'success' })
+    toast.add({ title: t('editor.flowSaved'), color: 'success' })
   } catch {
-    toast.add({ title: '保存失败', color: 'error' })
+    toast.add({ title: t('common.saveFail'), color: 'error' })
   } finally {
     saving.value = false
   }
@@ -551,19 +548,19 @@ const handleSave = async () => {
 
 const handleExecute = async () => {
   if (isSmokeTest.value) {
-    toast.add({ title: '测试路由下不调用执行接口', color: 'info' })
+    toast.add({ title: t('editor.noRunOnTest'), color: 'info' })
     return
   }
   if (!currentWorkflow.value) {
-    toast.add({ title: '请先保存工作流', color: 'error' })
+    toast.add({ title: t('editor.saveFirst'), color: 'error' })
     return
   }
   if (currentWorkflow.value.status === 'draft') {
-    toast.add({ title: '草稿状态工作流不能执行，请先发布', color: 'warning' })
+    toast.add({ title: t('editor.draftNoRun'), color: 'warning' })
     return
   }
   if (currentWorkflow.value.status === 'archived') {
-    toast.add({ title: '已归档的工作流不能执行', color: 'warning' })
+    toast.add({ title: t('editor.archivedNoRun'), color: 'warning' })
     return
   }
 
@@ -574,9 +571,9 @@ const handleExecute = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: `工作流已启动，执行ID: ${res.executionId}`, color: 'success' })
+    toast.add({ title: t('flows.started', { id: res.executionId }), color: 'success' })
   } catch {
-    toast.add({ title: '执行失败', color: 'error' })
+    toast.add({ title: t('editor.runFail'), color: 'error' })
   } finally {
     executing.value = false
   }
@@ -589,7 +586,7 @@ const handleBack = () => {
 const startDebug = async () => {
   if (!workflowId.value || isSmokeTest.value) return
   if (!currentWorkflow.value) {
-    toast.add({ title: '请先保存工作流', color: 'warning' })
+    toast.add({ title: t('editor.saveFirst'), color: 'warning' })
     return
   }
 
@@ -602,7 +599,7 @@ const startDebug = async () => {
     try {
       input = JSON.parse(debugInput.value || '{}')
     } catch {
-      toast.add({ title: '输入 JSON 格式错误', color: 'error' })
+      toast.add({ title: t('editor.badJson'), color: 'error' })
       isDebugging.value = false
       return
     }
@@ -614,7 +611,7 @@ const startDebug = async () => {
       return
     }
 
-    toast.add({ title: `调试会话已启动: ${res.executionId}`, color: 'success' })
+    toast.add({ title: t('editor.debugStarted', { id: res.executionId }), color: 'success' })
     currentExecution.value = { id: res.executionId, status: 'debugging' }
 
     debugPollInterval.value = window.setInterval(async () => {
@@ -625,15 +622,15 @@ const startDebug = async () => {
           stopPolling()
           isDebugging.value = false
           if (execRes.data.status === 'completed') {
-            toast.add({ title: '调试完成', color: 'success' })
+            toast.add({ title: t('editor.debugDone'), color: 'success' })
           } else if (execRes.data.status === 'failed') {
-            toast.add({ title: `调试失败: ${execRes.data.error}`, color: 'error' })
+            toast.add({ title: t('editor.debugFail', { error: execRes.data.error }), color: 'error' })
           }
         }
       }
     }, 1000)
   } catch {
-    toast.add({ title: '启动调试失败', color: 'error' })
+    toast.add({ title: t('editor.debugStartFail'), color: 'error' })
     isDebugging.value = false
   }
 }
@@ -654,7 +651,7 @@ const cancelDebug = async () => {
   }
   stopPolling()
   isDebugging.value = false
-  toast.add({ title: '已取消调试', color: 'success' })
+  toast.add({ title: t('editor.debugCancel'), color: 'success' })
 }
 
 const loadExecutionHistory = async () => {
@@ -666,6 +663,11 @@ const loadExecutionHistory = async () => {
 }
 
 onMounted(() => {
+  listModels().then((res) => {
+    modelOptions.value = (res.data || [])
+      .filter(m => m.id)
+      .map(m => ({ label: m.name || m.id, value: m.id }))
+  })
   nextTick(() => {
     const palette = document.querySelector('.node-palette')
     if (palette) {
@@ -868,10 +870,11 @@ onMounted(() => {
   color: var(--cf-ink-soft, #64748b);
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .drawer-footer {

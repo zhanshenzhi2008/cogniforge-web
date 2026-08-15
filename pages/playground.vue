@@ -1,7 +1,7 @@
 <template>
   <div class="playground-page">
     <div class="playground-container">
-      <!-- 左侧配置面板（桌面） -->
+      <!-- Desktop config panel -->
       <aside class="sidebar">
         <PlaygroundConfigPanel
           v-model:selected-agent="selectedAgent"
@@ -15,35 +15,30 @@
         />
       </aside>
 
-      <!-- 右侧聊天区域 -->
+      <!-- Chat area -->
       <main class="chat-area">
         <div class="chat-topbar cf-surface">
           <div class="chat-title">
             <div class="chat-title-text">
-              <span class="chat-title-main">AI Playground</span>
+              <span class="chat-title-main">{{ t('play.title') }}</span>
               <span class="chat-title-sub">{{ currentTitle }}</span>
             </div>
           </div>
           <div class="chat-topbar-actions">
-            <UButton
+            <CfButton
               class="config-toggle"
-              color="neutral"
-              variant="soft"
-              size="sm"
+              tone="secondary"
               icon="i-lucide-sliders-horizontal"
               @click="configOpen = true"
             >
-              Params
-            </UButton>
-            <UButton
-              color="error"
-              variant="ghost"
-              size="sm"
+              {{ t('play.params') }}
+            </CfButton>
+            <CfButton
+              tone="icon-danger"
               icon="i-lucide-trash-2"
+              :tip="t('play.clear')"
               @click="clearMessages"
-            >
-              Clear
-            </UButton>
+            />
           </div>
         </div>
 
@@ -51,19 +46,18 @@
           <div v-if="messages.length === 0" class="empty-state">
             <div class="empty-glow" />
             <UIcon name="i-lucide-messages-square" class="size-14 empty-icon" />
-            <p class="empty-title font-display">Start a conversation</p>
-            <p class="empty-sub">Pick an agent and send a message.</p>
+            <p class="empty-title font-display">{{ t('play.emptyTitle') }}</p>
+            <p class="empty-sub">{{ t('play.emptySub') }}</p>
             <div class="suggestion-chips">
-              <UButton
+              <CfButton
                 v-for="chip in suggestionChips"
                 :key="chip"
-                size="sm"
-                color="primary"
-                variant="soft"
+                tone="secondary"
+                icon="i-lucide-sparkles"
                 @click="sendSuggestion(chip)"
               >
                 {{ chip }}
-              </UButton>
+              </CfButton>
             </div>
           </div>
 
@@ -84,7 +78,7 @@
                 />
               </template>
               <template #indicator>
-                <UChatShimmer text="正在思考…" />
+                <UChatShimmer :text="t('play.thinking')" />
               </template>
             </UChatMessages>
           </div>
@@ -98,7 +92,7 @@
             v-model="inputMessage"
             :disabled="streaming"
             :submit-on-enter="true"
-            placeholder="输入消息… (Enter 发送, Shift+Enter 换行)"
+            :placeholder="t('play.placeholder')"
             variant="subtle"
             :rows="2"
             :maxrows="6"
@@ -107,7 +101,7 @@
           >
             <template #footer>
               <div class="composer-footer">
-                <span class="composer-hint">Enter 发送 · Shift+Enter 换行</span>
+                <span class="composer-hint">{{ t('play.hint') }}</span>
                 <UChatPromptSubmit
                   :status="chatStatus"
                   color="primary"
@@ -121,7 +115,7 @@
       </main>
     </div>
 
-    <USlideover v-model:open="configOpen" title="对话参数" :ui="{ content: 'max-w-sm w-full' }">
+    <USlideover v-model:open="configOpen" :title="t('play.paramsTitle')" :ui="{ content: 'max-w-sm w-full' }">
       <template #body>
         <PlaygroundConfigPanel
           v-model:selected-agent="selectedAgent"
@@ -172,6 +166,7 @@ type ChatStatus = 'submitted' | 'streaming' | 'ready' | 'error'
 const route = useRoute()
 const config = useRuntimeConfig()
 const toast = useToast()
+const { t } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
 const { get } = useApi()
 
@@ -188,22 +183,22 @@ const selectedAgentInfo = ref<Agent | null>(null)
 const abortController = ref<AbortController | null>(null)
 const configOpen = ref(false)
 
-const suggestionChips = [
-  '介绍一下你自己',
-  '帮我写一段产品说明',
-  '用三点总结今天的重点',
-]
+const suggestionChips = computed(() => [
+  t('play.chip1'),
+  t('play.chip2'),
+  t('play.chip3'),
+])
 
 const currentTitle = computed(() => {
   if (selectedAgentInfo.value) {
-    return `与 ${selectedAgentInfo.value.name} 对话`
+    return t('play.withAgent', { name: selectedAgentInfo.value.name })
   }
-  return '通用对话'
+  return t('play.generic')
 })
 
 const agentOptions = computed(() =>
   [
-    { label: '不选择 Agent（通用对话）', value: NONE_AGENT },
+    { label: t('play.noAgent'), value: NONE_AGENT },
     ...agents.value.map(a => ({ label: a.name, value: a.id })),
   ],
 )
@@ -330,7 +325,9 @@ const sendMessage = async () => {
 
     const body = {
       model: selectedModel.value,
-      messages: messages.value.map(m => ({ role: m.role, content: m.content })),
+      messages: messages.value
+        .filter(m => m.content.trim().length > 0)
+        .map(m => ({ role: m.role, content: m.content })),
       stream: true,
       ...params,
     }
@@ -349,13 +346,16 @@ const sendMessage = async () => {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      notifyError(`发送失败：HTTP ${response.status}${text ? ` - ${text}` : ''}`)
+      notifyError(t('play.sendFailHttp', {
+        status: response.status,
+        detail: text ? ` - ${text}` : '',
+      }))
       return
     }
 
     const reader = response.body?.getReader()
     if (!reader) {
-      notifyError('发送失败：response body 不可用')
+      notifyError(t('play.sendFailBody'))
       return
     }
 
@@ -381,9 +381,30 @@ const sendMessage = async () => {
           assistantMessage.content = parsed.error
           return true
         }
-        const content = parsed?.choices?.[0]?.delta?.content
+        const delta = parsed?.choices?.[0]?.delta?.content
+        if (typeof delta === 'string' && delta.length > 0) {
+          assistantMessage.content += delta
+          return false
+        }
+        const full = parsed?.choices?.[0]?.message?.content
+        if (typeof full === 'string' && full.length > 0) {
+          assistantMessage.content = full
+        }
+      } catch {
+        // ignore parse errors
+      }
+      return false
+    }
+
+    const consumeCompletionJSON = (raw: string): boolean => {
+      const text = raw.trim()
+      if (!text.startsWith('{')) return false
+      try {
+        const parsed = JSON.parse(text)
+        const content = parsed?.choices?.[0]?.message?.content
         if (typeof content === 'string' && content.length > 0) {
-          assistantMessage.content += content
+          assistantMessage.content = content
+          return true
         }
       } catch {
         // ignore parse errors
@@ -407,6 +428,9 @@ const sendMessage = async () => {
     }
 
     if (buffer) {
+      if (consumeCompletionJSON(buffer)) {
+        return
+      }
       for (const line of buffer.split('\n')) {
         if (consumeDataLine(line)) return
       }
@@ -415,7 +439,7 @@ const sendMessage = async () => {
     if (error?.name === 'AbortError') {
       return
     }
-    notifyError('发送失败')
+    notifyError(t('play.sendFail'))
     messages.value.pop()
   } finally {
     streaming.value = false

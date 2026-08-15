@@ -2,22 +2,27 @@
   <div class="cf-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Knowledge</h1>
-        <p class="cf-page-sub">Upload docs for retrieval.</p>
+        <h1 class="cf-page-title">{{ t('kb.title') }}</h1>
+        <p class="cf-page-sub">{{ t('kb.sub') }}</p>
       </div>
-      <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
-        New knowledge base
-      </UButton>
+      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+        {{ t('kb.new') }}
+      </CfButton>
+    </div>
+
+    <div class="list-toolbar">
+      <span class="list-count">{{ t('kb.count', { n: knowledgeBases.length }) }}</span>
+      <span class="list-hint">{{ t('kb.hint') }}</span>
     </div>
 
     <div v-if="loading" class="cf-state">
       <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-      <span>加载中…</span>
+      <span>{{ t('common.loading') }}</span>
     </div>
 
     <div v-else-if="knowledgeBases.length === 0" class="cf-state">
       <UIcon name="i-lucide-book-open" class="size-8 opacity-50" />
-      <p>暂无知识库，点击上方按钮创建</p>
+      <p>{{ t('kb.empty') }}</p>
     </div>
 
     <div v-else class="kb-grid">
@@ -25,7 +30,9 @@
         v-for="kb in knowledgeBases"
         :key="kb.id"
         class="kb-card cf-surface"
-        @click="handleSelectKB(kb)"
+        :title="t('kb.hint')"
+        @click="onCardClick(kb)"
+        @dblclick="onCardDblClick(kb)"
       >
         <div class="kb-header">
           <div class="kb-name">
@@ -36,52 +43,110 @@
               variant="subtle"
               :color="kb.status === 'active' ? 'success' : 'neutral'"
             >
-              {{ kb.status === 'active' ? '启用' : '禁用' }}
+              {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
             </UBadge>
           </div>
           <UDropdownMenu :items="getKBMenuItems(kb)" @click.stop>
-            <UButton
-              color="neutral"
-              variant="ghost"
+            <CfButton
+              tone="icon"
               icon="i-lucide-ellipsis"
-              size="sm"
+              :tip="t('common.more')"
               @click.stop
             />
           </UDropdownMenu>
         </div>
 
-        <p class="kb-description">{{ kb.description || '暂无描述' }}</p>
+        <p class="kb-description">{{ kb.description || t('common.noDesc') }}</p>
 
         <div class="kb-meta">
           <div class="meta-left">
             <span class="meta-item">
               <UIcon name="i-lucide-file-text" class="size-3.5" />
-              {{ kb.doc_count }} 文档
+              {{ t('kb.docs', { n: kb.doc_count }) }}
             </span>
             <span class="meta-item">
               <UIcon name="i-lucide-server" class="size-3.5" />
               {{ kb.vector_db || 'chroma' }}
             </span>
           </div>
-          <span class="meta-item">{{ formatDate(kb.created_at) }}</span>
+          <span class="meta-item">{{ d(kb.created_at) }}</span>
         </div>
       </div>
     </div>
 
-    <!-- Create / Edit KB -->
+    <!-- Create / View / Edit KB -->
     <UModal
       v-model:open="dialogVisible"
-      :title="isEditing ? '编辑知识库' : '创建知识库'"
+      :title="dialogTitle"
+      :description="dialogDescription"
       :ui="{ content: 'sm:max-w-lg' }"
     >
       <template #body>
-        <form id="kb-form" class="form-grid" @submit.prevent="handleSubmit">
+        <div v-if="dialogMode === 'view' && viewingKB" class="detail-sheet">
+          <div class="detail-hero">
+            <span class="detail-hero-icon">
+              <UIcon name="i-lucide-book-open" class="size-6" />
+            </span>
+            <div class="detail-hero-text">
+              <div class="detail-hero-name">{{ viewingKB.name }}</div>
+              <div class="detail-hero-sub">
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="viewingKB.status === 'active' ? 'success' : 'neutral'"
+                >
+                  {{ viewingKB.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+                </UBadge>
+                <UBadge size="sm" variant="subtle" color="neutral">
+                  {{ t('kb.docs', { n: viewingKB.doc_count }) }}
+                </UBadge>
+              </div>
+            </div>
+          </div>
+
+          <dl class="detail-list">
+            <div class="detail-row">
+              <dt>{{ t('common.name') }}</dt>
+              <dd>{{ viewingKB.name }}</dd>
+            </div>
+            <div class="detail-row detail-row--block">
+              <dt>{{ t('common.description') }}</dt>
+              <dd>{{ viewingKB.description || '—' }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('common.status') }}</dt>
+              <dd>{{ viewingKB.status === 'active' ? t('common.enabled') : t('common.disabled') }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('kb.vector') }}</dt>
+              <dd>{{ viewingKB.vector_db || 'chroma' }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('kb.embedding') }}</dt>
+              <dd>{{ viewingKB.embedding_model || '—' }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('kb.docCount') }}</dt>
+              <dd>{{ viewingKB.doc_count }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('common.createdAt') }}</dt>
+              <dd>{{ d(viewingKB.created_at) }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('common.updatedAt') }}</dt>
+              <dd>{{ d(viewingKB.updated_at) }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <form v-else id="kb-form" class="form-grid" @submit.prevent="handleSubmit">
           <div class="field">
-            <label class="field__label">名称</label>
+            <label class="field__label">{{ t('common.name') }}</label>
             <UInput
               v-model="form.name"
               class="w-full"
-              placeholder="请输入知识库名称"
+              :placeholder="t('kb.namePh')"
               :color="errors.name ? 'error' : undefined"
               @update:model-value="errors.name = ''"
             />
@@ -89,58 +154,97 @@
           </div>
 
           <div class="field">
-            <label class="field__label">描述</label>
+            <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
               v-model="form.description"
               class="w-full"
               :rows="2"
-              placeholder="请输入描述（可选）"
+              :placeholder="t('common.optionalDesc')"
             />
           </div>
 
           <div class="field">
-            <label class="field__label">向量数据库</label>
+            <label class="field__label">{{ t('kb.vector') }}</label>
             <USelect
               v-model="form.vector_db"
               class="w-full"
               :items="vectorDbOptions"
-              placeholder="选择向量数据库"
+              :placeholder="t('kb.pickVector')"
             />
           </div>
 
           <div class="field">
-            <label class="field__label">Embedding 模型</label>
+            <label class="field__label">{{ t('kb.embedding') }}</label>
             <USelect
               v-model="form.embedding_model"
               class="w-full"
               :items="embeddingModelOptions"
-              placeholder="选择 Embedding 模型"
+              :placeholder="t('kb.pickEmbedding')"
             />
           </div>
         </form>
       </template>
 
       <template #footer>
-        <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="dialogVisible = false">取消</UButton>
-          <UButton form="kb-form" type="submit" color="primary" :loading="submitting">
-            {{ isEditing ? '保存' : '创建' }}
-          </UButton>
+        <div class="modal-actions" :class="{ 'modal-actions--view': dialogMode === 'view' }">
+          <template v-if="dialogMode === 'view'">
+            <div class="modal-actions__right">
+              <CfButton tone="primary" icon="i-lucide-pencil" @click="enterEditFromView">
+                {{ t('common.edit') }}
+              </CfButton>
+            </div>
+          </template>
+          <template v-else>
+            <div class="modal-actions__left">
+              <CfButton
+                v-if="dialogMode === 'edit' && cameFromView"
+                tone="secondary"
+                icon="i-lucide-arrow-left"
+                @click="dialogMode = 'view'"
+              >
+                {{ t('common.detail') }}
+              </CfButton>
+            </div>
+            <div class="modal-actions__right">
+              <CfButton tone="secondary" icon="i-lucide-x" @click="dialogVisible = false">
+                {{ t('common.cancel') }}
+              </CfButton>
+              <CfButton
+                form="kb-form"
+                type="submit"
+                tone="primary"
+                :icon="dialogMode === 'edit' ? 'i-lucide-check' : 'i-lucide-plus'"
+                :loading="submitting"
+              >
+                {{ dialogMode === 'edit' ? t('common.save') : t('common.create') }}
+              </CfButton>
+            </div>
+          </template>
         </div>
       </template>
     </UModal>
 
     <!-- Delete KB confirm -->
-    <UModal v-model:open="deleteVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
-          确定要删除知识库「{{ deleting?.name }}」吗？删除后无法恢复。
+          {{ t('kb.deleteText', { name: deleting?.name ?? '' }) }}
         </p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
-          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">删除</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-trash-2"
+              :loading="deletingLoading"
+              @click="confirmDelete"
+            >
+              {{ t('common.delete') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -148,44 +252,39 @@
     <!-- Documents Slideover -->
     <USlideover
       v-model:open="drawerVisible"
-      :title="selectedKB?.name || '知识库'"
-      :description="`${documents.length} 个文档`"
+      :title="selectedKB?.name || t('kb.fallbackTitle')"
+      :description="t('kb.docsDrawer', { n: documents.length })"
       :ui="{ content: 'max-w-2xl w-full' }"
     >
       <template #body>
         <div class="drawer-header-actions">
-          <UButton
-            color="primary"
-            size="sm"
-            icon="i-lucide-cloud-upload"
-            @click="uploadModalVisible = true"
-          >
-            上传文档
-          </UButton>
+          <CfButton tone="primary" icon="i-lucide-cloud-upload" @click="uploadModalVisible = true">
+            {{ t('kb.upload') }}
+          </CfButton>
         </div>
 
         <UTabs v-model="drawerActiveTab" :items="drawerTabs" class="w-full">
           <template #docs>
             <div v-if="docsLoading" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
-              <span>加载中…</span>
+              <span>{{ t('common.loading') }}</span>
             </div>
 
             <div v-else-if="documents.length === 0" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-file" class="size-7 opacity-50" />
-              <p>暂无文档，请点击上方按钮上传</p>
+              <p>{{ t('kb.noDocs') }}</p>
             </div>
 
             <div v-else class="cf-table-wrap">
               <table class="cf-data-table">
                 <thead>
                   <tr>
-                    <th>名称</th>
-                    <th>状态</th>
-                    <th>分块</th>
-                    <th>大小</th>
-                    <th>时间</th>
-                    <th class="cf-col-actions">操作</th>
+                    <th>{{ t('common.name') }}</th>
+                    <th>{{ t('common.status') }}</th>
+                    <th>{{ t('kb.chunks') }}</th>
+                    <th>{{ t('kb.size') }}</th>
+                    <th>{{ t('kb.time') }}</th>
+                    <th class="cf-col-actions">{{ t('common.actions') }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -203,27 +302,21 @@
                     </td>
                     <td class="cf-muted">{{ doc.chunk_count || '—' }}</td>
                     <td class="cf-muted">{{ formatFileSize(doc.file_size) }}</td>
-                    <td class="cf-muted">{{ formatDate(doc.created_at) }}</td>
+                    <td class="cf-muted">{{ d(doc.created_at) }}</td>
                     <td>
                       <div class="action-btns">
-                        <UTooltip text="重新解析">
-                          <UButton
-                            color="neutral"
-                            variant="ghost"
-                            icon="i-lucide-refresh-cw"
-                            size="sm"
-                            @click="handleReparseDoc(doc)"
-                          />
-                        </UTooltip>
-                        <UTooltip text="删除">
-                          <UButton
-                            color="error"
-                            variant="ghost"
-                            icon="i-lucide-trash-2"
-                            size="sm"
-                            @click="askDeleteDoc(doc)"
-                          />
-                        </UTooltip>
+                        <CfButton
+                          tone="icon"
+                          icon="i-lucide-refresh-cw"
+                          :tip="t('kb.reparse')"
+                          @click="handleReparseDoc(doc)"
+                        />
+                        <CfButton
+                          tone="icon-danger"
+                          icon="i-lucide-trash-2"
+                          :tip="t('common.delete')"
+                          @click="askDeleteDoc(doc)"
+                        />
                       </div>
                     </td>
                   </tr>
@@ -238,34 +331,34 @@
                 v-model="searchQuery"
                 class="w-full"
                 :rows="2"
-                placeholder="输入检索关键词..."
+                :placeholder="t('kb.searchPh')"
                 @keydown.enter.ctrl="handleSearch"
               />
               <div class="search-actions">
-                <UButton
-                  color="primary"
+                <CfButton
+                  tone="primary"
                   icon="i-lucide-search"
                   :loading="searchLoading"
                   @click="handleSearch"
                 >
-                  检索
-                </UButton>
-                <UButton color="neutral" variant="outline" @click="searchQuery = ''">清空</UButton>
-                <span class="search-hint">支持 Ctrl+Enter 快捷检索</span>
+                  {{ t('kb.search') }}
+                </CfButton>
+                <CfButton tone="secondary" icon="i-lucide-eraser" @click="searchQuery = ''">{{ t('kb.clear') }}</CfButton>
+                <span class="search-hint">{{ t('kb.searchHint') }}</span>
               </div>
             </div>
 
             <div v-if="searchResults.length > 0" class="search-results">
               <div class="results-header">
-                <span>找到 {{ searchResults.length }} 条相关结果</span>
-                <span class="cf-muted">耗时 {{ searchDuration }}ms</span>
+                <span>{{ t('kb.searchHits', { n: searchResults.length }) }}</span>
+                <span class="cf-muted">{{ t('kb.searchMs', { ms: searchDuration }) }}</span>
               </div>
 
               <div v-for="result in searchResults" :key="result.chunk_id" class="result-item">
                 <div class="result-header">
                   <span class="result-doc-name">{{ result.document_name }}</span>
                   <UBadge size="sm" variant="subtle" :color="getScoreColor(result.score)">
-                    相似度: {{ (result.score * 100).toFixed(1) }}%
+                    {{ t('kb.score', { n: (result.score * 100).toFixed(1) }) }}
                   </UBadge>
                 </div>
                 <div class="result-content">{{ result.content }}</div>
@@ -274,23 +367,17 @@
 
             <div v-else-if="!searchLoading && hasSearched" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-search-x" class="size-7 opacity-50" />
-              <p>未找到相关结果</p>
+              <p>{{ t('kb.noHits') }}</p>
             </div>
           </template>
         </UTabs>
-      </template>
-
-      <template #footer>
-        <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="drawerVisible = false">关闭</UButton>
-        </div>
       </template>
     </USlideover>
 
     <!-- Upload Modal -->
     <UModal
       v-model:open="uploadModalVisible"
-      title="上传文档"
+      :title="t('kb.uploadTitle')"
       :ui="{ content: 'sm:max-w-lg' }"
     >
       <template #body>
@@ -298,38 +385,51 @@
           v-model="uploadFiles"
           multiple
           accept=".pdf,.txt,.md,.docx,.html"
-          label="点击或拖拽文件到此处上传"
-          description="支持 PDF、TXT、MD、DOCX、HTML，单个文件不超过 50MB"
+          :label="t('kb.uploadLabel')"
+          :description="t('kb.uploadDesc')"
           layout="list"
         />
       </template>
 
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="handleUploadCancel">取消</UButton>
-          <UButton
-            color="primary"
-            :loading="uploadLoading"
-            :disabled="!uploadFiles?.length"
-            @click="handleUploadSubmit"
-          >
-            上传
-          </UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="handleUploadCancel">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="primary"
+              icon="i-lucide-cloud-upload"
+              :loading="uploadLoading"
+              :disabled="!uploadFiles?.length"
+              @click="handleUploadSubmit"
+            >
+              {{ t('kb.upload') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
     <!-- Delete Doc confirm -->
-    <UModal v-model:open="deleteDocVisible" title="删除确认" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="deleteDocVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
-          确定要删除文档「{{ deletingDoc?.name }}」吗？
+          {{ t('kb.deleteDocText', { name: deletingDoc?.name ?? '' }) }}
         </p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="deleteDocVisible = false">取消</UButton>
-          <UButton color="error" :loading="deletingDocLoading" @click="confirmDeleteDoc">删除</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteDocVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-trash-2"
+              :loading="deletingDocLoading"
+              @click="confirmDeleteDoc"
+            >
+              {{ t('common.delete') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -351,6 +451,7 @@ definePageMeta({
 })
 
 const toast = useToast()
+const { t, d } = useLocale()
 const { listKBs, createKB, updateKB, deleteKB, listDocs, uploadDoc, deleteDoc, reparseDoc, searchKB } =
   useKnowledgeBases()
 
@@ -358,8 +459,22 @@ const loading = ref(false)
 const submitting = ref(false)
 const knowledgeBases = ref<KnowledgeBase[]>([])
 const dialogVisible = ref(false)
-const isEditing = ref(false)
+const dialogMode = ref<'create' | 'view' | 'edit'>('create')
+const cameFromView = ref(false)
 const editingId = ref('')
+const viewingKB = ref<KnowledgeBase | null>(null)
+
+const dialogTitle = computed(() => {
+  if (dialogMode.value === 'create') return t('kb.createTitle')
+  if (dialogMode.value === 'view') return t('kb.viewTitle')
+  return t('kb.editTitle')
+})
+
+const dialogDescription = computed(() => {
+  if (dialogMode.value === 'create') return t('kb.createDesc')
+  if (dialogMode.value === 'view') return t('kb.viewDesc')
+  return t('kb.editDesc')
+})
 
 const deleteVisible = ref(false)
 const deletingLoading = ref(false)
@@ -412,13 +527,13 @@ const hasSearched = ref(false)
 
 const drawerTabs = computed(() => [
   {
-    label: '文档管理',
+    label: t('kb.docsManage'),
     value: 'docs',
     slot: 'docs' as const,
     badge: documents.value.length || undefined,
   },
   {
-    label: '检索测试',
+    label: t('kb.searchTest'),
     value: 'search',
     slot: 'search' as const,
     badge: searchResults.value.length || undefined,
@@ -437,13 +552,10 @@ function getFileIcon(fileType: string) {
 }
 
 function docStatusLabel(status: string) {
-  const map: Record<string, string> = {
-    pending: '等待中',
-    processing: '处理中',
-    completed: '已完成',
-    failed: '失败',
+  if (status === 'pending' || status === 'processing' || status === 'completed' || status === 'failed') {
+    return t(`status.${status}`)
   }
-  return map[status] || status
+  return status
 }
 
 function docStatusColor(status: string): 'success' | 'warning' | 'error' | 'neutral' {
@@ -459,22 +571,27 @@ function docStatusColor(status: string): 'success' | 'warning' | 'error' | 'neut
 function getKBMenuItems(kb: KnowledgeBase): DropdownMenuItem[] {
   return [
     {
-      label: '编辑',
+      label: t('kb.docsManage'),
+      icon: 'i-lucide-file-text',
+      onSelect: () => handleSelectKB(kb, 'docs'),
+    },
+    {
+      label: t('kb.searchTest'),
+      icon: 'i-lucide-search',
+      onSelect: () => handleSelectKB(kb, 'search'),
+    },
+    {
+      label: t('common.edit'),
       icon: 'i-lucide-pencil',
       onSelect: () => handleEdit(kb),
     },
     {
-      label: '删除',
+      label: t('common.delete'),
       icon: 'i-lucide-trash-2',
       color: 'error' as const,
       onSelect: () => askDelete(kb),
     },
   ]
-}
-
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 
 function formatFileSize(bytes: number): string {
@@ -491,8 +608,8 @@ function getScoreColor(score: number): 'success' | 'warning' | 'neutral' {
 }
 
 function validate() {
-  errors.name = form.name.trim() ? '' : '名称不能为空'
-  if (form.name.trim().length > 100) errors.name = '名称不能超过 100 个字符'
+  errors.name = form.name.trim() ? '' : t('common.nameRequired')
+  if (form.name.trim().length > 100) errors.name = t('common.nameTooLong')
   return !errors.name
 }
 
@@ -506,7 +623,7 @@ const fetchKnowledgeBases = async () => {
     }
     knowledgeBases.value = res.data || []
   } catch {
-    toast.add({ title: '获取知识库列表失败', color: 'error' })
+    toast.add({ title: t('kb.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -522,7 +639,7 @@ const fetchDocuments = async (kbId: string) => {
     }
     documents.value = res.data || []
   } catch {
-    toast.add({ title: '获取文档列表失败', color: 'error' })
+    toast.add({ title: t('kb.docListFail'), color: 'error' })
   } finally {
     docsLoading.value = false
   }
@@ -553,10 +670,10 @@ watch(drawerVisible, (val) => {
   if (!val) stopDocRefresh()
 })
 
-const handleSelectKB = async (kb: KnowledgeBase) => {
+const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' = 'docs') => {
   selectedKB.value = kb
   drawerVisible.value = true
-  drawerActiveTab.value = 'docs'
+  drawerActiveTab.value = tab
   await fetchDocuments(kb.id)
   const hasProcessing = documents.value.some(
     (d) => d.status === 'pending' || d.status === 'processing',
@@ -566,22 +683,64 @@ const handleSelectKB = async (kb: KnowledgeBase) => {
   }
 }
 
-const handleCreate = () => {
-  isEditing.value = false
-  editingId.value = ''
-  resetForm()
-  dialogVisible.value = true
+let cardClickTimer: ReturnType<typeof setTimeout> | null = null
+
+const onCardClick = (kb: KnowledgeBase) => {
+  if (cardClickTimer) clearTimeout(cardClickTimer)
+  cardClickTimer = setTimeout(() => {
+    cardClickTimer = null
+    handleSelectKB(kb)
+  }, 250)
 }
 
-const handleEdit = (kb: KnowledgeBase) => {
-  isEditing.value = true
-  editingId.value = kb.id
+const onCardDblClick = (kb: KnowledgeBase) => {
+  if (cardClickTimer) {
+    clearTimeout(cardClickTimer)
+    cardClickTimer = null
+  }
+  handleView(kb)
+}
+
+const fillFormFromKB = (kb: KnowledgeBase) => {
   form.name = kb.name
   form.description = kb.description || ''
   form.vector_db = kb.vector_db || 'chroma'
   form.embedding_model = kb.embedding_model || 'text-embedding-ada-002'
   errors.name = ''
+}
+
+const handleCreate = () => {
+  dialogMode.value = 'create'
+  cameFromView.value = false
+  editingId.value = ''
+  viewingKB.value = null
+  resetForm()
   dialogVisible.value = true
+}
+
+const handleView = (kb: KnowledgeBase) => {
+  dialogMode.value = 'view'
+  cameFromView.value = true
+  viewingKB.value = kb
+  editingId.value = kb.id
+  fillFormFromKB(kb)
+  dialogVisible.value = true
+}
+
+const handleEdit = (kb: KnowledgeBase) => {
+  dialogMode.value = 'edit'
+  cameFromView.value = false
+  viewingKB.value = kb
+  editingId.value = kb.id
+  fillFormFromKB(kb)
+  dialogVisible.value = true
+}
+
+const enterEditFromView = () => {
+  if (!viewingKB.value) return
+  dialogMode.value = 'edit'
+  cameFromView.value = true
+  fillFormFromKB(viewingKB.value)
 }
 
 const askDelete = (kb: KnowledgeBase) => {
@@ -598,7 +757,7 @@ const confirmDelete = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: '删除成功', color: 'success' })
+    toast.add({ title: t('common.deleteOk'), color: 'success' })
     deleteVisible.value = false
     await fetchKnowledgeBases()
   } finally {
@@ -613,7 +772,7 @@ const handleUploadCancel = () => {
 
 const handleSearch = async () => {
   if (!selectedKB.value || !searchQuery.value.trim()) {
-    toast.add({ title: '请输入检索关键词', color: 'warning' })
+    toast.add({ title: t('kb.needQuery'), color: 'warning' })
     return
   }
 
@@ -638,7 +797,7 @@ const handleSearch = async () => {
       searchDuration.value = res.data.duration_ms || 0
     }
   } catch {
-    toast.add({ title: '检索失败', color: 'error' })
+    toast.add({ title: t('kb.searchFail'), color: 'error' })
   } finally {
     searchLoading.value = false
   }
@@ -663,9 +822,9 @@ const handleUploadSubmit = async () => {
   uploadLoading.value = false
 
   if (failCount === 0) {
-    toast.add({ title: `成功上传 ${successCount} 个文档`, color: 'success' })
+    toast.add({ title: t('kb.uploadOk', { n: successCount }), color: 'success' })
   } else {
-    toast.add({ title: `成功 ${successCount} 个，失败 ${failCount} 个`, color: 'warning' })
+    toast.add({ title: t('kb.uploadPartial', { ok: successCount, fail: failCount }), color: 'warning' })
   }
 
   handleUploadCancel()
@@ -691,7 +850,7 @@ const confirmDeleteDoc = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: '删除成功', color: 'success' })
+    toast.add({ title: t('common.deleteOk'), color: 'success' })
     deleteDocVisible.value = false
     await fetchDocuments(selectedKB.value!.id)
     await fetchKnowledgeBases()
@@ -708,7 +867,7 @@ const handleReparseDoc = async (doc: Document) => {
     toast.add({ title: res.error, color: 'error' })
     return
   }
-  toast.add({ title: '文档已提交重新解析', color: 'success' })
+  toast.add({ title: t('kb.reparseOk'), color: 'success' })
   await fetchDocuments(selectedKB.value!.id)
   startDocRefresh()
 }
@@ -718,7 +877,7 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
-    if (isEditing.value) {
+    if (dialogMode.value === 'edit') {
       const input: UpdateKBInput = {
         name: form.name,
         description: form.description,
@@ -730,7 +889,7 @@ const handleSubmit = async () => {
         toast.add({ title: res.error, color: 'error' })
         return
       }
-      toast.add({ title: '保存成功', color: 'success' })
+      toast.add({ title: t('common.saveOk'), color: 'success' })
     } else {
       const input: CreateKBInput = {
         name: form.name,
@@ -743,12 +902,12 @@ const handleSubmit = async () => {
         toast.add({ title: res.error, color: 'error' })
         return
       }
-      toast.add({ title: '创建成功', color: 'success' })
+      toast.add({ title: t('common.createOk'), color: 'success' })
     }
     dialogVisible.value = false
     await fetchKnowledgeBases()
   } catch {
-    toast.add({ title: isEditing.value ? '保存失败' : '创建失败', color: 'error' })
+    toast.add({ title: dialogMode.value === 'edit' ? t('common.saveFail') : t('common.createFail'), color: 'error' })
   } finally {
     submitting.value = false
   }
@@ -768,12 +927,26 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopDocRefresh()
+  if (cardClickTimer) {
+    clearTimeout(cardClickTimer)
+    cardClickTimer = null
+  }
 })
 </script>
 
 <style scoped>
 .cf-state--compact {
   min-height: 160px;
+}
+
+.list-count {
+  font-size: 0.8rem;
+  color: var(--cf-ink-soft);
+}
+
+.list-hint {
+  font-size: 0.8rem;
+  color: var(--cf-ink-soft);
 }
 
 .kb-grid {
@@ -963,10 +1136,115 @@ onUnmounted(() => {
   color: var(--cf-danger);
 }
 
-.modal-actions {
+.detail-sheet {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.detail-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-accent) 6%, var(--cf-nav-surface, var(--cf-bg-elevated)));
+}
+
+.detail-hero-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cf-accent);
+  background: color-mix(in oklab, var(--cf-accent) 14%, transparent);
+}
+
+.detail-hero-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-hero-name {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cf-ink);
+  line-height: 1.2;
+}
+
+.detail-hero-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--cf-line);
+  align-items: start;
+}
+
+.detail-row:last-child {
+  border-bottom: 0;
+}
+
+.detail-row dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+  padding-top: 2px;
+}
+
+.detail-row dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--cf-ink);
+  min-width: 0;
+  word-break: break-word;
+}
+
+.detail-row--block {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.modal-actions__right {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
+}
+
+.modal-actions__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
 }
 
 .delete-text {

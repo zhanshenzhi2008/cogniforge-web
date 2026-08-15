@@ -311,6 +311,107 @@ a {
   line-height: 1.45;
 }
 
+/* Modal footer — §2.8 */
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.modal-actions__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+}
+
+.modal-actions__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.modal-actions--center {
+  justify-content: center;
+}
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.list-count {
+  font-size: 0.8rem;
+  color: var(--cf-ink-soft);
+}
+
+.list-hint {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  opacity: 0.85;
+}
+
+.list-row {
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------------------------- */
+/* CfButton — unified scene tones (all have soft fill backgrounds)             */
+/* -------------------------------------------------------------------------- */
+.cf-btn {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  box-shadow: none !important;
+  border-radius: 8px !important;
+}
+
+.cf-btn--lg {
+  min-height: 36px;
+  padding-inline: 14px !important;
+  gap: 7px;
+  font-size: 13.5px;
+}
+
+.cf-btn--lg :deep(svg),
+.cf-btn--lg :deep(.iconify) {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.92;
+}
+
+.cf-btn--lg-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 !important;
+  border-radius: 9px !important;
+}
+
+.cf-btn--icon-only:not(.cf-btn--lg-icon) {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 !important;
+  border-radius: 7px !important;
+}
+
+.cf-btn--block {
+  width: 100%;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 @media (max-width: 640px) {
   .cf-page {
     padding: 20px 16px 36px;

@@ -1,8 +1,8 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="cf-section-title">Security</h2>
-      <p class="cf-section-desc">Password, 2FA, and active sessions.</p>
+      <h2 class="cf-section-title">{{ t('security.title') }}</h2>
+      <p class="cf-section-desc">{{ t('security.sub') }}</p>
     </div>
 
     <div class="content-card cf-surface">
@@ -11,31 +11,31 @@
           <UIcon name="i-lucide-key" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
-          <h3>修改密码</h3>
-          <p>定期更换密码可以提高账户安全性</p>
+          <h3>{{ t('security.changePassword') }}</h3>
+          <p>{{ t('security.changeHint') }}</p>
         </div>
       </div>
 
       <div class="card-body">
         <div class="form-row">
-          <label class="form-label">当前密码</label>
+          <label class="form-label">{{ t('security.current') }}</label>
           <UInput
             v-model="form.old_password"
             class="w-full"
             type="password"
-            placeholder="请输入当前密码"
+            :placeholder="t('security.currentPh')"
             size="sm"
             @keyup.enter="handleSubmit"
           />
         </div>
 
         <div class="form-row">
-          <label class="form-label">新密码</label>
+          <label class="form-label">{{ t('security.new') }}</label>
           <UInput
             v-model="form.new_password"
             class="w-full"
             type="password"
-            placeholder="请输入新密码"
+            :placeholder="t('security.newPh')"
             size="sm"
           />
           <div v-if="form.new_password" class="password-strength-wrapper">
@@ -44,12 +44,12 @@
         </div>
 
         <div class="form-row">
-          <label class="form-label">确认密码</label>
+          <label class="form-label">{{ t('security.confirm') }}</label>
           <UInput
             v-model="form.confirm_password"
             class="w-full"
             type="password"
-            placeholder="请再次输入新密码"
+            :placeholder="t('security.confirmPh')"
             size="sm"
             @keyup.enter="handleSubmit"
           />
@@ -58,37 +58,37 @@
         <div v-if="!isFormValid && form.new_password" class="password-requirements">
           <div class="requirement" :class="{ met: meetsLength }">
             <UIcon :name="meetsLength ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
-            <span>8+字符</span>
+            <span>{{ t('security.reqLen') }}</span>
           </div>
           <div class="requirement" :class="{ met: meetsUpper }">
             <UIcon :name="meetsUpper ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
-            <span>大写</span>
+            <span>{{ t('security.reqUpper') }}</span>
           </div>
           <div class="requirement" :class="{ met: meetsLower }">
             <UIcon :name="meetsLower ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
-            <span>小写</span>
+            <span>{{ t('security.reqLower') }}</span>
           </div>
           <div class="requirement" :class="{ met: meetsNumber }">
             <UIcon :name="meetsNumber ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
-            <span>数字</span>
+            <span>{{ t('security.reqDigit') }}</span>
           </div>
           <div class="requirement" :class="{ met: meetsSpecial }">
             <UIcon :name="meetsSpecial ? 'i-lucide-check-circle' : 'i-lucide-x-circle'" class="size-3.5" />
-            <span>特殊字符</span>
+            <span>{{ t('security.reqSpecial') }}</span>
           </div>
         </div>
       </div>
 
       <div class="card-footer">
-        <UButton
-          color="primary"
-          size="sm"
+        <CfButton
+          tone="primary"
+          icon="i-lucide-key-round"
           :loading="loading"
           :disabled="!canSubmit"
           @click="handleSubmit"
         >
-          更新密码
-        </UButton>
+          {{ t('security.update') }}
+        </CfButton>
       </div>
     </div>
 
@@ -98,10 +98,10 @@
           <UIcon name="i-lucide-shield-check" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
-          <h3>双因素认证</h3>
-          <p>启用后登录需要额外的验证码，增强账户安全</p>
+          <h3>{{ t('security.2fa') }}</h3>
+          <p>{{ t('security.2faHint') }}</p>
         </div>
-        <UBadge color="warning" variant="subtle" size="sm">暂未开放</UBadge>
+        <UBadge color="warning" variant="subtle" size="sm">{{ t('profile.unavailable') }}</UBadge>
       </div>
     </div>
 
@@ -111,12 +111,12 @@
           <UIcon name="i-lucide-laptop" class="size-[18px] text-white" />
         </div>
         <div class="card-title-area">
-          <h3>活跃会话</h3>
-          <p>查看和管理您登录的设备</p>
+          <h3>{{ t('security.sessions') }}</h3>
+          <p>{{ t('security.sessionsHint') }}</p>
         </div>
-        <UButton color="primary" variant="ghost" size="xs" trailing-icon="i-lucide-chevron-right">
-          查看全部
-        </UButton>
+        <CfButton tone="secondary" icon="i-lucide-chevron-right" @click.stop="goToSessions">
+          {{ t('security.viewAll') }}
+        </CfButton>
       </div>
     </div>
   </div>
@@ -125,6 +125,7 @@
 <script setup lang="ts">
 const router = useRouter()
 const toast = useToast()
+const { t } = useLocale()
 
 const loading = ref(false)
 
@@ -171,7 +172,7 @@ const handleSubmit = async () => {
       },
     })
 
-    toast.add({ title: '密码修改成功，请使用新密码重新登录', color: 'success' })
+    toast.add({ title: t('security.passwordOk'), color: 'success' })
 
     form.old_password = ''
     form.new_password = ''
@@ -183,7 +184,7 @@ const handleSubmit = async () => {
       router.push('/login')
     }, 1500)
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '密码修改失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('security.passwordFail'), color: 'error' })
   } finally {
     loading.value = false
   }

@@ -2,7 +2,7 @@
   <div class="settings-layout">
     <aside class="settings-sidebar">
       <div class="sidebar-header">
-        <h3 class="sidebar-brand">Settings</h3>
+        <h3 class="sidebar-brand">{{ t('settings.title') }}</h3>
       </div>
       <nav class="sidebar-nav">
         <button
@@ -20,13 +20,13 @@
         <div class="user-card">
           <UAvatar
             :src="user?.avatar_url || undefined"
-            :alt="user?.name || 'User'"
+            :alt="user?.name || t('common.user')"
             size="sm"
             :text="user?.name?.charAt(0)?.toUpperCase() || 'U'"
           />
           <div class="user-info">
-            <div class="user-name">{{ user?.name || 'User' }}</div>
-            <div class="user-role">{{ user?.role === 'admin' ? 'Admin' : 'Member' }}</div>
+            <div class="user-name">{{ user?.name || t('common.user') }}</div>
+            <div class="user-role">{{ user?.role === 'admin' ? t('common.admin') : t('common.member') }}</div>
           </div>
         </div>
       </div>
@@ -50,14 +50,15 @@ definePageMeta({
 })
 
 const { user } = useAuth()
+const { t } = useLocale()
 const activeSection = ref('profile')
 
-const navItems = [
-  { key: 'profile', label: 'Profile', icon: 'i-lucide-user' },
-  { key: 'security', label: 'Security', icon: 'i-lucide-shield' },
-  { key: 'preferences', label: 'Preferences', icon: 'i-lucide-sliders-horizontal' },
-  { key: 'sessions', label: 'Sessions', icon: 'i-lucide-clock' },
-]
+const navItems = computed(() => [
+  { key: 'profile', label: t('settings.profile'), icon: 'i-lucide-user' },
+  { key: 'security', label: t('settings.security'), icon: 'i-lucide-shield' },
+  { key: 'preferences', label: t('settings.preferences'), icon: 'i-lucide-sliders-horizontal' },
+  { key: 'sessions', label: t('settings.sessions'), icon: 'i-lucide-clock' },
+])
 
 const route = useRoute()
 watch(

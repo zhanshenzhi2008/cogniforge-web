@@ -2,13 +2,13 @@
   <div class="dashboard-page">
     <header class="hero">
       <h1 class="hero-title font-display">
-        Welcome back, {{ firstName }}.
+        {{ t('dash.welcome', { name: firstName }) }}
       </h1>
       <p class="hero-sub hero-sub--desktop">
-        Ship smarter with AI—your studio, your rules.
+        {{ t('dash.subDesktop') }}
       </p>
       <p class="hero-sub hero-sub--mobile">
-        Let's keep building.
+        {{ t('dash.subMobile') }}
       </p>
     </header>
 
@@ -35,7 +35,7 @@
 
     <div class="section-grid">
       <section class="panel panel--steps">
-        <h2 class="panel-title font-display">Next steps</h2>
+        <h2 class="panel-title font-display">{{ t('dash.nextSteps') }}</h2>
         <div class="quick-list">
           <button
             v-for="item in quickActions"
@@ -54,24 +54,23 @@
             <UIcon name="i-lucide-chevron-right" class="quick-chevron size-4" />
           </button>
         </div>
-        <UButton
-          color="primary"
-          size="lg"
+        <CfButton
           class="cta-btn"
+          tone="primary"
           icon="i-lucide-flask-conical"
           block
           @click="go('/playground')"
         >
-          Open Playground
-        </UButton>
+          {{ t('dash.openPlay') }}
+        </CfButton>
       </section>
 
       <section class="panel panel--activity">
-        <h2 class="panel-title font-display">Recent activity</h2>
+        <h2 class="panel-title font-display">{{ t('dash.activity') }}</h2>
         <div class="activity-empty">
           <UIcon name="i-lucide-zap" class="activity-icon size-9" />
-          <p class="activity-title">No recent activity</p>
-          <p class="activity-hint">Your runs, edits, and events will show up here.</p>
+          <p class="activity-title">{{ t('dash.activityEmpty') }}</p>
+          <p class="activity-hint">{{ t('dash.activityHint') }}</p>
         </div>
       </section>
     </div>
@@ -84,14 +83,15 @@ definePageMeta({
 })
 
 const { user } = useAuth()
+const { t } = useLocale()
 const { list: listAgents } = useAgents()
 const { list: listWorkflows } = useWorkflows()
 const { listKBs } = useKnowledgeBases()
 const { get } = useApi()
 
 const firstName = computed(() => {
-  const name = (user.value?.name || 'there').trim()
-  return name.split(/\s+/)[0] || 'there'
+  const name = (user.value?.name || t('dash.guestName')).trim()
+  return name.split(/\s+/)[0] || t('dash.guestName')
 })
 
 const counts = reactive({
@@ -110,68 +110,68 @@ function go(path: string) {
 const statCards = computed(() => [
   {
     key: 'agents',
-    label: 'Agents',
+    label: t('dash.stat.agents'),
     value: loading.value ? '—' : String(counts.agents),
-    caption: counts.agents > 0 ? `↑ ${counts.agents} total` : 'Create your first',
+    caption: counts.agents > 0 ? t('dash.stat.total', { n: counts.agents }) : t('dash.stat.firstAgent'),
     accent: counts.agents > 0,
     icon: 'i-lucide-bot',
     to: '/agents',
   },
   {
     key: 'flows',
-    label: 'Flows',
+    label: t('dash.stat.flows'),
     value: loading.value ? '—' : String(counts.flows),
-    caption: counts.flows > 0 ? `↑ ${counts.flows} total` : 'Build a workflow',
+    caption: counts.flows > 0 ? t('dash.stat.total', { n: counts.flows }) : t('dash.stat.firstFlow'),
     accent: counts.flows > 0,
     icon: 'i-lucide-git-branch',
     to: '/workflows',
   },
   {
     key: 'knowledge',
-    label: 'Knowledge Bases',
+    label: t('dash.stat.knowledge'),
     value: loading.value ? '—' : String(counts.knowledge),
-    caption: counts.knowledge > 0 ? 'Connected' : '— No changes',
+    caption: counts.knowledge > 0 ? t('dash.stat.kbOn') : t('dash.stat.kbOff'),
     accent: counts.knowledge > 0,
     icon: 'i-lucide-book-open',
     to: '/knowledge',
   },
   {
     key: 'keys',
-    label: 'API Keys',
+    label: t('dash.stat.keys'),
     value: loading.value ? '—' : String(counts.keys),
-    caption: counts.keys > 0 ? `↑ ${counts.keys} total` : 'Add a key to start',
+    caption: counts.keys > 0 ? t('dash.stat.total', { n: counts.keys }) : t('dash.stat.firstKey'),
     accent: counts.keys > 0,
     icon: 'i-lucide-key-round',
     to: '/keys',
   },
 ])
 
-const quickActions = [
+const quickActions = computed(() => [
   {
-    title: 'Try the Playground',
-    desc: 'Chat with models and agents',
+    title: t('dash.q.play.title'),
+    desc: t('dash.q.play.desc'),
     to: '/playground',
     icon: 'i-lucide-zap',
   },
   {
-    title: 'Create a new Flow',
-    desc: 'Wire nodes into an automation',
+    title: t('dash.q.flow.title'),
+    desc: t('dash.q.flow.desc'),
     to: '/workflows',
     icon: 'i-lucide-git-branch',
   },
   {
-    title: 'Add to Knowledge',
-    desc: 'Upload docs for retrieval',
+    title: t('dash.q.kb.title'),
+    desc: t('dash.q.kb.desc'),
     to: '/knowledge',
     icon: 'i-lucide-book-open',
   },
   {
-    title: 'Manage API Keys',
-    desc: 'Issue or revoke credentials',
+    title: t('dash.q.keys.title'),
+    desc: t('dash.q.keys.desc'),
     to: '/keys',
     icon: 'i-lucide-key-round',
   },
-]
+])
 
 async function loadCounts() {
   loading.value = true

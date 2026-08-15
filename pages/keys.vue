@@ -2,63 +2,70 @@
   <div class="cf-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Keys</h1>
-        <p class="cf-page-sub">Issue and revoke API credentials.</p>
+        <h1 class="cf-page-title">{{ t('keys.title') }}</h1>
+        <p class="cf-page-sub">{{ t('keys.sub') }}</p>
       </div>
-      <UButton color="primary" icon="i-lucide-plus" @click="handleCreateKey">
-        New key
-      </UButton>
+      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreateKey">
+        {{ t('keys.new') }}
+      </CfButton>
+    </div>
+
+    <div class="list-toolbar">
+      <span class="list-count">{{ t('keys.count', { n: keys.length }) }}</span>
+      <span class="list-hint">{{ t('keys.hint') }}</span>
     </div>
 
     <div class="cf-panel">
       <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>Loading…</span>
+        <span>{{ t('common.loading') }}</span>
       </div>
 
       <div v-else-if="keys.length === 0" class="cf-state">
         <UIcon name="i-lucide-key-round" class="size-8 opacity-50" />
-        <p>No API keys yet.</p>
+        <p>{{ t('keys.empty') }}</p>
       </div>
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
-              <th>名称</th>
-              <th>密钥</th>
-              <th>创建时间</th>
-              <th class="cf-col-actions">操作</th>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('keys.secret') }}</th>
+              <th>{{ t('common.createdAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in keys" :key="row.id">
               <td class="name">{{ row.name }}</td>
-              <td>
+              <td @click.stop>
                 <div class="key-secret-row">
                   <code class="key-secret-text">{{ row.show ? row.key : row.maskedKey }}</code>
-                  <UTooltip :text="row.show ? '隐藏' : '显示'">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="sm"
-                      :icon="row.show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                      @click="row.show = !row.show"
-                    />
-                  </UTooltip>
+                  <CfButton
+                    tone="icon"
+                    :icon="row.show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    :tip="row.show ? t('common.hide') : t('common.show')"
+                    @click="row.show = !row.show"
+                  />
                 </div>
               </td>
-              <td class="cf-muted">{{ formatDate(row.created_at) }}</td>
+              <td class="cf-muted">{{ d(row.created_at) }}</td>
               <td>
-                <UTooltip text="撤销">
-                  <UButton
-                    color="error"
-                    variant="ghost"
-                    size="sm"
+                <div class="action-btns">
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-copy"
+                    :tip="t('keys.copy')"
+                    @click="copyRowKey(row)"
+                  />
+                  <CfButton
+                    tone="icon-danger"
                     icon="i-lucide-trash-2"
+                    :tip="t('keys.revoke')"
                     @click="askDelete(row)"
                   />
-                </UTooltip>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -68,7 +75,7 @@
 
     <UModal
       v-model:open="dialogVisible"
-      title="创建 API 密钥"
+      :title="t('keys.createTitle')"
       :ui="{ content: 'sm:max-w-md' }"
     >
       <template #body>
@@ -76,22 +83,22 @@
           <UAlert
             color="warning"
             variant="subtle"
-            title="请妥善保存以下密钥，它只会显示一次。"
+            :title="t('keys.saveOnce')"
             :ui="{ root: 'mb-3' }"
           />
           <div class="copy-row">
             <UInput :model-value="newKey" class="w-full" readonly />
-            <UButton color="primary" variant="soft" @click="copyKey">复制</UButton>
+            <CfButton tone="primary" icon="i-lucide-copy" @click="copyKey">{{ t('common.copy') }}</CfButton>
           </div>
         </div>
 
         <form v-else id="key-form" class="form-grid" @submit.prevent="submitCreate">
           <div class="field">
-            <label class="field__label">名称</label>
+            <label class="field__label">{{ t('common.name') }}</label>
             <UInput
               v-model="form.name"
               class="w-full"
-              placeholder="请输入密钥名称"
+              :placeholder="t('keys.namePh')"
               :color="errors.name ? 'error' : 'neutral'"
               @update:model-value="errors.name = ''"
             />
@@ -100,30 +107,42 @@
         </form>
       </template>
 
-      <template #footer>
+      <template v-if="!newKey" #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="dialogVisible = false">关闭</UButton>
-          <UButton
-            v-if="!newKey"
-            form="key-form"
-            type="submit"
-            color="primary"
-            :loading="creating"
-          >
-            创建
-          </UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="dialogVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              form="key-form"
+              type="submit"
+              tone="primary"
+              icon="i-lucide-plus"
+              :loading="creating"
+            >
+              {{ t('common.create') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
-    <UModal v-model:open="deleteVisible" title="撤销确认" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="deleteVisible" :title="t('keys.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
-        <p class="delete-text">确定要撤销此 API 密钥吗？此操作不可恢复。</p>
+        <p class="delete-text">{{ t('keys.revokeText') }}</p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="deleteVisible = false">取消</UButton>
-          <UButton color="error" :loading="deletingLoading" @click="confirmDelete">撤销</UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-ban"
+              :loading="deletingLoading"
+              @click="confirmDelete"
+            >
+              {{ t('keys.revoke') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -145,6 +164,7 @@ definePageMeta({
 })
 
 const toast = useToast()
+const { t, d } = useLocale()
 const { get, post, del } = useApi()
 
 const loading = ref(false)
@@ -157,10 +177,6 @@ const deletingId = ref('')
 const newKey = ref('')
 const form = reactive({ name: '' })
 const errors = reactive({ name: '' })
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleString('zh-CN')
-}
 
 const fetchKeys = async () => {
   loading.value = true
@@ -177,7 +193,7 @@ const fetchKeys = async () => {
       show: false,
     }))
   } catch {
-    toast.add({ title: '获取密钥列表失败', color: 'error' })
+    toast.add({ title: t('keys.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -191,7 +207,7 @@ const handleCreateKey = () => {
 }
 
 const submitCreate = async () => {
-  errors.name = form.name.trim() ? '' : '请输入密钥名称'
+  errors.name = form.name.trim() ? '' : t('keys.needName')
   if (errors.name) return
 
   creating.value = true
@@ -204,7 +220,7 @@ const submitCreate = async () => {
     newKey.value = res.data?.key || ''
     await fetchKeys()
   } catch {
-    toast.add({ title: '创建失败', color: 'error' })
+    toast.add({ title: t('common.createFail'), color: 'error' })
   } finally {
     creating.value = false
   }
@@ -223,7 +239,7 @@ const confirmDelete = async () => {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: res.data?.message || '撤销成功', color: 'success' })
+    toast.add({ title: res.data?.message || t('keys.revokeOk'), color: 'success' })
     deleteVisible.value = false
     await fetchKeys()
   } finally {
@@ -233,7 +249,16 @@ const confirmDelete = async () => {
 
 const copyKey = async () => {
   await navigator.clipboard.writeText(newKey.value)
-  toast.add({ title: '已复制到剪贴板', color: 'success' })
+  toast.add({ title: t('common.copied'), color: 'success' })
+}
+
+const copyRowKey = async (row: ApiKey) => {
+  const text = row.show ? row.key : row.maskedKey
+  await navigator.clipboard.writeText(text)
+  toast.add({
+    title: row.show ? t('keys.copiedFull') : t('keys.copiedMasked'),
+    color: 'success',
+  })
 }
 
 onMounted(() => {
@@ -242,6 +267,21 @@ onMounted(() => {
 </script>
 
 <style scoped>
+
+.list-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+}
+
+.list-hint {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  opacity: 0.85;
+}
+
 .name {
   font-weight: 600;
   color: var(--cf-ink);
@@ -293,10 +333,11 @@ onMounted(() => {
   color: var(--cf-danger);
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .delete-text {

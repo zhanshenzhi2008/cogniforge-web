@@ -6,33 +6,33 @@
       </div>
       <div class="sidebar-title">
         <span class="app-name font-display">CogniForge</span>
-        <span class="app-sub">AI Agent Platform</span>
+        <span class="app-sub">{{ t('play.subtitle') }}</span>
       </div>
     </div>
 
     <section class="config-block">
       <div class="card-header">
         <UIcon name="i-lucide-bot" class="size-4" />
-        <span>Agent</span>
+        <span>{{ t('agents.title') }}</span>
       </div>
       <USelect
         :model-value="selectedAgent"
         :items="agentOptions"
-        placeholder="选择 Agent"
+        :placeholder="t('play.pickAgent')"
         value-key="value"
         class="w-full"
         @update:model-value="onAgentChange"
       />
       <div v-if="selectedAgentInfo" class="agent-meta">
         <div class="meta-item">
-          <span class="meta-label">模型</span>
+          <span class="meta-label">{{ t('common.model') }}</span>
           <UBadge size="sm" variant="subtle" color="primary">
             {{ selectedAgentInfo.model }}
           </UBadge>
         </div>
         <div class="meta-item">
-          <span class="meta-label">描述</span>
-          <p class="meta-desc">{{ selectedAgentInfo.description || '暂无描述' }}</p>
+          <span class="meta-label">{{ t('common.description') }}</span>
+          <p class="meta-desc">{{ selectedAgentInfo.description || t('common.noDesc') }}</p>
         </div>
       </div>
     </section>
@@ -40,12 +40,12 @@
     <section class="config-block">
       <div class="card-header">
         <UIcon name="i-lucide-settings-2" class="size-4" />
-        <span>模型</span>
+        <span>{{ t('common.model') }}</span>
       </div>
       <USelect
         :model-value="selectedModel"
         :items="modelOptions"
-        placeholder="选择模型"
+        :placeholder="t('play.pickModel')"
         value-key="value"
         class="w-full"
         @update:model-value="$emit('update:selectedModel', $event)"
@@ -55,7 +55,7 @@
     <section class="config-block params-block">
       <div class="card-header">
         <UIcon name="i-lucide-sliders-horizontal" class="size-4" />
-        <span>参数</span>
+        <span>{{ t('play.params') }}</span>
       </div>
       <div class="param-row">
         <div class="param-label">
@@ -118,6 +118,8 @@ defineProps<{
     top_p: number
   }
 }>()
+
+const { t } = useLocale()
 
 const emit = defineEmits<{
   (e: 'update:selectedAgent', value: string): void

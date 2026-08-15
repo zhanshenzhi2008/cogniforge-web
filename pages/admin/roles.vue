@@ -2,41 +2,51 @@
   <div class="cf-page">
     <div class="cf-page-header">
       <div class="cf-page-heading">
-        <h1 class="cf-page-title">Roles</h1>
-        <p class="cf-page-sub">Permissions and role codes.</p>
+        <h1 class="cf-page-title">{{ t('roles.title') }}</h1>
+        <p class="cf-page-sub">{{ t('roles.sub') }}</p>
       </div>
-      <UButton color="primary" icon="i-lucide-user-plus" @click="openCreateModal">
-        新建角色
-      </UButton>
+      <CfButton tone="primary" icon="i-lucide-shield-plus" @click="openCreateModal">
+        {{ t('roles.new') }}
+      </CfButton>
+    </div>
+
+    <div class="list-toolbar">
+      <span class="list-count">{{ t('roles.count', { n: roles.length }) }}</span>
+      <span class="list-hint">{{ t('common.hintDblclickEdit') }}</span>
     </div>
 
     <div class="cf-panel">
       <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>加载中…</span>
+        <span>{{ t('common.loading') }}</span>
       </div>
 
       <div v-else-if="pagedRoles.length === 0" class="cf-state">
         <UIcon name="i-lucide-shield" class="size-8 opacity-50" />
-        <p>暂无角色</p>
+        <p>{{ t('roles.empty') }}</p>
       </div>
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
-              <th>角色名称</th>
-              <th>角色代码</th>
-              <th>描述</th>
-              <th>系统角色</th>
-              <th>默认角色</th>
-              <th>权限数</th>
-              <th>创建时间</th>
-              <th class="cf-col-actions">操作</th>
+              <th>{{ t('roles.name') }}</th>
+              <th>{{ t('roles.code') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('roles.system') }}</th>
+              <th>{{ t('roles.default') }}</th>
+              <th>{{ t('roles.permCount') }}</th>
+              <th>{{ t('common.createdAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in pagedRoles" :key="row.id">
+            <tr
+              v-for="row in pagedRoles"
+              :key="row.id"
+              class="list-row"
+              @dblclick="handleEdit(row)"
+            >
               <td class="name">{{ row.name }}</td>
               <td><code class="role-code">{{ row.code }}</code></td>
               <td class="cf-muted desc-cell" :title="row.description">{{ row.description || '—' }}</td>
@@ -46,7 +56,7 @@
                   variant="subtle"
                   :color="row.is_system ? 'error' : 'neutral'"
                 >
-                  {{ row.is_system ? '是' : '否' }}
+                  {{ row.is_system ? t('common.yes') : t('common.no') }}
                 </UBadge>
               </td>
               <td>
@@ -55,25 +65,26 @@
                   variant="subtle"
                   :color="row.is_default ? 'success' : 'neutral'"
                 >
-                  {{ row.is_default ? '是' : '否' }}
+                  {{ row.is_default ? t('common.yes') : t('common.no') }}
                 </UBadge>
               </td>
               <td class="cf-muted">{{ row.permissions?.length || 0 }}</td>
-              <td class="cf-muted">{{ formatDate(row.created_at) }}</td>
-              <td>
+              <td class="cf-muted">{{ d(row.created_at) }}</td>
+              <td @dblclick.stop>
                 <div class="action-btns">
-                  <UButton color="primary" variant="ghost" size="sm" @click="handleEdit(row)">
-                    编辑
-                  </UButton>
-                  <UButton
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(row)"
+                  />
+                  <CfButton
                     v-if="!row.is_system"
-                    color="error"
-                    variant="ghost"
-                    size="sm"
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
                     @click="askDelete(row.id)"
-                  >
-                    删除
-                  </UButton>
+                  />
                 </div>
               </td>
             </tr>
@@ -82,71 +93,69 @@
       </div>
 
       <div v-if="roles.length > pageSize" class="pager">
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
+        <CfButton
+          tone="secondary"
+          icon="i-lucide-chevron-left"
           :disabled="page <= 1"
           @click="page--"
         >
-          上一页
-        </UButton>
+          {{ t('common.prev') }}
+        </CfButton>
         <span class="pager-page">{{ page }} / {{ roleTotalPages }}</span>
-        <UButton
-          color="neutral"
-          variant="outline"
-          size="sm"
+        <CfButton
+          tone="secondary"
+          icon="i-lucide-chevron-right"
           :disabled="page >= roleTotalPages"
           @click="page++"
         >
-          下一页
-        </UButton>
+          {{ t('common.next') }}
+        </CfButton>
       </div>
     </div>
 
     <UModal
       v-model:open="showRoleModal"
-      :title="isEditing ? '编辑角色' : '新建角色'"
+      :title="isEditing ? t('roles.editTitle') : t('roles.createTitle')"
       :ui="{ content: 'sm:max-w-xl' }"
     >
       <template #body>
         <form id="role-form" class="form-grid" @submit.prevent="handleRoleSubmit">
           <div class="field">
-            <label class="field__label">角色名称</label>
+            <label class="field__label">{{ t('roles.name') }}</label>
             <UInput
               v-model="roleForm.name"
               class="w-full"
-              placeholder="请输入角色名称"
+              :placeholder="t('roles.namePh')"
               @update:model-value="errors.name = ''"
             />
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
           </div>
 
           <div class="field">
-            <label class="field__label">角色代码</label>
+            <label class="field__label">{{ t('roles.code') }}</label>
             <UInput
               v-model="roleForm.code"
               class="w-full"
-              placeholder="如：admin, editor, viewer"
+              :placeholder="t('roles.codePh')"
               :disabled="isEditing"
               @update:model-value="errors.code = ''"
             />
-            <p class="field__hint">角色代码用于程序判断，只允许小写字母，创建后不可修改</p>
+            <p class="field__hint">{{ t('roles.codeHint') }}</p>
             <p v-if="errors.code" class="field__error">{{ errors.code }}</p>
           </div>
 
           <div class="field">
-            <label class="field__label">描述</label>
+            <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
               v-model="roleForm.description"
               class="w-full"
               :rows="3"
-              placeholder="角色描述"
+              :placeholder="t('roles.descPh')"
             />
           </div>
 
           <div class="field">
-            <label class="field__label">权限配置</label>
+            <label class="field__label">{{ t('roles.perms') }}</label>
             <div class="perm-groups">
               <details
                 v-for="group in groupedPermissions"
@@ -172,26 +181,42 @@
 
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="closeRoleModal">取消</UButton>
-          <UButton form="role-form" type="submit" color="primary" :loading="submitting">
-            保存
-          </UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="closeRoleModal">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              form="role-form"
+              type="submit"
+              tone="primary"
+              :icon="isEditing ? 'i-lucide-check' : 'i-lucide-plus'"
+              :loading="submitting"
+            >
+              {{ isEditing ? t('common.save') : t('common.create') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
 
-    <UModal v-model:open="showDeleteModal" title="确认删除" :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="showDeleteModal" :title="t('roles.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">
-          删除角色后，该角色的用户将失去所有权限。确定要删除吗？
+          {{ t('roles.deleteText') }}
         </p>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <UButton color="neutral" variant="outline" @click="showDeleteModal = false">取消</UButton>
-          <UButton color="error" :loading="deletingLoading" @click="handleDeleteConfirm">
-            删除
-          </UButton>
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="showDeleteModal = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="danger"
+              strong
+              icon="i-lucide-trash-2"
+              :loading="deletingLoading"
+              @click="handleDeleteConfirm"
+            >
+              {{ t('common.delete') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </UModal>
@@ -205,6 +230,7 @@ definePageMeta({
 })
 
 const toast = useToast()
+const { t, d } = useLocale()
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -242,7 +268,7 @@ const groupedPermissions = computed(() => {
   const groups: Record<string, any[]> = {}
 
   permissions.value.forEach((perm) => {
-    const groupName = perm.group || '其他'
+    const groupName = perm.group || t('roles.otherGroup')
     if (!groups[groupName]) {
       groups[groupName] = []
     }
@@ -258,25 +284,21 @@ const groupedPermissions = computed(() => {
   }))
 })
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleString('zh-CN')
-}
-
 function validateRoleForm() {
   errors.name = ''
   errors.code = ''
 
   if (!roleForm.name.trim()) {
-    errors.name = '请输入角色名称'
+    errors.name = t('roles.needName')
   } else if (roleForm.name.trim().length < 2 || roleForm.name.trim().length > 100) {
-    errors.name = '长度在 2-100 个字符'
+    errors.name = t('roles.nameLen')
   }
 
   if (!isEditing.value) {
     if (!roleForm.code.trim()) {
-      errors.code = '请输入角色代码'
+      errors.code = t('roles.needCode')
     } else if (!/^[a-z][a-z0-9_]*$/.test(roleForm.code.trim())) {
-      errors.code = '只允许小写字母、数字和下划线，且必须以字母开头'
+      errors.code = t('roles.badCode')
     }
   }
 
@@ -290,7 +312,7 @@ const fetchRoles = async () => {
     roles.value = (data as any) || []
     page.value = 1
   } catch {
-    toast.add({ title: '获取角色列表失败', color: 'error' })
+    toast.add({ title: t('roles.listFail'), color: 'error' })
   } finally {
     loading.value = false
   }
@@ -301,7 +323,7 @@ const fetchPermissions = async () => {
     const data = await $fetch('/api/v1/permissions')
     permissions.value = (data as any) || []
   } catch {
-    toast.add({ title: '获取权限列表失败', color: 'error' })
+    toast.add({ title: t('roles.permFail'), color: 'error' })
   }
 }
 
@@ -364,7 +386,7 @@ const handleRoleSubmit = async () => {
       body: payload,
     })
 
-    toast.add({ title: isEditing.value ? '角色已更新' : '角色已创建', color: 'success' })
+    toast.add({ title: isEditing.value ? t('roles.updated') : t('roles.created'), color: 'success' })
     closeRoleModal()
     await fetchRoles()
   } catch (error: any) {
@@ -387,11 +409,11 @@ const handleDeleteConfirm = async () => {
     await $fetch(`/api/v1/admin/roles/${selectedRoleId.value}`, {
       method: 'DELETE',
     })
-    toast.add({ title: '角色已删除', color: 'success' })
+    toast.add({ title: t('roles.deleted'), color: 'success' })
     showDeleteModal.value = false
     await fetchRoles()
   } catch (error: any) {
-    toast.add({ title: error.data?.message || '删除失败', color: 'error' })
+    toast.add({ title: error.data?.message || t('common.deleteFail'), color: 'error' })
   } finally {
     deletingLoading.value = false
   }
@@ -508,10 +530,11 @@ onMounted(async () => {
   margin-top: 10px;
 }
 
-.modal-actions {
+.modal-actions__right {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .confirm-text {

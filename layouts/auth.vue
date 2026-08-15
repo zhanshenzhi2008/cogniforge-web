@@ -1,6 +1,9 @@
 <template>
   <div class="auth-layout">
     <div class="auth-layout__grid" aria-hidden="true" />
+    <div class="auth-layout__lang">
+      <LanguageSwitch />
+    </div>
     <div class="auth-layout__content">
       <slot />
     </div>
@@ -30,6 +33,13 @@
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
   opacity: 0.55;
+}
+
+.auth-layout__lang {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
 }
 
 .auth-layout__content {
