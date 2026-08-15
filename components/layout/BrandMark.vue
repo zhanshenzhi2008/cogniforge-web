@@ -18,6 +18,7 @@
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
+  color: inherit;
 }
 
 .brand-mark:hover .brand-mark__word {

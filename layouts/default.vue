@@ -386,16 +386,21 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 /* -------------------------------------------------------------------------- */
 .app-shell[data-nav-style='editorial'] .cf-header :deep(header[data-slot='root']) {
   height: 4rem;
-  background: color-mix(in oklab, var(--cf-bg-elevated) 88%, transparent);
+  background: var(--cf-nav-surface);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--cf-line);
   box-shadow: none;
+  color: var(--cf-ink);
 }
 
 .app-shell[data-nav-style='editorial'] .cf-header :deep([data-slot='container']) {
   max-width: 1200px;
   gap: 1.25rem;
+}
+
+.app-shell[data-nav-style='editorial'] .cf-nav__link {
+  color: var(--cf-ink-soft);
 }
 
 .app-shell[data-nav-style='editorial'] .cf-nav__link::after {
@@ -412,8 +417,12 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   transition: transform 0.18s ease;
 }
 
+.app-shell[data-nav-style='editorial'] .cf-nav__link:hover {
+  color: var(--cf-ink);
+}
+
 .app-shell[data-nav-style='editorial'] .cf-nav__link.is-active {
-  color: var(--cf-accent-ink);
+  color: var(--cf-accent);
   font-weight: 600;
 }
 
@@ -433,6 +442,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  color: var(--cf-ink);
 }
 
 .app-shell[data-nav-style='island'] .cf-header :deep([data-slot='container']) {
@@ -442,19 +452,16 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   gap: 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--cf-line);
-  background: color-mix(in oklab, var(--cf-bg-elevated) 94%, white);
-  box-shadow:
-    0 1px 2px color-mix(in oklab, var(--cf-ink) 4%, transparent),
-    0 10px 28px color-mix(in oklab, var(--cf-ink) 6%, transparent);
+  background: var(--cf-nav-surface);
+  color: var(--cf-ink);
+  box-shadow: var(--cf-nav-shadow);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .app-shell[data-nav-style='island'] .cf-header :deep([data-slot='container']:hover) {
-  box-shadow:
-    0 1px 2px color-mix(in oklab, var(--cf-ink) 5%, transparent),
-    0 14px 34px color-mix(in oklab, var(--cf-ink) 8%, transparent);
+  box-shadow: var(--cf-nav-shadow);
 }
 
 .app-shell[data-nav-style='island'] .cf-nav {
@@ -464,6 +471,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 .app-shell[data-nav-style='island'] .cf-nav__link {
   padding: 0.4rem 0.75rem;
   border-radius: 999px;
+  color: var(--cf-ink-soft);
 }
 
 .app-shell[data-nav-style='island'] .cf-nav__link::after {
@@ -471,18 +479,26 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 }
 
 .app-shell[data-nav-style='island'] .cf-nav__link:hover {
-  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
+  background: color-mix(in oklab, var(--cf-accent) 14%, transparent);
   color: var(--cf-ink);
 }
 
 .app-shell[data-nav-style='island'] .cf-nav__link.is-active {
-  background: color-mix(in oklab, var(--cf-accent) 16%, transparent);
-  color: var(--cf-accent-ink);
+  background: var(--cf-accent-soft);
+  color: var(--cf-accent);
   font-weight: 600;
 }
 
+.app-shell[data-nav-style='island'] .cf-user-chip {
+  color: var(--cf-ink);
+}
+
 .app-shell[data-nav-style='island'] .cf-user-chip:hover {
-  background: color-mix(in oklab, var(--cf-accent) 10%, transparent);
+  background: color-mix(in oklab, var(--cf-accent) 14%, transparent);
+}
+
+.app-shell[data-nav-style='island'] .cf-icon-btn {
+  color: var(--cf-ink-soft);
 }
 
 @media (max-width: 1023px) {
