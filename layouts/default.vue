@@ -266,8 +266,8 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: 0.2rem;
-  width: 1.1rem;
+  bottom: 0.22rem;
+  width: 0.72rem;
   height: 2px;
   border-radius: 999px;
   background: var(--cf-accent);
