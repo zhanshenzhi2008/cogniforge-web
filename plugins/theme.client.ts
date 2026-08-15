@@ -1,4 +1,6 @@
 export default defineNuxtPlugin(() => {
-  const { init } = useTheme()
-  init()
+  const { init: initTheme } = useTheme()
+  const { init: initNavStyle } = useNavStyle()
+  initTheme()
+  initNavStyle()
 })

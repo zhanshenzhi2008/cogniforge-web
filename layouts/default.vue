@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell min-h-screen">
+  <div class="app-shell min-h-screen" :data-nav-style="navStyle">
     <UHeader
       :toggle="false"
       class="cf-header"
@@ -21,13 +21,13 @@
       </nav>
 
       <template #right>
-        <UDropdownMenu :items="themeMenuItems">
+        <UDropdownMenu :items="chromeMenuItems">
           <UButton
             color="neutral"
             variant="ghost"
             icon="i-lucide-palette"
             size="sm"
-            aria-label="切换主题"
+            aria-label="主题与导航样式"
             class="cf-icon-btn"
           />
         </UDropdownMenu>
@@ -104,6 +104,11 @@ const router = useRouter()
 const toast = useToast()
 const { user, clearAuth } = useAuth()
 const { theme, themes, setTheme } = useTheme()
+const { navStyle, navStyles, setNavStyle, init: initNavStyle } = useNavStyle()
+
+onMounted(() => {
+  initNavStyle()
+})
 
 const mobileOpen = ref(false)
 
@@ -143,7 +148,7 @@ const mobileAccountLinks = computed(() => {
   return items
 })
 
-const themeMenuItems = computed<DropdownMenuItem[][]>(() => [
+const chromeMenuItems = computed<DropdownMenuItem[][]>(() => [
   themes.map((item) => ({
     label: item.label,
     description: item.description,
@@ -152,6 +157,20 @@ const themeMenuItems = computed<DropdownMenuItem[][]>(() => [
     onSelect: (e: Event) => {
       e.preventDefault()
       setTheme(item.id)
+    },
+  })),
+  navStyles.map((item) => ({
+    label: item.label,
+    description: item.description,
+    type: 'checkbox' as const,
+    checked: navStyle.value === item.id,
+    onSelect: (e: Event) => {
+      e.preventDefault()
+      setNavStyle(item.id)
+      toast.add({
+        title: item.id === 'island' ? '已切换：悬浮岛' : '已切换：安静编辑室',
+        color: 'success',
+      })
     },
   })),
 ])
@@ -205,24 +224,13 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 </script>
 
 <style scoped>
+/* -------------------------------------------------------------------------- */
+/* Shared                                                                     */
+/* -------------------------------------------------------------------------- */
 .cf-header {
   position: sticky;
   top: 0;
   z-index: 40;
-}
-
-.cf-header :deep(header[data-slot='root']) {
-  height: 4rem;
-  background: color-mix(in oklab, var(--cf-bg-elevated) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--cf-line);
-  box-shadow: none;
-}
-
-.cf-header :deep([data-slot='container']) {
-  max-width: 1200px;
-  gap: 1.25rem;
 }
 
 .cf-header :deep([data-slot='left']) {
@@ -258,35 +266,12 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   letter-spacing: 0.01em;
   color: var(--cf-ink-soft);
   text-decoration: none;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
   white-space: nowrap;
-}
-
-.cf-nav__link::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 0.22rem;
-  width: 0.72rem;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--cf-accent);
-  transform: translateX(-50%) scaleX(0);
-  transform-origin: center;
-  transition: transform 0.18s ease;
 }
 
 .cf-nav__link:hover {
   color: var(--cf-ink);
-}
-
-.cf-nav__link.is-active {
-  color: var(--cf-accent-ink);
-  font-weight: 600;
-}
-
-.cf-nav__link.is-active::after {
-  transform: translateX(-50%) scaleX(1);
 }
 
 .cf-icon-btn {
@@ -393,6 +378,117 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 
   .cf-user-chip {
     padding: 0.15rem;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* A — 安静编辑室（默认）                                                      */
+/* -------------------------------------------------------------------------- */
+.app-shell[data-nav-style='editorial'] .cf-header :deep(header[data-slot='root']) {
+  height: 4rem;
+  background: color-mix(in oklab, var(--cf-bg-elevated) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--cf-line);
+  box-shadow: none;
+}
+
+.app-shell[data-nav-style='editorial'] .cf-header :deep([data-slot='container']) {
+  max-width: 1200px;
+  gap: 1.25rem;
+}
+
+.app-shell[data-nav-style='editorial'] .cf-nav__link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0.22rem;
+  width: 0.72rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--cf-accent);
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.app-shell[data-nav-style='editorial'] .cf-nav__link.is-active {
+  color: var(--cf-accent-ink);
+  font-weight: 600;
+}
+
+.app-shell[data-nav-style='editorial'] .cf-nav__link.is-active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* B — 悬浮岛                                                                  */
+/* -------------------------------------------------------------------------- */
+.app-shell[data-nav-style='island'] .cf-header :deep(header[data-slot='root']) {
+  height: auto;
+  min-height: 4.5rem;
+  padding: 0.75rem 1rem 0.35rem;
+  background: transparent;
+  border-bottom: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app-shell[data-nav-style='island'] .cf-header :deep([data-slot='container']) {
+  max-width: 1120px;
+  height: 3.35rem;
+  padding-inline: 0.85rem;
+  gap: 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-bg-elevated) 94%, white);
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--cf-ink) 4%, transparent),
+    0 10px 28px color-mix(in oklab, var(--cf-ink) 6%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.app-shell[data-nav-style='island'] .cf-header :deep([data-slot='container']:hover) {
+  box-shadow:
+    0 1px 2px color-mix(in oklab, var(--cf-ink) 5%, transparent),
+    0 14px 34px color-mix(in oklab, var(--cf-ink) 8%, transparent);
+}
+
+.app-shell[data-nav-style='island'] .cf-nav {
+  gap: 0.2rem;
+}
+
+.app-shell[data-nav-style='island'] .cf-nav__link {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+}
+
+.app-shell[data-nav-style='island'] .cf-nav__link::after {
+  display: none;
+}
+
+.app-shell[data-nav-style='island'] .cf-nav__link:hover {
+  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
+  color: var(--cf-ink);
+}
+
+.app-shell[data-nav-style='island'] .cf-nav__link.is-active {
+  background: color-mix(in oklab, var(--cf-accent) 16%, transparent);
+  color: var(--cf-accent-ink);
+  font-weight: 600;
+}
+
+.app-shell[data-nav-style='island'] .cf-user-chip:hover {
+  background: color-mix(in oklab, var(--cf-accent) 10%, transparent);
+}
+
+@media (max-width: 1023px) {
+  .app-shell[data-nav-style='island'] .cf-header :deep([data-slot='container']) {
+    border-radius: 1.1rem;
+    height: 3.15rem;
   }
 }
 </style>
