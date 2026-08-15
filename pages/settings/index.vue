@@ -1,8 +1,8 @@
 <template>
   <div class="settings-layout">
-    <aside class="settings-sidebar cf-surface">
+    <aside class="settings-sidebar">
       <div class="sidebar-header">
-        <h3>设置</h3>
+        <h3 class="sidebar-brand">Settings</h3>
       </div>
       <nav class="sidebar-nav">
         <button
@@ -20,13 +20,13 @@
         <div class="user-card">
           <UAvatar
             :src="user?.avatar_url || undefined"
-            :alt="user?.name || '用户'"
+            :alt="user?.name || 'User'"
             size="sm"
             :text="user?.name?.charAt(0)?.toUpperCase() || 'U'"
           />
           <div class="user-info">
-            <div class="user-name">{{ user?.name || '用户' }}</div>
-            <div class="user-role">{{ user?.role === 'admin' ? '管理员' : '普通用户' }}</div>
+            <div class="user-name">{{ user?.name || 'User' }}</div>
+            <div class="user-role">{{ user?.role === 'admin' ? 'Admin' : 'Member' }}</div>
           </div>
         </div>
       </div>
@@ -53,10 +53,10 @@ const { user } = useAuth()
 const activeSection = ref('profile')
 
 const navItems = [
-  { key: 'profile', label: '个人资料', icon: 'i-lucide-user' },
-  { key: 'security', label: '安全设置', icon: 'i-lucide-shield' },
-  { key: 'preferences', label: '偏好设置', icon: 'i-lucide-sliders-horizontal' },
-  { key: 'sessions', label: '登录会话', icon: 'i-lucide-clock' },
+  { key: 'profile', label: 'Profile', icon: 'i-lucide-user' },
+  { key: 'security', label: 'Security', icon: 'i-lucide-shield' },
+  { key: 'preferences', label: 'Preferences', icon: 'i-lucide-sliders-horizontal' },
+  { key: 'sessions', label: 'Sessions', icon: 'i-lucide-clock' },
 ]
 
 const route = useRoute()
@@ -84,6 +84,8 @@ watch(
   border-top: none;
   border-bottom: none;
   border-left: none;
+  border-right: 1px solid var(--cf-line);
+  background: var(--cf-nav-surface, var(--cf-bg-elevated));
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -94,12 +96,14 @@ watch(
   border-bottom: 1px solid var(--cf-line);
 }
 
-.sidebar-header h3 {
+.sidebar-brand {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   color: var(--cf-ink);
-  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 
 .sidebar-nav {

@@ -1,31 +1,34 @@
 <template>
-  <div class="monitor-page">
-    <div class="page-header">
-      <h1 class="page-title font-display">监控中心</h1>
+  <div class="cf-page">
+    <div class="cf-page-header">
+      <div class="cf-page-heading">
+        <h1 class="cf-page-title">Monitor</h1>
+        <p class="cf-page-sub">Request logs and usage.</p>
+      </div>
     </div>
 
     <div class="stat-grid">
       <div class="stat-card cf-surface">
-        <div class="stat-value">{{ stats?.total_requests || 0 }}</div>
+        <div class="stat-value font-display">{{ stats?.total_requests || 0 }}</div>
         <div class="stat-label">总请求数</div>
       </div>
       <div class="stat-card cf-surface">
-        <div class="stat-value">{{ stats?.avg_duration || 0 }}ms</div>
+        <div class="stat-value font-display">{{ stats?.avg_duration || 0 }}ms</div>
         <div class="stat-label">平均耗时</div>
       </div>
       <div class="stat-card cf-surface">
-        <div class="stat-value">{{ stats?.error_requests || 0 }}</div>
+        <div class="stat-value font-display">{{ stats?.error_requests || 0 }}</div>
         <div class="stat-label">错误请求</div>
       </div>
       <div class="stat-card cf-surface">
-        <div class="stat-value error-rate">{{ (stats?.error_rate || 0).toFixed(2) }}%</div>
+        <div class="stat-value font-display error-rate">{{ (stats?.error_rate || 0).toFixed(2) }}%</div>
         <div class="stat-label">错误率</div>
       </div>
     </div>
 
-    <div class="panel cf-surface">
+    <div class="cf-panel">
       <div class="panel-header">
-        <h2 class="panel-title">请求日志</h2>
+        <h2 class="panel-title">Request logs</h2>
         <div class="filters">
           <USelect
             v-model="filterMethod"
@@ -42,18 +45,18 @@
         </div>
       </div>
 
-      <div v-if="loading" class="state-box">
+      <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
         <span>加载中…</span>
       </div>
 
-      <div v-else-if="logs.length === 0" class="state-box">
+      <div v-else-if="logs.length === 0" class="cf-state">
         <UIcon name="i-lucide-activity" class="size-8 opacity-50" />
         <p>暂无请求日志</p>
       </div>
 
-      <div v-else class="table-wrap">
-        <table class="data-table">
+      <div v-else class="cf-table-wrap">
+        <table class="cf-data-table">
           <thead>
             <tr>
               <th>时间</th>
@@ -62,12 +65,12 @@
               <th>状态</th>
               <th>耗时</th>
               <th>IP</th>
-              <th class="col-actions">操作</th>
+              <th class="cf-col-actions">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in logs" :key="row.id">
-              <td class="muted">{{ formatDate(row.created_at) }}</td>
+              <td class="cf-muted">{{ formatDate(row.created_at) }}</td>
               <td>
                 <UBadge size="sm" variant="subtle" :color="methodColor(row.method)">
                   {{ row.method }}
@@ -79,8 +82,8 @@
                   {{ row.status_code }}
                 </UBadge>
               </td>
-              <td class="muted">{{ row.duration }}ms</td>
-              <td class="muted">{{ row.ip }}</td>
+              <td class="cf-muted">{{ row.duration }}ms</td>
+              <td class="cf-muted">{{ row.ip }}</td>
               <td>
                 <UButton color="primary" variant="ghost" size="sm" @click="openLogDetail(row)">
                   详情
@@ -182,7 +185,7 @@
               variant="subtle"
               :title="selectedLog.error"
             />
-            <span v-else class="muted">无</span>
+            <span v-else class="cf-muted">无</span>
           </div>
         </div>
       </template>
@@ -324,67 +327,45 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.monitor-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px 20px 40px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--cf-ink);
-}
-
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 22px;
 }
 
 @media (min-width: 960px) {
   .stat-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
   }
 }
 
 .stat-card {
-  text-align: center;
-  border-radius: 10px;
-  padding: 20px 16px;
+  text-align: left;
+  border-radius: 8px;
+  padding: 20px 18px 16px;
+  box-shadow: none;
 }
 
 .stat-value {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--cf-ink);
-  line-height: 1.2;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
 }
 
 .stat-label {
   margin-top: 8px;
   font-size: 0.875rem;
-  color: var(--cf-ink-soft);
+  font-weight: 500;
+  color: var(--cf-ink);
 }
 
 .error-rate {
   color: var(--cf-danger);
-}
-
-.panel {
-  border-radius: 10px;
-  padding: 8px;
-  min-height: 220px;
 }
 
 .panel-header {
@@ -418,55 +399,12 @@ onMounted(() => {
   width: 200px;
 }
 
-.state-box {
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--cf-ink-soft);
-}
-
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--cf-line);
-  vertical-align: middle;
-}
-
-.data-table th {
-  color: var(--cf-ink-soft);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.col-actions {
-  width: 88px;
-}
-
 .path-cell {
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--cf-ink);
-}
-
-.muted {
-  color: var(--cf-ink-soft);
 }
 
 .pager {

@@ -2,7 +2,7 @@
   <div class="playground-page">
     <div class="playground-container">
       <!-- 左侧配置面板（桌面） -->
-      <aside class="sidebar cf-surface">
+      <aside class="sidebar">
         <PlaygroundConfigPanel
           v-model:selected-agent="selectedAgent"
           v-model:selected-model="selectedModel"
@@ -51,8 +51,8 @@
           <div v-if="messages.length === 0" class="empty-state">
             <div class="empty-glow" />
             <UIcon name="i-lucide-messages-square" class="size-14 empty-icon" />
-            <p class="empty-title font-display">开始新对话</p>
-            <p class="empty-sub">输入消息与 AI 互动</p>
+            <p class="empty-title font-display">Start a conversation</p>
+            <p class="empty-sub">Pick an agent and send a message.</p>
             <div class="suggestion-chips">
               <UButton
                 v-for="chip in suggestionChips"
@@ -461,6 +461,7 @@ onMounted(async () => {
   border-right: 1px solid var(--cf-line);
   border-radius: 0;
   overflow-y: auto;
+  background: var(--cf-nav-surface, var(--cf-bg-elevated));
 }
 
 .sidebar-header {
@@ -620,10 +621,11 @@ onMounted(async () => {
 }
 
 .chat-title-main {
-  font-size: 15px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
   color: var(--cf-ink);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .chat-title-sub {

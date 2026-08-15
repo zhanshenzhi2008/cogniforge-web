@@ -1,8 +1,8 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="section-title font-display">个人资料</h2>
-      <p class="section-desc">管理您的个人信息和公开资料</p>
+      <h2 class="cf-section-title">Profile</h2>
+      <p class="cf-section-desc">Your name, avatar, and public details.</p>
     </div>
 
     <div class="content-card cf-surface">
@@ -233,19 +233,6 @@ onMounted(() => {
 
 .section-header {
   margin-bottom: 16px;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--cf-ink);
-  margin: 0 0 4px 0;
-}
-
-.section-desc {
-  font-size: 13px;
-  color: var(--cf-ink-soft);
-  margin: 0;
 }
 
 .content-card {

@@ -1,18 +1,21 @@
 <template>
-  <div class="knowledge-page">
-    <div class="page-header">
-      <h1 class="page-title font-display">知识库</h1>
+  <div class="cf-page">
+    <div class="cf-page-header">
+      <div class="cf-page-heading">
+        <h1 class="cf-page-title">Knowledge</h1>
+        <p class="cf-page-sub">Upload docs for retrieval.</p>
+      </div>
       <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
-        创建知识库
+        New knowledge base
       </UButton>
     </div>
 
-    <div v-if="loading" class="state-box">
+    <div v-if="loading" class="cf-state">
       <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
       <span>加载中…</span>
     </div>
 
-    <div v-else-if="knowledgeBases.length === 0" class="state-box">
+    <div v-else-if="knowledgeBases.length === 0" class="cf-state">
       <UIcon name="i-lucide-book-open" class="size-8 opacity-50" />
       <p>暂无知识库，点击上方按钮创建</p>
     </div>
@@ -163,18 +166,18 @@
 
         <UTabs v-model="drawerActiveTab" :items="drawerTabs" class="w-full">
           <template #docs>
-            <div v-if="docsLoading" class="state-box state-box--sm">
+            <div v-if="docsLoading" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
               <span>加载中…</span>
             </div>
 
-            <div v-else-if="documents.length === 0" class="state-box state-box--sm">
+            <div v-else-if="documents.length === 0" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-file" class="size-7 opacity-50" />
               <p>暂无文档，请点击上方按钮上传</p>
             </div>
 
-            <div v-else class="table-wrap">
-              <table class="data-table">
+            <div v-else class="cf-table-wrap">
+              <table class="cf-data-table">
                 <thead>
                   <tr>
                     <th>名称</th>
@@ -182,7 +185,7 @@
                     <th>分块</th>
                     <th>大小</th>
                     <th>时间</th>
-                    <th class="col-actions">操作</th>
+                    <th class="cf-col-actions">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -198,9 +201,9 @@
                         {{ docStatusLabel(doc.status) }}
                       </UBadge>
                     </td>
-                    <td class="muted">{{ doc.chunk_count || '—' }}</td>
-                    <td class="muted">{{ formatFileSize(doc.file_size) }}</td>
-                    <td class="muted">{{ formatDate(doc.created_at) }}</td>
+                    <td class="cf-muted">{{ doc.chunk_count || '—' }}</td>
+                    <td class="cf-muted">{{ formatFileSize(doc.file_size) }}</td>
+                    <td class="cf-muted">{{ formatDate(doc.created_at) }}</td>
                     <td>
                       <div class="action-btns">
                         <UTooltip text="重新解析">
@@ -255,7 +258,7 @@
             <div v-if="searchResults.length > 0" class="search-results">
               <div class="results-header">
                 <span>找到 {{ searchResults.length }} 条相关结果</span>
-                <span class="muted">耗时 {{ searchDuration }}ms</span>
+                <span class="cf-muted">耗时 {{ searchDuration }}ms</span>
               </div>
 
               <div v-for="result in searchResults" :key="result.chunk_id" class="result-item">
@@ -269,7 +272,7 @@
               </div>
             </div>
 
-            <div v-else-if="!searchLoading && hasSearched" class="state-box state-box--sm">
+            <div v-else-if="!searchLoading && hasSearched" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-search-x" class="size-7 opacity-50" />
               <p>未找到相关结果</p>
             </div>
@@ -769,38 +772,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.knowledge-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px 20px 40px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--cf-ink);
-}
-
-.state-box {
-  min-height: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--cf-ink-soft);
-}
-
-.state-box--sm {
+.cf-state--compact {
   min-height: 160px;
 }
 
@@ -881,34 +853,8 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
+.cf-table-wrap {
   margin-top: 8px;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--cf-line);
-  vertical-align: middle;
-}
-
-.data-table th {
-  color: var(--cf-ink-soft);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.col-actions {
-  width: 96px;
 }
 
 .doc-name-cell {
@@ -923,10 +869,6 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--cf-ink);
-}
-
-.muted {
-  color: var(--cf-ink-soft);
 }
 
 .action-btns {

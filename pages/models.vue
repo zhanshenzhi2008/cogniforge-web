@@ -1,9 +1,12 @@
 <template>
-  <div class="models-page">
-    <div class="page-header">
-      <h1 class="page-title font-display">模型配置</h1>
+  <div class="cf-page">
+    <div class="cf-page-header">
+      <div class="cf-page-heading">
+        <h1 class="cf-page-title">Models</h1>
+        <p class="cf-page-sub">Providers and default models.</p>
+      </div>
       <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
-        添加供应商
+        Add provider
       </UButton>
     </div>
 
@@ -47,11 +50,11 @@
     <!-- 无生效配置时的提示 -->
     <div v-else class="no-active-banner">
       当前没有生效的 AI 配置，请先
-      <UButton color="primary" size="sm" @click="handleCreate">添加供应商</UButton>
+      <UButton color="primary" size="sm" @click="handleCreate">Add provider</UButton>
     </div>
 
     <!-- 供应商列表 -->
-    <div class="panel cf-surface">
+    <div class="cf-panel">
       <div class="card-header">
         <div class="card-header-left">
           <span class="card-header-title">已配置的供应商</span>
@@ -59,12 +62,12 @@
         </div>
       </div>
 
-      <div v-if="loading" class="state-box">
+      <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
         <span>加载中…</span>
       </div>
 
-      <div v-else-if="providers.length === 0" class="state-box">
+      <div v-else-if="providers.length === 0" class="cf-state">
         <UIcon name="i-lucide-boxes" class="size-8 opacity-50" />
         <p>暂无供应商配置，请点击上方添加</p>
       </div>
@@ -137,11 +140,11 @@
             </div>
             <div class="provider-field provider-field--full">
               <span class="field-label">Base URL</span>
-              <span class="field-value ellipsis muted">{{ p.base_url || '—' }}</span>
+              <span class="field-value ellipsis cf-muted">{{ p.base_url || '—' }}</span>
             </div>
             <div v-if="p.last_test_at" class="provider-field provider-field--full">
               <span class="field-label">最近测试</span>
-              <span class="field-value muted">{{ formatDate(p.last_test_at) }}</span>
+              <span class="field-value cf-muted">{{ formatDate(p.last_test_at) }}</span>
             </div>
           </div>
 
@@ -616,27 +619,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.models-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px 20px 40px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--cf-ink);
-}
-
 /* Active Banner — teal/accent, not purple/indigo */
 .active-banner {
   display: flex;
@@ -718,17 +700,12 @@ onMounted(() => {
   text-align: center;
 }
 
-.panel {
-  border-radius: 10px;
-  padding: 16px;
-  min-height: 220px;
-}
-
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+  padding: 10px 10px 0;
 }
 
 .card-header-left {
@@ -747,20 +724,11 @@ onMounted(() => {
   color: var(--cf-ink-soft);
 }
 
-.state-box {
-  min-height: 180px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--cf-ink-soft);
-}
-
 .provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 16px;
+  padding: 0 10px 10px;
 }
 
 .provider-card {
@@ -880,10 +848,6 @@ onMounted(() => {
   font-size: 12px;
   color: var(--cf-ink);
   min-width: 0;
-}
-
-.muted {
-  color: var(--cf-ink-soft);
 }
 
 .ellipsis {

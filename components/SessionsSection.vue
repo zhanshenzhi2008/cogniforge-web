@@ -1,8 +1,8 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="section-title font-display">登录会话</h2>
-      <p class="section-desc">查看和管理您的活跃登录会话</p>
+      <h2 class="cf-section-title">Sessions</h2>
+      <p class="cf-section-desc">Review and revoke active logins.</p>
     </div>
 
     <div class="content-card cf-surface">
@@ -211,19 +211,6 @@ onMounted(() => {
 
 .section-header {
   margin-bottom: 16px;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--cf-ink);
-  margin: 0 0 4px 0;
-}
-
-.section-desc {
-  font-size: 13px;
-  color: var(--cf-ink-soft);
-  margin: 0;
 }
 
 .content-card {

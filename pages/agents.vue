@@ -1,32 +1,35 @@
 <template>
-  <div class="agents-page">
-    <div class="page-header">
-      <h1 class="page-title font-display">我的 Agent</h1>
+  <div class="cf-page">
+    <div class="cf-page-header">
+      <div class="cf-page-heading">
+        <h1 class="cf-page-title">Agents</h1>
+        <p class="cf-page-sub">Configure and chat with your agents.</p>
+      </div>
       <UButton color="primary" icon="i-lucide-plus" @click="handleCreate">
-        创建 Agent
+        New Agent
       </UButton>
     </div>
 
-    <div class="panel cf-surface">
-      <div v-if="loading" class="state-box">
+    <div class="cf-panel">
+      <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>加载中…</span>
+        <span>Loading…</span>
       </div>
 
-      <div v-else-if="agents.length === 0" class="state-box">
+      <div v-else-if="agents.length === 0" class="cf-state">
         <UIcon name="i-lucide-bot" class="size-8 opacity-50" />
-        <p>暂无 Agent，点击上方按钮创建</p>
+        <p>No agents yet. Create one to get started.</p>
       </div>
 
-      <div v-else class="table-wrap">
-        <table class="data-table">
+      <div v-else class="cf-table-wrap">
+        <table class="cf-data-table">
           <thead>
             <tr>
               <th>名称</th>
               <th>描述</th>
               <th>模型</th>
               <th>创建时间</th>
-              <th class="col-actions">操作</th>
+              <th class="cf-col-actions">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -43,11 +46,11 @@
                   </UBadge>
                 </div>
               </td>
-              <td class="muted">{{ agent.description || '—' }}</td>
+              <td class="cf-muted">{{ agent.description || '—' }}</td>
               <td>
                 <UBadge size="sm" variant="subtle" color="primary">{{ agent.model }}</UBadge>
               </td>
-              <td class="muted">{{ formatDate(agent.created_at) }}</td>
+              <td class="cf-muted">{{ formatDate(agent.created_at) }}</td>
               <td>
                 <div class="action-btns">
                   <UTooltip text="编辑">
@@ -356,72 +359,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.agents-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px 20px 40px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--cf-ink);
-}
-
-.panel {
-  border-radius: 10px;
-  padding: 8px;
-  min-height: 220px;
-}
-
-.state-box {
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--cf-ink-soft);
-}
-
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--cf-line);
-  vertical-align: middle;
-}
-
-.data-table th {
-  color: var(--cf-ink-soft);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.col-actions {
-  width: 140px;
-}
-
 .agent-name {
   display: flex;
   align-items: center;
@@ -431,10 +368,6 @@ onMounted(() => {
 .agent-name .name {
   font-weight: 600;
   color: var(--cf-ink);
-}
-
-.muted {
-  color: var(--cf-ink-soft);
 }
 
 .action-btns {

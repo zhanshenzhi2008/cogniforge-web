@@ -1,8 +1,8 @@
 <template>
   <div class="section-container">
     <div class="section-header">
-      <h2 class="section-title font-display">安全设置</h2>
-      <p class="section-desc">管理您的账户密码和安全选项</p>
+      <h2 class="cf-section-title">Security</h2>
+      <p class="cf-section-desc">Password, 2FA, and active sessions.</p>
     </div>
 
     <div class="content-card cf-surface">
@@ -212,19 +212,6 @@ const goToSessions = () => {
 
 .section-header {
   margin-bottom: 16px;
-}
-
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--cf-ink);
-  margin: 0 0 4px 0;
-}
-
-.section-desc {
-  font-size: 13px;
-  color: var(--cf-ink-soft);
-  margin: 0;
 }
 
 .content-card {

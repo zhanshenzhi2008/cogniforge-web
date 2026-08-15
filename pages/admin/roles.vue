@@ -1,25 +1,28 @@
 <template>
-  <div class="admin-roles-page">
-    <div class="page-header">
-      <h1 class="page-title font-display">角色权限管理</h1>
+  <div class="cf-page">
+    <div class="cf-page-header">
+      <div class="cf-page-heading">
+        <h1 class="cf-page-title">Roles</h1>
+        <p class="cf-page-sub">Permissions and role codes.</p>
+      </div>
       <UButton color="primary" icon="i-lucide-user-plus" @click="openCreateModal">
         新建角色
       </UButton>
     </div>
 
-    <div class="panel cf-surface">
-      <div v-if="loading" class="state-box">
+    <div class="cf-panel">
+      <div v-if="loading" class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
         <span>加载中…</span>
       </div>
 
-      <div v-else-if="pagedRoles.length === 0" class="state-box">
+      <div v-else-if="pagedRoles.length === 0" class="cf-state">
         <UIcon name="i-lucide-shield" class="size-8 opacity-50" />
         <p>暂无角色</p>
       </div>
 
-      <div v-else class="table-wrap">
-        <table class="data-table">
+      <div v-else class="cf-table-wrap">
+        <table class="cf-data-table">
           <thead>
             <tr>
               <th>角色名称</th>
@@ -29,14 +32,14 @@
               <th>默认角色</th>
               <th>权限数</th>
               <th>创建时间</th>
-              <th class="col-actions">操作</th>
+              <th class="cf-col-actions">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in pagedRoles" :key="row.id">
               <td class="name">{{ row.name }}</td>
               <td><code class="role-code">{{ row.code }}</code></td>
-              <td class="muted desc-cell" :title="row.description">{{ row.description || '—' }}</td>
+              <td class="cf-muted desc-cell" :title="row.description">{{ row.description || '—' }}</td>
               <td>
                 <UBadge
                   size="sm"
@@ -55,8 +58,8 @@
                   {{ row.is_default ? '是' : '否' }}
                 </UBadge>
               </td>
-              <td class="muted">{{ row.permissions?.length || 0 }}</td>
-              <td class="muted">{{ formatDate(row.created_at) }}</td>
+              <td class="cf-muted">{{ row.permissions?.length || 0 }}</td>
+              <td class="cf-muted">{{ formatDate(row.created_at) }}</td>
               <td>
                 <div class="action-btns">
                   <UButton color="primary" variant="ghost" size="sm" @click="handleEdit(row)">
@@ -400,79 +403,9 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.admin-roles-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 24px 20px 40px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--cf-ink);
-}
-
-.panel {
-  border-radius: 10px;
-  padding: 8px;
-  min-height: 220px;
-}
-
-.state-box {
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: var(--cf-ink-soft);
-}
-
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table th,
-.data-table td {
-  padding: 12px 14px;
-  text-align: left;
-  border-bottom: 1px solid var(--cf-line);
-  vertical-align: middle;
-}
-
-.data-table th {
-  color: var(--cf-ink-soft);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.col-actions {
-  width: 140px;
-}
-
 .name {
   font-weight: 600;
   color: var(--cf-ink);
-}
-
-.muted {
-  color: var(--cf-ink-soft);
 }
 
 .desc-cell {

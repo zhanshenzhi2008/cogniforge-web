@@ -189,3 +189,135 @@ a {
     font-size: 1.25rem;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Editorial module chrome — shared across Agents / Flows / Keys / …           */
+/* -------------------------------------------------------------------------- */
+.cf-page {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+  box-sizing: border-box;
+}
+
+.cf-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.cf-page-heading {
+  min-width: 0;
+}
+
+.cf-page-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 2.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--cf-ink);
+  line-height: 1.15;
+}
+
+.cf-page-sub {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.45;
+}
+
+.cf-panel {
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: var(--cf-nav-surface, var(--cf-bg-elevated));
+  padding: 6px;
+  min-height: 220px;
+}
+
+.cf-state {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--cf-ink-soft);
+  text-align: center;
+}
+
+.cf-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.cf-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.cf-data-table th,
+.cf-data-table td {
+  padding: 13px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--cf-line);
+  vertical-align: middle;
+}
+
+.cf-data-table th {
+  color: var(--cf-ink-soft);
+  font-weight: 500;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cf-data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.cf-data-table tbody tr:hover td {
+  background: color-mix(in oklab, var(--cf-accent) 5%, transparent);
+}
+
+.cf-muted {
+  color: var(--cf-ink-soft);
+}
+
+.cf-col-actions {
+  width: 140px;
+}
+
+.cf-section-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--cf-ink);
+  line-height: 1.2;
+}
+
+.cf-section-desc {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .cf-page {
+    padding: 20px 16px 36px;
+  }
+
+  .cf-page-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}
