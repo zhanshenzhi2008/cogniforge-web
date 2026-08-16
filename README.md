@@ -19,6 +19,7 @@ Aurora（默认）/ Ink Night / Citrus / Glass — 顶栏调色盘或设置页�
 ## Getting Started
 
 需要 **Node.js 22+**（CI / Docker 构建用 22；本机 22 或 24 均可）。
+Docker 镜像里的包管理器钉死 **pnpm 9**（和 CI 的 `pnpm/action-setup` 一致）。不要在 Dockerfile 里写无版本的 `npm install -g pnpm`：pnpm 10/11 会拦截 `@parcel/watcher`、`esbuild`、`vue-demi` 的构建脚本，安装以 `ERR_PNPM_IGNORED_BUILDS` 失败。
 
 ```bash
 pnpm install

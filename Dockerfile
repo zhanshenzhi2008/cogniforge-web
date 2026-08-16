@@ -6,7 +6,10 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml* ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+# 必须钉 pnpm 9：CI 也是 9。`pnpm` 最新（10/11）默认拦截依赖构建脚本，
+# 会在 nuxt prepare 之后以 ERR_PNPM_IGNORED_BUILDS 失败
+#（@parcel/watcher / esbuild / vue-demi）。
+RUN npm install -g pnpm@9 && pnpm install --frozen-lockfile
 
 COPY . .
 # 静态托管没有运行时 Nuxt 配置；API 基址必须在构建时写入产物。
