@@ -29,6 +29,7 @@ export interface AgentChatResponse {
 export const useAgentChat = () => {
   const api = useApi()
   const config = useRuntimeConfig()
+  const { t } = useI18n()
   const streaming = ref(false)
   const error = ref<string | null>(null)
 
@@ -79,7 +80,19 @@ export const useAgentChat = () => {
       )
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
+        const text = await response.text().catch(() => '')
+        let msg = `HTTP ${response.status}`
+        try {
+          const parsed = JSON.parse(text)
+          if (parsed?.code === 4010) {
+            msg = t('play.noProvider')
+          } else if (parsed?.message) {
+            msg = parsed.message
+          }
+        } catch {
+          // 不是 JSON
+        }
+        throw new Error(msg)
       }
 
       const reader = response.body?.getReader()

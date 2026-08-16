@@ -272,6 +272,29 @@ const notifyError = (title: string) => {
   toast.add({ title, color: 'error' })
 }
 
+const NO_ACTIVE_PROVIDER = 4010
+
+const notifyChatHttpError = (status: number, text: string) => {
+  try {
+    const parsed = JSON.parse(text)
+    if (parsed?.code === NO_ACTIVE_PROVIDER) {
+      notifyError(t('play.noProvider'))
+      return
+    }
+    const msg = parsed?.message || parsed?.error
+    if (typeof msg === 'string' && msg.length > 0) {
+      notifyError(msg)
+      return
+    }
+  } catch {
+    // 不是 JSON
+  }
+  notifyError(t('play.sendFailHttp', {
+    status,
+    detail: text ? ` - ${text}` : '',
+  }))
+}
+
 const fetchAgents = async () => {
   try {
     const res = await listAgents()
@@ -440,10 +463,7 @@ const sendMessage = async () => {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      notifyError(t('play.sendFailHttp', {
-        status: response.status,
-        detail: text ? ` - ${text}` : '',
-      }))
+      notifyChatHttpError(response.status, text)
       return
     }
 
@@ -472,7 +492,11 @@ const sendMessage = async () => {
         const parsed = JSON.parse(data)
         if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
           notifyError(parsed.error)
-          assistantMessage.content = parsed.error
+          if (!assistantMessage.content) {
+            messages.value.pop()
+          } else {
+            assistantMessage.content = parsed.error
+          }
           return true
         }
         const delta = parsed?.choices?.[0]?.delta?.content

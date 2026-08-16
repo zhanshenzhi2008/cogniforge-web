@@ -197,6 +197,7 @@ export const M = {
   'play.sendFail': { 'zh-CN': '发送失败', 'en-US': 'Send failed' },
   'play.sendFailHttp': { 'zh-CN': '发送失败：HTTP {status}{detail}', 'en-US': 'Send failed: HTTP {status}{detail}' },
   'play.sendFailBody': { 'zh-CN': '发送失败：响应体不可用', 'en-US': 'Send failed: response body unavailable' },
+  'play.noProvider': { 'zh-CN': '请先到「模型」页填写 API Key，并设置一个默认模型后再对话。', 'en-US': 'Go to Models, add an API key, and set a default model before chatting.' },
   'play.chip1': { 'zh-CN': '介绍一下你自己', 'en-US': 'Introduce yourself' },
   'play.chip2': { 'zh-CN': '帮我写一段产品说明', 'en-US': 'Write a short product blurb' },
   'play.chip3': { 'zh-CN': '用三点总结今天的重点', 'en-US': 'Summarize today in three points' },
