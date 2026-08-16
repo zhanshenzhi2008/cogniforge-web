@@ -1,24 +1,26 @@
 <template>
   <div class="playground-page">
-    <div class="playground-container">
-      <!-- Desktop config panel -->
+    <div class="playground-container" :class="{ 'is-history-collapsed': sidebarCollapsed }">
       <aside class="sidebar">
-        <PlaygroundConfigPanel
-          v-model:selected-agent="selectedAgent"
-          v-model:selected-model="selectedModel"
-          :selected-agent-info="selectedAgentInfo"
-          :agent-options="agentOptions"
-          :model-options="modelOptions"
-          :params="params"
-          show-brand
-          @agent-change="handleAgentChange"
+        <PlaygroundHistoryPanel
+          :items="conversations"
+          :active-id="currentConversationId"
+          @new="startNewChat"
+          @select="loadConversation"
+          @delete="deleteConversation"
         />
       </aside>
 
-      <!-- Chat area -->
       <main class="chat-area">
         <div class="chat-topbar cf-surface">
           <div class="chat-title">
+            <CfButton
+              class="sidebar-fold"
+              tone="icon"
+              :icon="sidebarCollapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
+              :tip="sidebarCollapsed ? t('play.showHistory') : t('play.hideHistory')"
+              @click="toggleDesktopHistory"
+            />
             <div class="chat-title-text">
               <span class="chat-title-main">{{ t('play.title') }}</span>
               <span class="chat-title-sub">{{ currentTitle }}</span>
@@ -26,19 +28,20 @@
           </div>
           <div class="chat-topbar-actions">
             <CfButton
-              class="config-toggle"
+              class="history-toggle"
+              tone="secondary"
+              icon="i-lucide-history"
+              @click="historyOpen = true"
+            >
+              {{ t('play.history') }}
+            </CfButton>
+            <CfButton
               tone="secondary"
               icon="i-lucide-sliders-horizontal"
               @click="configOpen = true"
             >
               {{ t('play.params') }}
             </CfButton>
-            <CfButton
-              tone="icon-danger"
-              icon="i-lucide-trash-2"
-              :tip="t('play.clear')"
-              @click="clearMessages"
-            />
           </div>
         </div>
 
@@ -115,6 +118,18 @@
       </main>
     </div>
 
+    <USlideover v-model:open="historyOpen" :title="t('play.historyTitle')" :ui="{ content: 'max-w-sm w-full' }">
+      <template #body>
+        <PlaygroundHistoryPanel
+          :items="conversations"
+          :active-id="currentConversationId"
+          @new="startNewChat(); historyOpen = false"
+          @select="id => { loadConversation(id); historyOpen = false }"
+          @delete="deleteConversation"
+        />
+      </template>
+    </USlideover>
+
     <USlideover v-model:open="configOpen" :title="t('play.paramsTitle')" :ui="{ content: 'max-w-sm w-full' }">
       <template #body>
         <PlaygroundConfigPanel
@@ -135,6 +150,7 @@
 import { marked } from 'marked'
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
+import type { ConversationMessage, ConversationSummary } from '@/composables/useConversations'
 
 definePageMeta({
   layout: 'default',
@@ -164,10 +180,12 @@ interface Model {
 type ChatStatus = 'submitted' | 'streaming' | 'ready' | 'error'
 
 const route = useRoute()
+const router = useRouter()
 const config = useRuntimeConfig()
 const toast = useToast()
 const { t } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
+const { list: listConversations, get: getConversation, create: createConversation, update: updateConversation, remove: removeConversation } = useConversations()
 const { get } = useApi()
 
 const messages = ref<Message[]>([])
@@ -182,6 +200,13 @@ const selectedAgent = ref(NONE_AGENT)
 const selectedAgentInfo = ref<Agent | null>(null)
 const abortController = ref<AbortController | null>(null)
 const configOpen = ref(false)
+const historyOpen = ref(false)
+const SIDEBAR_KEY = 'cf-play-sidebar-collapsed'
+const sidebarCollapsed = ref(false)
+const conversations = ref<ConversationSummary[]>([])
+const currentConversationId = ref('')
+const conversationTitle = ref('')
+let persistSeq = 0
 
 const suggestionChips = computed(() => [
   t('play.chip1'),
@@ -190,6 +215,7 @@ const suggestionChips = computed(() => [
 ])
 
 const currentTitle = computed(() => {
+  if (conversationTitle.value) return conversationTitle.value
   if (selectedAgentInfo.value) {
     return t('play.withAgent', { name: selectedAgentInfo.value.name })
   }
@@ -291,10 +317,78 @@ const fetchModels = async () => {
   }
 }
 
+const fetchConversationList = async () => {
+  const res = await listConversations()
+  if (res.error) {
+    notifyError(res.error)
+    return
+  }
+  conversations.value = res.data || []
+}
+
+function conversationPayload() {
+  return {
+    agent_id: selectedAgent.value === NONE_AGENT ? '' : selectedAgent.value,
+    model: selectedModel.value,
+    messages: messages.value.map((m): ConversationMessage => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      time: m.time,
+    })),
+  }
+}
+
+async function setConversationQuery(id: string | null) {
+  const query = { ...route.query }
+  if (id) {
+    await router.replace({ query: { ...query, c: id } })
+    return
+  }
+  const { c: _omit, ...rest } = query
+  await router.replace({ query: rest })
+}
+
+async function persistConversation() {
+  if (messages.value.length === 0) return
+  const seq = ++persistSeq
+  const snapshotId = currentConversationId.value
+  const payload = conversationPayload()
+  const res = snapshotId
+    ? await updateConversation(snapshotId, payload)
+    : await createConversation(payload)
+  if (seq !== persistSeq) return
+  if (res.error) {
+    notifyError(res.error || t('play.saveFail'))
+    return
+  }
+  if (!snapshotId && res.data?.id) {
+    currentConversationId.value = res.data.id
+    conversationTitle.value = res.data.title || ''
+    await setConversationQuery(res.data.id)
+  } else if (res.data?.title) {
+    conversationTitle.value = res.data.title
+  }
+  await fetchConversationList()
+}
+
 const stopStreaming = () => {
   abortController.value?.abort()
   abortController.value = null
   streaming.value = false
+}
+
+const toggleDesktopHistory = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+const startNewChat = () => {
+  persistSeq++
+  stopStreaming()
+  messages.value = []
+  currentConversationId.value = ''
+  conversationTitle.value = ''
+  void setConversationQuery(null)
 }
 
 const sendSuggestion = (text: string) => {
@@ -444,23 +538,81 @@ const sendMessage = async () => {
   } finally {
     streaming.value = false
     abortController.value = null
+    await persistConversation()
   }
 }
 
-const clearMessages = () => {
+const loadConversation = async (id: string) => {
+  if (!id || id === currentConversationId.value) return
+  persistSeq++
   stopStreaming()
-  messages.value = []
+  const res = await getConversation(id)
+  if (res.error || !res.data) {
+    notifyError(res.error || t('play.loadFail'))
+    return
+  }
+  currentConversationId.value = res.data.id
+  conversationTitle.value = res.data.title || ''
+  messages.value = (res.data.messages || []).map(m => ({
+    id: m.id || crypto.randomUUID(),
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: m.content || '',
+    time: m.time,
+  }))
+  await handleAgentChange(res.data.agent_id || NONE_AGENT)
+  if (res.data.model) {
+    selectedModel.value = res.data.model
+  }
+  await setConversationQuery(res.data.id)
+}
+
+const deleteConversation = async (id: string) => {
+  if (!id) return
+  if (!window.confirm(t('play.deleteConfirm'))) return
+  const res = await removeConversation(id)
+  if (res.error) {
+    notifyError(res.error)
+    return
+  }
+  conversations.value = conversations.value.filter(item => item.id !== id)
+  if (currentConversationId.value === id) {
+    startNewChat()
+  }
 }
 
 onMounted(async () => {
+  if (import.meta.client) {
+    sidebarCollapsed.value = localStorage.getItem(SIDEBAR_KEY) === '1'
+  }
   await fetchAgents()
   await fetchModels()
+  await fetchConversationList()
+
+  const conversationId = typeof route.query.c === 'string' ? route.query.c : ''
+  if (conversationId) {
+    await loadConversation(conversationId)
+    return
+  }
 
   const agentId = route.query.agent as string
   if (agentId) {
     selectedAgent.value = agentId
     await handleAgentChange(agentId)
   }
+})
+
+watch(
+  () => (typeof route.query.c === 'string' ? route.query.c : ''),
+  (id) => {
+    if (id && id !== currentConversationId.value) {
+      void loadConversation(id)
+    }
+  },
+)
+
+watch(sidebarCollapsed, (collapsed) => {
+  if (!import.meta.client) return
+  localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0')
 })
 </script>
 
@@ -480,125 +632,20 @@ onMounted(async () => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   padding: 16px;
   border-right: 1px solid var(--cf-line);
-  border-radius: 0;
-  overflow-y: auto;
-  background: var(--cf-nav-surface, var(--cf-bg-elevated));
-}
-
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--cf-line);
-}
-
-.header-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--cf-accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.sidebar-title {
-  display: flex;
-  flex-direction: column;
-}
-
-.app-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--cf-ink);
-  letter-spacing: 0.2px;
-}
-
-.app-sub {
-  font-size: 10px;
-  color: var(--cf-ink-soft);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.config-block {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cf-ink-soft);
-}
-
-.card-header :deep(svg) {
-  color: var(--cf-accent);
-}
-
-.agent-meta {
-  margin-top: 2px;
-  padding-top: 10px;
-  border-top: 1px solid var(--cf-line);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.meta-label {
-  font-size: 11px;
-  color: var(--cf-ink-soft);
-  min-width: 32px;
-  padding-top: 2px;
-}
-
-.meta-desc {
-  font-size: 12px;
-  color: var(--cf-ink-soft);
-  margin: 0;
-  line-height: 1.5;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  background: var(--cf-nav-surface, var(--cf-bg-elevated));
+  transition: width 0.2s ease, padding 0.2s ease, opacity 0.2s ease, border-width 0.2s ease;
 }
 
-.params-block {
-  flex: 1;
-}
-
-.param-row {
-  margin-bottom: 14px;
-}
-
-.param-row:last-child {
-  margin-bottom: 0;
-}
-
-.param-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: var(--cf-ink-soft);
+.playground-container.is-history-collapsed .sidebar {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-width: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .chat-area {
@@ -626,8 +673,12 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.config-toggle {
+.history-toggle {
   display: none;
+}
+
+.sidebar-fold {
+  flex-shrink: 0;
 }
 
 .chat-title {
@@ -658,10 +709,6 @@ onMounted(async () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.title-icon {
-  color: var(--cf-accent);
 }
 
 .messages-wrapper {
@@ -806,11 +853,12 @@ onMounted(async () => {
 }
 
 @media (max-width: 900px) {
-  .sidebar {
+  .sidebar,
+  .sidebar-fold {
     display: none;
   }
 
-  .config-toggle {
+  .history-toggle {
     display: inline-flex;
   }
 

@@ -34,9 +34,12 @@ API_BASE=http://localhost:8080
 
 本地默认打本机后端；生产镜像 `API_BASE` 为空，走同源 `/api/v1/*`。
 
+## Playground
+
+登录后可在「对话」页聊天。左侧是历史（手机点「历史对话」）；Agent / 模型 / 温度等点右上角「参数」。每轮结束后会保存，刷新还能打开。
+
 ## Constraints
 
-- 不改 API 入参 / 出参
 - 不改工作流 Vue Flow 核心逻辑
 - 导航模块与权限与现网一致
 - 尽量不改 Dockerfile / nginx / GitHub Actions

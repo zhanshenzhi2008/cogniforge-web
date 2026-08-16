@@ -51,7 +51,15 @@ export interface TestResult {
 }
 
 // 供应商元信息（用于表单展示）
-export const PROVIDER_META: Record<string, { label: string; icon: string; color: string; defaultBaseURL: string; docURL: string; local?: boolean }> = {
+export const PROVIDER_META: Record<string, {
+  label: string
+  icon: string
+  color: string
+  defaultBaseURL: string
+  docURL: string
+  local?: boolean
+  suggestedModels?: Array<{ label: string; value: string }>
+}> = {
   openai: {
     label: 'OpenAI',
     icon: '🤖',
@@ -86,6 +94,12 @@ export const PROVIDER_META: Record<string, { label: string; icon: string; color:
     color: '#6366f1',
     defaultBaseURL: 'https://api.deepseek.com/v1',
     docURL: 'https://api-docs.deepseek.com',
+    suggestedModels: [
+      { label: 'deepseek-chat', value: 'deepseek-chat' },
+      { label: 'deepseek-reasoner', value: 'deepseek-reasoner' },
+      { label: 'deepseek-v4-flash', value: 'deepseek-v4-flash' },
+      { label: 'deepseek-v4-pro', value: 'deepseek-v4-pro' },
+    ],
   },
   aicore: {
     label: 'AI Core',

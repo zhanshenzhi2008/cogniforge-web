@@ -359,7 +359,21 @@
 
           <div class="field">
             <label class="field__label">{{ t('models.defaultModel') }}</label>
-            <UInput v-model="form.default_model" class="w-full" :placeholder="t('models.modelPh')" />
+            <USelect
+              v-if="suggestedModelItems.length"
+              :model-value="form.default_model"
+              :items="suggestedModelItems"
+              value-key="value"
+              class="w-full"
+              @update:model-value="form.default_model = $event"
+            />
+            <UInput
+              v-else
+              v-model="form.default_model"
+              class="w-full"
+              :placeholder="t('models.modelPh')"
+            />
+            <p v-if="form.provider === 'deepseek'" class="field__hint">{{ t('models.deepseekHint') }}</p>
           </div>
 
           <div v-if="form.provider === 'openrouter'" class="field">
@@ -589,8 +603,14 @@ function formatExtraHeaders(headers: Record<string, any> | null) {
 function selectProvider(key: string) {
   form.provider = key
   form.base_url = PROVIDER_META[key]?.defaultBaseURL || ''
+  const suggested = PROVIDER_META[key]?.suggestedModels
+  if (dialogMode.value === 'create' && suggested?.length) {
+    form.default_model = suggested[0].value
+  }
   errors.provider = ''
 }
+
+const suggestedModelItems = computed(() => PROVIDER_META[form.provider]?.suggestedModels || [])
 
 function validate() {
   errors.provider = form.provider ? '' : t('models.needType')
