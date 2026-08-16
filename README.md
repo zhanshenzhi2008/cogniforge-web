@@ -18,6 +18,8 @@ Aurora（默认）/ Ink Night / Citrus / Glass — 顶栏调色盘或设置页�
 
 ## Getting Started
 
+需要 **Node.js 22+**（CI / Docker 构建用 22；本机 22 或 24 均可）。
+
 ```bash
 pnpm install
 pnpm dev

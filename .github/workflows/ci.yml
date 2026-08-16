@@ -15,7 +15,7 @@ on:
 env:
   # ── 前端配置 ─────────────────────────────────────────────────────
   FRONTEND_DIR: .                       # ← 改 1：前端代码目录（仓库根或子目录）
-  NODE_VERSION: '20'                    # ← 改 2：Node 版本
+  NODE_VERSION: '22'                    # ← 改 2：Node 版本（GitHub 推荐 22）
   PACKAGE_MANAGER: pnpm                 # ← 改 3：npm / pnpm / yarn
 
 jobs:
