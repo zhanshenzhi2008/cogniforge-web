@@ -86,6 +86,10 @@ export const useAgentChat = () => {
           const parsed = JSON.parse(text)
           if (parsed?.code === 4010) {
             msg = t('play.noProvider')
+          } else if (parsed?.code === 5016) {
+            msg = t('quota.exhausted')
+          } else if (parsed?.code === 5014) {
+            msg = t('quota.rate')
           } else if (parsed?.message) {
             msg = parsed.message
           }

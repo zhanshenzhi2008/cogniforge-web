@@ -152,6 +152,7 @@ const mobileAccountLinks = computed(() => {
     items.push(
       { label: t('nav.users'), to: '/admin/users' },
       { label: t('nav.roles'), to: '/admin/roles' },
+      { label: t('nav.quota'), to: '/admin/quota' },
     )
   }
   return items
@@ -205,6 +206,11 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
           label: t('nav.roles'),
           icon: 'i-lucide-shield-check',
           to: '/admin/roles',
+        },
+        {
+          label: t('nav.quota'),
+          icon: 'i-lucide-gauge',
+          to: '/admin/quota',
         },
       ]
     : []

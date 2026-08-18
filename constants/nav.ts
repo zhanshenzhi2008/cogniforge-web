@@ -17,6 +17,7 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
   { label: 'Flows', key: 'workflows', to: '/workflows', roles: ['admin', 'user'] },
   { label: 'Knowledge', key: 'knowledge', to: '/knowledge', roles: ['admin', 'user'] },
   { label: 'Keys', key: 'keys', to: '/keys', roles: ['admin', 'user'] },
+  { label: 'Usage', key: 'usage', to: '/usage', roles: ['admin', 'user'] },
   { label: 'Monitor', key: 'monitor', to: '/monitor', roles: ['admin'] },
 ]
 

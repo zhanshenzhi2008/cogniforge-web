@@ -88,14 +88,15 @@
         </div>
 
         <div class="composer-area">
+          <QuotaBar :snap="quotaSnap" />
           <div class="composer-meta">
             <span class="token-hint">{{ tokenCount }} tokens</span>
           </div>
           <UChatPrompt
             v-model="inputMessage"
-            :disabled="streaming"
+            :disabled="streaming || quotaGone"
             :submit-on-enter="true"
-            :placeholder="t('play.placeholder')"
+            :placeholder="quotaGone ? t('quota.placeholderDone') : t('play.placeholder')"
             variant="subtle"
             :rows="2"
             :maxrows="6"
@@ -108,7 +109,7 @@
                 <UChatPromptSubmit
                   :status="chatStatus"
                   color="primary"
-                  :disabled="!inputMessage.trim() && chatStatus === 'ready'"
+                  :disabled="quotaGone || (!inputMessage.trim() && chatStatus === 'ready')"
                   @stop="stopStreaming"
                 />
               </div>
@@ -151,6 +152,7 @@ import { marked } from 'marked'
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
 import type { ConversationMessage, ConversationSummary } from '@/composables/useConversations'
+import type { QuotaSnapshot } from '@/composables/useQuota'
 
 definePageMeta({
   layout: 'default',
@@ -187,6 +189,9 @@ const { t } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
 const { list: listConversations, get: getConversation, create: createConversation, update: updateConversation, remove: removeConversation } = useConversations()
 const { get } = useApi()
+const { me: fetchQuota } = useQuota()
+const quotaSnap = ref<QuotaSnapshot | null>(null)
+const quotaGone = computed(() => quotaExhausted(quotaSnap.value))
 
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
@@ -273,12 +278,28 @@ const notifyError = (title: string) => {
 }
 
 const NO_ACTIVE_PROVIDER = 4010
+const USER_QUOTA = 5016
+const RATE_LIMIT = 5014
+
+const refreshQuota = async () => {
+  const res = await fetchQuota()
+  if (res.data) quotaSnap.value = res.data
+}
 
 const notifyChatHttpError = (status: number, text: string) => {
   try {
     const parsed = JSON.parse(text)
     if (parsed?.code === NO_ACTIVE_PROVIDER) {
       notifyError(t('play.noProvider'))
+      return
+    }
+    if (parsed?.code === USER_QUOTA) {
+      notifyError(t('quota.exhausted'))
+      void refreshQuota()
+      return
+    }
+    if (parsed?.code === RATE_LIMIT) {
+      notifyError(t('quota.rate'))
       return
     }
     const msg = parsed?.message || parsed?.error
@@ -420,7 +441,7 @@ const sendSuggestion = (text: string) => {
 }
 
 const sendMessage = async () => {
-  if (!inputMessage.value.trim() || streaming.value) return
+  if (!inputMessage.value.trim() || streaming.value || quotaGone.value) return
 
   const userMessage = inputMessage.value.trim()
   messages.value.push({
@@ -464,6 +485,7 @@ const sendMessage = async () => {
     if (!response.ok) {
       const text = await response.text().catch(() => '')
       notifyChatHttpError(response.status, text)
+      messages.value.pop()
       return
     }
 
@@ -563,6 +585,7 @@ const sendMessage = async () => {
     streaming.value = false
     abortController.value = null
     await persistConversation()
+    await refreshQuota()
   }
 }
 
@@ -611,6 +634,7 @@ onMounted(async () => {
   await fetchAgents()
   await fetchModels()
   await fetchConversationList()
+  await refreshQuota()
 
   const conversationId = typeof route.query.c === 'string' ? route.query.c : ''
   if (conversationId) {

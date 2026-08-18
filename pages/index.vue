@@ -12,6 +12,17 @@
       </p>
     </header>
 
+    <button
+      type="button"
+      class="quota-strip"
+      :class="{ 'is-warn': quotaSnap?.warn, 'is-empty': quotaGone }"
+      @click="go('/usage')"
+    >
+      <span class="quota-strip__label">{{ t('dash.quota.label') }}</span>
+      <span class="quota-strip__value font-display">{{ quotaCaption }}</span>
+      <UIcon name="i-lucide-chevron-right" class="size-4 quota-strip__chevron" />
+    </button>
+
     <div class="stat-grid">
       <button
         v-for="card in statCards"
@@ -78,6 +89,8 @@
 </template>
 
 <script setup lang="ts">
+import type { QuotaSnapshot } from '~/composables/useQuota'
+
 definePageMeta({
   layout: 'default',
 })
@@ -88,6 +101,19 @@ const { list: listAgents } = useAgents()
 const { list: listWorkflows } = useWorkflows()
 const { listKBs } = useKnowledgeBases()
 const { get } = useApi()
+const { me: fetchQuota } = useQuota()
+const quotaSnap = ref<QuotaSnapshot | null>(null)
+const quotaGone = computed(() => quotaExhausted(quotaSnap.value))
+
+const quotaCaption = computed(() => {
+  if (quotaSnap.value?.unlimited) return t('dash.quota.unlimited')
+  if (quotaGone.value) return t('quota.exhausted')
+  if (quotaSnap.value?.warn) return t('dash.quota.warn')
+  const limit = quotaSnap.value?.day.requests_limit || 0
+  const used = quotaSnap.value?.day.requests_used || 0
+  const left = Math.max(0, limit - used)
+  return `${t('dash.quota.left', { n: left })} · ${t('dash.quota.of', { n: limit })}`
+})
 
 const firstName = computed(() => {
   const name = (user.value?.name || t('dash.guestName')).trim()
@@ -176,12 +202,15 @@ const quickActions = computed(() => [
 async function loadCounts() {
   loading.value = true
   try {
-    const [agentsRes, flowsRes, kbRes, keysRes] = await Promise.all([
+    const [agentsRes, flowsRes, kbRes, keysRes, quotaRes] = await Promise.all([
       listAgents(),
       listWorkflows(),
       listKBs(),
       get<{ keys?: unknown[]; data?: unknown[]; total?: number } | unknown[]>('/api/v1/keys'),
+      fetchQuota(),
     ])
+
+    if (quotaRes.data) quotaSnap.value = quotaRes.data
 
     if (!agentsRes.error && Array.isArray(agentsRes.data)) {
       counts.agents = agentsRes.data.length
@@ -249,6 +278,30 @@ onMounted(() => {
 .hero-sub--mobile {
   display: none;
 }
+
+.quota-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-bg-elevated) 92%, white);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.quota-strip:hover {
+  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
+}
+.quota-strip.is-warn { border-color: #d97706; }
+.quota-strip.is-empty { border-color: #dc2626; }
+.quota-strip__label { font-size: 0.85rem; color: var(--cf-ink-soft); }
+.quota-strip__value { margin-left: auto; font-weight: 600; font-size: 0.95rem; }
+.quota-strip__chevron { color: var(--cf-ink-soft); }
 
 .stat-grid {
   display: grid;
