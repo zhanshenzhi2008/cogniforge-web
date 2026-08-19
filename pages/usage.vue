@@ -26,17 +26,41 @@
       <div class="stat-card cf-surface">
         <div class="stat-value font-display">{{ reqLabel }}</div>
         <div class="stat-label">{{ t('usage.dayReq') }}</div>
-        <UProgress :value="reqPct" size="xs" class="mt-2" />
+        <div
+          class="usage-meter"
+          role="progressbar"
+          :aria-valuenow="reqPct"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <span class="usage-meter__fill" :style="{ width: `${reqPct}%` }" />
+        </div>
       </div>
       <div class="stat-card cf-surface">
         <div class="stat-value font-display">{{ formatNum(snap?.day.tokens_used) }}</div>
         <div class="stat-label">{{ t('usage.dayTok') }}</div>
-        <UProgress :value="dayTokPct" size="xs" class="mt-2" />
+        <div
+          class="usage-meter"
+          role="progressbar"
+          :aria-valuenow="dayTokPct"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <span class="usage-meter__fill" :style="{ width: `${dayTokPct}%` }" />
+        </div>
       </div>
       <div class="stat-card cf-surface">
         <div class="stat-value font-display">{{ formatNum(snap?.month.tokens_used) }}</div>
         <div class="stat-label">{{ t('usage.monthTok') }}</div>
-        <UProgress :value="monthTokPct" size="xs" class="mt-2" />
+        <div
+          class="usage-meter"
+          role="progressbar"
+          :aria-valuenow="monthTokPct"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <span class="usage-meter__fill" :style="{ width: `${monthTokPct}%` }" />
+        </div>
       </div>
     </div>
 
@@ -136,6 +160,7 @@ const maxVal = computed(() => {
 
 function barHeight(p: { requests: number; tokens: number }) {
   const v = metric.value === 'tokens' ? p.tokens : p.requests
+  if (v <= 0) return '0%'
   return `${Math.max(4, Math.round((v / maxVal.value) * 100))}%`
 }
 function barTitle(p: { date: string; requests: number; tokens: number }) {
@@ -181,6 +206,19 @@ onMounted(() => { void reload() })
 .stat-card { padding: 18px 16px; }
 .stat-value { font-size: 1.6rem; font-weight: 700; color: var(--cf-ink); }
 .stat-label { font-size: 0.85rem; color: var(--cf-ink-soft); margin-top: 4px; }
+.usage-meter {
+  margin-top: 8px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--cf-ink) 10%, transparent);
+  overflow: hidden;
+}
+.usage-meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cf-accent);
+}
 .charts { display: grid; grid-template-columns: 1.4fr 0.8fr; gap: 16px; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .panel-title { margin: 0 0 12px; font-size: 1rem; }
@@ -191,7 +229,6 @@ onMounted(() => { void reload() })
   width: 100%;
   background: var(--cf-accent);
   border-radius: 4px 4px 0 0;
-  min-height: 4px;
 }
 .bar-label { font-size: 0.7rem; color: var(--cf-ink-soft); }
 .model-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

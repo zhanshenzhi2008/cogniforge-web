@@ -16,6 +16,9 @@ html[data-theme="aurora"] {
   --cf-accent: #0f9f8a;
   --cf-accent-ink: #087a6a;
   --cf-accent-soft: #d8f3ee;
+  --cf-on-accent: #ffffff;
+  --cf-btn-disabled-bg: color-mix(in oklab, var(--cf-ink) 9%, var(--cf-bg-elevated));
+  --cf-btn-disabled-fg: color-mix(in oklab, var(--cf-ink) 40%, transparent);
   --cf-nav-surface: rgb(255 255 255 / 0.92);
   --cf-nav-shadow: 0 1px 2px rgb(18 21 26 / 0.04), 0 10px 28px rgb(18 21 26 / 0.06);
   --cf-ok: #1f8a5b;
@@ -39,6 +42,7 @@ html[data-theme="inknight"] {
   --cf-accent: #2ee6c7;
   --cf-accent-ink: #7af0d8;
   --cf-accent-soft: #12352f;
+  --cf-on-accent: #0e1116;
   --cf-nav-surface: #161b22;
   --cf-nav-shadow: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 32px rgb(0 0 0 / 0.4);
   --cf-ok: #3ecf8e;
@@ -62,6 +66,7 @@ html[data-theme="citrus"] {
   --cf-accent: #0d9f6e;
   --cf-accent-ink: #0a7d57;
   --cf-accent-soft: #d4f5c8;
+  --cf-on-accent: #ffffff;
   --cf-accent-2: #e6a23c;
   --cf-nav-surface: rgb(255 255 255 / 0.94);
   --cf-nav-shadow: 0 1px 2px rgb(20 32 26 / 0.04), 0 10px 28px rgb(20 32 26 / 0.06);
@@ -86,6 +91,7 @@ html[data-theme="glass"] {
   --cf-accent: #0f9f8a;
   --cf-accent-ink: #087a6a;
   --cf-accent-soft: #d8f3ee;
+  --cf-on-accent: #ffffff;
   --cf-nav-surface: rgb(255 255 255 / 0.72);
   --cf-nav-shadow: 0 1px 2px rgb(18 21 26 / 0.04), 0 10px 28px rgb(18 21 26 / 0.06);
   --cf-ok: #1f8a5b;
@@ -362,13 +368,14 @@ a {
 }
 
 /* -------------------------------------------------------------------------- */
-/* CfButton — unified scene tones (all have soft fill backgrounds)             */
+/* CfButton — enabled = theme color; disabled = gray (never leftover accent)   */
 /* -------------------------------------------------------------------------- */
 .cf-btn {
   font-weight: 500;
   letter-spacing: 0.01em;
   box-shadow: none !important;
   border-radius: 8px !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .cf-btn--lg {
@@ -378,8 +385,8 @@ a {
   font-size: 13.5px;
 }
 
-.cf-btn--lg :deep(svg),
-.cf-btn--lg :deep(.iconify) {
+.cf-btn--lg svg,
+.cf-btn--lg .iconify {
   width: 15px;
   height: 15px;
   flex-shrink: 0;
@@ -404,6 +411,95 @@ a {
 
 .cf-btn--block {
   width: 100%;
+}
+
+/* Login / Save / Confirm / Create — solid accent, clearly clickable */
+.cf-btn--primary:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--cf-accent) !important;
+  color: var(--cf-on-accent) !important;
+  border-color: transparent !important;
+}
+
+.cf-btn--primary:not(:disabled):not([aria-disabled="true"]):hover {
+  background: var(--cf-accent-ink) !important;
+  color: var(--cf-on-accent) !important;
+}
+
+html[data-theme="inknight"] .cf-btn--primary:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in oklab, var(--cf-accent) 78%, #000) !important;
+}
+
+/* Cancel / Back — outline, quieter but still enabled */
+.cf-btn--secondary:not(:disabled):not([aria-disabled="true"]) {
+  background: color-mix(in oklab, var(--cf-bg-elevated) 88%, transparent) !important;
+  color: var(--cf-ink) !important;
+  border: 1px solid var(--cf-line) !important;
+}
+
+.cf-btn--secondary:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in oklab, var(--cf-ink) 5%, var(--cf-bg-elevated)) !important;
+  border-color: color-mix(in oklab, var(--cf-ink) 22%, transparent) !important;
+}
+
+/* Delete confirm — solid danger, not a pale wash */
+.cf-btn--danger:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--cf-danger) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+.cf-btn--danger:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in oklab, var(--cf-danger) 82%, #000) !important;
+}
+
+.cf-btn--icon:not(:disabled):not([aria-disabled="true"]),
+.cf-btn--icon-accent:not(:disabled):not([aria-disabled="true"]),
+.cf-btn--icon-danger:not(:disabled):not([aria-disabled="true"]) {
+  background: transparent !important;
+}
+
+.cf-btn--icon:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--cf-ink-soft) !important;
+}
+
+.cf-btn--icon-accent:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--cf-accent-ink) !important;
+}
+
+.cf-btn--icon-danger:not(:disabled):not([aria-disabled="true"]) {
+  color: var(--cf-danger) !important;
+}
+
+.cf-btn--icon:not(:disabled):not([aria-disabled="true"]):hover,
+.cf-btn--icon-accent:not(:disabled):not([aria-disabled="true"]):hover,
+.cf-btn--icon-danger:not(:disabled):not([aria-disabled="true"]):hover {
+  background: color-mix(in oklab, var(--cf-ink) 6%, transparent) !important;
+}
+
+/* Gray = cannot click. Strip leftover teal/red so it never looks enabled. */
+.cf-btn:disabled,
+.cf-btn[disabled],
+.cf-btn[aria-disabled="true"],
+.cf-btn[data-disabled] {
+  background: var(--cf-btn-disabled-bg) !important;
+  color: var(--cf-btn-disabled-fg) !important;
+  border-color: transparent !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  filter: none !important;
+}
+
+.cf-btn:disabled svg,
+.cf-btn[disabled] svg,
+.cf-btn[aria-disabled="true"] svg,
+.cf-btn[data-disabled] svg,
+.cf-btn:disabled .iconify,
+.cf-btn[disabled] .iconify,
+.cf-btn[aria-disabled="true"] .iconify,
+.cf-btn[data-disabled] .iconify {
+  opacity: 0.55 !important;
+  color: inherit !important;
 }
 
 .action-btns {

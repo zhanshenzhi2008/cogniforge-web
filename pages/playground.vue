@@ -107,8 +107,10 @@
               <div class="composer-footer">
                 <span class="composer-hint">{{ t('play.hint') }}</span>
                 <UChatPromptSubmit
+                  class="cf-btn cf-btn--primary"
                   :status="chatStatus"
                   color="primary"
+                  variant="solid"
                   :disabled="quotaGone || (!inputMessage.trim() && chatStatus === 'ready')"
                   @stop="stopStreaming"
                 />
@@ -898,6 +900,15 @@ watch(sidebarCollapsed, (collapsed) => {
 .composer-hint {
   font-size: 11px;
   color: var(--cf-ink-soft);
+}
+
+.composer-prompt :deep(button:disabled),
+.composer-prompt :deep(button[aria-disabled="true"]) {
+  background: var(--cf-btn-disabled-bg) !important;
+  color: var(--cf-btn-disabled-fg) !important;
+  border-color: transparent !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
 }
 
 @media (max-width: 900px) {

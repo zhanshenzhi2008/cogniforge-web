@@ -11,49 +11,38 @@ export interface Session {
   expires_at: string
   last_used: string
   is_active: boolean
+  is_current?: boolean
   created_at: string
   updated_at: string
+}
+
+const SESSIONS_PATH = '/api/v1/settings/sessions'
+
+function asSessionList(raw: unknown): Session[] {
+  return Array.isArray(raw) ? raw : []
 }
 
 export const useSessions = () => {
   const api = useApi()
 
-  /**
-   * 获取当前用户的会话列表
-   */
-  const getSessions = async (): Promise<Session[]> => {
-    const response = await api.get<Session[]>('/api/sessions')
+  const getSessions = async (): Promise<{ data: Session[]; error?: string }> => {
+    const response = await api.get<Session[]>(SESSIONS_PATH)
     if (response.error) {
-      throw new Error(response.error)
+      return { data: [], error: response.error }
     }
-    return response.data || []
+    return { data: asSessionList(response.data) }
   }
 
-  /**
-   * 撤销指定会话（远程登出）
-   */
-  const revokeSession = async (sessionId: string): Promise<void> => {
-    const response = await api.del(`/api/sessions/${sessionId}`)
+  const revokeSession = async (sessionId: string): Promise<{ error?: string }> => {
+    const response = await api.del(`${SESSIONS_PATH}/${sessionId}`)
     if (response.error) {
-      throw new Error(response.error)
+      return { error: response.error }
     }
-  }
-
-  /**
-   * 撤销所有其他会话（保留当前）
-   */
-  const revokeAllOtherSessions = async (): Promise<void> => {
-    const sessions = await getSessions()
-    const revokePromises = sessions
-      .filter((s) => !s.is_active || !s.is_current)
-      .map((s) => revokeSession(s.id))
-
-    await Promise.all(revokePromises)
+    return {}
   }
 
   return {
     getSessions,
     revokeSession,
-    revokeAllOtherSessions,
   }
 }

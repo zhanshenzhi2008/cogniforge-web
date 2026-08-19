@@ -22,6 +22,7 @@ export default defineConfig({
       '.nuxt/**',
       '.output/**',
       'coverage/**',
+      'e2e/**',
     ],
     coverage: {
       provider: 'v8',

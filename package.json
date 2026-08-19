@@ -13,7 +13,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@nuxt/ui": "^4.10.0",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@nuxt/devtools": "2.6.4",
     "@nuxt/test-utils": "^4.0.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^20.11.24",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",

@@ -164,13 +164,16 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    await $fetch('/api/v1/settings/password', {
-      method: 'POST',
-      body: {
-        old_password: form.old_password,
-        new_password: form.new_password,
-      },
+    const { post } = useApi()
+    const res = await post('/api/v1/settings/password', {
+      old_password: form.old_password,
+      new_password: form.new_password,
     })
+
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
 
     toast.add({ title: t('security.passwordOk'), color: 'success' })
 
@@ -183,8 +186,8 @@ const handleSubmit = async () => {
       clearAuth()
       router.push('/login')
     }, 1500)
-  } catch (error: any) {
-    toast.add({ title: error.data?.message || t('security.passwordFail'), color: 'error' })
+  } catch {
+    toast.add({ title: t('security.passwordFail'), color: 'error' })
   } finally {
     loading.value = false
   }

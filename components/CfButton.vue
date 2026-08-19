@@ -2,17 +2,19 @@
 /**
  * CogniForge unified button — one API, scene tones.
  *
+ * primary   实心主题色（登录 / 保存 / 确认）— 能点
+ * secondary 描边（取消 / 返回）— 能点，但不是主操作
+ * danger    实心警示（删除确认）
+ * 禁用一律灰色，不再留浅青绿，避免看起来还能点。
+ *
  * 大按钮（primary / secondary / danger）必须带图标；
  * 文字可与图标并排（默认），或仅作 tip 悬浮（label-mode="tip"）。
  * 小按钮（icon*）永远仅图标 + tip。
  */
-export type CfButtonTone =
-  | 'primary'
-  | 'secondary'
-  | 'danger'
-  | 'icon'
-  | 'icon-accent'
-  | 'icon-danger'
+import { computed, useSlots } from 'vue'
+import { cfButtonRootClass, mapCfButtonTone, type CfButtonTone } from '~/utils/cfButtonTone'
+
+export type { CfButtonTone }
 
 export type CfLabelMode = 'inline' | 'tip'
 
@@ -96,38 +98,14 @@ const useTooltip = computed(() => {
   return props.labelMode === 'tip' && !!tipText.value
 })
 
-const mapped = computed(() => {
-  const tone = props.tone
-  if (tone === 'primary') {
-    return { color: 'primary' as const, variant: 'soft' as const, size: 'md' as const }
-  }
-  if (tone === 'secondary') {
-    return { color: 'neutral' as const, variant: 'soft' as const, size: 'md' as const }
-  }
-  if (tone === 'danger') {
-    return {
-      color: 'error' as const,
-      variant: (props.strong ? 'solid' : 'soft') as 'solid' | 'soft',
-      size: 'md' as const,
-    }
-  }
-  if (tone === 'icon-accent') {
-    return { color: 'primary' as const, variant: 'soft' as const, size: 'xs' as const }
-  }
-  if (tone === 'icon-danger') {
-    return { color: 'error' as const, variant: 'soft' as const, size: 'xs' as const }
-  }
-  return { color: 'neutral' as const, variant: 'soft' as const, size: 'xs' as const }
-})
+const mapped = computed(() => mapCfButtonTone(props.tone))
 
-const rootClass = computed(() => [
-  'cf-btn',
-  `cf-btn--${props.tone}`,
-  !showLabelInline.value && 'cf-btn--icon-only',
-  !isCompactTone.value && 'cf-btn--lg',
-  !isCompactTone.value && !showLabelInline.value && 'cf-btn--lg-icon',
-  props.block && 'cf-btn--block',
-])
+const rootClass = computed(() =>
+  cfButtonRootClass(props.tone, {
+    showLabelInline: showLabelInline.value,
+    block: props.block,
+  }),
+)
 
 const ariaLabel = computed(() => tipText.value || slotLabel.value || undefined)
 </script>

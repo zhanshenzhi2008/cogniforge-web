@@ -34,14 +34,14 @@
           <span>{{ t('common.loading') }}</span>
         </div>
 
-        <div v-else-if="sessions.length === 0" class="empty-state">
+        <div v-else-if="otherSessions.length === 0" class="empty-state">
           <UIcon name="i-lucide-circle-check" class="empty-icon size-9" />
           <p>{{ t('sessions.empty') }}</p>
         </div>
 
         <TransitionGroup v-else name="session-list" tag="div">
           <div
-            v-for="(session, index) in sessions"
+            v-for="(session, index) in otherSessions"
             :key="session.id || `session-${index}`"
             class="session-item"
           >
@@ -120,14 +120,19 @@
 </template>
 
 <script setup lang="ts">
+import type { Session } from '~/composables/useSessions'
+
 const toast = useToast()
 const { t, d } = useLocale()
+const { getSessions, revokeSession } = useSessions()
 
 const loading = ref(false)
-const sessions = ref<any[]>([])
+const sessions = ref<Session[]>([])
 const revokingId = ref<string | null>(null)
 const revokeVisible = ref(false)
 const pendingRevokeId = ref<string | null>(null)
+
+const otherSessions = computed(() => sessions.value.filter(item => !item.is_current))
 
 const getDeviceIcon = (device: string) => {
   if (!device) return 'i-lucide-laptop'
@@ -161,9 +166,13 @@ const formatTime = (time: string) => {
 const loadSessions = async () => {
   loading.value = true
   try {
-    const data = await $fetch('/api/v1/settings/sessions')
-    sessions.value = data || []
+    const res = await getSessions()
+    sessions.value = res.data
+    if (res.error) {
+      toast.add({ title: res.error || t('sessions.listFail'), color: 'error' })
+    }
   } catch {
+    sessions.value = []
     toast.add({ title: t('sessions.listFail'), color: 'error' })
   } finally {
     loading.value = false
@@ -185,13 +194,15 @@ const confirmRevoke = async () => {
 const handleRevoke = async (sessionId: string) => {
   revokingId.value = sessionId
   try {
-    await $fetch(`/api/v1/settings/sessions/${sessionId}`, {
-      method: 'DELETE',
-    })
+    const res = await revokeSession(sessionId)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
     toast.add({ title: t('sessions.revoked'), color: 'success' })
     await loadSessions()
-  } catch (error: any) {
-    toast.add({ title: error.data?.message || t('sessions.revokeFail'), color: 'error' })
+  } catch {
+    toast.add({ title: t('sessions.revokeFail'), color: 'error' })
   } finally {
     revokingId.value = null
   }

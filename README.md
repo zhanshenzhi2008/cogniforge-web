@@ -12,6 +12,8 @@ CogniForge 前端控制台。
 
 Aurora（默认）/ Ink Night / Citrus / Glass — 顶栏调色盘或设置页切换。
 
+登录、保存、确认等能点的主按钮用当前主题的实心色；取消是细边框；灰色只表示不能点。
+
 ## 语言
 
 简体中文 / English。顶栏地球图标、登录页右上角、或设置 → Preferences。选择会记在浏览器里；登录后同步到现有 `PUT /api/v1/settings` 的 `language` 字段。地址栏路径不变。
@@ -25,7 +27,11 @@ Docker 镜像里的包管理器钉死 **pnpm 9**（和 CI 的 `pnpm/action-setup
 pnpm install
 pnpm dev
 pnpm build
+pnpm test
+pnpm test:e2e
 ```
+
+`pnpm test:e2e` 会在 3010 起 Nuxt，并用 Playwright 拦截 `/api/v1`，不必先开 Go。第一次先装浏览器：`pnpm exec playwright install chromium`。
 
 ## Environment Variables
 

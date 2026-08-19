@@ -64,3 +64,9 @@ jobs:
 
       - name: Unit tests
         run: ${{ env.PACKAGE_MANAGER }} test || true
+
+      - name: Install Playwright Chromium
+        run: ${{ env.PACKAGE_MANAGER }} exec playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: ${{ env.PACKAGE_MANAGER }} test:e2e
