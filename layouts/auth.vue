@@ -32,7 +32,7 @@
     linear-gradient(90deg, color-mix(in oklab, var(--cf-line) 55%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
-  opacity: 0.55;
+  opacity: 0.22;
 }
 
 .auth-layout__lang {

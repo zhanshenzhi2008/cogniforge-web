@@ -14,7 +14,7 @@
 
     <button
       type="button"
-      class="quota-strip"
+      class="quota-strip cf-surface"
       :class="{ 'is-warn': quotaSnap?.warn, 'is-empty': quotaGone }"
       @click="go('/usage')"
     >
@@ -28,7 +28,7 @@
         v-for="card in statCards"
         :key="card.key"
         type="button"
-        class="stat-card"
+        class="stat-card cf-surface"
         @click="go(card.to)"
       >
         <div class="stat-top">
@@ -45,7 +45,7 @@
     </div>
 
     <div class="section-grid">
-      <section class="panel panel--steps">
+      <section class="panel panel--steps cf-surface">
         <h2 class="panel-title font-display">{{ t('dash.nextSteps') }}</h2>
         <div class="quick-list">
           <button
@@ -76,7 +76,7 @@
         </CfButton>
       </section>
 
-      <section class="panel panel--activity">
+      <section class="panel panel--activity cf-surface">
         <h2 class="panel-title font-display">{{ t('dash.activity') }}</h2>
         <div class="activity-empty">
           <UIcon name="i-lucide-zap" class="activity-icon size-9" />
@@ -248,10 +248,10 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-page {
-  max-width: 1120px;
   width: 100%;
+  max-width: var(--cf-content-max);
   margin: 0 auto;
-  padding: 36px 28px 56px;
+  padding: 36px var(--cf-page-pad) 56px;
   box-sizing: border-box;
 }
 
@@ -286,9 +286,7 @@ onMounted(() => {
   width: 100%;
   margin: 0 0 16px;
   padding: 14px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--cf-line);
-  background: color-mix(in oklab, var(--cf-bg-elevated) 92%, white);
+  border-radius: 10px;
   cursor: pointer;
   text-align: left;
   font: inherit;
@@ -322,15 +320,12 @@ onMounted(() => {
   gap: 4px;
   width: 100%;
   padding: 20px 18px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--cf-line);
-  background: color-mix(in oklab, var(--cf-bg-elevated) 92%, white);
-  box-shadow: none;
+  border-radius: 10px;
   cursor: pointer;
   text-align: left;
   font: inherit;
   color: inherit;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .stat-card:hover {
@@ -387,15 +382,13 @@ onMounted(() => {
 
 @media (min-width: 900px) {
   .section-grid {
-    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.35fr);
+    grid-template-columns: 1fr 1fr;
     gap: 24px;
   }
 }
 
 .panel {
-  border-radius: 8px;
-  border: 1px solid var(--cf-line);
-  background: color-mix(in oklab, var(--cf-bg-elevated) 92%, white);
+  border-radius: 10px;
   padding: 22px 20px 20px;
   display: flex;
   flex-direction: column;
@@ -523,8 +516,7 @@ onMounted(() => {
 /* Mobile: match cogniforge-ui-mobile — stats 2×2, next steps, no activity */
 @media (max-width: 899px) {
   .dashboard-page {
-    padding: 24px 16px 40px;
-    max-width: 560px;
+    padding: 24px var(--cf-page-pad) 40px;
   }
 
   .hero {

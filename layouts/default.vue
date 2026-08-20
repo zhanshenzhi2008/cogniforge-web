@@ -246,6 +246,11 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   position: sticky;
   top: 0;
   z-index: 40;
+  background: transparent;
+}
+
+.app-shell {
+  background: transparent;
 }
 
 .cf-header :deep([data-slot='left']) {
@@ -332,6 +337,7 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 
 .app-shell__main {
   min-height: calc(100vh - 4rem);
+  background: transparent;
 }
 
 .mobile-nav {
@@ -401,16 +407,18 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 /* -------------------------------------------------------------------------- */
 .app-shell[data-nav-style='editorial'] .cf-header :deep(header[data-slot='root']) {
   height: 4rem;
-  background: var(--cf-nav-surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-nav-surface) 38%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid color-mix(in oklab, var(--cf-line) 55%, transparent);
   box-shadow: none;
   color: var(--cf-ink);
 }
 
 .app-shell[data-nav-style='editorial'] .cf-header :deep([data-slot='container']) {
-  max-width: 1200px;
+  max-width: var(--cf-content-max);
+  width: 100%;
+  padding-inline: var(--cf-page-pad);
   gap: 1.25rem;
 }
 
@@ -461,9 +469,10 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 }
 
 .app-shell[data-nav-style='island'] .cf-header :deep([data-slot='container']) {
-  max-width: 1120px;
+  max-width: var(--cf-content-max);
+  width: calc(100% - 1.5rem);
   height: 3.35rem;
-  padding-inline: 0.85rem;
+  padding-inline: var(--cf-page-pad);
   gap: 0.75rem;
   border-radius: 999px;
   border: 1px solid var(--cf-line);

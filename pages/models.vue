@@ -841,10 +841,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.models-page {
-  max-width: 1360px;
-}
-
 .header-actions {
   display: flex;
   align-items: center;

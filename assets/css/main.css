@@ -26,10 +26,23 @@ html[data-theme="aurora"] {
   --cf-danger: #c23b3b;
   --cf-blur: blur(14px);
   --cf-bg-aura:
-    radial-gradient(1200px 600px at 10% -10%, #b8f1e8 0%, transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, #cfe8ff 0%, transparent 50%),
-    #eef7f8;
+    radial-gradient(ellipse 80% 62% at 50% 22%, #c4f3ea 0%, #d4ecf8 38%, #e6eef4 70%, #cfd8e0 100%);
+  --cf-page-pad: 24px;
+  --cf-content-max: 1200px;
+  --cf-card-glow: 0 18px 50px color-mix(in oklab, #0f9f8a 12%, transparent);
   color-scheme: light;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --cf-page-pad: 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --cf-page-pad: 16px;
+  }
 }
 
 html[data-theme="inknight"] {
@@ -50,9 +63,8 @@ html[data-theme="inknight"] {
   --cf-danger: #f07178;
   --cf-blur: blur(16px);
   --cf-bg-aura:
-    radial-gradient(800px 400px at 100% 0%, #12352f 0%, transparent 60%),
-    radial-gradient(700px 380px at 0% 100%, #152033 0%, transparent 55%),
-    #0e1116;
+    radial-gradient(ellipse 72% 58% at 50% 30%, #14645c 0%, #0a2c2a 36%, #070b10 68%, #050608 100%);
+  --cf-card-glow: 0 24px 60px color-mix(in oklab, #2ee6c7 16%, transparent);
   color-scheme: dark;
 }
 
@@ -75,9 +87,8 @@ html[data-theme="citrus"] {
   --cf-danger: #c23b3b;
   --cf-blur: blur(12px);
   --cf-bg-aura:
-    radial-gradient(900px 500px at 0% 0%, #d4f5c8 0%, transparent 55%),
-    radial-gradient(800px 480px at 100% 0%, #d9f0ff 0%, transparent 50%),
-    #f3faf3;
+    radial-gradient(ellipse 78% 60% at 50% 24%, #d8f5c4 0%, #e4f4e8 40%, #eef6f0 72%, #d5e0d8 100%);
+  --cf-card-glow: 0 18px 50px color-mix(in oklab, #0d9f6e 12%, transparent);
   color-scheme: light;
 }
 
@@ -99,9 +110,8 @@ html[data-theme="glass"] {
   --cf-danger: #c23b3b;
   --cf-blur: blur(16px);
   --cf-bg-aura:
-    radial-gradient(600px 400px at 20% 10%, rgb(15 159 138 / 0.18), transparent),
-    radial-gradient(500px 360px at 80% 0%, rgb(100 160 255 / 0.14), transparent),
-    #f4f7fb;
+    radial-gradient(ellipse 70% 55% at 50% 26%, rgb(15 159 138 / 0.28) 0%, rgb(180 210 255 / 0.16) 42%, #e8eef6 100%);
+  --cf-card-glow: 0 18px 48px color-mix(in oklab, #0f9f8a 10%, transparent);
   color-scheme: light;
 }
 
@@ -132,13 +142,17 @@ body,
   min-height: 100%;
 }
 
+html {
+  background: var(--cf-bg-aura);
+  background-attachment: fixed;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
   line-height: 1.6;
   color: var(--cf-ink);
-  background: var(--cf-bg-aura);
-  background-attachment: fixed;
+  background: transparent;
 }
 
 a {
@@ -151,10 +165,11 @@ a {
 }
 
 .cf-surface {
-  background: var(--cf-bg-elevated);
-  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-bg-elevated) 62%, transparent);
+  border: 1px solid color-mix(in oklab, var(--cf-line) 75%, transparent);
   backdrop-filter: var(--cf-blur);
   -webkit-backdrop-filter: var(--cf-blur);
+  box-shadow: var(--cf-card-glow);
 }
 
 ::-webkit-scrollbar {
@@ -200,10 +215,10 @@ a {
 /* Editorial module chrome — shared across Agents / Flows / Keys / …           */
 /* -------------------------------------------------------------------------- */
 .cf-page {
-  max-width: 1120px;
   width: 100%;
+  max-width: var(--cf-content-max);
   margin: 0 auto;
-  padding: 28px 20px 48px;
+  padding: 28px var(--cf-page-pad) 48px;
   box-sizing: border-box;
 }
 
@@ -510,7 +525,7 @@ html[data-theme="inknight"] .cf-btn--primary:not(:disabled):not([aria-disabled="
 
 @media (max-width: 640px) {
   .cf-page {
-    padding: 20px 16px 36px;
+    padding: 20px var(--cf-page-pad) 36px;
   }
 
   .cf-page-header {
