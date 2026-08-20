@@ -89,6 +89,12 @@
                     :tip="t('common.edit')"
                     @click="handleEdit(row)"
                   />
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-key-round"
+                    :tip="t('users.resetPwd')"
+                    @click="askResetPassword(row)"
+                  />
                   <template v-if="row.role !== 'admin' && row.id !== 'admin'">
                     <CfButton
                       :tone="row.status === 'active' ? 'icon' : 'icon-accent'"
@@ -248,6 +254,46 @@
         </div>
       </template>
     </UModal>
+
+    <UModal v-model:open="resetConfirmVisible" :title="t('users.resetPwdTitle')" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="confirm-text">{{ t('users.resetPwdConfirm') }}</p>
+        <p v-if="resetTargetName" class="confirm-text cf-muted">{{ resetTargetName }}</p>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="resetConfirmVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton
+              tone="primary"
+              icon="i-lucide-key-round"
+              :loading="resetLoading"
+              @click="confirmResetPassword"
+            >
+              {{ t('users.resetPwd') }}
+            </CfButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="resetResultVisible" :title="t('users.resetPwdDone')" :ui="{ content: 'sm:max-w-md' }">
+      <template #body>
+        <p class="confirm-text">{{ t('users.resetPwdHint') }}</p>
+        <div class="temp-pwd-box">
+          <span class="temp-pwd-label">{{ t('users.tempPassword') }}</span>
+          <code class="temp-pwd-value">{{ temporaryPassword }}</code>
+        </div>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-copy" @click="copyTempPassword">{{ t('users.copyPwd') }}</CfButton>
+            <CfButton tone="primary" icon="i-lucide-check" @click="closeResetResult">{{ t('common.close') }}</CfButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -269,6 +315,12 @@ const filterStatus = ref('all')
 const showUserModal = ref(false)
 const showStatusModal = ref(false)
 const deleteVisible = ref(false)
+const resetConfirmVisible = ref(false)
+const resetResultVisible = ref(false)
+const resetLoading = ref(false)
+const resetUserId = ref('')
+const resetTargetName = ref('')
+const temporaryPassword = ref('')
 const isEditing = ref(false)
 const selectedUserId = ref('')
 const deletingUserId = ref('')
@@ -486,6 +538,51 @@ const confirmDelete = async () => {
   }
 }
 
+const askResetPassword = (row: any) => {
+  resetUserId.value = row.id
+  resetTargetName.value = `${row.name} · ${row.email}`
+  resetConfirmVisible.value = true
+}
+
+const confirmResetPassword = async () => {
+  resetLoading.value = true
+  try {
+    const { post } = useApi()
+    const res = await post<{ temporary_password: string }>(
+      `/api/v1/admin/users/${resetUserId.value}/reset-password`,
+    )
+    if (res.error) {
+      toast.add({ title: res.error || t('users.resetPwdFail'), color: 'error' })
+      return
+    }
+    temporaryPassword.value = res.data?.temporary_password || ''
+    resetConfirmVisible.value = false
+    resetResultVisible.value = true
+    toast.add({ title: t('users.resetPwdDone'), color: 'success' })
+  } catch (error: any) {
+    toast.add({ title: error?.data?.message || t('users.resetPwdFail'), color: 'error' })
+  } finally {
+    resetLoading.value = false
+  }
+}
+
+const copyTempPassword = async () => {
+  if (!temporaryPassword.value) return
+  try {
+    await navigator.clipboard.writeText(temporaryPassword.value)
+    toast.add({ title: t('users.copied'), color: 'success' })
+  } catch {
+    toast.add({ title: temporaryPassword.value, color: 'info' })
+  }
+}
+
+const closeResetResult = () => {
+  resetResultVisible.value = false
+  temporaryPassword.value = ''
+  resetUserId.value = ''
+  resetTargetName.value = ''
+}
+
 const handleStatusChange = (userId: string, currentStatus: string) => {
   selectedUserId.value = userId
   if (currentStatus === 'active') {
@@ -609,5 +706,30 @@ onMounted(() => {
   margin: 0;
   color: var(--cf-ink-soft);
   line-height: 1.5;
+}
+
+.temp-pwd-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-bg-elevated) 70%, transparent);
+}
+
+.temp-pwd-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  margin-bottom: 6px;
+}
+
+.temp-pwd-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--cf-ink);
+  word-break: break-all;
 }
 </style>

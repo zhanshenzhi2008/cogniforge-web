@@ -4,7 +4,11 @@
  */
 export default defineNuxtRouteMiddleware((to) => {
   const { isLoggedIn, isAuthenticated } = useAuth()
-  const isAuthPage = to.path === '/login' || to.path === '/register'
+  const isAuthPage =
+    to.path === '/login' ||
+    to.path === '/register' ||
+    to.path === '/forgot-password' ||
+    to.path === '/reset-password'
 
   // Server side: use cookie-based auth state (setAuth writes to cookies too)
   if (process.server) {

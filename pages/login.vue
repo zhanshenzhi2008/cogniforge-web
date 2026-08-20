@@ -32,7 +32,17 @@
         </div>
 
         <div class="field">
-          <label class="field__label" for="login-password">{{ t('auth.password') }}</label>
+          <div class="field__row">
+            <label class="field__label" for="login-password">{{ t('auth.password') }}</label>
+            <UButton
+              variant="link"
+              color="primary"
+              class="forgot-link"
+              to="/forgot-password"
+            >
+              {{ t('auth.forgotPassword') }}
+            </UButton>
+          </div>
           <UInput
             id="login-password"
             v-model="form.password"
@@ -189,6 +199,20 @@ const handleLogin = async () => {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--cf-ink);
+}
+
+.field__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.forgot-link {
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  font-size: 0.8rem;
 }
 
 .field__error {
