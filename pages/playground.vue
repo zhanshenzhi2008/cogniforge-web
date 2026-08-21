@@ -8,6 +8,7 @@
           @new="startNewChat"
           @select="loadConversation"
           @delete="deleteConversation"
+          @pin="togglePinConversation"
         />
       </aside>
 
@@ -129,6 +130,7 @@
           @new="startNewChat(); historyOpen = false"
           @select="id => { loadConversation(id); historyOpen = false }"
           @delete="deleteConversation"
+          @pin="togglePinConversation"
         />
       </template>
     </USlideover>

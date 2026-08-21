@@ -9,15 +9,57 @@
       {{ t('play.newChat') }}
     </CfButton>
 
+    <template v-if="pinnedItems.length > 0">
+      <p class="history-label">{{ t('play.pinned') }}</p>
+      <ul class="history-list history-list--section">
+        <li
+          v-for="item in pinnedItems"
+          :key="item.id"
+          class="history-item is-pinned"
+          :class="{ 'is-active': item.id === activeId }"
+        >
+          <button
+            type="button"
+            class="history-item-main"
+            @click="$emit('select', item.id)"
+          >
+            <span class="history-item-title">
+              <UIcon name="i-lucide-pin" class="history-pin-mark" />
+              <span class="history-item-title-text">{{ item.title || t('play.newChat') }}</span>
+            </span>
+            <span class="history-item-time">{{ formatTime(item.updated_at) }}</span>
+          </button>
+          <span class="history-item-actions" @click.stop>
+            <CfButton
+              tone="icon-accent"
+              icon="i-lucide-pin-off"
+              :tip="t('play.unpinChat')"
+              @click="$emit('pin', item.id, false)"
+            />
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('play.deleteChat')"
+              @click="$emit('delete', item.id)"
+            />
+          </span>
+        </li>
+      </ul>
+    </template>
+
     <p class="history-label">{{ t('play.history') }}</p>
 
     <p v-if="items.length === 0" class="history-empty">
       {{ t('play.historyEmpty') }}
     </p>
 
+    <p v-else-if="unpinnedItems.length === 0" class="history-empty">
+      {{ t('play.historyAllPinned') }}
+    </p>
+
     <ul v-else class="history-list">
       <li
-        v-for="item in items"
+        v-for="item in unpinnedItems"
         :key="item.id"
         class="history-item"
         :class="{ 'is-active': item.id === activeId }"
@@ -27,10 +69,18 @@
           class="history-item-main"
           @click="$emit('select', item.id)"
         >
-          <span class="history-item-title">{{ item.title || t('play.newChat') }}</span>
+          <span class="history-item-title">
+            <span class="history-item-title-text">{{ item.title || t('play.newChat') }}</span>
+          </span>
           <span class="history-item-time">{{ formatTime(item.updated_at) }}</span>
         </button>
-        <span class="history-item-del" @click.stop>
+        <span class="history-item-actions" @click.stop>
+          <CfButton
+            tone="icon"
+            icon="i-lucide-pin"
+            :tip="t('play.pinChat')"
+            @click="$emit('pin', item.id, true)"
+          />
           <CfButton
             tone="icon-danger"
             icon="i-lucide-trash-2"
@@ -44,9 +94,10 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ConversationSummary } from '@/composables/useConversations'
 
-defineProps<{
+const props = defineProps<{
   items: ConversationSummary[]
   activeId: string
 }>()
@@ -55,10 +106,13 @@ defineEmits<{
   (e: 'new'): void
   (e: 'select', id: string): void
   (e: 'delete', id: string): void
+  (e: 'pin', id: string, pinned: boolean): void
 }>()
 
 const { t, locale } = useLocale()
 
+const pinnedItems = computed(() => props.items.filter(item => item.pinned))
+const unpinnedItems = computed(() => props.items.filter(item => !item.pinned))
 
 function formatTime(iso: string) {
   if (!iso) return ''
@@ -110,6 +164,12 @@ function formatTime(iso: string) {
   flex: 1;
 }
 
+.history-list--section {
+  flex: 0 0 auto;
+  overflow-y: visible;
+  max-height: none;
+}
+
 .history-item {
   display: flex;
   align-items: center;
@@ -145,12 +205,28 @@ function formatTime(iso: string) {
 
 .history-item-title {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 550;
   color: var(--cf-ink);
+  min-width: 0;
+}
+
+.history-item-title-text {
+  min-width: 0;
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.history-pin-mark {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  color: var(--cf-accent);
 }
 
 .history-item-time {
@@ -158,13 +234,17 @@ function formatTime(iso: string) {
   color: var(--cf-ink-soft);
 }
 
-.history-item-del {
+.history-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
   opacity: 0.55;
   flex-shrink: 0;
 }
 
-.history-item:hover .history-item-del,
-.history-item:focus-within .history-item-del {
+.history-item:hover .history-item-actions,
+.history-item:focus-within .history-item-actions,
+.history-item.is-pinned .history-item-actions {
   opacity: 1;
 }
 </style>
