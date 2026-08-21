@@ -9,6 +9,27 @@
       {{ t('play.newChat') }}
     </CfButton>
 
+    <div class="history-search">
+      <UIcon name="i-lucide-search" class="history-search-icon" />
+      <input
+        v-model="query"
+        type="search"
+        class="history-search-input"
+        :placeholder="t('play.historySearch')"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <button
+        v-if="query.trim()"
+        type="button"
+        class="history-search-clear"
+        :aria-label="t('play.historySearchClear')"
+        @click="query = ''"
+      >
+        <UIcon name="i-lucide-x" class="size-3.5" />
+      </button>
+    </div>
+
     <template v-if="pinnedItems.length > 0">
       <p class="history-label">{{ t('play.pinned') }}</p>
       <ul class="history-list history-list--section">
@@ -53,8 +74,12 @@
       {{ t('play.historyEmpty') }}
     </p>
 
+    <p v-else-if="filteredItems.length === 0" class="history-empty">
+      {{ t('play.historySearchEmpty') }}
+    </p>
+
     <p v-else-if="unpinnedItems.length === 0" class="history-empty">
-      {{ t('play.historyAllPinned') }}
+      {{ query.trim() ? t('play.historySearchEmpty') : t('play.historyAllPinned') }}
     </p>
 
     <ul v-else class="history-list">
@@ -94,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { ConversationSummary } from '@/composables/useConversations'
 
 const props = defineProps<{
@@ -110,9 +135,22 @@ defineEmits<{
 }>()
 
 const { t, locale } = useLocale()
+const query = ref('')
 
-const pinnedItems = computed(() => props.items.filter(item => item.pinned))
-const unpinnedItems = computed(() => props.items.filter(item => !item.pinned))
+function matchesQuery(item: ConversationSummary, q: string): boolean {
+  if (!q) return true
+  const title = (item.title || '').toLowerCase()
+  return title.includes(q)
+}
+
+const filteredItems = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return props.items
+  return props.items.filter(item => matchesQuery(item, q))
+})
+
+const pinnedItems = computed(() => filteredItems.value.filter(item => item.pinned))
+const unpinnedItems = computed(() => filteredItems.value.filter(item => !item.pinned))
 
 function formatTime(iso: string) {
   if (!iso) return ''
@@ -134,6 +172,62 @@ function formatTime(iso: string) {
   gap: 12px;
   min-height: 0;
   height: 100%;
+}
+
+.history-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.history-search-icon {
+  position: absolute;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: var(--cf-ink-soft);
+  pointer-events: none;
+}
+
+.history-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 32px 0 32px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--cf-ink) 12%, transparent);
+  background: color-mix(in oklab, var(--cf-ink) 3%, transparent);
+  color: var(--cf-ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.history-search-input::placeholder {
+  color: var(--cf-ink-soft);
+}
+
+.history-search-input:focus {
+  border-color: color-mix(in oklab, var(--cf-accent) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--cf-accent) 16%, transparent);
+}
+
+.history-search-clear {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cf-ink-soft);
+  cursor: pointer;
+}
+
+.history-search-clear:hover {
+  background: color-mix(in oklab, var(--cf-ink) 8%, transparent);
+  color: var(--cf-ink);
 }
 
 .history-label {
