@@ -76,10 +76,28 @@
               class="chat-messages"
             >
               <template #content="{ message }">
-                <div
-                  class="message-md"
-                  v-html="renderMarkdown(partsToText(message?.parts))"
-                />
+                <div class="message-body">
+                  <div
+                    v-if="messageImages(message?.id).length > 0"
+                    class="message-images"
+                  >
+                    <a
+                      v-for="(src, idx) in messageImages(message?.id)"
+                      :key="`${message?.id}-${idx}`"
+                      class="message-md-img-link"
+                      :href="src"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img class="message-md-img" :src="src" alt="" loading="lazy" />
+                    </a>
+                  </div>
+                  <div
+                    v-if="partsToText(message?.parts)"
+                    class="message-md"
+                    v-html="renderMarkdown(partsToText(message?.parts))"
+                  />
+                </div>
               </template>
               <template #indicator>
                 <UChatShimmer :text="t('play.thinking')" />
@@ -88,11 +106,27 @@
           </div>
         </div>
 
-        <div class="composer-area">
+        <div class="composer-area" @paste="onComposerPaste">
           <QuotaBar :snap="quotaSnap" />
           <div class="composer-meta">
             <span class="token-hint">{{ tokenCount }} tokens</span>
           </div>
+          <div v-if="pendingImages.length > 0" class="pending-images">
+            <div
+              v-for="(src, idx) in pendingImages"
+              :key="idx"
+              class="pending-image"
+            >
+              <img :src="src" alt="" />
+              <CfButton
+                tone="icon-danger"
+                icon="i-lucide-x"
+                :tip="t('play.removeImage')"
+                @click="removePendingImage(idx)"
+              />
+            </div>
+          </div>
+          <p v-if="pendingImages.length > 0" class="vision-hint">{{ t('play.visionHint') }}</p>
           <UChatPrompt
             v-model="inputMessage"
             :disabled="streaming || quotaGone"
@@ -106,13 +140,30 @@
           >
             <template #footer>
               <div class="composer-footer">
-                <span class="composer-hint">{{ t('play.hint') }}</span>
+                <div class="composer-footer-left">
+                  <input
+                    ref="imageInput"
+                    type="file"
+                    :accept="CHAT_IMAGE_ACCEPT"
+                    multiple
+                    class="sr-only"
+                    @change="onImageInputChange"
+                  >
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-image-plus"
+                    :tip="t('play.attachImage')"
+                    :disabled="streaming || quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
+                    @click="imageInput?.click()"
+                  />
+                  <span class="composer-hint">{{ t('play.hint') }}</span>
+                </div>
                 <UChatPromptSubmit
                   class="cf-btn cf-btn--primary"
                   :status="chatStatus"
                   color="primary"
                   variant="solid"
-                  :disabled="quotaGone || (!inputMessage.trim() && chatStatus === 'ready')"
+                  :disabled="quotaGone || (!canSend && chatStatus === 'ready')"
                   @stop="stopStreaming"
                 />
               </div>
@@ -153,6 +204,13 @@
 
 <script setup lang="ts">
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
+import {
+  CHAT_IMAGE_ACCEPT,
+  CHAT_IMAGE_MAX_COUNT,
+  ChatImageError,
+  filesToChatDataUrls,
+  toVisionContent,
+} from '~/utils/chatImages'
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
 import type { ConversationMessage, ConversationSummary } from '@/composables/useConversations'
@@ -163,11 +221,12 @@ definePageMeta({
   requiresAuth: true,
 })
 
-/** Local playground message — API still uses role + content only. */
+/** Local playground message. */
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  images?: string[]
   time?: string
 }
 
@@ -199,6 +258,8 @@ const quotaGone = computed(() => quotaExhausted(quotaSnap.value))
 
 const messages = ref<Message[]>([])
 const inputMessage = ref('')
+const pendingImages = ref<string[]>([])
+const imageInput = ref<HTMLInputElement | null>(null)
 const streaming = ref(false)
 const selectedModel = ref('')
 const models = ref<Model[]>([])
@@ -249,8 +310,15 @@ const params = reactive({
 })
 
 const tokenCount = computed(() => {
-  return messages.value.reduce((acc, msg) => acc + msg.content.length / 4, 0) | 0
+  return messages.value.reduce((acc, msg) => {
+    const imgBoost = (msg.images?.length || 0) * 300
+    return acc + msg.content.length / 4 + imgBoost
+  }, 0) | 0
 })
+
+const canSend = computed(
+  () => inputMessage.value.trim().length > 0 || pendingImages.value.length > 0,
+)
 
 const chatStatus = computed<ChatStatus>(() => (streaming.value ? 'streaming' : 'ready'))
 
@@ -273,7 +341,58 @@ function partsToText(parts?: Array<{ type: string; text?: string }>): string {
     .join('')
 }
 
+function messageImages(id?: string): string[] {
+  if (!id) return []
+  return messages.value.find(m => m.id === id)?.images || []
+}
+
 const renderMarkdown = (content: string) => renderChatMarkdown(content)
+
+function notifyImageError(err: unknown) {
+  if (err instanceof ChatImageError) {
+    const map: Record<string, string> = {
+      tooMany: t('play.imageTooMany'),
+      tooBig: t('play.imageTooBig'),
+      badType: t('play.imageBadType'),
+      readFail: t('play.imageReadFail'),
+    }
+    notifyError(map[err.code] || t('play.imageReadFail'))
+    return
+  }
+  notifyError(t('play.imageReadFail'))
+}
+
+async function addImageFiles(files: File[]) {
+  if (!files.length) return
+  try {
+    const urls = await filesToChatDataUrls(files, pendingImages.value.length)
+    pendingImages.value = [...pendingImages.value, ...urls]
+  } catch (err) {
+    notifyImageError(err)
+  }
+}
+
+function removePendingImage(idx: number) {
+  pendingImages.value = pendingImages.value.filter((_, i) => i !== idx)
+}
+
+async function onImageInputChange(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  await addImageFiles(files)
+}
+
+async function onComposerPaste(ev: ClipboardEvent) {
+  const items = Array.from(ev.clipboardData?.items || [])
+  const files = items
+    .filter(item => item.type.startsWith('image/'))
+    .map(item => item.getAsFile())
+    .filter((f): f is File => !!f)
+  if (!files.length) return
+  ev.preventDefault()
+  await addImageFiles(files)
+}
 
 const notifyError = (title: string) => {
   toast.add({ title, color: 'error' })
@@ -380,6 +499,7 @@ function conversationPayload() {
       id: m.id,
       role: m.role,
       content: m.content,
+      images: m.images?.length ? m.images : undefined,
       time: m.time,
     })),
   }
@@ -432,6 +552,7 @@ const startNewChat = () => {
   persistSeq++
   stopStreaming()
   messages.value = []
+  pendingImages.value = []
   currentConversationId.value = ''
   conversationTitle.value = ''
   void setConversationQuery(null)
@@ -443,16 +564,19 @@ const sendSuggestion = (text: string) => {
 }
 
 const sendMessage = async () => {
-  if (!inputMessage.value.trim() || streaming.value || quotaGone.value) return
+  if ((!inputMessage.value.trim() && pendingImages.value.length === 0) || streaming.value || quotaGone.value) return
 
   const userMessage = inputMessage.value.trim()
+  const images = [...pendingImages.value]
   messages.value.push({
     id: crypto.randomUUID(),
     role: 'user',
     content: userMessage,
+    images: images.length ? images : undefined,
     time: new Date().toISOString(),
   })
   inputMessage.value = ''
+  pendingImages.value = []
 
   streaming.value = true
   const controller = new AbortController()
@@ -466,8 +590,8 @@ const sendMessage = async () => {
     const body = {
       model: selectedModel.value,
       messages: messages.value
-        .filter(m => m.content.trim().length > 0)
-        .map(m => ({ role: m.role, content: m.content })),
+        .filter(m => m.content.trim().length > 0 || (m.images?.length ?? 0) > 0)
+        .map(m => ({ role: m.role, content: toVisionContent(m.content, m.images) })),
       stream: true,
       ...params,
     }
@@ -606,8 +730,10 @@ const loadConversation = async (id: string) => {
     id: m.id || crypto.randomUUID(),
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: m.content || '',
+    images: Array.isArray(m.images) ? m.images.filter(Boolean) : undefined,
     time: m.time,
   }))
+  pendingImages.value = []
   await handleAgentChange(res.data.agent_id || NONE_AGENT)
   if (res.data.model) {
     selectedModel.value = res.data.model
@@ -627,6 +753,16 @@ const deleteConversation = async (id: string) => {
   if (currentConversationId.value === id) {
     startNewChat()
   }
+}
+
+const togglePinConversation = async (id: string, pinned: boolean) => {
+  if (!id) return
+  const res = await updateConversation(id, { pinned })
+  if (res.error) {
+    notifyError(res.error || t('play.pinFail'))
+    return
+  }
+  await fetchConversationList()
 }
 
 onMounted(async () => {
@@ -894,6 +1030,84 @@ watch(sidebarCollapsed, (collapsed) => {
   opacity: 0.92;
 }
 
+.message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.message-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.message-images .message-md-img-link {
+  margin: 0;
+  max-width: min(100%, 280px);
+}
+
+.message-images .message-md-img {
+  max-height: 240px;
+}
+
+.pending-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.vision-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: var(--cf-ink-soft);
+  line-height: 1.4;
+}
+
+.pending-image {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--cf-ink) 12%, transparent);
+  background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
+}
+
+.pending-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pending-image :deep(.cf-btn) {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: color-mix(in oklab, #000 45%, transparent) !important;
+}
+
+.composer-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 .composer-area {
   width: min(780px, 100%);

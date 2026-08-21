@@ -8,6 +8,7 @@ export interface ConversationMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  images?: string[]
   time?: string
 }
 
