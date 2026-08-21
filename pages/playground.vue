@@ -97,6 +97,18 @@
                     class="message-md"
                     v-html="renderMarkdown(partsToText(message?.parts))"
                   />
+                  <div
+                    v-if="message?.role === 'user' && !streaming && !insertAfterId"
+                    class="message-actions"
+                  >
+                    <CfButton
+                      tone="secondary"
+                      icon="i-lucide-corner-down-left"
+                      @click="beginInsert(message.id)"
+                    >
+                      {{ t('play.insertAfter') }}
+                    </CfButton>
+                  </div>
                 </div>
               </template>
               <template #indicator>
@@ -122,6 +134,22 @@
           <div class="composer-meta">
             <span class="token-hint">{{ tokenCount }} tokens</span>
           </div>
+
+          <div v-if="insertAfterId" class="insert-bar">
+            <p class="insert-bar-hint">{{ t('play.insertHint') }}</p>
+            <div class="insert-bar-actions">
+              <CfButton tone="secondary" icon="i-lucide-x" @click="cancelInsert">
+                {{ t('play.insertCancel') }}
+              </CfButton>
+            </div>
+          </div>
+
+          <PlaygroundQueueBar
+            :items="messageQueue"
+            @update="onQueueUpdate"
+            @move="onQueueMove"
+          />
+
           <div v-if="pendingImages.length > 0" class="pending-images">
             <div
               v-for="(src, idx) in pendingImages"
@@ -148,14 +176,14 @@
           <p v-if="pendingImages.length > 0" class="vision-hint">{{ t('play.visionHint') }}</p>
           <UChatPrompt
             v-model="inputMessage"
-            :disabled="streaming || quotaGone"
+            :disabled="quotaGone"
             :submit-on-enter="true"
-            :placeholder="quotaGone ? t('quota.placeholderDone') : t('play.placeholder')"
+            :placeholder="composerPlaceholder"
             variant="subtle"
             :rows="2"
             :maxrows="6"
             class="composer-prompt"
-            @submit="sendMessage"
+            @submit="onComposerSubmit"
           >
             <template #footer>
               <div class="composer-footer">
@@ -172,10 +200,10 @@
                     tone="icon"
                     icon="i-lucide-image-plus"
                     :tip="t('play.attachImage')"
-                    :disabled="streaming || quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
+                    :disabled="quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
                     @click="imageInput?.click()"
                   />
-                  <span class="composer-hint">{{ t('play.hint') }}</span>
+                  <span class="composer-hint">{{ streaming ? t('play.queueAdd') + ' · ' + t('play.hint') : t('play.hint') }}</span>
                 </div>
                 <UChatPromptSubmit
                   class="cf-btn cf-btn--primary"
@@ -232,13 +260,19 @@ import {
 } from '~/utils/chatImages'
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
-import type { ConversationMessage, ConversationSummary } from '@/composables/useConversations'
+import type {
+  ConversationMessage,
+  ConversationQueueItem,
+  ConversationSummary,
+} from '@/composables/useConversations'
 import type { QuotaSnapshot } from '@/composables/useQuota'
 
 definePageMeta({
   layout: 'default',
   requiresAuth: true,
 })
+
+const MAX_MESSAGE_QUEUE = 5
 
 /** Local playground message. */
 interface Message {
@@ -276,6 +310,8 @@ const quotaSnap = ref<QuotaSnapshot | null>(null)
 const quotaGone = computed(() => quotaExhausted(quotaSnap.value))
 
 const messages = ref<Message[]>([])
+const messageQueue = ref<ConversationQueueItem[]>([])
+const insertAfterId = ref('')
 const inputMessage = ref('')
 const pendingImages = ref<string[]>([])
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -304,6 +340,13 @@ const suggestionChips = computed(() => [
   t('play.chip2'),
   t('play.chip3'),
 ])
+
+const composerPlaceholder = computed(() => {
+  if (quotaGone.value) return t('quota.placeholderDone')
+  if (insertAfterId.value) return t('play.insertSend')
+  if (streaming.value) return t('play.queueAdd')
+  return t('play.placeholder')
+})
 
 const currentTitle = computed(() => {
   if (conversationTitle.value) return conversationTitle.value
@@ -554,6 +597,13 @@ function conversationPayload() {
       images: m.images?.length ? m.images : undefined,
       time: m.time,
     })),
+    message_queue: messageQueue.value.map((q, i): ConversationQueueItem => ({
+      id: q.id,
+      content: q.content,
+      images: q.images?.length ? q.images : undefined,
+      status: q.status === 'sending' ? 'sending' : 'queued',
+      sort: i,
+    })),
   }
 }
 
@@ -567,11 +617,17 @@ async function setConversationQuery(id: string | null) {
   await router.replace({ query: rest })
 }
 
-async function persistConversation() {
-  if (messages.value.length === 0) return
+async function persistConversation(opts?: { allowEmpty?: boolean; queueOnly?: boolean }) {
+  if (!opts?.allowEmpty && messages.value.length === 0 && messageQueue.value.length === 0) return
   const seq = ++persistSeq
   const snapshotId = currentConversationId.value
   const payload = conversationPayload()
+  if (opts?.queueOnly && snapshotId) {
+    const res = await updateConversation(snapshotId, { message_queue: payload.message_queue })
+    if (seq !== persistSeq) return
+    if (res.error) notifyError(res.error || t('play.saveFail'))
+    return
+  }
   const res = snapshotId
     ? await updateConversation(snapshotId, payload)
     : await createConversation(payload)
@@ -590,10 +646,48 @@ async function persistConversation() {
   await fetchConversationList()
 }
 
+async function persistQueue() {
+  if (!currentConversationId.value) {
+    if (messages.value.length > 0) await persistConversation()
+    return
+  }
+  await persistConversation({ allowEmpty: true, queueOnly: true })
+}
+
+function onQueueUpdate(items: ConversationQueueItem[]) {
+  messageQueue.value = items.map((item, i) => ({ ...item, sort: i }))
+  void persistQueue()
+}
+
+function onQueueMove(id: string, delta: number) {
+  const idx = messageQueue.value.findIndex(i => i.id === id)
+  if (idx < 0) return
+  const next = idx + delta
+  if (next < 0 || next >= messageQueue.value.length) return
+  if (messageQueue.value[idx].status === 'sending' || messageQueue.value[next].status === 'sending') return
+  const copy = [...messageQueue.value]
+  const [row] = copy.splice(idx, 1)
+  copy.splice(next, 0, row)
+  messageQueue.value = copy.map((item, i) => ({ ...item, sort: i }))
+  void persistQueue()
+}
+
+function beginInsert(messageId: string) {
+  if (streaming.value) return
+  insertAfterId.value = messageId
+}
+
+function cancelInsert() {
+  insertAfterId.value = ''
+}
+
 const stopStreaming = () => {
   abortController.value?.abort()
   abortController.value = null
   streaming.value = false
+  messageQueue.value = messageQueue.value.map(item => (
+    item.status === 'sending' ? { ...item, status: 'queued' as const } : item
+  ))
 }
 
 const toggleDesktopHistory = () => {
@@ -604,6 +698,8 @@ const startNewChat = () => {
   persistSeq++
   stopStreaming()
   messages.value = []
+  messageQueue.value = []
+  insertAfterId.value = ''
   pendingImages.value = []
   imageDragOver.value = false
   imageDragDepth = 0
@@ -614,7 +710,82 @@ const startNewChat = () => {
 
 const sendSuggestion = (text: string) => {
   inputMessage.value = text
-  sendMessage()
+  void onComposerSubmit()
+}
+
+function enqueueFromComposer(): boolean {
+  if (messageQueue.value.length >= MAX_MESSAGE_QUEUE) {
+    notifyError(t('play.queueFull'))
+    return false
+  }
+  const content = inputMessage.value.trim()
+  const images = [...pendingImages.value]
+  if (!content && images.length === 0) return false
+  messageQueue.value = [
+    ...messageQueue.value,
+    {
+      id: crypto.randomUUID(),
+      content,
+      images: images.length ? images : undefined,
+      status: 'queued',
+      sort: messageQueue.value.length,
+    },
+  ]
+  inputMessage.value = ''
+  pendingImages.value = []
+  void persistQueue()
+  return true
+}
+
+async function onComposerSubmit() {
+  if (quotaGone.value) return
+  if (!canSend.value) return
+
+  if (insertAfterId.value) {
+    await confirmAndInsert()
+    return
+  }
+
+  if (streaming.value) {
+    enqueueFromComposer()
+    return
+  }
+
+  await sendMessage()
+}
+
+async function confirmAndInsert() {
+  const afterId = insertAfterId.value
+  if (!afterId) return
+  const idx = messages.value.findIndex(m => m.id === afterId)
+  if (idx < 0) {
+    cancelInsert()
+    return
+  }
+  const removeCount = messages.value.length - idx - 1
+  if (removeCount > 0) {
+    const ok = window.confirm(t('play.insertConfirm', { n: removeCount }))
+    if (!ok) return
+  }
+  messages.value = messages.value.slice(0, idx + 1)
+  messageQueue.value = []
+  insertAfterId.value = ''
+  await sendMessage()
+}
+
+async function drainQueueIfNeeded() {
+  if (streaming.value || quotaGone.value) return
+  const next = messageQueue.value.find(i => i.status === 'queued')
+  if (!next) return
+  messageQueue.value = messageQueue.value.map(item => (
+    item.id === next.id ? { ...item, status: 'sending' as const } : item
+  ))
+  await persistQueue()
+  inputMessage.value = next.content
+  pendingImages.value = [...(next.images || [])]
+  messageQueue.value = messageQueue.value.filter(item => item.id !== next.id)
+  await persistQueue()
+  await sendMessage()
 }
 
 const sendMessage = async () => {
@@ -764,8 +935,9 @@ const sendMessage = async () => {
   } finally {
     streaming.value = false
     abortController.value = null
-    await persistConversation()
+    await persistConversation({ allowEmpty: true })
     await refreshQuota()
+    await drainQueueIfNeeded()
   }
 }
 
@@ -787,6 +959,14 @@ const loadConversation = async (id: string) => {
     images: Array.isArray(m.images) ? m.images.filter(Boolean) : undefined,
     time: m.time,
   }))
+  messageQueue.value = (res.data.message_queue || []).map((q, i) => ({
+    id: q.id || crypto.randomUUID(),
+    content: q.content || '',
+    images: Array.isArray(q.images) ? q.images.filter(Boolean) : undefined,
+    status: q.status === 'sending' ? 'queued' : (q.status || 'queued'),
+    sort: typeof q.sort === 'number' ? q.sort : i,
+  }))
+  insertAfterId.value = ''
   pendingImages.value = []
   await handleAgentChange(res.data.agent_id || NONE_AGENT)
   if (res.data.model) {
@@ -1089,6 +1269,41 @@ watch(sidebarCollapsed, (collapsed) => {
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+}
+
+.message-actions {
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.message-body:hover .message-actions,
+.message-body:focus-within .message-actions {
+  opacity: 1;
+}
+
+.insert-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed color-mix(in oklab, var(--cf-accent) 50%, transparent);
+  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
+}
+
+.insert-bar-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--cf-ink);
+  line-height: 1.4;
+}
+
+.insert-bar-actions {
+  flex-shrink: 0;
 }
 
 .message-images {

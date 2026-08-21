@@ -12,12 +12,21 @@ export interface ConversationMessage {
   time?: string
 }
 
+export interface ConversationQueueItem {
+  id: string
+  content: string
+  images?: string[]
+  status: 'queued' | 'sending'
+  sort: number
+}
+
 export interface ConversationSummary {
   id: string
   title: string
   agent_id: string
   model: string
   pinned: boolean
+  queue_len?: number
   created_at: string
   updated_at: string
 }
@@ -25,6 +34,7 @@ export interface ConversationSummary {
 export interface Conversation extends ConversationSummary {
   user_id: string
   messages: ConversationMessage[]
+  message_queue?: ConversationQueueItem[]
 }
 
 export interface UpsertConversationInput {
@@ -33,6 +43,7 @@ export interface UpsertConversationInput {
   model?: string
   pinned?: boolean
   messages?: ConversationMessage[]
+  message_queue?: ConversationQueueItem[]
 }
 
 export const useConversations = () => {
