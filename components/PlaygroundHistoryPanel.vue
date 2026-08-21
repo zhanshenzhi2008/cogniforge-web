@@ -78,11 +78,11 @@
       {{ t('play.historySearchEmpty') }}
     </p>
 
-    <p v-else-if="unpinnedItems.length === 0" class="history-empty">
-      {{ query.trim() ? t('play.historySearchEmpty') : t('play.historyAllPinned') }}
+    <p v-else-if="unpinnedItems.length === 0 && !query.trim()" class="history-empty">
+      {{ t('play.historyAllPinned') }}
     </p>
 
-    <ul v-else class="history-list">
+    <ul v-else-if="unpinnedItems.length > 0" class="history-list">
       <li
         v-for="item in unpinnedItems"
         :key="item.id"
