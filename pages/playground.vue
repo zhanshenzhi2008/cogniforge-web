@@ -152,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { marked } from 'marked'
+import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
 import type { ConversationMessage, ConversationSummary } from '@/composables/useConversations'
@@ -273,9 +273,7 @@ function partsToText(parts?: Array<{ type: string; text?: string }>): string {
     .join('')
 }
 
-const renderMarkdown = (content: string) => {
-  return marked.parse(content || '', { async: false }) as string
-}
+const renderMarkdown = (content: string) => renderChatMarkdown(content)
 
 const notifyError = (title: string) => {
   toast.add({ title, color: 'error' })
@@ -867,6 +865,35 @@ watch(sidebarCollapsed, (collapsed) => {
   padding: 0;
   color: #e2e8f0;
 }
+
+.message-md :deep(.message-md-img-link) {
+  display: block;
+  max-width: 100%;
+  margin: 10px 0;
+  line-height: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
+}
+
+.message-md :deep(.message-md-img),
+.message-md :deep(img) {
+  display: block;
+  max-width: min(100%, 520px);
+  width: auto;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--cf-ink) 10%, transparent);
+  cursor: zoom-in;
+}
+
+.message-md :deep(a.message-md-img-link:hover .message-md-img),
+.message-md :deep(a.message-md-img-link:hover img) {
+  opacity: 0.92;
+}
+
 
 .composer-area {
   width: min(780px, 100%);
