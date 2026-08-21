@@ -106,7 +106,18 @@
           </div>
         </div>
 
-        <div class="composer-area" @paste="onComposerPaste">
+        <div
+          class="composer-area"
+          :class="{ 'is-dragover': imageDragOver }"
+          @paste="onComposerPaste"
+          @dragenter.prevent="onComposerDragEnter"
+          @dragover.prevent="onComposerDragOver"
+          @dragleave.prevent="onComposerDragLeave"
+          @drop.prevent="onComposerDrop"
+        >
+          <div v-if="imageDragOver" class="composer-drop-hint">
+            {{ t('play.dropImages') }}
+          </div>
           <QuotaBar :snap="quotaSnap" />
           <div class="composer-meta">
             <span class="token-hint">{{ tokenCount }} tokens</span>
@@ -117,12 +128,20 @@
               :key="idx"
               class="pending-image"
             >
-              <img :src="src" alt="" />
+              <a
+                class="pending-image-link"
+                :href="src"
+                target="_blank"
+                rel="noopener noreferrer"
+                :title="t('play.previewImage')"
+              >
+                <img :src="src" alt="" />
+              </a>
               <CfButton
                 tone="icon-danger"
                 icon="i-lucide-x"
                 :tip="t('play.removeImage')"
-                @click="removePendingImage(idx)"
+                @click.stop="removePendingImage(idx)"
               />
             </div>
           </div>
@@ -260,6 +279,8 @@ const messages = ref<Message[]>([])
 const inputMessage = ref('')
 const pendingImages = ref<string[]>([])
 const imageInput = ref<HTMLInputElement | null>(null)
+const imageDragOver = ref(false)
+let imageDragDepth = 0
 const streaming = ref(false)
 const selectedModel = ref('')
 const models = ref<Model[]>([])
@@ -391,6 +412,37 @@ async function onComposerPaste(ev: ClipboardEvent) {
     .filter((f): f is File => !!f)
   if (!files.length) return
   ev.preventDefault()
+  await addImageFiles(files)
+}
+
+function dragHasImages(ev: DragEvent): boolean {
+  const types = Array.from(ev.dataTransfer?.types || [])
+  return types.includes('Files')
+}
+
+function onComposerDragEnter(ev: DragEvent) {
+  if (!dragHasImages(ev) || streaming.value || quotaGone.value) return
+  imageDragDepth += 1
+  imageDragOver.value = true
+  if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'copy'
+}
+
+function onComposerDragOver(ev: DragEvent) {
+  if (!dragHasImages(ev) || streaming.value || quotaGone.value) return
+  if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'copy'
+  imageDragOver.value = true
+}
+
+function onComposerDragLeave() {
+  imageDragDepth = Math.max(0, imageDragDepth - 1)
+  if (imageDragDepth === 0) imageDragOver.value = false
+}
+
+async function onComposerDrop(ev: DragEvent) {
+  imageDragDepth = 0
+  imageDragOver.value = false
+  if (streaming.value || quotaGone.value) return
+  const files = Array.from(ev.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'))
   await addImageFiles(files)
 }
 
@@ -553,6 +605,8 @@ const startNewChat = () => {
   stopStreaming()
   messages.value = []
   pendingImages.value = []
+  imageDragOver.value = false
+  imageDragDepth = 0
   currentConversationId.value = ''
   conversationTitle.value = ''
   void setConversationQuery(null)
@@ -1076,6 +1130,13 @@ watch(sidebarCollapsed, (collapsed) => {
   background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
 }
 
+.pending-image-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+
 .pending-image img {
   width: 100%;
   height: 100%;
@@ -1087,6 +1148,7 @@ watch(sidebarCollapsed, (collapsed) => {
   position: absolute;
   top: 2px;
   right: 2px;
+  z-index: 2;
   background: color-mix(in oklab, #000 45%, transparent) !important;
 }
 
@@ -1110,10 +1172,34 @@ watch(sidebarCollapsed, (collapsed) => {
 }
 
 .composer-area {
+  position: relative;
   width: min(780px, 100%);
   margin: 0 auto;
   padding: 0 24px 20px;
   flex-shrink: 0;
+  border-radius: 16px;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.composer-area.is-dragover {
+  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--cf-accent) 45%, transparent);
+}
+
+.composer-drop-hint {
+  position: absolute;
+  inset: 8px 24px 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1.5px dashed color-mix(in oklab, var(--cf-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--cf-bg, #fff) 88%, transparent);
+  color: var(--cf-accent-ink, var(--cf-accent));
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .composer-meta {
