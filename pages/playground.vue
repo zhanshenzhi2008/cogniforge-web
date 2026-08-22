@@ -126,6 +126,7 @@
           @dragover.prevent="onComposerDragOver"
           @dragleave.prevent="onComposerDragLeave"
           @drop.prevent="onComposerDrop"
+          @keydown.escape="onComposerEscape"
         >
           <div v-if="imageDragOver" class="composer-drop-hint">
             {{ t('play.dropImages') }}
@@ -146,8 +147,11 @@
 
           <PlaygroundQueueBar
             :items="messageQueue"
+            :editing-id="queueEditingId"
             @update="onQueueUpdate"
             @move="onQueueMove"
+            @edit="startQueueEdit"
+            @cancel-edit="cancelQueueEdit"
           />
 
           <div v-if="pendingImages.length > 0" class="pending-images">
@@ -203,14 +207,14 @@
                     :disabled="quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
                     @click="imageInput?.click()"
                   />
-                  <span class="composer-hint">{{ streaming ? t('play.queueAdd') + ' · ' + t('play.hint') : t('play.hint') }}</span>
+                  <span class="composer-hint">{{ composerHint }}</span>
                 </div>
                 <UChatPromptSubmit
                   class="cf-btn cf-btn--primary"
-                  :status="chatStatus"
+                  :status="queueEditingId ? 'ready' : chatStatus"
                   color="primary"
                   variant="solid"
-                  :disabled="quotaGone || (!canSend && chatStatus === 'ready')"
+                  :disabled="quotaGone || (!canSend && (queueEditingId ? true : chatStatus === 'ready'))"
                   @stop="stopStreaming"
                 />
               </div>
@@ -311,6 +315,7 @@ const quotaGone = computed(() => quotaExhausted(quotaSnap.value))
 
 const messages = ref<Message[]>([])
 const messageQueue = ref<ConversationQueueItem[]>([])
+const queueEditingId = ref('')
 const insertAfterId = ref('')
 const inputMessage = ref('')
 const pendingImages = ref<string[]>([])
@@ -343,9 +348,16 @@ const suggestionChips = computed(() => [
 
 const composerPlaceholder = computed(() => {
   if (quotaGone.value) return t('quota.placeholderDone')
+  if (queueEditingId.value) return t('play.queueEditingPlaceholder')
   if (insertAfterId.value) return t('play.insertSend')
   if (streaming.value) return t('play.queueAdd')
   return t('play.placeholder')
+})
+
+const composerHint = computed(() => {
+  if (queueEditingId.value) return t('play.queueEditingHint')
+  if (streaming.value) return `${t('play.queueAdd')} · ${t('play.hint')}`
+  return t('play.hint')
 })
 
 const currentTitle = computed(() => {
@@ -655,6 +667,10 @@ async function persistQueue() {
 }
 
 function onQueueUpdate(items: ConversationQueueItem[]) {
+  if (queueEditingId.value && !items.some(i => i.id === queueEditingId.value)) {
+    restoreComposerStash()
+    queueEditingId.value = ''
+  }
   messageQueue.value = items.map((item, i) => ({ ...item, sort: i }))
   void persistQueue()
 }
@@ -672,8 +688,72 @@ function onQueueMove(id: string, delta: number) {
   void persistQueue()
 }
 
+let composerStash: { text: string; images: string[] } | null = null
+
+function restoreComposerStash() {
+  inputMessage.value = composerStash?.text ?? ''
+  pendingImages.value = composerStash?.images ?? []
+  composerStash = null
+}
+
+function startQueueEdit(id: string) {
+  const item = messageQueue.value.find(i => i.id === id)
+  if (!item || item.status === 'sending') return
+  if (queueEditingId.value && queueEditingId.value !== id) {
+    if (!saveQueueEdit({ drain: false })) return
+  }
+  if (insertAfterId.value) cancelInsert()
+  if (!queueEditingId.value) {
+    composerStash = {
+      text: inputMessage.value,
+      images: [...pendingImages.value],
+    }
+  }
+  queueEditingId.value = id
+  inputMessage.value = item.content || ''
+  pendingImages.value = [...(item.images || [])]
+}
+
+function cancelQueueEdit() {
+  if (!queueEditingId.value) return
+  queueEditingId.value = ''
+  restoreComposerStash()
+  if (!streaming.value) void drainQueueIfNeeded()
+}
+
+function saveQueueEdit(opts?: { drain?: boolean }): boolean {
+  const id = queueEditingId.value
+  if (!id) return false
+  const content = inputMessage.value.trim()
+  const images = [...pendingImages.value]
+  if (!content && images.length === 0) return false
+  messageQueue.value = messageQueue.value.map((item, i) => {
+    if (item.id !== id) return item
+    return {
+      ...item,
+      content,
+      images: images.length ? images : undefined,
+      sort: i,
+    }
+  })
+  queueEditingId.value = ''
+  restoreComposerStash()
+  void persistQueue()
+  if (opts?.drain !== false && !streaming.value) void drainQueueIfNeeded()
+  return true
+}
+
+function onComposerEscape() {
+  if (queueEditingId.value) {
+    cancelQueueEdit()
+    return
+  }
+  if (insertAfterId.value) cancelInsert()
+}
+
 function beginInsert(messageId: string) {
   if (streaming.value) return
+  if (queueEditingId.value) cancelQueueEdit()
   insertAfterId.value = messageId
 }
 
@@ -699,6 +779,8 @@ const startNewChat = () => {
   stopStreaming()
   messages.value = []
   messageQueue.value = []
+  queueEditingId.value = ''
+  composerStash = null
   insertAfterId.value = ''
   pendingImages.value = []
   imageDragOver.value = false
@@ -741,6 +823,11 @@ async function onComposerSubmit() {
   if (quotaGone.value) return
   if (!canSend.value) return
 
+  if (queueEditingId.value) {
+    saveQueueEdit()
+    return
+  }
+
   if (insertAfterId.value) {
     await confirmAndInsert()
     return
@@ -769,12 +856,14 @@ async function confirmAndInsert() {
   }
   messages.value = messages.value.slice(0, idx + 1)
   messageQueue.value = []
+  queueEditingId.value = ''
+  composerStash = null
   insertAfterId.value = ''
   await sendMessage()
 }
 
 async function drainQueueIfNeeded() {
-  if (streaming.value || quotaGone.value) return
+  if (streaming.value || quotaGone.value || queueEditingId.value) return
   const next = messageQueue.value.find(i => i.status === 'queued')
   if (!next) return
   messageQueue.value = messageQueue.value.map(item => (
@@ -967,6 +1056,8 @@ const loadConversation = async (id: string) => {
     sort: typeof q.sort === 'number' ? q.sort : i,
   }))
   insertAfterId.value = ''
+  queueEditingId.value = ''
+  composerStash = null
   pendingImages.value = []
   await handleAgentChange(res.data.agent_id || NONE_AGENT)
   if (res.data.model) {

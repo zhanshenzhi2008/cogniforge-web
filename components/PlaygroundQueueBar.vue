@@ -17,43 +17,38 @@
       >
         <span class="queue-idx">{{ idx + 1 }}</span>
 
-        <template v-if="editingId === item.id">
-          <textarea
-            v-model="editDraft"
-            class="queue-edit"
-            rows="2"
-            @keydown="onEditKeydown"
-          />
-          <div class="queue-edit-actions">
-            <CfButton tone="primary" icon="i-lucide-check" @click="saveEdit">
-              {{ t('play.queueSave') }}
-            </CfButton>
-            <CfButton tone="secondary" icon="i-lucide-x" @click="cancelEdit">
-              {{ t('common.cancel') }}
-            </CfButton>
-            <CfButton tone="danger" icon="i-lucide-trash-2" @click="remove(item.id)">
-              {{ t('play.queueDelete') }}
-            </CfButton>
-          </div>
-        </template>
+        <div class="queue-body">
+          <span class="queue-text">{{ item.content || t('play.queueImageOnly') }}</span>
+          <span v-if="item.images?.length" class="queue-img-badge">
+            {{ t('play.queueImages', { n: item.images.length }) }}
+          </span>
+        </div>
 
-        <template v-else>
+        <span v-if="editingId === item.id" class="queue-editing">
+          <span class="queue-editing-label">{{ t('play.queueEditing') }}</span>
           <button
             type="button"
-            class="queue-body"
-            :disabled="item.status === 'sending'"
-            :title="item.status === 'sending' ? t('play.queueSending') : t('play.queueEdit')"
-            @click="startEdit(item)"
+            class="queue-editing-x"
+            :title="t('play.queueCancelEdit')"
+            :aria-label="t('play.queueCancelEdit')"
+            @click="$emit('cancel-edit')"
           >
-            <span class="queue-text">{{ item.content || t('play.queueImageOnly') }}</span>
-            <span v-if="item.images?.length" class="queue-img-badge">
-              {{ t('play.queueImages', { n: item.images.length }) }}
-            </span>
+            ×
           </button>
+        </span>
+
+        <template v-else>
           <span class="queue-status">
             {{ item.status === 'sending' ? t('play.queueSending') : t('play.queueWaiting') }}
           </span>
-          <span class="queue-actions" @click.stop>
+          <span class="queue-actions">
+            <CfButton
+              tone="icon"
+              icon="i-lucide-pencil"
+              :tip="t('play.queueEdit')"
+              :disabled="item.status === 'sending'"
+              @click="$emit('edit', item.id)"
+            />
             <CfButton
               tone="icon"
               icon="i-lucide-arrow-up"
@@ -83,64 +78,26 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
 import type { ConversationQueueItem } from '@/composables/useConversations'
 
 const props = defineProps<{
   items: ConversationQueueItem[]
+  editingId?: string
 }>()
 
 const emit = defineEmits<{
   (e: 'update', items: ConversationQueueItem[]): void
   (e: 'move', id: string, delta: number): void
+  (e: 'edit', id: string): void
+  (e: 'cancel-edit'): void
 }>()
 
 const { t } = useLocale()
-const editingId = ref('')
-const editDraft = ref('')
-
-function startEdit(item: ConversationQueueItem) {
-  if (item.status === 'sending') return
-  editingId.value = item.id
-  editDraft.value = item.content || ''
-  void nextTick(() => {
-    const el = document.querySelector('.queue-edit') as HTMLTextAreaElement | null
-    el?.focus()
-  })
-}
-
-function cancelEdit() {
-  editingId.value = ''
-  editDraft.value = ''
-}
-
-function saveEdit() {
-  if (!editingId.value) return
-  const next = props.items.map((item) => {
-    if (item.id !== editingId.value) return item
-    return { ...item, content: editDraft.value }
-  })
-  emit('update', next)
-  cancelEdit()
-}
 
 function remove(id: string) {
   const target = props.items.find(i => i.id === id)
   if (!target || target.status === 'sending') return
-  if (editingId.value === id) cancelEdit()
   emit('update', props.items.filter(i => i.id !== id))
-}
-
-function onEditKeydown(ev: KeyboardEvent) {
-  if (ev.key === 'Escape') {
-    ev.preventDefault()
-    cancelEdit()
-    return
-  }
-  if (ev.key === 'Enter' && !ev.shiftKey) {
-    ev.preventDefault()
-    saveEdit()
-  }
 }
 </script>
 
@@ -184,7 +141,6 @@ function onEditKeydown(ev: KeyboardEvent) {
 
 .queue-item {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
@@ -214,22 +170,7 @@ function onEditKeydown(ev: KeyboardEvent) {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: text;
-}
-
-.queue-body:hover:not(:disabled) {
-  border-color: color-mix(in oklab, var(--cf-ink) 12%, transparent);
-  background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
-}
-
-.queue-body:disabled {
-  cursor: default;
+  padding: 4px 2px;
 }
 
 .queue-text {
@@ -258,26 +199,33 @@ function onEditKeydown(ev: KeyboardEvent) {
   flex-shrink: 0;
 }
 
-.queue-edit {
-  flex: 1 1 100%;
-  width: 100%;
-  min-height: 56px;
-  margin-left: 24px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklab, var(--cf-accent) 50%, transparent);
-  background: var(--cf-bg, transparent);
-  color: var(--cf-ink);
-  font-size: 13px;
-  resize: vertical;
-  outline: none;
+.queue-editing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--cf-accent, var(--cf-ink));
 }
 
-.queue-edit-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-left: 24px;
-  width: 100%;
+.queue-editing-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--cf-ink) 8%, transparent);
+  color: var(--cf-ink);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.queue-editing-x:hover {
+  background: color-mix(in oklab, var(--cf-ink) 16%, transparent);
 }
 </style>
