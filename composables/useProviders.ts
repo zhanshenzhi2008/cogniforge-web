@@ -10,9 +10,12 @@ export interface AIProvider {
   provider: string       // openai | anthropic | openrouter | azure | gemini | siliconeglow | deepseek
   base_url: string
   default_model: string
+  embedding_model: string
+  capabilities: string[]
   extra_headers: Record<string, any> | null
   is_enabled: boolean
   is_default: boolean
+  is_default_embedding: boolean
   priority: number
   status: 'active' | 'error' | 'testing'
   last_test_at: string | null
@@ -29,6 +32,8 @@ export interface CreateProviderInput {
   base_url?: string
   api_key: string
   default_model?: string
+  embedding_model?: string
+  capabilities?: string[]
   extra_headers?: Record<string, any>
   is_enabled?: boolean
   priority?: number
@@ -39,6 +44,8 @@ export interface UpdateProviderInput {
   base_url?: string
   api_key?: string
   default_model?: string
+  embedding_model?: string
+  capabilities?: string[]
   extra_headers?: Record<string, any>
   is_enabled?: boolean
   priority?: number
@@ -59,6 +66,7 @@ export const PROVIDER_META: Record<string, {
   docURL: string
   local?: boolean
   suggestedModels?: Array<{ label: string; value: string }>
+  suggestedEmbeddingModels?: Array<{ label: string; value: string }>
 }> = {
   openai: {
     label: 'OpenAI',
@@ -66,6 +74,10 @@ export const PROVIDER_META: Record<string, {
     color: '#10a37f',
     defaultBaseURL: 'https://api.openai.com/v1',
     docURL: 'https://platform.openai.com/docs/api-reference',
+    suggestedEmbeddingModels: [
+      { label: 'text-embedding-3-small', value: 'text-embedding-3-small' },
+      { label: 'text-embedding-3-large', value: 'text-embedding-3-large' },
+    ],
   },
   anthropic: {
     label: 'Anthropic Claude',
@@ -80,6 +92,9 @@ export const PROVIDER_META: Record<string, {
     color: '#7c3aed',
     defaultBaseURL: 'https://openrouter.ai/api/v1',
     docURL: 'https://openrouter.ai/docs',
+    suggestedEmbeddingModels: [
+      { label: 'openai/text-embedding-3-small', value: 'openai/text-embedding-3-small' },
+    ],
   },
   siliconeglow: {
     label: '硅基流动 SiliconGlow',
@@ -87,6 +102,9 @@ export const PROVIDER_META: Record<string, {
     color: '#0ea5e9',
     defaultBaseURL: 'https://api.siliconflow.cn/v1',
     docURL: 'https://docs.siliconflow.cn',
+    suggestedEmbeddingModels: [
+      { label: 'BAAI/bge-m3', value: 'BAAI/bge-m3' },
+    ],
   },
   deepseek: {
     label: 'DeepSeek',
@@ -107,6 +125,9 @@ export const PROVIDER_META: Record<string, {
     color: '#f59e0b',
     defaultBaseURL: 'https://api.xty.app/v1',
     docURL: '',
+    suggestedEmbeddingModels: [
+      { label: 'text-embedding-3-small', value: 'text-embedding-3-small' },
+    ],
   },
   azure: {
     label: 'Azure OpenAI',
@@ -207,9 +228,9 @@ export const useProviders = () => {
     }
   }
 
-  const setDefault = async (id: string): Promise<{ error?: string }> => {
+  const setDefault = async (id: string, purpose: 'chat' | 'embedding' = 'chat'): Promise<{ error?: string }> => {
     try {
-      const res = await api.post(`/api/v1/providers/${id}/default`)
+      const res = await api.post(`/api/v1/providers/${id}/default`, { purpose })
       if (res.error) return { error: res.error }
       return {}
     } catch (err: any) {

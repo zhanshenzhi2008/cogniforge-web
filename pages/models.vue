@@ -26,28 +26,27 @@
       </div>
     </div>
 
-    <!-- Active provider — one-line strip -->
-    <div v-if="activeProvider" class="active-strip">
-      <span class="active-strip-label">{{ t('models.active') }}</span>
-      <span class="active-strip-icon">{{ getProviderMeta(activeProvider.provider)?.icon }}</span>
-      <span class="active-strip-name">{{ activeProvider.name }}</span>
-      <span class="active-strip-sep">·</span>
-      <span class="active-strip-model">{{ activeProvider.default_model }}</span>
-      <span class="active-strip-sep">·</span>
-      <span :class="['status-badge', activeProvider.status]">
-        <span class="dot" />{{ statusLabel(activeProvider.status) }}
-      </span>
-      <UBadge
-        size="sm"
-        variant="subtle"
-        :color="activeProvider.is_default ? 'warning' : 'success'"
-        class="active-strip-badge"
-      >
-        {{ activeProvider.is_default ? t('models.default') : t('models.firstEnabled') }}
-      </UBadge>
-      <div class="active-strip-actions">
-        <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(activeProvider)" />
-        <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(activeProvider.id)" />
+    <!-- Active defaults -->
+    <div v-if="activeProvider || embeddingProvider" class="active-defaults">
+      <div v-if="activeProvider" class="active-strip">
+        <span class="active-strip-label">{{ t('models.activeChat') }}</span>
+        <span class="active-strip-icon">{{ getProviderMeta(activeProvider.provider)?.icon }}</span>
+        <span class="active-strip-name">{{ activeProvider.name }}</span>
+        <span class="active-strip-sep">·</span>
+        <span class="active-strip-model">{{ activeProvider.default_model }}</span>
+        <div class="active-strip-actions">
+          <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(activeProvider)" />
+        </div>
+      </div>
+      <div v-if="embeddingProvider" class="active-strip">
+        <span class="active-strip-label">{{ t('models.activeEmbed') }}</span>
+        <span class="active-strip-icon">{{ getProviderMeta(embeddingProvider.provider)?.icon }}</span>
+        <span class="active-strip-name">{{ embeddingProvider.name }}</span>
+        <span class="active-strip-sep">·</span>
+        <span class="active-strip-model">{{ embeddingProvider.embedding_model || embeddingProvider.default_model }}</span>
+        <div class="active-strip-actions">
+          <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(embeddingProvider)" />
+        </div>
       </div>
     </div>
 
@@ -108,6 +107,10 @@
         </div>
 
         <div class="provider-card-meta">
+          <div class="cap-row">
+            <UBadge v-if="hasCap(p, 'chat')" size="sm" variant="subtle">{{ t('models.capChat') }}</UBadge>
+            <UBadge v-if="hasCap(p, 'embedding')" size="sm" variant="subtle">{{ t('models.capEmbed') }}</UBadge>
+          </div>
           <code class="model-code" :title="p.default_model || ''">{{ p.default_model || '—' }}</code>
           <span :class="['status-badge', p.status]" :title="p.status === 'error' ? p.last_error || '' : undefined">
             <span class="dot" />{{ statusLabel(p.status) }}
@@ -123,12 +126,20 @@
           />
           <div class="action-btns">
             <CfButton
-              v-if="!p.is_default"
+              v-if="hasCap(p, 'chat') && !p.is_default"
               tone="icon"
               icon="i-lucide-star"
-              :tip="t('models.setDefault')"
-              :loading="settingDefaultId === p.id"
-              @click="handleSetDefault(p.id)"
+              :tip="t('models.setDefaultChat')"
+              :loading="settingDefaultId === p.id + ':chat'"
+              @click="handleSetDefault(p.id, 'chat')"
+            />
+            <CfButton
+              v-if="hasCap(p, 'embedding') && !p.is_default_embedding"
+              tone="icon"
+              icon="i-lucide-database"
+              :tip="t('models.setDefaultEmbed')"
+              :loading="settingDefaultId === p.id + ':embedding'"
+              @click="handleSetDefault(p.id, 'embedding')"
             />
             <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(p.id)" />
             <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(p)" />
@@ -200,12 +211,20 @@
               <td @dblclick.stop>
                 <div class="action-btns">
                   <CfButton
-                    v-if="!p.is_default"
+                    v-if="hasCap(p, 'chat') && !p.is_default"
                     tone="icon"
                     icon="i-lucide-star"
-                    :tip="t('models.setDefault')"
-                    :loading="settingDefaultId === p.id"
-                    @click="handleSetDefault(p.id)"
+                    :tip="t('models.setDefaultChat')"
+                    :loading="settingDefaultId === p.id + ':chat'"
+                    @click="handleSetDefault(p.id, 'chat')"
+                  />
+                  <CfButton
+                    v-if="hasCap(p, 'embedding') && !p.is_default_embedding"
+                    tone="icon"
+                    icon="i-lucide-database"
+                    :tip="t('models.setDefaultEmbed')"
+                    :loading="settingDefaultId === p.id + ':embedding'"
+                    @click="handleSetDefault(p.id, 'embedding')"
                   />
                   <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(p.id)" />
                   <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(p)" />
@@ -264,6 +283,14 @@
             <div class="detail-row">
               <dt>{{ t('models.defaultModel') }}</dt>
               <dd><code class="model-code">{{ viewingProvider.default_model || '—' }}</code></dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('models.embeddingModel') }}</dt>
+              <dd><code class="model-code">{{ viewingProvider.embedding_model || '—' }}</code></dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('models.capabilities') }}</dt>
+              <dd>{{ (viewingProvider.capabilities || ['chat']).join(', ') }}</dd>
             </div>
             <div class="detail-row">
               <dt>Base URL</dt>
@@ -358,6 +385,15 @@
           </div>
 
           <div class="field">
+            <label class="field__label">{{ t('models.capabilities') }}</label>
+            <div class="cap-checks">
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="chat"> {{ t('models.capChat') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="embedding"> {{ t('models.capEmbed') }}</label>
+            </div>
+            <p class="field__hint">{{ t('models.capabilitiesHint') }}</p>
+          </div>
+
+          <div v-if="form.capabilities.includes('chat')" class="field">
             <label class="field__label">{{ t('models.defaultModel') }}</label>
             <USelect
               v-if="suggestedModelItems.length"
@@ -374,6 +410,24 @@
               :placeholder="t('models.modelPh')"
             />
             <p v-if="form.provider === 'deepseek'" class="field__hint">{{ t('models.deepseekHint') }}</p>
+          </div>
+
+          <div v-if="form.capabilities.includes('embedding')" class="field">
+            <label class="field__label">{{ t('models.embeddingModel') }}</label>
+            <USelect
+              v-if="suggestedEmbeddingItems.length"
+              :model-value="form.embedding_model"
+              :items="suggestedEmbeddingItems"
+              value-key="value"
+              class="w-full"
+              @update:model-value="form.embedding_model = $event"
+            />
+            <UInput
+              v-else
+              v-model="form.embedding_model"
+              class="w-full"
+              :placeholder="t('models.embedModelPh')"
+            />
           </div>
 
           <div v-if="form.provider === 'openrouter'" class="field">
@@ -519,6 +573,17 @@ const loading = ref(false)
 const submitting = ref(false)
 const providers = ref<AIProvider[]>([])
 const activeProvider = ref<AIProvider | null>(null)
+
+function hasCap(p: AIProvider, cap: string) {
+  const caps = p.capabilities?.length ? p.capabilities : ['chat']
+  return caps.includes(cap)
+}
+
+const embeddingProvider = computed(() => {
+  return providers.value.find(p => p.is_default_embedding && p.is_enabled)
+    || providers.value.find(p => p.is_enabled && hasCap(p, 'embedding'))
+    || null
+})
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const editingId = ref('')
@@ -563,6 +628,8 @@ const form = reactive({
   api_key: '',
   base_url: '',
   default_model: '',
+  embedding_model: '',
+  capabilities: ['chat'] as string[],
   extra_headers_raw: '',
   priority: 10,
 })
@@ -611,6 +678,7 @@ function selectProvider(key: string) {
 }
 
 const suggestedModelItems = computed(() => PROVIDER_META[form.provider]?.suggestedModels || [])
+const suggestedEmbeddingItems = computed(() => PROVIDER_META[form.provider]?.suggestedEmbeddingModels || [])
 
 function validate() {
   errors.provider = form.provider ? '' : t('models.needType')
@@ -629,6 +697,8 @@ function fillFormFromProvider(p: AIProvider) {
   form.api_key = ''
   form.base_url = p.base_url || ''
   form.default_model = p.default_model || ''
+  form.embedding_model = p.embedding_model || ''
+  form.capabilities = p.capabilities?.length ? [...p.capabilities] : ['chat']
   form.priority = p.priority
   if (p.extra_headers) {
     try {
@@ -708,15 +778,15 @@ const handleToggleEnable = async (p: AIProvider) => {
   await fetchAll()
 }
 
-const handleSetDefault = async (id: string) => {
-  settingDefaultId.value = id
+const handleSetDefault = async (id: string, purpose: 'chat' | 'embedding' = 'chat') => {
+  settingDefaultId.value = id + ':' + purpose
   try {
-    const res = await setDefault(id)
+    const res = await setDefault(id, purpose)
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: t('models.defaultToast'), color: 'success' })
+    toast.add({ title: purpose === 'embedding' ? t('models.defaultEmbedToast') : t('models.defaultToast'), color: 'success' })
     await fetchAll()
   } finally {
     settingDefaultId.value = ''
@@ -764,6 +834,8 @@ const handleSubmit = async () => {
         base_url: form.base_url,
         api_key: form.api_key || undefined,
         default_model: form.default_model,
+        embedding_model: form.embedding_model,
+        capabilities: form.capabilities,
         extra_headers: extraHeaders,
         priority: form.priority,
       }
@@ -780,6 +852,8 @@ const handleSubmit = async () => {
         api_key: form.api_key,
         base_url: form.base_url,
         default_model: form.default_model,
+        embedding_model: form.embedding_model,
+        capabilities: form.capabilities,
         extra_headers: extraHeaders,
         priority: form.priority,
       }
@@ -805,6 +879,8 @@ const resetForm = () => {
   form.api_key = ''
   form.base_url = PROVIDER_META['openai']?.defaultBaseURL || ''
   form.default_model = ''
+  form.embedding_model = ''
+  form.capabilities = ['chat']
   form.extra_headers_raw = ''
   form.priority = 10
   errors.provider = ''
@@ -1088,13 +1164,33 @@ onMounted(() => {
   border-top: 1px solid var(--cf-line);
 }
 
+.active-defaults {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.cap-row,
+.cap-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.cap-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
 .active-strip {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 10px;
   padding: 10px 14px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
   border-radius: 8px;
   border: 1px solid color-mix(in oklab, var(--cf-accent) 28%, var(--cf-line));
   background: color-mix(in oklab, var(--cf-accent) 8%, var(--cf-nav-surface, var(--cf-bg-elevated)));

@@ -259,7 +259,9 @@ import {
   CHAT_IMAGE_ACCEPT,
   CHAT_IMAGE_MAX_COUNT,
   ChatImageError,
+  collectClipboardFiles,
   filesToChatDataUrls,
+  partitionChatImages,
   toVisionContent,
 } from '~/utils/chatImages'
 import { apiUrl } from '~/utils/apiBase'
@@ -383,6 +385,7 @@ const params = reactive({
   temperature: 0.7,
   max_tokens: 2048,
   top_p: 0.9,
+  memory_turns: 10, // 阶段十四 14.2：服务端滑动窗口轮数
 })
 
 const tokenCount = computed(() => {
@@ -440,9 +443,18 @@ function notifyImageError(err: unknown) {
 
 async function addImageFiles(files: File[]) {
   if (!files.length) return
+  const { images, rejected } = partitionChatImages(files)
+  if (rejected.length > 0 && images.length === 0) {
+    notifyImageError(new ChatImageError('badType', 'unsupported image type'))
+    return
+  }
+  if (!images.length) return
   try {
-    const urls = await filesToChatDataUrls(files, pendingImages.value.length)
+    const urls = await filesToChatDataUrls(images, pendingImages.value.length)
     pendingImages.value = [...pendingImages.value, ...urls]
+    if (rejected.length > 0) {
+      notifyError(t('play.imageBadType'))
+    }
   } catch (err) {
     notifyImageError(err)
   }
@@ -460,30 +472,27 @@ async function onImageInputChange(ev: Event) {
 }
 
 async function onComposerPaste(ev: ClipboardEvent) {
-  const items = Array.from(ev.clipboardData?.items || [])
-  const files = items
-    .filter(item => item.type.startsWith('image/'))
-    .map(item => item.getAsFile())
-    .filter((f): f is File => !!f)
+  const files = collectClipboardFiles(ev.clipboardData)
   if (!files.length) return
   ev.preventDefault()
+  if (quotaGone.value) return
   await addImageFiles(files)
 }
 
-function dragHasImages(ev: DragEvent): boolean {
+function dragHasFiles(ev: DragEvent): boolean {
   const types = Array.from(ev.dataTransfer?.types || [])
   return types.includes('Files')
 }
 
 function onComposerDragEnter(ev: DragEvent) {
-  if (!dragHasImages(ev) || streaming.value || quotaGone.value) return
+  if (!dragHasFiles(ev) || quotaGone.value) return
   imageDragDepth += 1
   imageDragOver.value = true
   if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'copy'
 }
 
 function onComposerDragOver(ev: DragEvent) {
-  if (!dragHasImages(ev) || streaming.value || quotaGone.value) return
+  if (!dragHasFiles(ev) || quotaGone.value) return
   if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'copy'
   imageDragOver.value = true
 }
@@ -496,9 +505,8 @@ function onComposerDragLeave() {
 async function onComposerDrop(ev: DragEvent) {
   imageDragDepth = 0
   imageDragOver.value = false
-  if (streaming.value || quotaGone.value) return
-  const files = Array.from(ev.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'))
-  await addImageFiles(files)
+  if (quotaGone.value) return
+  await addImageFiles(collectClipboardFiles(ev.dataTransfer))
 }
 
 const notifyError = (title: string) => {

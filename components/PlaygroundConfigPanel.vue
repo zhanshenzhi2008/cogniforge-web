@@ -98,6 +98,21 @@
           @update:model-value="params.top_p = $event"
         />
       </div>
+      <div class="param-row">
+        <div class="param-label">
+          <span>{{ t('play.memoryTurns') }}</span>
+          <UBadge size="sm" variant="subtle" color="info">{{ params.memory_turns }}</UBadge>
+        </div>
+        <USlider
+          :model-value="params.memory_turns"
+          :min="0"
+          :max="40"
+          :step="1"
+          color="info"
+          @update:model-value="params.memory_turns = $event"
+        />
+        <div class="param-hint">{{ t('play.memoryTurnsHint') }}</div>
+      </div>
     </section>
   </div>
 </template>
@@ -116,6 +131,7 @@ defineProps<{
     temperature: number
     max_tokens: number
     top_p: number
+    memory_turns: number
   }
 }>()
 
@@ -233,5 +249,10 @@ function onAgentChange(value: string) {
   align-items: center;
   font-size: 12px;
   color: var(--cf-ink);
+}
+
+.param-hint {
+  font-size: 11px;
+  color: var(--cf-ink-soft);
 }
 </style>

@@ -23,8 +23,48 @@ export class ChatImageError extends Error {
   }
 }
 
+export function guessChatImageMime(file: File): string {
+  if (ALLOWED.has(file.type)) return file.type
+  const name = (file.name || '').toLowerCase()
+  if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg'
+  if (name.endsWith('.png')) return 'image/png'
+  if (name.endsWith('.gif')) return 'image/gif'
+  if (name.endsWith('.webp')) return 'image/webp'
+  return file.type || ''
+}
+
 export function isAllowedChatImage(file: File): boolean {
-  return ALLOWED.has(file.type)
+  return ALLOWED.has(guessChatImageMime(file))
+}
+
+/** Finder copy/paste often puts files on `files` with empty MIME; screenshots use `items`. */
+export function collectClipboardFiles(data: DataTransfer | null | undefined): File[] {
+  if (!data) return []
+  const seen = new Set<string>()
+  const out: File[] = []
+  const push = (file: File | null | undefined) => {
+    if (!file) return
+    const key = `${file.name}:${file.size}:${file.lastModified}`
+    if (seen.has(key)) return
+    seen.add(key)
+    const mime = guessChatImageMime(file)
+    out.push(mime && mime !== file.type ? new File([file], file.name || 'image', { type: mime, lastModified: file.lastModified }) : file)
+  }
+  for (const item of Array.from(data.items || [])) {
+    if (item.kind === 'file') push(item.getAsFile())
+  }
+  for (const file of Array.from(data.files || [])) push(file)
+  return out
+}
+
+export function partitionChatImages(files: File[]): { images: File[]; rejected: File[] } {
+  const images: File[] = []
+  const rejected: File[] = []
+  for (const file of files) {
+    if (isAllowedChatImage(file)) images.push(file)
+    else rejected.push(file)
+  }
+  return { images, rejected }
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {

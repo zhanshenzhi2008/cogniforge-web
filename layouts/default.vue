@@ -9,15 +9,29 @@
       </template>
 
       <nav class="cf-nav" aria-label="Primary">
-        <NuxtLink
-          v-for="item in desktopNavItems"
-          :key="item.key"
-          :to="item.to"
-          class="cf-nav__link"
-          :class="{ 'is-active': item.active }"
-        >
-          {{ item.label }}
-        </NuxtLink>
+        <template v-for="item in desktopNavItems" :key="item.key">
+          <UDropdownMenu
+            v-if="item.children?.length"
+            :items="item.menuItems"
+          >
+            <button
+              type="button"
+              class="cf-nav__link cf-nav__link--menu"
+              :class="{ 'is-active': item.active }"
+            >
+              {{ item.label }}
+              <UIcon name="i-lucide-chevron-down" class="cf-nav__chevron size-3.5" />
+            </button>
+          </UDropdownMenu>
+          <NuxtLink
+            v-else
+            :to="item.to"
+            class="cf-nav__link"
+            :class="{ 'is-active': item.active }"
+          >
+            {{ item.label }}
+          </NuxtLink>
+        </template>
       </nav>
 
       <template #right>
@@ -98,7 +112,13 @@
 
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { filterNavItems, resolveActiveNavKey } from '~/constants/nav'
+import {
+  APP_ACCOUNT_NAV,
+  APP_PRIMARY_NAV,
+  filterNavItems,
+  isNavGroupActive,
+  resolveActiveNavKey,
+} from '~/constants/nav'
 
 const route = useRoute()
 const router = useRouter()
@@ -121,7 +141,7 @@ onMounted(async () => {
 
 const mobileOpen = ref(false)
 
-const visibleNav = computed(() => filterNavItems(user.value?.role))
+const visibleNav = computed(() => filterNavItems(APP_PRIMARY_NAV, user.value?.role))
 const activeKey = computed(() => resolveActiveNavKey(route.path))
 
 const displayName = computed(() => user.value?.name || t('nav.userFallback'))
@@ -135,19 +155,68 @@ const userInitials = computed(() => {
   return name.slice(0, 2).toUpperCase()
 })
 
-const desktopNavItems = computed(() =>
-  visibleNav.value.map((item) => ({
-    key: item.key,
-    label: t(`nav.${item.key}`),
-    to: item.to,
-    active: activeKey.value === item.key,
-  })),
+type DesktopNavRow = {
+  key: string
+  label: string
+  to?: string
+  active: boolean
+  children?: { key: string; to: string }[]
+  menuItems?: DropdownMenuItem[][]
+}
+
+const desktopNavItems = computed<DesktopNavRow[]>(() =>
+  visibleNav.value.map((item) => {
+    const children = (item.children || [])
+      .filter((child): child is typeof child & { to: string } => !!child.to)
+    return {
+      key: item.key,
+      label: t(`nav.${item.key}`),
+      to: item.to,
+      active: isNavGroupActive(item, activeKey.value),
+      children,
+      menuItems: children.length
+        ? [children.map(child => ({
+            label: t(`nav.${child.key}`),
+            to: child.to,
+          }))]
+        : undefined,
+    }
+  }),
 )
 
-const mobileNavItems = desktopNavItems
+const mobileNavItems = computed(() => {
+  const rows: { key: string; label: string; to: string; active: boolean }[] = []
+  for (const item of visibleNav.value) {
+    if (item.to) {
+      rows.push({
+        key: item.key,
+        label: t(`nav.${item.key}`),
+        to: item.to,
+        active: activeKey.value === item.key,
+      })
+    }
+    for (const child of item.children || []) {
+      if (!child.to) continue
+      rows.push({
+        key: child.key,
+        label: t(`nav.${child.key}`),
+        to: child.to,
+        active: activeKey.value === child.key,
+      })
+    }
+  }
+  return rows
+})
+
+const accountNavItems = computed(() => filterNavItems(APP_ACCOUNT_NAV, user.value?.role))
 
 const mobileAccountLinks = computed(() => {
-  const items = [{ label: t('nav.settings'), to: '/settings' }]
+  const items = [
+    { label: t('nav.settings'), to: '/settings' },
+    ...accountNavItems.value
+      .filter((item): item is typeof item & { to: string } => !!item.to)
+      .map(item => ({ label: t(`nav.${item.key}`), to: item.to })),
+  ]
   if (user.value?.role === 'admin') {
     items.push(
       { label: t('nav.users'), to: '/admin/users' },
@@ -193,10 +262,20 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
       icon: 'i-lucide-settings',
       to: '/settings',
     },
+    {
+      label: t('nav.usage'),
+      icon: 'i-lucide-chart-column',
+      to: '/usage',
+    },
   ]
 
   const admin: DropdownMenuItem[] = isAdmin
     ? [
+        {
+          label: t('nav.monitor'),
+          icon: 'i-lucide-activity',
+          to: '/monitor',
+        },
         {
           label: t('nav.users'),
           icon: 'i-lucide-users',
@@ -269,17 +348,24 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
 }
 
 .cf-nav {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   gap: 0.15rem;
   flex-wrap: nowrap;
 }
 
+@media (min-width: 1024px) {
+  .cf-nav {
+    display: flex;
+  }
+}
+
 .cf-nav__link {
   position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 0.15rem;
   padding: 0.55rem 0.7rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -288,6 +374,17 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => {
   text-decoration: none;
   transition: color 0.15s ease, background 0.15s ease;
   white-space: nowrap;
+}
+
+button.cf-nav__link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cf-nav__chevron {
+  opacity: 0.7;
 }
 
 .cf-nav__link:hover {
