@@ -171,6 +171,24 @@
 
         <!-- Create / Edit form -->
         <form v-else id="agent-form" class="form-grid" @submit.prevent="handleSubmit">
+          <!-- SKILL 快速选择（仅创建时显示） -->
+          <div v-if="dialogMode === 'create' && skills.length > 0" class="skill-picker">
+            <span class="skill-picker__label">{{ t('agents.fromSkill') }}</span>
+            <div class="skill-picker__items">
+              <button
+                v-for="skill in skills"
+                :key="skill.id"
+                type="button"
+                class="skill-chip"
+                :class="{ 'skill-chip--active': form.skill_id === skill.id }"
+                @click="applySkill(skill)"
+              >
+                <span>{{ skill.icon }}</span>
+                <span>{{ skill.name }}</span>
+              </button>
+            </div>
+          </div>
+
           <div class="field">
             <label class="field__label">{{ t('common.name') }}</label>
             <UInput v-model="form.name" class="w-full" :placeholder="t('agents.namePh')" />
@@ -302,6 +320,8 @@
 
 <script setup lang="ts">
 import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
+import type { McpServer } from '@/composables/useMcpServers'
+import type { Skill } from '@/composables/useSkills'
 
 definePageMeta({
   layout: 'default',
@@ -311,11 +331,15 @@ const router = useRouter()
 const toast = useToast()
 const { t, d } = useLocale()
 const { list, create, update, remove } = useAgents()
+const { list: listMcpServers } = useMcpServers()
+const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 
 const loading = ref(false)
 const submitting = ref(false)
 const agents = ref<Agent[]>([])
+const mcpServers = ref<McpServer[]>([])
+const skills = ref<Skill[]>([])
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const cameFromView = ref(false)
@@ -343,11 +367,20 @@ const form = reactive({
   model: '',
   system_prompt: '',
   tools: [] as string[],
+  skill_id: '',
 })
 const statusEnabled = ref(true)
 const errors = reactive({ name: '', model: '' })
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
+
+// MCP Server 选项：内置 + 用户自定义
+const toolOptions = computed(() =>
+  mcpServers.value.map((srv) => ({
+    label: `${srv.name}${srv.type === 'built-in' ? '' : ' (HTTP)'}`,
+    value: srv.id,
+  }))
+)
 
 const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
 
@@ -361,11 +394,18 @@ const fetchModelOptions = async () => {
   }
 }
 
-const toolOptions = computed(() => [
-  { label: t('agents.tool.web'), value: 'web_search' },
-  { label: t('agents.tool.calc'), value: 'calculator' },
-  { label: t('agents.tool.code'), value: 'code_executor' },
-])
+// 从 SKILL 加载配置
+const applySkill = (skill: Skill) => {
+  form.name = skill.name + ' (副本)'
+  form.description = skill.description
+  form.system_prompt = skill.system_prompt
+  form.model = skill.model || form.model || firstConfiguredModel()
+  form.tools = [...skill.mcp_servers]
+  if (skill.memory_turns) {
+    // memory_turns 暂时不在表单里，等 UI 做完再加
+  }
+  toast.add({ title: `已应用「${skill.name}」模板`, color: 'success' })
+}
 
 function toolLabel(value: string) {
   return toolOptions.value.find((item) => item.value === value)?.label || value
@@ -394,12 +434,23 @@ const fetchAgents = async () => {
   }
 }
 
+const fetchMcpServers = async () => {
+  const res = await listMcpServers()
+  if (res.data) mcpServers.value = res.data
+}
+
+const fetchSkills = async () => {
+  const res = await listSkills()
+  if (res.data) skills.value = res.data
+}
+
 const resetForm = () => {
   form.name = ''
   form.description = ''
   form.model = firstConfiguredModel()
   form.system_prompt = ''
   form.tools = []
+  form.skill_id = ''
   statusEnabled.value = true
   errors.name = ''
   errors.model = ''
@@ -411,6 +462,7 @@ function fillFormFromAgent(agent: Agent) {
   form.model = agent.model
   form.system_prompt = agent.system_prompt || ''
   form.tools = [...(agent.tools || [])]
+  form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
   errors.name = ''
   errors.model = ''
@@ -487,6 +539,7 @@ const handleSubmit = async () => {
         model: form.model,
         system_prompt: form.system_prompt,
         tools: form.tools,
+        skill_id: form.skill_id || undefined,
         status: statusEnabled.value ? 'active' : 'disabled',
       }
       const res = await update(editingId.value, input)
@@ -502,6 +555,7 @@ const handleSubmit = async () => {
         model: form.model,
         system_prompt: form.system_prompt,
         tools: form.tools,
+        skill_id: form.skill_id || undefined,
       }
       const res = await create(input)
       if (res.error) {
@@ -522,6 +576,8 @@ const handleSubmit = async () => {
 onMounted(() => {
   fetchAgents()
   fetchModelOptions()
+  fetchMcpServers()
+  fetchSkills()
 })
 </script>
 
@@ -562,6 +618,56 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.skill-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-accent) 4%, transparent);
+}
+
+.skill-picker__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+}
+
+.skill-picker__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--cf-line);
+  background: var(--cf-surface);
+  color: var(--cf-ink);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.skill-chip:hover {
+  border-color: var(--cf-accent);
+  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
+}
+
+.skill-chip--active {
+  border-color: var(--cf-accent);
+  background: color-mix(in oklab, var(--cf-accent) 14%, transparent);
+  color: var(--cf-accent);
+  font-weight: 500;
 }
 
 .field {

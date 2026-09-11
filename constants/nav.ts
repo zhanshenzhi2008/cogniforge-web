@@ -22,6 +22,7 @@ export const APP_PRIMARY_NAV: AppNavItem[] = [
     children: [
       { key: 'models', to: '/models', roles: ['admin', 'user'] },
       { key: 'keys', to: '/keys', roles: ['admin', 'user'] },
+      { key: 'mcp', to: '/mcp', roles: ['admin', 'user'] },
     ],
   },
 ]
