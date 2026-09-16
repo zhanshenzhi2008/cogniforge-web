@@ -1,5 +1,6 @@
 <template>
   <div class="auth-layout">
+    <ParticlesBg />
     <div class="auth-layout__grid" aria-hidden="true" />
     <div class="auth-layout__lang">
       <LanguageSwitch />
@@ -18,8 +19,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background: var(--cf-bg-aura);
-  background-attachment: fixed;
+  background: linear-gradient(135deg, #0f0c29, #1a1a2e, #16213e);
   overflow: hidden;
 }
 
@@ -28,11 +28,10 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(color-mix(in oklab, var(--cf-line) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in oklab, var(--cf-line) 55%, transparent) 1px, transparent 1px);
+    linear-gradient(rgba(99, 102, 241, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.15) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 20%, transparent 75%);
-  opacity: 0.22;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, #000 30%, transparent 80%);
 }
 
 .auth-layout__lang {

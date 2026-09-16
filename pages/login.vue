@@ -166,19 +166,23 @@ const handleLogin = async () => {
   font-size: clamp(2.6rem, 7vw, 3.4rem);
   font-weight: 700;
   letter-spacing: -0.04em;
-  color: var(--cf-ink);
+  color: #ffffff;
   line-height: 1.02;
+  text-shadow: 0 2px 20px rgba(99, 102, 241, 0.5);
 }
 
 .auth-brand__tagline {
   margin: 12px 0 0;
   font-size: 1rem;
-  color: var(--cf-ink-soft);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .auth-panel {
   border-radius: 10px;
   padding: 28px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .auth-form {
@@ -198,7 +202,7 @@ const handleLogin = async () => {
 .field__label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--cf-ink);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .field__row {
@@ -239,6 +243,6 @@ const handleLogin = async () => {
 
 .auth-footer__muted {
   font-size: 0.875rem;
-  color: var(--cf-ink-soft);
+  color: rgba(255, 255, 255, 0.6);
 }
 </style>
