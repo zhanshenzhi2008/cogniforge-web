@@ -91,6 +91,7 @@ export const M = {
   'nav.config': { 'zh-CN': '配置', 'en-US': 'Config' },
   'nav.keys': { 'zh-CN': '密钥', 'en-US': 'Keys' },
   'nav.usage': { 'zh-CN': '用量', 'en-US': 'Usage' },
+  'nav.mcp': { 'zh-CN': 'MCP', 'en-US': 'MCP' },
   'nav.monitor': { 'zh-CN': '监控', 'en-US': 'Monitor' },
   'nav.settings': { 'zh-CN': '个人设置', 'en-US': 'Settings' },
   'nav.users': { 'zh-CN': '用户管理', 'en-US': 'Users' },

@@ -232,8 +232,8 @@
               <UCheckbox
                 v-for="tool in toolOptions"
                 :key="tool.value"
-                v-model="form.tools"
-                :value="tool.value"
+                :model-value="form.tools.includes(tool.value)"
+                @update:model-value="(checked: boolean) => toggleTool(tool.value, checked)"
                 :label="tool.label"
               />
             </div>
@@ -409,6 +409,17 @@ const applySkill = (skill: Skill) => {
 
 function toolLabel(value: string) {
   return toolOptions.value.find((item) => item.value === value)?.label || value
+}
+
+function toggleTool(value: string, checked: boolean | string) {
+  const isChecked = Boolean(checked)
+  if (isChecked) {
+    if (!form.tools.includes(value)) {
+      form.tools.push(value)
+    }
+  } else {
+    form.tools = form.tools.filter((t) => t !== value)
+  }
 }
 
 function validate() {
