@@ -4,11 +4,20 @@
 
 import { useApi } from './useApi'
 
+export interface ConversationAttachment {
+  id: string
+  name: string
+  file_type: string
+  status?: string
+  chunk_count?: number
+}
+
 export interface ConversationMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   images?: string[]
+  attachments?: ConversationAttachment[]
   time?: string
 }
 

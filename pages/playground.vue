@@ -93,6 +93,20 @@
                     </a>
                   </div>
                   <div
+                    v-if="messageAttachments(message?.id).length > 0"
+                    class="message-attachments"
+                  >
+                    <span
+                      v-for="(att, idx) in messageAttachments(message?.id)"
+                      :key="`${message?.id}-att-${idx}`"
+                      class="message-attachment-chip"
+                      :title="att.name"
+                    >
+                      <UIcon name="i-lucide-paperclip" class="message-attachment-icon" />
+                      {{ att.name }}
+                    </span>
+                  </div>
+                  <div
                     v-if="partsToText(message?.parts)"
                     class="message-md"
                     v-html="renderMarkdown(partsToText(message?.parts))"
@@ -177,7 +191,30 @@
               />
             </div>
           </div>
+          <div v-if="pendingAttachments.length > 0" class="pending-attachments">
+            <div
+              v-for="att in pendingAttachments"
+              :key="att.localId"
+              class="pending-attachment"
+              :class="`is-${att.status}`"
+            >
+              <UIcon name="i-lucide-file-text" class="pending-attachment-icon" />
+              <div class="pending-attachment-meta">
+                <span class="pending-attachment-name">{{ att.name }}</span>
+                <span class="pending-attachment-status">
+                  {{ att.status === 'uploading' ? t('play.docUploading') : (att.status || '') }}
+                </span>
+              </div>
+              <CfButton
+                tone="icon-danger"
+                icon="i-lucide-x"
+                :tip="t('play.removeFile')"
+                @click.stop="removePendingAttachment(att.localId)"
+              />
+            </div>
+          </div>
           <p v-if="pendingImages.length > 0" class="vision-hint">{{ t('play.visionHint') }}</p>
+          <p v-if="pendingAttachments.length > 0" class="vision-hint">{{ t('play.ragHint') }}</p>
           <UChatPrompt
             v-model="inputMessage"
             :disabled="quotaGone"
@@ -200,12 +237,27 @@
                     class="sr-only"
                     @change="onImageInputChange"
                   >
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    :accept="CHAT_DOC_ACCEPT"
+                    multiple
+                    class="sr-only"
+                    @change="onFileInputChange"
+                  >
                   <CfButton
                     tone="icon"
                     icon="i-lucide-image-plus"
                     :tip="t('play.attachImage')"
                     :disabled="quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
                     @click="imageInput?.click()"
+                  />
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-paperclip"
+                    :tip="t('play.attachFile')"
+                    :disabled="quotaGone || pendingAttachments.length >= CHAT_DOC_MAX_COUNT"
+                    @click="fileInput?.click()"
                   />
                   <span class="composer-hint">{{ composerHint }}</span>
                 </div>
@@ -264,6 +316,17 @@ import {
   partitionChatImages,
   toVisionContent,
 } from '~/utils/chatImages'
+import {
+  assertDocBatch,
+  CHAT_DOC_ACCEPT,
+  CHAT_DOC_MAX_COUNT,
+  ChatDocError,
+  guessChatDocType,
+  partitionChatDocs,
+  toSendAttachments,
+  type MessageAttachment,
+  type PendingAttachment,
+} from '~/utils/chatAttachments'
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
 import type {
@@ -286,6 +349,7 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   images?: string[]
+  attachments?: MessageAttachment[]
   time?: string
 }
 
@@ -310,6 +374,7 @@ const toast = useToast()
 const { t } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
 const { list: listConversations, get: getConversation, create: createConversation, update: updateConversation, remove: removeConversation } = useConversations()
+const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
 const { get } = useApi()
 const { me: fetchQuota } = useQuota()
 const quotaSnap = ref<QuotaSnapshot | null>(null)
@@ -321,9 +386,13 @@ const queueEditingId = ref('')
 const insertAfterId = ref('')
 const inputMessage = ref('')
 const pendingImages = ref<string[]>([])
+const pendingAttachments = ref<PendingAttachment[]>([])
 const imageInput = ref<HTMLInputElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const imageDragOver = ref(false)
 let imageDragDepth = 0
+/** Cached KB id for Playground file uploads */
+const playgroundKBId = ref('')
 const streaming = ref(false)
 const selectedModel = ref('')
 const models = ref<Model[]>([])
@@ -395,8 +464,17 @@ const tokenCount = computed(() => {
   }, 0) | 0
 })
 
+const hasReadyAttachments = computed(() =>
+  pendingAttachments.value.some(a => a.id && a.status !== 'failed' && a.status !== 'uploading'),
+)
+const attachmentsUploading = computed(() =>
+  pendingAttachments.value.some(a => a.status === 'uploading'),
+)
 const canSend = computed(
-  () => inputMessage.value.trim().length > 0 || pendingImages.value.length > 0,
+  () =>
+    inputMessage.value.trim().length > 0
+    || pendingImages.value.length > 0
+    || hasReadyAttachments.value,
 )
 
 const chatStatus = computed<ChatStatus>(() => (streaming.value ? 'streaming' : 'ready'))
@@ -425,6 +503,11 @@ function messageImages(id?: string): string[] {
   return messages.value.find(m => m.id === id)?.images || []
 }
 
+function messageAttachments(id?: string): MessageAttachment[] {
+  if (!id) return []
+  return messages.value.find(m => m.id === id)?.attachments || []
+}
+
 const renderMarkdown = (content: string) => renderChatMarkdown(content)
 
 function notifyImageError(err: unknown) {
@@ -441,22 +524,105 @@ function notifyImageError(err: unknown) {
   notifyError(t('play.imageReadFail'))
 }
 
-async function addImageFiles(files: File[]) {
-  if (!files.length) return
-  const { images, rejected } = partitionChatImages(files)
-  if (rejected.length > 0 && images.length === 0) {
-    notifyImageError(new ChatImageError('badType', 'unsupported image type'))
+function notifyDocError(err: unknown) {
+  if (err instanceof ChatDocError) {
+    const map: Record<string, string> = {
+      tooMany: t('play.docTooMany'),
+      tooBig: t('play.docTooBig'),
+      badType: t('play.docBadType'),
+      uploadFail: t('play.docUploadFail'),
+    }
+    notifyError(map[err.code] || t('play.docUploadFail'))
     return
   }
-  if (!images.length) return
+  notifyError(t('play.docUploadFail'))
+}
+
+async function ensurePlaygroundKB(): Promise<string | null> {
+  if (playgroundKBId.value) return playgroundKBId.value
+  const listed = await listKBs()
+  if (listed.error) {
+    notifyError(listed.error)
+    return null
+  }
+  const first = (listed.data || []).find(k => k.status !== 'disabled') || listed.data?.[0]
+  if (first?.id) {
+    playgroundKBId.value = first.id
+    return first.id
+  }
+  const created = await createKB({ name: 'Playground' })
+  if (created.error || !created.data?.id) {
+    notifyError(created.error || t('play.docUploadFail'))
+    return null
+  }
+  playgroundKBId.value = created.data.id
+  return created.data.id
+}
+
+async function uploadDocFiles(docs: File[]) {
+  if (!docs.length) return
   try {
-    const urls = await filesToChatDataUrls(images, pendingImages.value.length)
-    pendingImages.value = [...pendingImages.value, ...urls]
-    if (rejected.length > 0) {
-      notifyError(t('play.imageBadType'))
-    }
+    assertDocBatch(docs, pendingAttachments.value.length)
   } catch (err) {
-    notifyImageError(err)
+    notifyDocError(err)
+    return
+  }
+  const kbId = await ensurePlaygroundKB()
+  if (!kbId) return
+
+  for (const file of docs) {
+    const localId = crypto.randomUUID()
+    const fileType = guessChatDocType(file)
+    pendingAttachments.value = [
+      ...pendingAttachments.value,
+      {
+        localId,
+        name: file.name || `file.${fileType}`,
+        file_type: fileType,
+        status: 'uploading',
+      },
+    ]
+    const res = await uploadDoc(kbId, file)
+    pendingAttachments.value = pendingAttachments.value.map((a) => {
+      if (a.localId !== localId) return a
+      if (res.error || !res.data) {
+        return { ...a, status: 'failed', error: res.error || 'upload failed' }
+      }
+      return {
+        ...a,
+        id: res.data.id,
+        name: res.data.name || res.data.file_name || a.name,
+        file_type: res.data.file_type || fileType,
+        status: res.data.status || 'pending',
+        chunk_count: res.data.chunk_count,
+      }
+    })
+    if (res.error || !res.data) {
+      notifyError(res.error || t('play.docUploadFail'))
+    }
+  }
+}
+
+async function addComposerFiles(files: File[]) {
+  if (!files.length) return
+  const { images, rejected: afterImages } = partitionChatImages(files)
+  const { docs, rejected } = partitionChatDocs(afterImages)
+
+  if (images.length) {
+    try {
+      const urls = await filesToChatDataUrls(images, pendingImages.value.length)
+      pendingImages.value = [...pendingImages.value, ...urls]
+    } catch (err) {
+      notifyImageError(err)
+    }
+  }
+  if (docs.length) {
+    await uploadDocFiles(docs)
+  }
+  if (!images.length && !docs.length && rejected.length > 0) {
+    notifyError(t('play.docBadType'))
+  } else if (rejected.length > 0) {
+    notifyError(t('play.docBadType'))
   }
 }
 
@@ -464,11 +630,22 @@ function removePendingImage(idx: number) {
   pendingImages.value = pendingImages.value.filter((_, i) => i !== idx)
 }
 
+function removePendingAttachment(localId: string) {
+  pendingAttachments.value = pendingAttachments.value.filter(a => a.localId !== localId)
+}
+
 async function onImageInputChange(ev: Event) {
   const input = ev.target as HTMLInputElement
   const files = Array.from(input.files || [])
   input.value = ''
-  await addImageFiles(files)
+  await addComposerFiles(files)
+}
+
+async function onFileInputChange(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  await addComposerFiles(files)
 }
 
 async function onComposerPaste(ev: ClipboardEvent) {
@@ -476,7 +653,7 @@ async function onComposerPaste(ev: ClipboardEvent) {
   if (!files.length) return
   ev.preventDefault()
   if (quotaGone.value) return
-  await addImageFiles(files)
+  await addComposerFiles(files)
 }
 
 function dragHasFiles(ev: DragEvent): boolean {
@@ -506,7 +683,7 @@ async function onComposerDrop(ev: DragEvent) {
   imageDragDepth = 0
   imageDragOver.value = false
   if (quotaGone.value) return
-  await addImageFiles(collectClipboardFiles(ev.dataTransfer))
+  await addComposerFiles(collectClipboardFiles(ev.dataTransfer))
 }
 
 const notifyError = (title: string) => {
@@ -615,6 +792,7 @@ function conversationPayload() {
       role: m.role,
       content: m.content,
       images: m.images?.length ? m.images : undefined,
+      attachments: m.attachments?.length ? m.attachments : undefined,
       time: m.time,
     })),
     message_queue: messageQueue.value.map((q, i): ConversationQueueItem => ({
@@ -791,6 +969,7 @@ const startNewChat = () => {
   composerStash = null
   insertAfterId.value = ''
   pendingImages.value = []
+  pendingAttachments.value = []
   imageDragOver.value = false
   imageDragDepth = 0
   currentConversationId.value = ''
@@ -806,6 +985,10 @@ const sendSuggestion = (text: string) => {
 function enqueueFromComposer(): boolean {
   if (messageQueue.value.length >= MAX_MESSAGE_QUEUE) {
     notifyError(t('play.queueFull'))
+    return false
+  }
+  if (pendingAttachments.value.length > 0) {
+    notifyError(t('play.queueNoFiles'))
     return false
   }
   const content = inputMessage.value.trim()
@@ -886,19 +1069,30 @@ async function drainQueueIfNeeded() {
 }
 
 const sendMessage = async () => {
-  if ((!inputMessage.value.trim() && pendingImages.value.length === 0) || streaming.value || quotaGone.value) return
+  if (
+    (!inputMessage.value.trim() && pendingImages.value.length === 0 && !hasReadyAttachments.value)
+    || streaming.value
+    || quotaGone.value
+  ) return
+  if (attachmentsUploading.value) {
+    notifyError(t('play.docWaitUpload'))
+    return
+  }
 
   const userMessage = inputMessage.value.trim()
   const images = [...pendingImages.value]
+  const attachments = toSendAttachments(pendingAttachments.value)
   messages.value.push({
     id: crypto.randomUUID(),
     role: 'user',
     content: userMessage,
     images: images.length ? images : undefined,
+    attachments: attachments.length ? attachments : undefined,
     time: new Date().toISOString(),
   })
   inputMessage.value = ''
   pendingImages.value = []
+  pendingAttachments.value = []
 
   streaming.value = true
   const controller = new AbortController()
@@ -912,9 +1106,15 @@ const sendMessage = async () => {
     const body = {
       model: selectedModel.value,
       messages: messages.value
-        .filter(m => m.content.trim().length > 0 || (m.images?.length ?? 0) > 0)
+        .filter(m =>
+          m.content.trim().length > 0
+          || (m.images?.length ?? 0) > 0
+          || (m.attachments?.length ?? 0) > 0,
+        )
         .map(m => ({ role: m.role, content: toVisionContent(m.content, m.images) })),
       stream: true,
+      conversation_id: currentConversationId.value || undefined,
+      attachments: attachments.length ? attachments : undefined,
       ...params,
     }
 
@@ -1054,6 +1254,15 @@ const loadConversation = async (id: string) => {
     role: m.role === 'assistant' ? 'assistant' : 'user',
     content: m.content || '',
     images: Array.isArray(m.images) ? m.images.filter(Boolean) : undefined,
+    attachments: Array.isArray(m.attachments)
+      ? m.attachments.filter(a => a && a.id).map(a => ({
+          id: a.id,
+          name: a.name || a.id,
+          file_type: a.file_type || '',
+          status: a.status,
+          chunk_count: a.chunk_count,
+        }))
+      : undefined,
     time: m.time,
   }))
   messageQueue.value = (res.data.message_queue || []).map((q, i) => ({
@@ -1067,6 +1276,7 @@ const loadConversation = async (id: string) => {
   queueEditingId.value = ''
   composerStash = null
   pendingImages.value = []
+  pendingAttachments.value = []
   await handleAgentChange(res.data.agent_id || NONE_AGENT)
   if (res.data.model) {
     selectedModel.value = res.data.model
@@ -1425,6 +1635,81 @@ watch(sidebarCollapsed, (collapsed) => {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 6px;
+}
+
+.pending-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pending-attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--cf-ink) 12%, transparent);
+  background: color-mix(in oklab, var(--cf-ink) 4%, transparent);
+}
+
+.pending-attachment.is-failed {
+  border-color: color-mix(in oklab, #e11 35%, transparent);
+}
+
+.pending-attachment-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--cf-ink-soft);
+}
+
+.pending-attachment-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pending-attachment-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-attachment-status {
+  font-size: 10px;
+  color: var(--cf-ink-soft);
+}
+
+.message-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.message-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: color-mix(in oklab, var(--cf-ink) 8%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-attachment-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .vision-hint {
