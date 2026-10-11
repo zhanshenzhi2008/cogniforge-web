@@ -25,6 +25,7 @@ export interface ConversationQueueItem {
   id: string
   content: string
   images?: string[]
+  attachments?: ConversationAttachment[]
   status: 'queued' | 'sending'
   sort: number
 }

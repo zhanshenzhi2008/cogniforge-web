@@ -330,6 +330,7 @@ import {
 import { apiUrl } from '~/utils/apiBase'
 import type { Agent } from '@/composables/useAgents'
 import type {
+  ConversationAttachment,
   ConversationMessage,
   ConversationQueueItem,
   ConversationSummary,
@@ -801,10 +802,26 @@ function conversationPayload() {
       id: q.id,
       content: q.content,
       images: q.images?.length ? q.images : undefined,
+      attachments: q.attachments?.length ? q.attachments : undefined,
       status: q.status === 'sending' ? 'sending' : 'queued',
       sort: i,
     })),
   }
+}
+
+function attachmentsToPending(atts?: ConversationAttachment[]): PendingAttachment[] {
+  return (atts || [])
+    .filter(a => a?.id)
+    .map(a => ({
+      localId: crypto.randomUUID(),
+      id: a.id,
+      name: a.name || a.id,
+      file_type: a.file_type || '',
+      status: (a.status === 'failed' || a.status === 'pending' || a.status === 'processing' || a.status === 'completed')
+        ? a.status
+        : 'completed',
+      chunk_count: a.chunk_count,
+    }))
 }
 
 async function setConversationQuery(id: string | null) {
@@ -876,11 +893,12 @@ function onQueueMove(id: string, delta: number) {
   void persistQueue()
 }
 
-let composerStash: { text: string; images: string[] } | null = null
+let composerStash: { text: string; images: string[]; attachments: PendingAttachment[] } | null = null
 
 function restoreComposerStash() {
   inputMessage.value = composerStash?.text ?? ''
   pendingImages.value = composerStash?.images ?? []
+  pendingAttachments.value = composerStash?.attachments ?? []
   composerStash = null
 }
 
@@ -895,11 +913,13 @@ function startQueueEdit(id: string) {
     composerStash = {
       text: inputMessage.value,
       images: [...pendingImages.value],
+      attachments: [...pendingAttachments.value],
     }
   }
   queueEditingId.value = id
   inputMessage.value = item.content || ''
   pendingImages.value = [...(item.images || [])]
+  pendingAttachments.value = attachmentsToPending(item.attachments)
 }
 
 function cancelQueueEdit() {
@@ -912,15 +932,21 @@ function cancelQueueEdit() {
 function saveQueueEdit(opts?: { drain?: boolean }): boolean {
   const id = queueEditingId.value
   if (!id) return false
+  if (attachmentsUploading.value) {
+    notifyError(t('play.docWaitUpload'))
+    return false
+  }
   const content = inputMessage.value.trim()
   const images = [...pendingImages.value]
-  if (!content && images.length === 0) return false
+  const attachments = toSendAttachments(pendingAttachments.value)
+  if (!content && images.length === 0 && attachments.length === 0) return false
   messageQueue.value = messageQueue.value.map((item, i) => {
     if (item.id !== id) return item
     return {
       ...item,
       content,
       images: images.length ? images : undefined,
+      attachments: attachments.length ? attachments : undefined,
       sort: i,
     }
   })
@@ -989,25 +1015,28 @@ function enqueueFromComposer(): boolean {
     notifyError(t('play.queueFull'))
     return false
   }
-  if (pendingAttachments.value.length > 0) {
-    notifyError(t('play.queueNoFiles'))
+  if (attachmentsUploading.value) {
+    notifyError(t('play.docWaitUpload'))
     return false
   }
   const content = inputMessage.value.trim()
   const images = [...pendingImages.value]
-  if (!content && images.length === 0) return false
+  const attachments = toSendAttachments(pendingAttachments.value)
+  if (!content && images.length === 0 && attachments.length === 0) return false
   messageQueue.value = [
     ...messageQueue.value,
     {
       id: crypto.randomUUID(),
       content,
       images: images.length ? images : undefined,
+      attachments: attachments.length ? attachments : undefined,
       status: 'queued',
       sort: messageQueue.value.length,
     },
   ]
   inputMessage.value = ''
   pendingImages.value = []
+  pendingAttachments.value = []
   void persistQueue()
   return true
 }
@@ -1065,6 +1094,7 @@ async function drainQueueIfNeeded() {
   await persistQueue()
   inputMessage.value = next.content
   pendingImages.value = [...(next.images || [])]
+  pendingAttachments.value = attachmentsToPending(next.attachments)
   messageQueue.value = messageQueue.value.filter(item => item.id !== next.id)
   await persistQueue()
   await sendMessage()
@@ -1271,6 +1301,15 @@ const loadConversation = async (id: string) => {
     id: q.id || crypto.randomUUID(),
     content: q.content || '',
     images: Array.isArray(q.images) ? q.images.filter(Boolean) : undefined,
+    attachments: Array.isArray(q.attachments)
+      ? q.attachments.filter(a => a && a.id).map(a => ({
+          id: a.id,
+          name: a.name || a.id,
+          file_type: a.file_type || '',
+          status: a.status,
+          chunk_count: a.chunk_count,
+        }))
+      : undefined,
     status: q.status === 'sending' ? 'queued' : (q.status || 'queued'),
     sort: typeof q.sort === 'number' ? q.sort : i,
   }))

@@ -18,9 +18,12 @@
         <span class="queue-idx">{{ idx + 1 }}</span>
 
         <div class="queue-body">
-          <span class="queue-text">{{ item.content || t('play.queueImageOnly') }}</span>
+          <span class="queue-text">{{ queueItemLabel(item) }}</span>
           <span v-if="item.images?.length" class="queue-img-badge">
             {{ t('play.queueImages', { n: item.images.length }) }}
+          </span>
+          <span v-if="item.attachments?.length" class="queue-img-badge">
+            {{ t('play.queueFiles', { n: item.attachments.length }) }}
           </span>
         </div>
 
@@ -93,6 +96,13 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useLocale()
+
+function queueItemLabel(item: ConversationQueueItem): string {
+  if (item.content?.trim()) return item.content
+  if (item.attachments?.length) return t('play.queueFileOnly')
+  if (item.images?.length) return t('play.queueImageOnly')
+  return t('play.queueImageOnly')
+}
 
 function remove(id: string) {
   const target = props.items.find(i => i.id === id)
