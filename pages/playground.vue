@@ -455,6 +455,8 @@ const params = reactive({
   max_tokens: 2048,
   top_p: 0.9,
   memory_turns: 10, // 阶段十四 14.2：服务端滑动窗口轮数
+  rag_top_k: 3, // 阶段十三 13.5
+  rag_min_score: 0.5,
 })
 
 const tokenCount = computed(() => {

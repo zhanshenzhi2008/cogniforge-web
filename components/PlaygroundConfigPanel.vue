@@ -113,6 +113,36 @@
         />
         <div class="param-hint">{{ t('play.memoryTurnsHint') }}</div>
       </div>
+      <div class="param-row">
+        <div class="param-label">
+          <span>{{ t('play.ragTopK') }}</span>
+          <UBadge size="sm" variant="subtle" color="primary">{{ params.rag_top_k }}</UBadge>
+        </div>
+        <USlider
+          :model-value="params.rag_top_k"
+          :min="1"
+          :max="10"
+          :step="1"
+          color="primary"
+          @update:model-value="params.rag_top_k = $event"
+        />
+        <div class="param-hint">{{ t('play.ragTopKHint') }}</div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">
+          <span>{{ t('play.ragMinScore') }}</span>
+          <UBadge size="sm" variant="subtle" color="primary">{{ params.rag_min_score }}</UBadge>
+        </div>
+        <USlider
+          :model-value="params.rag_min_score"
+          :min="0.1"
+          :max="0.9"
+          :step="0.05"
+          color="primary"
+          @update:model-value="params.rag_min_score = Number(Number($event).toFixed(2))"
+        />
+        <div class="param-hint">{{ t('play.ragMinScoreHint') }}</div>
+      </div>
     </section>
   </div>
 </template>
@@ -132,6 +162,8 @@ defineProps<{
     max_tokens: number
     top_p: number
     memory_turns: number
+    rag_top_k: number
+    rag_min_score: number
   }
 }>()
 

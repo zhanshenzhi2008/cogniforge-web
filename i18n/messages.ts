@@ -317,6 +317,10 @@ export const M = {
   'play.pickModel': { 'zh-CN': '选择模型', 'en-US': 'Select a model' },
   'play.memoryTurns': { 'zh-CN': '记住最近 N 轮', 'en-US': 'Remember last N turns' },
   'play.memoryTurnsHint': { 'zh-CN': '0=默认(10轮)', 'en-US': '0=default(10 turns)' },
+  'play.ragTopK': { 'zh-CN': '知识库片段数', 'en-US': 'RAG top-K' },
+  'play.ragTopKHint': { 'zh-CN': '每个知识库最多召回多少段', 'en-US': 'Max chunks per knowledge base' },
+  'play.ragMinScore': { 'zh-CN': '最低相关分', 'en-US': 'Min relevance score' },
+  'play.ragMinScoreHint': { 'zh-CN': '低于此分数的片段丢弃', 'en-US': 'Drop chunks below this score' },
 
   'agents.title': { 'zh-CN': '智能体', 'en-US': 'Agents' },
   'agents.sub': { 'zh-CN': '配置智能体并与之对话。', 'en-US': 'Configure and chat with your agents.' },
