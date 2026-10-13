@@ -13,6 +13,9 @@ services:
     image: ghcr.io/${IMAGE_NAMESPACE:-zhanshenzhi2008}/cogniforge/cogniforge-web:latest
     container_name: cogniforge-web
     restart: unless-stopped
+    mem_limit: ${WEB_MEM_LIMIT:-128m}
+    mem_reservation: ${WEB_MEM_RESERVATION:-32m}
+    cpus: ${WEB_CPUS:-0.25}
     expose:
       - "80"
     networks:
