@@ -112,12 +112,22 @@
           <h3>{{ t('evals.run') }}</h3>
         </div>
         <div class="run-form">
-          <UInput v-model="runModel" class="w-full" :placeholder="t('evals.modelIdPh')" />
+          <USelect
+            v-model="runTargetType"
+            :items="targetOptions"
+            value-key="value"
+            class="target-type"
+          />
+          <UInput
+            v-model="runTargetId"
+            class="w-full"
+            :placeholder="runTargetType === 'agent' ? t('evals.agentIdPh') : t('evals.modelIdPh')"
+          />
           <CfButton
             tone="primary"
             icon="i-lucide-play"
             :loading="running"
-            :disabled="!runModel.trim() || cases.length === 0"
+            :disabled="!runTargetId.trim() || cases.length === 0"
             @click="doRun"
           >
             {{ running ? t('evals.running') : t('evals.run') }}
@@ -210,7 +220,12 @@ const judgeOptions = [
   { label: 'exact', value: 'exact' },
   { label: 'llm_judge (skip)', value: 'llm_judge' },
 ]
-const runModel = ref('')
+const runTargetType = ref<'model' | 'agent'>('model')
+const runTargetId = ref('')
+const targetOptions = [
+  { label: 'model', value: 'model' },
+  { label: 'agent', value: 'agent' },
+]
 const lastRun = ref<EvalRun | null>(null)
 const lastResults = ref<EvalResult[]>([])
 
@@ -298,11 +313,11 @@ const removeCase = async (id: string) => {
 }
 
 const doRun = async () => {
-  if (!activeSuite.value || !runModel.value.trim()) return
+  if (!activeSuite.value || !runTargetId.value.trim()) return
   running.value = true
   const res = await api.createRun(activeSuite.value.id, {
-    target_type: 'model',
-    target_id: runModel.value.trim(),
+    target_type: runTargetType.value,
+    target_id: runTargetId.value.trim(),
   })
   running.value = false
   if (res.error) {
@@ -329,7 +344,8 @@ onMounted(loadSuites)
 .block-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .block-head h3 { margin: 0; font-size: 15px; }
 .cf-state.compact { padding: 24px; }
-.run-form { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.run-form { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.target-type { width: 120px; flex-shrink: 0; }
 .run-summary { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
 .results { display: flex; flex-direction: column; gap: 10px; }
 .result-card {

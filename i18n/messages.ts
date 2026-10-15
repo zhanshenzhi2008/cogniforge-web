@@ -390,6 +390,7 @@ export const M = {
   'evals.running': { 'zh-CN': '评测中…', 'en-US': 'Running…' },
   'evals.modelId': { 'zh-CN': '模型 ID', 'en-US': 'Model ID' },
   'evals.modelIdPh': { 'zh-CN': '与模型页 default_model 一致', 'en-US': 'Same as provider default_model' },
+  'evals.agentIdPh': { 'zh-CN': '智能体 ID（Agent 详情里的 id）', 'en-US': 'Agent id from agent detail' },
   'evals.score': { 'zh-CN': '得分', 'en-US': 'Score' },
   'evals.passFail': { 'zh-CN': '通过 {p} / 失败 {f} / 跳过 {s}', 'en-US': 'Pass {p} / Fail {f} / Skip {s}' },
   'evals.actual': { 'zh-CN': '模型回答', 'en-US': 'Actual' },
