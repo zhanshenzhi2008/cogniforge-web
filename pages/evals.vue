@@ -118,16 +118,35 @@
             value-key="value"
             class="target-type"
           />
+          <template v-if="runTargetType === 'prompt'">
+            <USelect
+              v-if="promptOptions.length"
+              v-model="selectedPromptId"
+              :items="promptOptions"
+              value-key="value"
+              class="prompt-pick"
+              :placeholder="t('evals.pickPrompt')"
+            />
+            <USelect
+              v-if="versionOptions.length"
+              v-model="runTargetId"
+              :items="versionOptions"
+              value-key="value"
+              class="prompt-pick"
+              :placeholder="t('evals.pickVersion')"
+            />
+            <UInput
+              v-model="runModel"
+              class="w-full"
+              :placeholder="t('evals.chatModelPh')"
+            />
+            <p v-if="promptOptions.length === 0" class="param-hint full">{{ t('evals.noPrompts') }}</p>
+          </template>
           <UInput
+            v-else
             v-model="runTargetId"
             class="w-full"
             :placeholder="targetIdPlaceholder"
-          />
-          <UInput
-            v-if="runTargetType === 'prompt'"
-            v-model="runModel"
-            class="w-full"
-            :placeholder="t('evals.chatModelPh')"
           />
           <CfButton
             tone="primary"
@@ -233,18 +252,30 @@ const judgeOptions = [
   { label: 'exact', value: 'exact' },
   { label: 'llm_judge (skip)', value: 'llm_judge' },
 ]
+const promptApi = usePrompts()
 const runTargetType = ref<'model' | 'agent' | 'prompt'>('model')
 const runTargetId = ref('')
 const runModel = ref('')
 const runSystemPrompt = ref('')
+const selectedPromptId = ref('')
+const promptList = ref<{ id: string; name: string }[]>([])
+const versionList = ref<{ id: string; version: number; changelog?: string }[]>([])
 const targetOptions = [
   { label: 'model', value: 'model' },
   { label: 'agent', value: 'agent' },
   { label: 'prompt', value: 'prompt' },
 ]
+const promptOptions = computed(() =>
+  promptList.value.map(p => ({ label: p.name, value: p.id })),
+)
+const versionOptions = computed(() =>
+  versionList.value.map(v => ({
+    label: v.changelog ? `v${v.version} · ${v.changelog}` : `v${v.version}`,
+    value: v.id,
+  })),
+)
 const targetIdPlaceholder = computed(() => {
   if (runTargetType.value === 'agent') return t('evals.agentIdPh')
-  if (runTargetType.value === 'prompt') return t('evals.promptVerPh')
   return t('evals.modelIdPh')
 })
 const canRun = computed(() => {
@@ -254,6 +285,39 @@ const canRun = computed(() => {
 })
 const lastRun = ref<EvalRun | null>(null)
 const lastResults = ref<EvalResult[]>([])
+
+const loadPromptCatalog = async () => {
+  const res = await promptApi.list()
+  if (res.error) {
+    promptList.value = []
+    return
+  }
+  promptList.value = (res.data || []).map(p => ({ id: p.id, name: p.name }))
+}
+
+watch(runTargetType, async (tt) => {
+  runTargetId.value = ''
+  selectedPromptId.value = ''
+  versionList.value = []
+  if (tt === 'prompt') {
+    await loadPromptCatalog()
+  }
+})
+
+watch(selectedPromptId, async (pid) => {
+  runTargetId.value = ''
+  versionList.value = []
+  if (!pid) return
+  const res = await promptApi.listVersions(pid)
+  versionList.value = (res.data || []).map(v => ({
+    id: v.id,
+    version: v.version,
+    changelog: v.changelog,
+  }))
+  if (versionList.value[0]) {
+    runTargetId.value = versionList.value[0].id
+  }
+})
 
 const loadSuites = async () => {
   loading.value = true
@@ -270,6 +334,10 @@ const openSuite = async (s: EvalSuite) => {
   activeSuite.value = s
   lastRun.value = null
   lastResults.value = []
+  runTargetType.value = 'model'
+  runTargetId.value = ''
+  selectedPromptId.value = ''
+  versionList.value = []
   const res = await api.listCases(s.id)
   cases.value = res.data || []
 }
@@ -384,8 +452,10 @@ onMounted(loadSuites)
 .cf-state.compact { padding: 24px; }
 .run-form { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .target-type { width: 120px; flex-shrink: 0; }
+.prompt-pick { min-width: 160px; flex: 1; }
 .sys-prompt { margin-bottom: 4px; }
 .param-hint { font-size: 11px; color: var(--cf-ink-soft); margin: 0 0 12px; }
+.param-hint.full { width: 100%; flex-basis: 100%; margin: 0; }
 .run-summary { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
 .results { display: flex; flex-direction: column; gap: 10px; }
 .result-card {
