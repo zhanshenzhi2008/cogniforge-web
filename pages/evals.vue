@@ -121,18 +121,31 @@
           <UInput
             v-model="runTargetId"
             class="w-full"
-            :placeholder="runTargetType === 'agent' ? t('evals.agentIdPh') : t('evals.modelIdPh')"
+            :placeholder="targetIdPlaceholder"
+          />
+          <UInput
+            v-if="runTargetType === 'prompt'"
+            v-model="runModel"
+            class="w-full"
+            :placeholder="t('evals.chatModelPh')"
           />
           <CfButton
             tone="primary"
             icon="i-lucide-play"
             :loading="running"
-            :disabled="!runTargetId.trim() || cases.length === 0"
+            :disabled="!canRun"
             @click="doRun"
           >
             {{ running ? t('evals.running') : t('evals.run') }}
           </CfButton>
         </div>
+        <UTextarea
+          v-model="runSystemPrompt"
+          class="w-full sys-prompt"
+          :rows="3"
+          :placeholder="t('evals.systemPromptPh')"
+        />
+        <p class="param-hint">{{ t('evals.systemPrompt') }}</p>
 
         <div v-if="lastRun" class="run-summary">
           <UBadge color="primary" variant="subtle">
@@ -220,12 +233,25 @@ const judgeOptions = [
   { label: 'exact', value: 'exact' },
   { label: 'llm_judge (skip)', value: 'llm_judge' },
 ]
-const runTargetType = ref<'model' | 'agent'>('model')
+const runTargetType = ref<'model' | 'agent' | 'prompt'>('model')
 const runTargetId = ref('')
+const runModel = ref('')
+const runSystemPrompt = ref('')
 const targetOptions = [
   { label: 'model', value: 'model' },
   { label: 'agent', value: 'agent' },
+  { label: 'prompt', value: 'prompt' },
 ]
+const targetIdPlaceholder = computed(() => {
+  if (runTargetType.value === 'agent') return t('evals.agentIdPh')
+  if (runTargetType.value === 'prompt') return t('evals.promptVerPh')
+  return t('evals.modelIdPh')
+})
+const canRun = computed(() => {
+  if (!runTargetId.value.trim() || cases.value.length === 0) return false
+  if (runTargetType.value === 'prompt' && !runModel.value.trim()) return false
+  return true
+})
 const lastRun = ref<EvalRun | null>(null)
 const lastResults = ref<EvalResult[]>([])
 
@@ -313,12 +339,24 @@ const removeCase = async (id: string) => {
 }
 
 const doRun = async () => {
-  if (!activeSuite.value || !runTargetId.value.trim()) return
+  if (!activeSuite.value || !canRun.value) return
   running.value = true
-  const res = await api.createRun(activeSuite.value.id, {
+  const body: {
+    target_type: string
+    target_id: string
+    model?: string
+    system_prompt?: string
+  } = {
     target_type: runTargetType.value,
     target_id: runTargetId.value.trim(),
-  })
+  }
+  if (runTargetType.value === 'prompt') {
+    body.model = runModel.value.trim()
+  }
+  if (runSystemPrompt.value.trim()) {
+    body.system_prompt = runSystemPrompt.value.trim()
+  }
+  const res = await api.createRun(activeSuite.value.id, body)
   running.value = false
   if (res.error) {
     toast.add({ title: res.error, color: 'error' })
@@ -346,6 +384,8 @@ onMounted(loadSuites)
 .cf-state.compact { padding: 24px; }
 .run-form { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .target-type { width: 120px; flex-shrink: 0; }
+.sys-prompt { margin-bottom: 4px; }
+.param-hint { font-size: 11px; color: var(--cf-ink-soft); margin: 0 0 12px; }
 .run-summary { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
 .results { display: flex; flex-direction: column; gap: 10px; }
 .result-card {

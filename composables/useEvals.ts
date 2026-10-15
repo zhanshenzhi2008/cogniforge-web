@@ -64,7 +64,12 @@ export function useEvals() {
     put<EvalCase>(`/api/v1/evals/cases/${id}`, body)
   const deleteCase = (id: string) => del(`/api/v1/evals/cases/${id}`)
 
-  const createRun = (suiteId: string, body: { target_type: string; target_id: string }) =>
+  const createRun = (suiteId: string, body: {
+    target_type: string
+    target_id: string
+    model?: string
+    system_prompt?: string
+  }) =>
     post<{ run: EvalRun; results: EvalResult[] }>(`/api/v1/evals/suites/${suiteId}/runs`, body)
   const listRuns = (suiteId?: string) => {
     const q = suiteId ? `?suite_id=${encodeURIComponent(suiteId)}` : ''

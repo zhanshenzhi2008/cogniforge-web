@@ -49,6 +49,13 @@ API_BASE=http://localhost:8080
 
 发送框可粘贴/拖入/选择**图片**（走视觉模型）或 **PDF/TXT/MD/DOCX/HTML**（上传到知识库后按附件检索回答）。无知识库时会自动创建名为 `Playground` 的库。
 
+## 提示词与评估
+
+配置菜单里：
+
+- **提示词** `/prompts`：管理 system prompt 版本（可复制版本 ID）
+- **评估** `/evals`：建评测集跑分；运行时可选手模型 / Agent / 提示词版本，也可填临时 system prompt 覆盖
+
 ## Constraints
 
 - 不改工作流 Vue Flow 核心逻辑
