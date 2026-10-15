@@ -250,7 +250,7 @@ const caseForm = reactive({ input: '', expected: '', judge_type: 'contains' })
 const judgeOptions = [
   { label: 'contains', value: 'contains' },
   { label: 'exact', value: 'exact' },
-  { label: 'llm_judge (skip)', value: 'llm_judge' },
+  { label: 'llm_judge', value: 'llm_judge' },
 ]
 const promptApi = usePrompts()
 const runTargetType = ref<'model' | 'agent' | 'prompt'>('model')
