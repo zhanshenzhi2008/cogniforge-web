@@ -1221,7 +1221,10 @@ const sendMessage = async () => {
       if (!text.startsWith('{')) return false
       try {
         const parsed = JSON.parse(text)
-        const content = parsed?.choices?.[0]?.message?.content
+        // Agent 非流式包在 { code, data }；流式则是 OpenAI chunk / 裸 completion
+        const content =
+          parsed?.choices?.[0]?.message?.content
+          ?? parsed?.data?.choices?.[0]?.message?.content
         if (typeof content === 'string' && content.length > 0) {
           assistantMessage.content = content
           return true
