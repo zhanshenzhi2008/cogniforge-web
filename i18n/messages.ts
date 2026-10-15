@@ -322,6 +322,8 @@ export const M = {
   'play.ragTopKHint': { 'zh-CN': '每个知识库最多召回多少段', 'en-US': 'Max chunks per knowledge base' },
   'play.ragMinScore': { 'zh-CN': '最低相关分', 'en-US': 'Min relevance score' },
   'play.ragMinScoreHint': { 'zh-CN': '低于此分数的片段丢弃', 'en-US': 'Drop chunks below this score' },
+  'play.webSearch': { 'zh-CN': '网络搜索', 'en-US': 'Web search' },
+  'play.webSearchHint': { 'zh-CN': '无智能体时可用；查天气/新闻等实时信息', 'en-US': 'When no agent; for weather/news and other live facts' },
 
   'agents.title': { 'zh-CN': '智能体', 'en-US': 'Agents' },
   'agents.sub': { 'zh-CN': '配置智能体并与之对话。', 'en-US': 'Configure and chat with your agents.' },

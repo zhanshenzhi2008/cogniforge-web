@@ -143,6 +143,13 @@
         />
         <div class="param-hint">{{ t('play.ragMinScoreHint') }}</div>
       </div>
+      <div v-if="!hasAgent" class="param-row">
+        <div class="param-label">
+          <span>{{ t('play.webSearch') }}</span>
+          <USwitch v-model="params.enable_web_search" size="sm" />
+        </div>
+        <div class="param-hint">{{ t('play.webSearchHint') }}</div>
+      </div>
     </section>
   </div>
 </template>
@@ -150,7 +157,7 @@
 <script setup lang="ts">
 import type { Agent } from '@/composables/useAgents'
 
-defineProps<{
+const props = defineProps<{
   showBrand?: boolean
   selectedAgent: string
   selectedModel: string
@@ -164,10 +171,13 @@ defineProps<{
     memory_turns: number
     rag_top_k: number
     rag_min_score: number
+    enable_web_search: boolean
   }
 }>()
 
 const { t } = useLocale()
+const NONE_AGENT = '__none__'
+const hasAgent = computed(() => !!props.selectedAgent && props.selectedAgent !== NONE_AGENT)
 
 const emit = defineEmits<{
   (e: 'update:selectedAgent', value: string): void

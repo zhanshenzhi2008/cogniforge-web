@@ -458,6 +458,7 @@ const params = reactive({
   memory_turns: 10, // 阶段十四 14.2：服务端滑动窗口轮数
   rag_top_k: 3, // 阶段十三 13.5
   rag_min_score: 0.5,
+  enable_web_search: true, // 无 Agent 时默认开 web_search（mcp_servers）
 })
 
 const tokenCount = computed(() => {
@@ -1135,7 +1136,8 @@ const sendMessage = async () => {
       ? apiUrl(`/api/v1/agents/${selectedAgent.value}/chat`, String(config.public.apiBase ?? ''))
       : apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
 
-    const body = {
+    const { enable_web_search, ...chatParams } = params
+    const body: Record<string, unknown> = {
       model: selectedModel.value,
       messages: messages.value
         .filter(m =>
@@ -1147,7 +1149,11 @@ const sendMessage = async () => {
       stream: true,
       conversation_id: currentConversationId.value || undefined,
       attachments: attachments.length ? attachments : undefined,
-      ...params,
+      ...chatParams,
+    }
+    // 无 Agent 时把「网络搜索」开关映射为 mcp_servers（Agent 自带 tools）
+    if (selectedAgent.value === NONE_AGENT && enable_web_search) {
+      body.mcp_servers = ['web_search']
     }
 
     const response = await fetch(endpoint, {
