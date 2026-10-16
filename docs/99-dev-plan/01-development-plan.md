@@ -4,9 +4,16 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-16 | v1.3 | CD 登录 GHCR 改用 GITHUB_TOKEN | orjrs |
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] CD GHCR 改用 GITHUB_TOKEN（2026-10-16）
+
+- **变更原因**：与主仓对齐；PAT 失效导致 `denied`
+- **包含代码**：`.github/workflows/cd.yml`（开启 `packages: write`）
+- **主仓文档**：`cogniforge/docs/06-devops/01-deployment.md`
 
 ## [变更] 评估页提示词版本下拉（2026-10-15）
 
