@@ -4,10 +4,18 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-16 | v1.4 | GHCR 镜像扁平化：`.../cogniforge-web`（去掉中间目录） | orjrs |
 | 2026-10-16 | v1.3 | CD 登录 GHCR 改用 GITHUB_TOKEN | orjrs |
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] GHCR 镜像扁平化（2026-10-16）
+
+- **变更原因**：与 ai-job-hunter / 主仓对齐
+- **包含代码**：`.github/workflows/cd.yml`、`docker-compose-web.yml`
+- **变更前 vs 变更后**：~~`ghcr.io/<owner>/cogniforge/cogniforge-web`~~ → `ghcr.io/<owner>/cogniforge-web`
+- **主仓文档**：`cogniforge/docs/06-devops/01-deployment.md`
 
 ## [变更] CD GHCR 改用 GITHUB_TOKEN（2026-10-16）
 
