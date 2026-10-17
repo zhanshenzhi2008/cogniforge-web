@@ -24,6 +24,10 @@ RUN pnpm build
 # =====================================================================
 FROM nginx:alpine
 
+# 镜像内默认北京时间（Portainer / nginx 日志）；compose 不必再写 TZ
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Shanghai
+
 COPY --from=builder /app/.output/public /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

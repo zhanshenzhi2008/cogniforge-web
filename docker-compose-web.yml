@@ -18,6 +18,9 @@ services:
     cpus: ${WEB_CPUS:-0.25}
     expose:
       - "80"
+    # TZ 由 Dockerfile ENV 提供；仅临时覆盖时再解开
+    # environment:
+    #   TZ: ${TZ:-Asia/Shanghai}
     networks:
       - cogniforge-net
       - proxy
