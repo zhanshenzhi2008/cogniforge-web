@@ -4,11 +4,18 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-17 | v1.5 | CD 改 workflow_run：等 CI 成功再部署 | orjrs |
 | 2026-10-16 | v1.4 | GHCR 镜像扁平化：`.../cogniforge-web`（去掉中间目录） | orjrs |
 | 2026-10-16 | v1.3 | CD 登录 GHCR 改用 GITHUB_TOKEN | orjrs |
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] CD 等 CI 成功再部署（2026-10-17）
+
+- **变更原因**：与主仓方案 B 对齐；避免 CI 红仍部署
+- **包含代码**：`.github/workflows/cd.yml`（`workflow_run` + `head_sha`）
+- **主仓文档**：`cogniforge/docs/06-devops/01-deployment.md`
 
 ## [变更] GHCR 镜像扁平化（2026-10-16）
 
