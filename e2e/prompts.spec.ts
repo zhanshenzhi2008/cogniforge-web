@@ -14,6 +14,7 @@ type PromptVersion = {
   id: string
   prompt_id: string
   version: number
+  status: string
   content: string
   changelog?: string
   created_at: string
@@ -64,6 +65,7 @@ async function mockPromptAPI(page: Page) {
         id: vid,
         prompt_id: id,
         version: 1,
+        status: 'published',
         content: body.content || '',
         created_at: now(),
       }
@@ -71,6 +73,45 @@ async function mockPromptAPI(page: Page) {
       versions.set(id, [v])
       await json({ prompt: p, current_version: v })
       return
+    }
+
+    const verOne = path.match(/\/api\/v1\/prompts\/versions\/([^/]+)$/)
+    if (verOne && method === 'DELETE') {
+      const vid = verOne[1]
+      for (const [pid, list] of versions) {
+        const idx = list.findIndex(v => v.id === vid)
+        if (idx < 0) continue
+        if (list.length <= 1) {
+          await route.fulfill({
+            status: 400,
+            contentType: 'application/json',
+            body: JSON.stringify({ code: 400, message: '至少保留一个版本', data: null }),
+          })
+          return
+        }
+        list.splice(idx, 1)
+        versions.set(pid, list)
+        const p = items.find(x => x.id === pid)
+        if (p && p.current_version_id === vid) {
+          p.current_version_id = list[0]?.id
+          p.updated_at = now()
+        }
+        await json(null)
+        return
+      }
+    }
+
+    const currentVer = path.match(/\/api\/v1\/prompts\/([^/]+)\/current-version$/)
+    if (currentVer && method === 'PUT') {
+      const pid = currentVer[1]
+      const body = req.postDataJSON() as { version_id?: string }
+      const p = items.find(x => x.id === pid)
+      if (p && body.version_id) {
+        p.current_version_id = body.version_id
+        p.updated_at = now()
+        await json(p)
+        return
+      }
     }
 
     const verList = path.match(/\/api\/v1\/prompts\/([^/]+)\/versions$/)
@@ -81,12 +122,14 @@ async function mockPromptAPI(page: Page) {
         return
       }
       if (method === 'POST') {
-        const body = req.postDataJSON() as { content?: string; changelog?: string }
+        const body = req.postDataJSON() as { content?: string; changelog?: string; publish?: boolean }
         const list = versions.get(pid) || []
+        const publish = body.publish !== false
         const v: PromptVersion = {
           id: `pv-${pid}-${list.length + 1}`,
           prompt_id: pid,
           version: list.length + 1,
+          status: publish ? 'published' : 'draft',
           content: body.content || '',
           changelog: body.changelog,
           created_at: now(),
@@ -94,7 +137,7 @@ async function mockPromptAPI(page: Page) {
         list.unshift(v)
         versions.set(pid, list)
         const p = items.find(x => x.id === pid)
-        if (p) {
+        if (p && publish) {
           p.current_version_id = v.id
           p.updated_at = now()
         }
@@ -147,5 +190,12 @@ test.describe('prompts e2e', () => {
 
     await expect(page.getByText('你是严格的客服，只答政策')).toBeVisible()
     await expect(page.getByText('v2')).toBeVisible()
+
+    // 删除旧版 v1（列表按 version DESC，v2 在上；卡片内最后一个 icon 为删）
+    const verCards = page.locator('.ver-card')
+    await expect(verCards).toHaveCount(2)
+    await verCards.nth(1).locator('button').last().click()
+    await page.locator('[role="dialog"]').getByRole('button', { name: '删除' }).click()
+    await expect(verCards).toHaveCount(1)
   })
 })

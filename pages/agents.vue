@@ -134,10 +134,15 @@
               <dt>{{ t('common.status') }}</dt>
               <dd>{{ viewingAgent.status === 'active' ? t('common.enabled') : t('common.disabled') }}</dd>
             </div>
+            <div class="detail-row">
+              <dt>{{ t('agents.boundPrompt') }}</dt>
+              <dd>{{ viewingAgent.prompt_id ? (promptOptions.find(p => p.value === viewingAgent!.prompt_id)?.label || viewingAgent.prompt_id) : '—' }}</dd>
+            </div>
             <div class="detail-row detail-row--block">
               <dt>{{ t('agents.systemPrompt') }}</dt>
               <dd>
-                <pre v-if="viewingAgent.system_prompt" class="detail-pre">{{ viewingAgent.system_prompt }}</pre>
+                <pre v-if="!viewingAgent.prompt_id && viewingAgent.system_prompt" class="detail-pre">{{ viewingAgent.system_prompt }}</pre>
+                <span v-else-if="viewingAgent.prompt_id">{{ t('agents.boundPromptActive') }}</span>
                 <span v-else>—</span>
               </dd>
             </div>
@@ -217,12 +222,24 @@
           </div>
 
           <div class="field">
+            <label class="field__label">{{ t('agents.boundPrompt') }}</label>
+            <USelect
+              v-model="form.prompt_id"
+              class="w-full"
+              :items="promptOptions"
+              :placeholder="t('agents.boundPromptPh')"
+            />
+            <p class="field__hint">{{ t('agents.boundPromptHint') }}</p>
+          </div>
+
+          <div class="field">
             <label class="field__label">{{ t('agents.systemPrompt') }}</label>
             <UTextarea
               v-model="form.system_prompt"
               class="w-full"
               :rows="4"
               :placeholder="t('agents.systemPh')"
+              :disabled="!!form.prompt_id"
             />
           </div>
 
@@ -334,12 +351,16 @@ const { list, create, update, remove } = useAgents()
 const { list: listMcpServers } = useMcpServers()
 const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
+const { list: listPrompts } = usePrompts()
 
 const loading = ref(false)
 const submitting = ref(false)
 const agents = ref<Agent[]>([])
 const mcpServers = ref<McpServer[]>([])
 const skills = ref<Skill[]>([])
+const promptOptions = ref<{ label: string; value: string }[]>([
+  { label: '—', value: '' },
+])
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const cameFromView = ref(false)
@@ -366,6 +387,7 @@ const form = reactive({
   description: '',
   model: '',
   system_prompt: '',
+  prompt_id: '' as string,
   tools: [] as string[],
   skill_id: '',
 })
@@ -455,11 +477,18 @@ const fetchSkills = async () => {
   if (res.data) skills.value = res.data
 }
 
+const fetchPrompts = async () => {
+  const res = await listPrompts()
+  const items = (res.data || []).map(p => ({ label: p.name, value: p.id }))
+  promptOptions.value = [{ label: t('agents.boundPromptNone'), value: '' }, ...items]
+}
+
 const resetForm = () => {
   form.name = ''
   form.description = ''
   form.model = firstConfiguredModel()
   form.system_prompt = ''
+  form.prompt_id = ''
   form.tools = []
   form.skill_id = ''
   statusEnabled.value = true
@@ -472,6 +501,7 @@ function fillFormFromAgent(agent: Agent) {
   form.description = agent.description || ''
   form.model = agent.model
   form.system_prompt = agent.system_prompt || ''
+  form.prompt_id = agent.prompt_id || ''
   form.tools = [...(agent.tools || [])]
   form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
@@ -549,6 +579,7 @@ const handleSubmit = async () => {
         description: form.description,
         model: form.model,
         system_prompt: form.system_prompt,
+        prompt_id: form.prompt_id || '',
         tools: form.tools,
         skill_id: form.skill_id || undefined,
         status: statusEnabled.value ? 'active' : 'disabled',
@@ -565,6 +596,7 @@ const handleSubmit = async () => {
         description: form.description,
         model: form.model,
         system_prompt: form.system_prompt,
+        prompt_id: form.prompt_id || undefined,
         tools: form.tools,
         skill_id: form.skill_id || undefined,
       }
@@ -589,6 +621,7 @@ onMounted(() => {
   fetchModelOptions()
   fetchMcpServers()
   fetchSkills()
+  fetchPrompts()
 })
 </script>
 

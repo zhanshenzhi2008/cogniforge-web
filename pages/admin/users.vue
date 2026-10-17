@@ -414,7 +414,12 @@ function validateUserForm() {
     }
   }
 
-  if (!userForm.name.trim()) errors.name = t('users.needName')
+  const name = normalizeUsername(userForm.name)
+  const nameErr = validateUsername(name)
+  if (nameErr === 'empty') errors.name = t('users.needName')
+  else if (nameErr === 'space') errors.name = t('auth.usernameNoSpace')
+  else if (nameErr === 'len') errors.name = t('auth.usernameLen')
+  else if (nameErr === 'format') errors.name = t('auth.usernameFormat')
 
   return !errors.email && !errors.name && !errors.password
 }
@@ -486,7 +491,7 @@ const handleUserSubmit = async () => {
   submitting.value = true
   try {
     const payload: any = {
-      name: userForm.name,
+      name: normalizeUsername(userForm.name),
       role: userForm.role,
       status: userForm.status,
     }

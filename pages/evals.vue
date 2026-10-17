@@ -165,6 +165,16 @@
           :placeholder="t('evals.systemPromptPh')"
         />
         <p class="param-hint">{{ t('evals.systemPrompt') }}</p>
+        <UTextarea
+          v-if="runTargetType === 'prompt' || runTargetType === 'agent'"
+          v-model="runVariablesJson"
+          class="w-full sys-prompt"
+          :rows="2"
+          placeholder='{"brand":"CogniForge"}'
+        />
+        <p v-if="runTargetType === 'prompt' || runTargetType === 'agent'" class="param-hint">
+          {{ t('evals.variablesHint') }}
+        </p>
 
         <div v-if="lastRun" class="run-summary">
           <UBadge color="primary" variant="subtle">
@@ -257,6 +267,7 @@ const runTargetType = ref<'model' | 'agent' | 'prompt'>('model')
 const runTargetId = ref('')
 const runModel = ref('')
 const runSystemPrompt = ref('')
+const runVariablesJson = ref('')
 const selectedPromptId = ref('')
 const promptList = ref<{ id: string; name: string }[]>([])
 const versionList = ref<{ id: string; version: number; changelog?: string }[]>([])
@@ -414,6 +425,7 @@ const doRun = async () => {
     target_id: string
     model?: string
     system_prompt?: string
+    variables?: Record<string, string>
   } = {
     target_type: runTargetType.value,
     target_id: runTargetId.value.trim(),
@@ -423,6 +435,15 @@ const doRun = async () => {
   }
   if (runSystemPrompt.value.trim()) {
     body.system_prompt = runSystemPrompt.value.trim()
+  }
+  if (runVariablesJson.value.trim()) {
+    try {
+      body.variables = JSON.parse(runVariablesJson.value.trim()) as Record<string, string>
+    } catch {
+      toast.add({ title: t('evals.variablesInvalid'), color: 'error' })
+      running.value = false
+      return
+    }
   }
   const res = await api.createRun(activeSuite.value.id, body)
   running.value = false

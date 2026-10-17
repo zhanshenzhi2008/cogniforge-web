@@ -131,14 +131,13 @@ const errors = reactive({
 })
 
 function validate(): boolean {
-  const name = form.name.trim()
-  if (!name) {
-    errors.name = t('auth.enterUsername')
-  } else if (name.length < 2 || name.length > 20) {
-    errors.name = t('auth.usernameLen')
-  } else {
-    errors.name = ''
-  }
+  const name = normalizeUsername(form.name)
+  const nameErr = validateUsername(name)
+  if (nameErr === 'empty') errors.name = t('auth.enterUsername')
+  else if (nameErr === 'space') errors.name = t('auth.usernameNoSpace')
+  else if (nameErr === 'len') errors.name = t('auth.usernameLen')
+  else if (nameErr === 'format') errors.name = t('auth.usernameFormat')
+  else errors.name = ''
 
   const email = form.email.trim()
   if (!email) {
@@ -177,7 +176,7 @@ const handleRegister = async () => {
     const res = await post<{ token: string; user: any }>('/api/v1/auth/register', {
       email: form.email,
       password: form.password,
-      name: form.name,
+      name: normalizeUsername(form.name),
     })
 
     if (res.error) {
