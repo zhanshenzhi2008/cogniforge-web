@@ -69,6 +69,7 @@
     <template v-else>
       <div class="detail-head">
         <h2>{{ active.name }}</h2>
+        <p v-if="sourceLabel(active)" class="source-line">{{ sourceLabel(active) }}</p>
         <p class="cf-muted">{{ active.description }}</p>
       </div>
 
@@ -95,7 +96,7 @@
         </div>
         <div v-if="!usages.length" class="cf-muted">{{ t('prompts.usagesEmpty') }}</div>
         <ul v-else class="usage-list">
-          <li v-for="u in usages" :key="u.agent_id">{{ u.agent_name }} <span class="mono">{{ u.agent_id }}</span></li>
+          <li v-for="u in usages" :key="u.agent_id">{{ u.agent_name }}</li>
         </ul>
       </section>
 
@@ -140,7 +141,6 @@
               {{ t('prompts.current') }}
             </UBadge>
             <span class="cf-muted">{{ v.changelog || '—' }}</span>
-            <span class="cf-muted mono">{{ v.id }}</span>
             <div class="ver-actions">
               <CfButton
                 v-if="v.status === 'draft'"
@@ -319,6 +319,16 @@ const varSamples = reactive<Record<string, string>>({})
 
 const VAR_RE = /\{\{\s*([a-zA-Z_][\w]*)\s*\}\}/g
 
+const sourceLabel = (p: Prompt) => {
+  if (p.source_type === 'agent' && p.source_name) {
+    return t('prompts.sourceAgent', { name: p.source_name })
+  }
+  if (p.source_type === 'skill' && p.source_name) {
+    return t('prompts.sourceSkill', { name: p.source_name })
+  }
+  return ''
+}
+
 const extractVars = (content: string): string[] => {
   const names = new Set<string>()
   for (const m of content.matchAll(VAR_RE)) {
@@ -423,6 +433,11 @@ const doImport = async () => {
   }
   showImport.value = false
   importAgentId.value = ''
+  const ver = res.data?.current_version
+  toast.add({
+    title: ver && ver.version > 1 ? t('prompts.importUpdated') : t('prompts.importCreated'),
+    color: 'success',
+  })
   await load()
   if (res.data?.prompt) await openDetail(res.data.prompt)
 }
@@ -576,6 +591,12 @@ onMounted(() => {
 .name { font-weight: 600; }
 .detail-head { margin-bottom: 16px; }
 .detail-head h2 { margin: 0 0 4px; font-size: 18px; }
+.source-line {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: var(--cf-accent-ink, var(--cf-ink-soft));
+}
 .block { margin-bottom: 16px; padding: 16px; }
 .block-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 12px; flex-wrap: wrap; }
 .block-head h3 { margin: 0; font-size: 15px; }

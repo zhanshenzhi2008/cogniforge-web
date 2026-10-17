@@ -9,6 +9,11 @@ export interface Prompt {
   id: string
   name: string
   description?: string
+  /** manual | agent | skill */
+  source_type?: string
+  source_id?: string
+  /** 来源展示名快照，如 Agent 名 */
+  source_name?: string
   current_version_id?: string
   variables?: PromptVarDef[]
   tags?: string[]
