@@ -101,6 +101,8 @@ export const M = {
   'nav.quota': { 'zh-CN': '配额策略', 'en-US': 'Quota' },
   'nav.logout': { 'zh-CN': '退出登录', 'en-US': 'Sign out' },
   'nav.mobile': { 'zh-CN': '导航', 'en-US': 'Menu' },
+  'nav.sectionMain': { 'zh-CN': '功能', 'en-US': 'App' },
+  'nav.sectionAccount': { 'zh-CN': '账户', 'en-US': 'Account' },
   'nav.openMenu': { 'zh-CN': '打开导航菜单', 'en-US': 'Open menu' },
   'nav.themeAndNav': { 'zh-CN': '主题与导航样式', 'en-US': 'Theme and nav style' },
   'nav.loggedOut': { 'zh-CN': '已退出登录', 'en-US': 'Signed out' },

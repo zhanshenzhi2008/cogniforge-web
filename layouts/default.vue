@@ -73,9 +73,15 @@
       </template>
     </UHeader>
 
-    <USlideover v-model:open="mobileOpen" :title="t('nav.mobile')" side="right">
+    <USlideover
+      v-model:open="mobileOpen"
+      :title="t('nav.mobile')"
+      side="right"
+      :ui="{ content: 'max-w-[17.5rem] w-full sm:max-w-xs' }"
+    >
       <template #body>
         <div class="mobile-nav">
+          <p class="mobile-nav__label">{{ t('nav.sectionMain') }}</p>
           <nav class="mobile-nav__list" aria-label="Mobile primary">
             <NuxtLink
               v-for="item in mobileNavItems"
@@ -88,13 +94,14 @@
               {{ item.label }}
             </NuxtLink>
           </nav>
-          <div class="mobile-nav__divider" />
-          <nav class="mobile-nav__list" aria-label="Account">
+          <p class="mobile-nav__label">{{ t('nav.sectionAccount') }}</p>
+          <nav class="mobile-nav__list mobile-nav__list--account" aria-label="Account">
             <NuxtLink
               v-for="item in mobileAccountLinks"
               :key="item.to"
               :to="item.to"
               class="mobile-nav__link"
+              :class="{ 'is-active': route.path === item.to || route.path.startsWith(`${item.to}/`) }"
               @click="mobileOpen = false"
             >
               {{ item.label }}
@@ -440,52 +447,61 @@ button.cf-nav__link {
 .mobile-nav {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
+  gap: 0.55rem;
+  padding: 0 0 0.25rem;
+}
+
+.mobile-nav__label {
+  margin: 0.15rem 0 0;
+  padding: 0 0.15rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+  opacity: 0.75;
 }
 
 .mobile-nav__list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.mobile-nav__list--account {
+  grid-template-columns: 1fr 1fr;
 }
 
 .mobile-nav__link {
-  position: relative;
   display: flex;
   align-items: center;
-  padding: 0.85rem 0.25rem;
-  font-size: 1rem;
-  font-weight: 500;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.2;
+  text-align: center;
   color: var(--cf-ink-soft);
   text-decoration: none;
-  border-bottom: 1px solid var(--cf-line);
+  border-radius: 0.55rem;
+  border: 1px solid color-mix(in oklab, var(--cf-line) 80%, transparent);
+  background: color-mix(in oklab, var(--cf-nav-surface, var(--ui-bg)) 55%, transparent);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.mobile-nav__link:last-child {
-  border-bottom: 0;
+.mobile-nav__link:hover {
+  color: var(--cf-ink);
+  border-color: color-mix(in oklab, var(--cf-accent) 35%, var(--cf-line));
+  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
 }
 
 .mobile-nav__link.is-active {
   color: var(--cf-accent-ink);
   font-weight: 650;
-}
-
-.mobile-nav__link.is-active::before {
-  content: '';
-  position: absolute;
-  left: -0.35rem;
-  top: 50%;
-  width: 3px;
-  height: 1.1rem;
-  border-radius: 999px;
-  background: var(--cf-accent);
-  transform: translateY(-50%);
-}
-
-.mobile-nav__divider {
-  height: 1px;
-  margin: 10px 0;
-  background: var(--cf-line);
+  border-color: color-mix(in oklab, var(--cf-accent) 45%, var(--cf-line));
+  background: color-mix(in oklab, var(--cf-accent) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--cf-accent) 20%, transparent);
 }
 
 @media (max-width: 640px) {
