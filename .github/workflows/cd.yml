@@ -143,7 +143,7 @@ jobs:
             cd ${{ env.DEPLOY_PATH }}
             docker compose -f ${{ env.COMPOSE_FILE }} pull ${{ env.COMPOSE_SERVICES }}
             docker compose -f ${{ env.COMPOSE_FILE }} up -d --no-deps ${{ env.COMPOSE_SERVICES }}
-            docker image prune -f --filter "until=72h"
+            # 不在此处 prune：与其它仓并行 pull 会撞 containerd lease（digest/lease not found）
 
             sleep 15
             docker compose -f ${{ env.COMPOSE_FILE }} ps ${{ env.COMPOSE_SERVICES }}
