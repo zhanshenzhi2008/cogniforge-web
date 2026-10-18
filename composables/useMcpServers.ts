@@ -12,9 +12,17 @@ export interface McpServer {
   url?: string
   auth_header?: string
   enabled: boolean
-  metadata: Record<string, any>
+  metadata?: Record<string, any>
   created_at: string
   updated_at: string
+}
+
+export interface McpTool {
+  name: string
+  description: string
+  input_schema?: Record<string, any>
+  server_id: string
+  server_type?: string
 }
 
 export const useMcpServers = () => {
@@ -27,6 +35,26 @@ export const useMcpServers = () => {
       return { data: res.data || [] }
     } catch (err: any) {
       return { error: err.message || '获取 MCP Server 列表失败' }
+    }
+  }
+
+  const getOne = async (id: string): Promise<{ data?: McpServer; error?: string }> => {
+    try {
+      const res = await api.get<McpServer>(`/api/v1/mcp/servers/${id}`)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '获取 MCP Server 失败' }
+    }
+  }
+
+  const listTools = async (id: string): Promise<{ data?: McpTool[]; error?: string }> => {
+    try {
+      const res = await api.get<McpTool[]>(`/api/v1/mcp/servers/${id}/tools`)
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取工具列表失败' }
     }
   }
 
@@ -62,6 +90,8 @@ export const useMcpServers = () => {
 
   return {
     list,
+    getOne,
+    listTools,
     create,
     update,
     remove,
