@@ -47,14 +47,17 @@
                 <div class="srv-name">
                   <UIcon :name="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'" class="size-4" />
                   <span class="name">{{ srv.name }}</span>
-                  <UBadge v-if="srv.type === 'built-in'" size="xs" variant="subtle" color="primary">
-                    {{ t('mcp.builtIn') }}
-                  </UBadge>
                 </div>
                 <p v-if="srvDesc(srv)" class="srv-desc">{{ srvDesc(srv) }}</p>
               </td>
               <td>
-                <span class="cf-muted">{{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}</span>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
+                >
+                  {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
+                </UBadge>
               </td>
               <td>
                 <UBadge size="sm" variant="subtle" :color="srv.enabled ? 'success' : 'neutral'">
