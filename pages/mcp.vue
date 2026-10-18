@@ -11,88 +11,111 @@
     </div>
 
     <div class="list-toolbar">
-      <span class="list-count">{{ t('mcp.count', { n: servers.length }) }}</span>
+      <div class="filter-row">
+        <button
+          v-for="tab in filterTabs"
+          :key="tab.id"
+          type="button"
+          class="filter-chip"
+          :class="{ 'filter-chip--on': filter === tab.id }"
+          @click="filter = tab.id"
+        >
+          {{ tab.label }}
+          <span class="filter-n">{{ tab.count }}</span>
+        </button>
+      </div>
+      <UInput
+        v-model="query"
+        class="search-input"
+        icon="i-lucide-search"
+        :placeholder="t('mcp.searchPh')"
+      />
     </div>
 
-    <div class="cf-panel">
-      <div v-if="loading" class="cf-state">
+    <div v-if="loading" class="cf-panel">
+      <div class="cf-state">
         <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
         <span>{{ t('common.loading') }}</span>
       </div>
+    </div>
 
-      <div v-else-if="servers.length === 0" class="cf-state">
+    <div v-else-if="filteredServers.length === 0" class="cf-panel">
+      <div class="cf-state">
         <UIcon name="i-lucide-plug" class="size-8 opacity-50" />
-        <p>{{ t('mcp.empty') }}</p>
+        <p>{{ servers.length === 0 ? t('mcp.empty') : t('mcp.filterEmpty') }}</p>
       </div>
+    </div>
 
-      <div v-else class="cf-table-wrap">
-        <table class="cf-data-table">
-          <thead>
-            <tr>
-              <th>{{ t('common.name') }}</th>
-              <th>{{ t('mcp.type') }}</th>
-              <th>{{ t('common.status') }}</th>
-              <th>{{ t('common.createdAt') }}</th>
-              <th class="cf-col-actions">{{ t('common.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="srv in servers"
-              :key="srv.id"
-              class="row-click"
+    <div v-else class="mcp-grid">
+      <article
+        v-for="srv in filteredServers"
+        :key="srv.id"
+        class="mcp-card"
+        :class="{ 'mcp-card--off': !srv.enabled }"
+        @click="openDetail(srv)"
+      >
+        <div class="mcp-card__top">
+          <div class="mcp-card__icon" :class="srv.type === 'built-in' ? 'is-builtin' : 'is-http'">
+            <UIcon :name="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'" class="size-5" />
+          </div>
+          <div class="mcp-card__titles">
+            <h3 class="mcp-card__name">{{ srv.name }}</h3>
+            <div class="mcp-card__tags">
+              <UBadge
+                size="sm"
+                variant="subtle"
+                :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
+              >
+                {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
+              </UBadge>
+              <span class="tool-pill" @click.stop="openDetail(srv)">
+                {{ t('mcp.toolsEnabled', { n: srv.tool_count ?? 0 }) }}
+              </span>
+            </div>
+          </div>
+          <div class="mcp-card__switch" @click.stop>
+            <USwitch
+              v-if="srv.type !== 'built-in'"
+              :model-value="srv.enabled"
+              :disabled="togglingId === srv.id"
+              @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
+            />
+            <UBadge v-else size="sm" variant="subtle" color="success">
+              {{ t('common.enabled') }}
+            </UBadge>
+          </div>
+        </div>
+
+        <p class="mcp-card__desc">{{ srvDesc(srv) || t('mcp.noDesc') }}</p>
+
+        <div class="mcp-card__foot">
+          <span class="cf-muted mono url-snip" :title="srv.url || ''">
+            {{ srv.type === 'built-in' ? t('mcp.builtinShort') : (srv.url || '—') }}
+          </span>
+          <div class="action-btns" @click.stop>
+            <CfButton
+              tone="icon-accent"
+              icon="i-lucide-eye"
+              :tip="t('mcp.viewDetail')"
               @click="openDetail(srv)"
-            >
-              <td>
-                <div class="srv-name">
-                  <UIcon :name="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'" class="size-4" />
-                  <span class="name">{{ srv.name }}</span>
-                </div>
-                <p v-if="srvDesc(srv)" class="srv-desc">{{ srvDesc(srv) }}</p>
-              </td>
-              <td>
-                <UBadge
-                  size="sm"
-                  variant="subtle"
-                  :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
-                >
-                  {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
-                </UBadge>
-              </td>
-              <td>
-                <UBadge size="sm" variant="subtle" :color="srv.enabled ? 'success' : 'neutral'">
-                  {{ srv.enabled ? t('common.enabled') : t('common.disabled') }}
-                </UBadge>
-              </td>
-              <td class="cf-muted">{{ srv.type === 'built-in' ? '—' : d(srv.created_at) }}</td>
-              <td>
-                <div class="action-btns" @click.stop>
-                  <CfButton
-                    tone="icon-accent"
-                    icon="i-lucide-eye"
-                    :tip="t('mcp.viewDetail')"
-                    @click="openDetail(srv)"
-                  />
-                  <CfButton
-                    v-if="srv.type !== 'built-in'"
-                    tone="icon-accent"
-                    icon="i-lucide-pencil"
-                    :tip="t('common.edit')"
-                    @click="handleEdit(srv)"
-                  />
-                  <CfButton
-                    v-if="srv.type !== 'built-in'"
-                    tone="icon-danger"
-                    icon="i-lucide-trash-2"
-                    :tip="t('common.delete')"
-                    @click="askDelete(srv)"
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+            />
+            <CfButton
+              v-if="srv.type !== 'built-in'"
+              tone="icon-accent"
+              icon="i-lucide-pencil"
+              :tip="t('common.edit')"
+              @click="handleEdit(srv)"
+            />
+            <CfButton
+              v-if="srv.type !== 'built-in'"
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(srv)"
+            />
+          </div>
+        </div>
+      </article>
     </div>
 
     <!-- Detail: tools + config -->
@@ -130,7 +153,19 @@
           <div class="detail-block">
             <div class="detail-block-head">
               <h4>{{ t('mcp.tools') }}</h4>
-              <span class="cf-muted">{{ t('mcp.toolsCount', { n: detailTools.length }) }}</span>
+              <div class="detail-tools-actions">
+                <span class="cf-muted">{{ t('mcp.toolsCount', { n: detailTools.length }) }}</span>
+                <CfButton
+                  v-if="detail.type === 'http'"
+                  tone="secondary"
+                  icon="i-lucide-refresh-cw"
+                  :loading="toolsRefreshing"
+                  :tip="t('mcp.refreshTools')"
+                  @click="refreshDetailTools"
+                >
+                  {{ t('mcp.refreshTools') }}
+                </CfButton>
+              </div>
             </div>
             <div v-if="toolsLoading" class="cf-muted">{{ t('common.loading') }}</div>
             <div v-else-if="!detailTools.length" class="cf-muted">{{ t('mcp.toolsEmpty') }}</div>
@@ -255,12 +290,17 @@ import type { McpServer, McpTool } from '@/composables/useMcpServers'
 definePageMeta({ layout: 'default' })
 
 const toast = useToast()
-const { t, d } = useLocale()
-const { list, listTools, create, update, remove } = useMcpServers()
+const { t } = useLocale()
+const { list, listTools, refreshTools, create, update, remove } = useMcpServers()
+
+type FilterId = 'all' | 'built-in' | 'http'
 
 const loading = ref(false)
 const submitting = ref(false)
 const servers = ref<McpServer[]>([])
+const filter = ref<FilterId>('all')
+const query = ref('')
+const togglingId = ref('')
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
 const editingId = ref('')
@@ -272,6 +312,7 @@ const detailOpen = ref(false)
 const detail = ref<McpServer | null>(null)
 const detailTools = ref<McpTool[]>([])
 const toolsLoading = ref(false)
+const toolsRefreshing = ref(false)
 
 const form = reactive({
   name: '',
@@ -281,6 +322,25 @@ const form = reactive({
   enabled: true,
 })
 const errors = reactive({ name: '', url: '' })
+
+const builtinCount = computed(() => servers.value.filter(s => s.type === 'built-in').length)
+const httpCount = computed(() => servers.value.filter(s => s.type === 'http').length)
+
+const filterTabs = computed(() => [
+  { id: 'all' as FilterId, label: t('mcp.filterAll'), count: servers.value.length },
+  { id: 'built-in' as FilterId, label: t('mcp.filterBuiltin'), count: builtinCount.value },
+  { id: 'http' as FilterId, label: t('mcp.filterHttp'), count: httpCount.value },
+])
+
+const filteredServers = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  return servers.value.filter((s) => {
+    if (filter.value !== 'all' && s.type !== filter.value) return false
+    if (!q) return true
+    const hay = `${s.name} ${srvDesc(s)} ${s.url || ''}`.toLowerCase()
+    return hay.includes(q)
+  })
+})
 
 const srvDesc = (srv: McpServer) => {
   const d0 = srv.metadata?.description
@@ -327,6 +387,48 @@ const openDetail = async (srv: McpServer) => {
     return
   }
   detailTools.value = res.data || []
+  // 同步卡片上的工具数
+  const idx = servers.value.findIndex(s => s.id === srv.id)
+  if (idx >= 0) {
+    servers.value[idx] = { ...servers.value[idx]!, tool_count: detailTools.value.length }
+  }
+}
+
+const refreshDetailTools = async () => {
+  if (!detail.value || detail.value.type !== 'http') return
+  toolsRefreshing.value = true
+  try {
+    const res = await refreshTools(detail.value.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    detailTools.value = res.data || []
+    const idx = servers.value.findIndex(s => s.id === detail.value!.id)
+    if (idx >= 0) {
+      servers.value[idx] = { ...servers.value[idx]!, tool_count: detailTools.value.length }
+    }
+    toast.add({ title: t('mcp.refreshOk', { n: detailTools.value.length }), color: 'success' })
+  } finally {
+    toolsRefreshing.value = false
+  }
+}
+
+const toggleEnabled = async (srv: McpServer, enabled: boolean) => {
+  if (srv.type === 'built-in') return
+  togglingId.value = srv.id
+  const prev = srv.enabled
+  srv.enabled = enabled
+  try {
+    const res = await update(srv.id, { enabled })
+    if (res.error) {
+      srv.enabled = prev
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+  } finally {
+    togglingId.value = ''
+  }
 }
 
 const resetForm = () => {
@@ -423,36 +525,164 @@ onMounted(() => { fetchServers() })
 </script>
 
 <style scoped>
-.list-count {
-  font-size: 0.8rem;
-  color: var(--cf-ink-soft);
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
 }
 
-.row-click {
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line);
+  background: transparent;
+  color: var(--cf-ink-soft);
+  font-size: 0.8125rem;
   cursor: pointer;
 }
 
-.row-click:hover {
-  background: color-mix(in oklab, var(--cf-accent) 6%, transparent);
-}
-
-.srv-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.filter-chip--on {
   color: var(--cf-ink);
-}
-
-.srv-name .name {
+  border-color: color-mix(in oklab, var(--cf-accent) 45%, var(--cf-line));
+  background: color-mix(in oklab, var(--cf-accent) 12%, transparent);
   font-weight: 600;
 }
 
-.srv-desc {
-  margin: 4px 0 0;
-  font-size: 0.75rem;
+.filter-n {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.search-input {
+  width: min(100%, 16rem);
+}
+
+.mcp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.mcp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem 1.05rem;
+  border-radius: 0.85rem;
+  border: 1px solid color-mix(in oklab, var(--cf-line) 90%, transparent);
+  background: color-mix(in oklab, var(--cf-nav-surface, var(--ui-bg)) 70%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mcp-card:hover {
+  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--cf-accent) 8%, transparent);
+  transform: translateY(-1px);
+}
+
+.mcp-card--off {
+  opacity: 0.72;
+}
+
+.mcp-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.mcp-card__icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.6rem;
+  flex-shrink: 0;
+}
+
+.mcp-card__icon.is-builtin {
+  background: color-mix(in oklab, var(--cf-accent) 16%, transparent);
+  color: var(--cf-accent);
+}
+
+.mcp-card__icon.is-http {
+  background: color-mix(in oklab, var(--cf-ink) 8%, transparent);
   color: var(--cf-ink-soft);
-  line-height: 1.35;
-  max-width: 28rem;
+}
+
+.mcp-card__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-card__name {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--cf-ink);
+  line-height: 1.3;
+}
+
+.mcp-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.tool-pill {
+  font-size: 0.7rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  color: var(--cf-ink-soft);
+  background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
+}
+
+.mcp-card__switch {
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+}
+
+.mcp-card__desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--cf-ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.25em;
+}
+
+.mcp-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in oklab, var(--cf-line) 70%, transparent);
+}
+
+.url-snip {
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
 }
 
 .action-btns {
@@ -556,7 +786,7 @@ onMounted(() => { fetchServers() })
 
 .detail-block-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
@@ -564,6 +794,12 @@ onMounted(() => { fetchServers() })
 
 .detail-block-head h4 {
   margin: 0;
+}
+
+.detail-tools-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .hint {
