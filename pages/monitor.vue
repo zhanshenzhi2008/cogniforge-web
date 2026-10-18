@@ -135,7 +135,7 @@
       </div>
     </div>
 
-    <UModal
+    <CfModal
       v-model:open="showLogDetail"
       :title="t('monitor.logDetail')"
       :ui="{ content: 'sm:max-w-3xl' }"
@@ -198,7 +198,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

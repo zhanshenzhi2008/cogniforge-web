@@ -92,7 +92,7 @@
       </div>
     </div>
 
-    <UModal
+    <CfModal
       v-model:open="editPopoverShow"
       :title="t('editor.editInfo')"
       :ui="{ content: 'sm:max-w-md' }"
@@ -129,7 +129,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <USlideover
       v-model:open="configDrawer"

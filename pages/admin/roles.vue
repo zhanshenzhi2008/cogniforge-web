@@ -113,7 +113,7 @@
       </div>
     </div>
 
-    <UModal
+    <CfModal
       v-model:open="showRoleModal"
       :title="isEditing ? t('roles.editTitle') : t('roles.createTitle')"
       :ui="{ content: 'sm:max-w-xl' }"
@@ -195,9 +195,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="showDeleteModal" :title="t('roles.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="showDeleteModal" :title="t('roles.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">
           {{ t('roles.deleteText') }}
@@ -219,7 +219,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

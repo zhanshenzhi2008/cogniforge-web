@@ -186,7 +186,7 @@
       </section>
     </template>
 
-    <UModal v-model:open="showCreate">
+    <CfModal v-model:open="showCreate">
       <template #content>
         <div class="modal-body">
           <h3>{{ t('prompts.new') }}</h3>
@@ -199,9 +199,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="showVer">
+    <CfModal v-model:open="showVer">
       <template #content>
         <div class="modal-body">
           <h3>{{ t('prompts.newVersion') }}</h3>
@@ -214,9 +214,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="showImport">
+    <CfModal v-model:open="showImport">
       <template #content>
         <div class="modal-body">
           <h3>{{ t('prompts.importAgent') }}</h3>
@@ -227,9 +227,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('prompts.deleteText', { name: deleting?.name ?? '' }) }}
@@ -243,9 +243,9 @@
           </CfButton>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="deleteVerVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVerVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('prompts.deleteVersionText', { n: deletingVer?.version ?? '' }) }}
@@ -259,9 +259,9 @@
           </CfButton>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="compareVisible" :title="t('prompts.compareTitle')" :ui="{ content: 'sm:max-w-4xl' }">
+    <CfModal v-model:open="compareVisible" :title="t('prompts.compareTitle')" :ui="{ content: 'sm:max-w-4xl' }">
       <template #body>
         <div v-if="comparePair.length === 2" class="compare-grid">
           <div v-for="v in comparePair" :key="v.id" class="compare-col">
@@ -278,7 +278,7 @@
           <CfButton tone="secondary" @click="compareVisible = false">{{ t('common.cancel') }}</CfButton>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

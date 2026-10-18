@@ -184,7 +184,7 @@
     </USlideover>
 
     <!-- Create / Edit Modal -->
-    <UModal
+    <CfModal
       v-model:open="dialogVisible"
       :title="dialogMode === 'create' ? t('mcp.createTitle') : t('mcp.editTitle')"
       :description="dialogMode === 'create' ? t('mcp.createDesc') : t('mcp.editDesc')"
@@ -253,10 +253,10 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <!-- Delete Confirm -->
-    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('mcp.deleteText', { name: deleting?.name ?? '' }) }}
@@ -280,7 +280,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

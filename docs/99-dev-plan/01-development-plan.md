@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-18 | v1.16 | 共用 CfModal：拖动/缩放/最大化，替换 UModal | orjrs |
 | 2026-10-18 | v1.15 | MCP 卡片 UI：筛选/开关/工具数/刷新 | orjrs |
 | 2026-10-18 | v1.14 | MCP 文案：Streamable HTTP 已可用；stdio 需网关 | orjrs |
 | 2026-10-18 | v1.13 | MCP 页：内置工具明细 + 飞书配置提示 | orjrs |
@@ -20,6 +21,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 共用 CfModal（2026-10-18）
+
+- **变更原因**：全站弹窗要可拖动、缩放、最大化；UModal 做不到
+- **包含代码**：`components/CfModal.vue`；各页 `UModal` → `CfModal`
+- **用法**：与 UModal 相同（`v-model:open` / `title` / `#body` / `#footer`）；侧栏仍用 `USlideover`
 
 ## [变更] MCP 卡片式管理 UI（2026-10-18）
 

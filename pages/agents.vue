@@ -89,7 +89,7 @@
       </div>
     </div>
 
-    <UModal
+    <CfModal
       v-model:open="dialogVisible"
       :title="dialogTitle"
       :description="dialogDescription"
@@ -307,9 +307,9 @@
           </template>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('agents.deleteText', { name: deleting?.name ?? '' }) }}
@@ -331,7 +331,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

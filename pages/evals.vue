@@ -204,7 +204,7 @@
       </section>
     </template>
 
-    <UModal v-model:open="showCreate">
+    <CfModal v-model:open="showCreate">
       <template #content>
         <div class="modal-body">
           <h3>{{ t('evals.createTitle') }}</h3>
@@ -216,9 +216,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="showCase">
+    <CfModal v-model:open="showCase">
       <template #content>
         <div class="modal-body">
           <h3>{{ t('evals.addCase') }}</h3>
@@ -236,7 +236,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

@@ -95,7 +95,7 @@
       </ul>
     </div>
 
-    <UModal v-model:open="revokeVisible" :title="t('sessions.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="revokeVisible" :title="t('sessions.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">{{ t('sessions.revokeText') }}</p>
       </template>
@@ -115,7 +115,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

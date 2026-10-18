@@ -75,7 +75,7 @@
     </div>
 
     <!-- Create / View / Edit KB -->
-    <UModal
+    <CfModal
       v-model:open="dialogVisible"
       :title="dialogTitle"
       :description="dialogDescription"
@@ -222,10 +222,10 @@
           </template>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <!-- Delete KB confirm -->
-    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('kb.deleteText', { name: deleting?.name ?? '' }) }}
@@ -247,7 +247,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <!-- Documents Slideover -->
     <USlideover
@@ -375,7 +375,7 @@
     </USlideover>
 
     <!-- Upload Modal -->
-    <UModal
+    <CfModal
       v-model:open="uploadModalVisible"
       :title="t('kb.uploadTitle')"
       :ui="{ content: 'sm:max-w-lg' }"
@@ -407,10 +407,10 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <!-- Delete Doc confirm -->
-    <UModal v-model:open="deleteDocVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteDocVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('kb.deleteDocText', { name: deletingDoc?.name ?? '' }) }}
@@ -432,7 +432,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

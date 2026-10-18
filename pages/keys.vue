@@ -73,7 +73,7 @@
       </div>
     </div>
 
-    <UModal
+    <CfModal
       v-model:open="dialogVisible"
       :title="t('keys.createTitle')"
       :ui="{ content: 'sm:max-w-md' }"
@@ -123,9 +123,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="deleteVisible" :title="t('keys.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('keys.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">{{ t('keys.revokeText') }}</p>
       </template>
@@ -145,7 +145,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

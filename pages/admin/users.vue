@@ -137,7 +137,7 @@
       </div>
     </div>
 
-    <UModal
+    <CfModal
       v-model:open="showUserModal"
       :title="isEditing ? t('users.editTitle') : t('users.createTitle')"
       :ui="{ content: 'sm:max-w-lg' }"
@@ -217,9 +217,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="showStatusModal" :title="t('users.confirmStatusTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="showStatusModal" :title="t('users.confirmStatusTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">{{ t('users.confirmStatus', { action: statusActionText }) }}</p>
       </template>
@@ -231,9 +231,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="deleteVisible" :title="t('users.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('users.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">{{ t('users.deleteText') }}</p>
       </template>
@@ -253,9 +253,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="resetConfirmVisible" :title="t('users.resetPwdTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="resetConfirmVisible" :title="t('users.resetPwdTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">{{ t('users.resetPwdConfirm') }}</p>
         <p v-if="resetTargetName" class="confirm-text cf-muted">{{ resetTargetName }}</p>
@@ -275,9 +275,9 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
-    <UModal v-model:open="resetResultVisible" :title="t('users.resetPwdDone')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="resetResultVisible" :title="t('users.resetPwdDone')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="confirm-text">{{ t('users.resetPwdHint') }}</p>
         <div class="temp-pwd-box">
@@ -293,7 +293,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 

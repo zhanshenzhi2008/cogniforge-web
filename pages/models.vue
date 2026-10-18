@@ -238,7 +238,7 @@
     </div>
 
     <!-- Add / view / edit (same modal) -->
-    <UModal
+    <CfModal
       v-model:open="dialogVisible"
       :title="dialogTitle"
       :description="dialogDescription"
@@ -499,10 +499,10 @@
           </template>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <!-- Connection test result -->
-    <UModal v-model:open="testModalVisible" :title="t('models.testTitle')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="testModalVisible" :title="t('models.testTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <div class="test-result">
           <div v-if="testLoading" class="test-loading">
@@ -530,10 +530,10 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
 
     <!-- Delete confirm -->
-    <UModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
+    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
         <p class="delete-text">
           {{ t('models.deleteText', { name: deleting?.name ?? '' }) }}
@@ -549,7 +549,7 @@
           </div>
         </div>
       </template>
-    </UModal>
+    </CfModal>
   </div>
 </template>
 
