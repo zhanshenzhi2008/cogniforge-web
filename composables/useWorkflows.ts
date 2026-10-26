@@ -16,15 +16,28 @@ export interface Workflow {
   updated_at: string
 }
 
+export interface WorkflowNodeRun {
+  id: string
+  execution_id: string
+  node_id: string
+  node_type: string
+  attempt: number
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'skipped' | string
+  error?: string
+  duration_ms?: number
+  output?: Record<string, any>
+}
+
 export interface WorkflowExecution {
   id: string
   workflow_id: string
   user_id: string
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'debugging' | 'cancelled'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'debugging' | 'cancelled' | 'waiting' | 'succeeded'
   input: Record<string, any>
   output: string
   error: string
   current_node?: string
+  node_runs?: WorkflowNodeRun[]
   started_at: string | null
   completed_at: string | null
   created_at: string

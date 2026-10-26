@@ -618,6 +618,7 @@ const startDebug = async () => {
       const execRes = await getExecution(workflowId.value, res.executionId!)
       if (execRes.data) {
         currentExecution.value = execRes.data
+        applyNodeRunHighlight(execRes.data)
         if (execRes.data.status === 'completed' || execRes.data.status === 'failed' || execRes.data.status === 'cancelled') {
           stopPolling()
           isDebugging.value = false
@@ -640,6 +641,26 @@ const stopPolling = () => {
     clearInterval(debugPollInterval.value)
     debugPollInterval.value = null
   }
+}
+
+/** 按 node_runs / current_node 给画布节点上色（阶段十八 W1） */
+const applyNodeRunHighlight = (exec: { current_node?: string; node_runs?: { node_id: string; status: string }[] }) => {
+  const byId = new Map<string, string>()
+  for (const r of exec.node_runs || []) {
+    byId.set(r.node_id, r.status)
+  }
+  if (exec.current_node && !byId.has(exec.current_node)) {
+    byId.set(exec.current_node, 'running')
+  }
+  nodes.value = nodes.value.map((n) => {
+    const st = byId.get(n.id)
+    const base = (n.class || '').split(' ').filter((c: string) => !c.startsWith('run-'))
+    if (st === 'running') base.push('run-running')
+    else if (st === 'succeeded' || st === 'completed') base.push('run-succeeded')
+    else if (st === 'failed') base.push('run-failed')
+    else if (st === 'skipped') base.push('run-skipped')
+    return { ...n, class: base.filter(Boolean).join(' ') }
+  })
 }
 
 const cancelDebug = async () => {
@@ -837,6 +858,19 @@ onMounted(() => {
 .canvas-container :deep(.vue-flow__edge-path) {
   stroke: #4f46e5;
   stroke-width: 2;
+}
+
+.canvas-container :deep(.vue-flow__node.run-running) {
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+.canvas-container :deep(.vue-flow__node.run-succeeded) {
+  box-shadow: 0 0 0 2px #10b981;
+}
+.canvas-container :deep(.vue-flow__node.run-failed) {
+  box-shadow: 0 0 0 2px #ef4444;
+}
+.canvas-container :deep(.vue-flow__node.run-skipped) {
+  opacity: 0.55;
 }
 
 .canvas-container :deep(.vue-flow__minimap) {

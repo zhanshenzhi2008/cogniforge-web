@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-26 | v1.19 | W1：调试轮询按 node_runs 高亮画布节点 | orjrs |
 | 2026-10-26 | v1.18 | 阶段十八：工作流画布跟 Checkpoint/节点高亮（设计同步） | orjrs |
 | 2026-10-24 | v1.17 | P1：试跑 / 评估变量表单 / 顶栏邮箱 | orjrs |
 | 2026-10-18 | v1.16 | 共用 CfModal：拖动/缩放/最大化，替换 UModal | orjrs |
@@ -24,6 +25,11 @@
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
 
+## [变更] W1 画布节点高亮（2026-10-26）
+
+- **包含代码**：`pages/workflows/[id].vue` `applyNodeRunHighlight`；`useWorkflows` 类型含 `node_runs`
+- **行为**：调试轮询执行详情后，按 running/succeeded/failed 给 Vue Flow 节点加 `run-*` class
+
 ## [变更] 阶段十八工作流前端跟进（2026-10-26）
 
 - **变更原因**：主仓立项工作流 Checkpoint；Web 继续用 Vue Flow，按 W0–W2 跟 UI
@@ -32,9 +38,8 @@
   | 阶段 | 页面改动 |
   |------|----------|
   | W0 | 调试/结果展示真实 LLM/Agent 输出 |
-  | W1 | 画布按 node_runs 高亮 running/success/failed |
+  | W1 | ✅ 画布按 node_runs 高亮 |
   | W2 | 执行详情「继续 / 取消」；waiting 提示 |
-- **状态**：设计同步；代码未开工（等 Go W0）
 
 ## [变更] 提示词 P1：试跑 / 变量表单 / 顶栏邮箱（2026-10-24）
 
