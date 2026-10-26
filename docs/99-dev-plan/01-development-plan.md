@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-24 | v1.17 | P1：试跑 / 评估变量表单 / 顶栏邮箱 | orjrs |
 | 2026-10-18 | v1.16 | 共用 CfModal：拖动/缩放/最大化，替换 UModal | orjrs |
 | 2026-10-18 | v1.15 | MCP 卡片 UI：筛选/开关/工具数/刷新 | orjrs |
 | 2026-10-18 | v1.14 | MCP 文案：Streamable HTTP 已可用；stdio 需网关 | orjrs |
@@ -21,6 +22,16 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 提示词 P1：试跑 / 变量表单 / 顶栏邮箱（2026-10-24）
+
+- **变更原因**：工业闭环后的体验缺口（验人设、评估变量、同名用户）
+- **包含代码**：`pages/prompts.vue`、`pages/evals.vue`、`layouts/default.vue`、`components/PromptVarForm.vue`、`utils/promptVars.ts`、i18n
+- **能力**：
+  - `/prompts` 详情：选版本 + 变量表单 + 模型 + 一轮流式回答（render + chat/stream）
+  - `/evals` target=prompt：按变量定义出表单（替 JSON）；agent 仍 JSON
+  - 顶栏用户芯片显示邮箱
+- **主仓**：`cogniforge/docs/01-requirements/09-prompt-engineering-design.md` v2.4
 
 ## [变更] 共用 CfModal（2026-10-18）
 
@@ -61,13 +72,11 @@
 
 - **变更原因**：工业 UI 已写、未部署；需记清前端还要做什么
 - **主仓对齐**：`cogniforge/docs/01-requirements/09-prompt-engineering-design.md` §6.2；开发计划阶段十七
-- **前端剩余**：
+- **前端剩余**（P1 已于 2026-10-24 完成，见上节）：
   | 优先级 | 项 | 页面 |
   |--------|----|------|
-  | P0 | 合入部署当前改动 | CD |
-  | P1 | 17.10 试跑一轮 | `/prompts` |
-  | P1 | 17.12 评估变量表单（替 JSON） | `/evals` |
-  | P1 | 17.13 顶栏显示邮箱（区分同名 admin） | layout / 用户菜单 |
+  | P0 | 合入部署当前改动 / 冒烟 | CD |
+  | ~~P1~~ | ~~17.10 / 17.12 / 17.13~~ | ✅ |
   | P2 | 17.11 Skill 导入；17.15 行级 diff；17.16 Tags | `/prompts` |
   | P3 | 17.18 工业 e2e | `e2e/prompts.spec.ts` |
 

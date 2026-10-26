@@ -165,16 +165,24 @@
           :placeholder="t('evals.systemPromptPh')"
         />
         <p class="param-hint">{{ t('evals.systemPrompt') }}</p>
-        <UTextarea
-          v-if="runTargetType === 'prompt' || runTargetType === 'agent'"
-          v-model="runVariablesJson"
-          class="w-full sys-prompt"
-          :rows="2"
-          placeholder='{"brand":"CogniForge"}'
+        <PromptVarForm
+          v-if="runTargetType === 'prompt'"
+          v-model="runVars"
+          :defs="runVarDefs"
+          :hint="t('evals.variablesFormHint')"
+          :empty-text="t('evals.variablesNone')"
+          :placeholder="t('prompts.varsPh')"
+          :required-label="t('prompts.varRequired')"
         />
-        <p v-if="runTargetType === 'prompt' || runTargetType === 'agent'" class="param-hint">
-          {{ t('evals.variablesHint') }}
-        </p>
+        <template v-else-if="runTargetType === 'agent'">
+          <UTextarea
+            v-model="runVariablesJson"
+            class="w-full sys-prompt"
+            :rows="2"
+            placeholder='{"brand":"CogniForge"}'
+          />
+          <p class="param-hint">{{ t('evals.variablesHint') }}</p>
+        </template>
 
         <div v-if="lastRun" class="run-summary">
           <UBadge color="primary" variant="subtle">
@@ -242,6 +250,8 @@
 
 <script setup lang="ts">
 import type { EvalCase, EvalResult, EvalRun, EvalSuite } from '@/composables/useEvals'
+import type { PromptVarDef } from '@/composables/usePrompts'
+import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
 
 const { t, d } = useLocale()
 const toast = useToast()
@@ -268,6 +278,8 @@ const runTargetId = ref('')
 const runModel = ref('')
 const runSystemPrompt = ref('')
 const runVariablesJson = ref('')
+const runVarDefs = ref<PromptVarDef[]>([])
+const runVars = ref<Record<string, string>>({})
 const selectedPromptId = ref('')
 const promptList = ref<{ id: string; name: string }[]>([])
 const versionList = ref<{ id: string; version: number; changelog?: string }[]>([])
@@ -310,6 +322,9 @@ watch(runTargetType, async (tt) => {
   runTargetId.value = ''
   selectedPromptId.value = ''
   versionList.value = []
+  runVarDefs.value = []
+  runVars.value = {}
+  runVariablesJson.value = ''
   if (tt === 'prompt') {
     await loadPromptCatalog()
   }
@@ -318,9 +333,14 @@ watch(runTargetType, async (tt) => {
 watch(selectedPromptId, async (pid) => {
   runTargetId.value = ''
   versionList.value = []
+  runVarDefs.value = []
+  runVars.value = {}
   if (!pid) return
-  const res = await promptApi.listVersions(pid)
-  versionList.value = (res.data || []).map(v => ({
+  const [verRes, one] = await Promise.all([
+    promptApi.listVersions(pid),
+    promptApi.getOne(pid),
+  ])
+  versionList.value = (verRes.data || []).map(v => ({
     id: v.id,
     version: v.version,
     changelog: v.changelog,
@@ -328,6 +348,11 @@ watch(selectedPromptId, async (pid) => {
   if (versionList.value[0]) {
     runTargetId.value = versionList.value[0].id
   }
+  const defs = (one.data?.prompt?.variables || [])
+    .map(v => ({ ...v }))
+    .filter(v => !!v.name?.trim())
+  runVarDefs.value = defs
+  runVars.value = initVarFormValues(defs)
 })
 
 const loadSuites = async () => {
@@ -349,6 +374,9 @@ const openSuite = async (s: EvalSuite) => {
   runTargetId.value = ''
   selectedPromptId.value = ''
   versionList.value = []
+  runVarDefs.value = []
+  runVars.value = {}
+  runVariablesJson.value = ''
   const res = await api.listCases(s.id)
   cases.value = res.data || []
 }
@@ -436,7 +464,19 @@ const doRun = async () => {
   if (runSystemPrompt.value.trim()) {
     body.system_prompt = runSystemPrompt.value.trim()
   }
-  if (runVariablesJson.value.trim()) {
+  if (runTargetType.value === 'prompt') {
+    const missing = missingRequiredVars(runVarDefs.value, runVars.value)
+    if (missing.length) {
+      toast.add({
+        title: t('prompts.tryMissingVars', { names: missing.join(', ') }),
+        color: 'warning',
+      })
+      running.value = false
+      return
+    }
+    const vars = buildVariableMap(runVarDefs.value, runVars.value)
+    if (Object.keys(vars).length) body.variables = vars
+  } else if (runVariablesJson.value.trim()) {
     try {
       body.variables = JSON.parse(runVariablesJson.value.trim()) as Record<string, string>
     } catch {

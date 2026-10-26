@@ -49,7 +49,7 @@
         </UDropdownMenu>
 
         <UDropdownMenu :items="userMenuItems">
-          <button type="button" class="cf-user-chip">
+          <button type="button" class="cf-user-chip" :title="userChipTitle">
             <UAvatar
               :src="user?.avatar_url || undefined"
               :alt="displayName"
@@ -57,7 +57,10 @@
               size="sm"
               class="cf-user-avatar"
             />
-            <span class="cf-user-name">{{ displayName }}</span>
+            <span class="cf-user-meta">
+              <span class="cf-user-name">{{ displayName }}</span>
+              <span v-if="userEmail" class="cf-user-email">{{ userEmail }}</span>
+            </span>
             <UIcon name="i-lucide-chevron-down" class="cf-user-chevron size-3.5" />
           </button>
         </UDropdownMenu>
@@ -152,6 +155,11 @@ const visibleNav = computed(() => filterNavItems(APP_PRIMARY_NAV, user.value?.ro
 const activeKey = computed(() => resolveActiveNavKey(route.path))
 
 const displayName = computed(() => user.value?.name || t('nav.userFallback'))
+const userEmail = computed(() => (user.value?.email || '').trim())
+const userChipTitle = computed(() => {
+  if (userEmail.value) return `${displayName.value} · ${userEmail.value}`
+  return displayName.value
+})
 const userInitials = computed(() => {
   const name = displayName.value.trim()
   if (!name) return '?'
@@ -425,10 +433,29 @@ button.cf-nav__link {
   --ui-avatar-color: var(--cf-accent-ink);
 }
 
+.cf-user-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 11rem;
+  line-height: 1.15;
+}
+
 .cf-user-name {
   font-size: 0.875rem;
   font-weight: 500;
-  max-width: 9rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cf-user-email {
+  font-size: 0.6875rem;
+  font-weight: 450;
+  color: var(--cf-ink-soft);
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -505,7 +532,7 @@ button.cf-nav__link {
 }
 
 @media (max-width: 640px) {
-  .cf-user-name,
+  .cf-user-meta,
   .cf-user-chevron {
     display: none;
   }

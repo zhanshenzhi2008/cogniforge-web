@@ -92,6 +92,57 @@
 
       <section class="cf-panel block">
         <div class="block-head">
+          <h3>{{ t('prompts.tryTitle') }}</h3>
+          <CfButton
+            tone="primary"
+            icon="i-lucide-play"
+            :loading="trying"
+            :disabled="!canTry"
+            @click="doTry"
+          >
+            {{ trying ? t('prompts.trying') : t('prompts.tryRun') }}
+          </CfButton>
+        </div>
+        <p class="cf-muted try-hint">{{ t('prompts.tryHint') }}</p>
+        <div class="try-form">
+          <USelect
+            v-model="tryVersionId"
+            :items="tryVersionOptions"
+            value-key="value"
+            class="try-select"
+            :placeholder="t('prompts.tryVersionPh')"
+          />
+          <USelect
+            v-model="tryModel"
+            :items="modelOptions"
+            value-key="value"
+            class="try-select"
+            :placeholder="t('prompts.tryModelPh')"
+          />
+        </div>
+        <PromptVarForm
+          v-model="tryVars"
+          :defs="varDefs.filter(v => !!v.name?.trim())"
+          :hint="t('prompts.tryVarsHint')"
+          :empty-text="t('prompts.tryVarsNone')"
+          :placeholder="t('prompts.varsPh')"
+          :required-label="t('prompts.varRequired')"
+        />
+        <UTextarea
+          v-model="tryMessage"
+          class="w-full"
+          :rows="3"
+          :placeholder="t('prompts.tryMessagePh')"
+        />
+        <div v-if="tryAnswer || trying" class="try-answer">
+          <div class="try-answer-label">{{ t('prompts.tryAnswer') }}</div>
+          <pre class="content try-answer-body">{{ tryAnswer || '…' }}</pre>
+        </div>
+        <p v-if="tryError" class="try-error">{{ tryError }}</p>
+      </section>
+
+      <section class="cf-panel block">
+        <div class="block-head">
           <h3>{{ t('prompts.usages') }}</h3>
         </div>
         <div v-if="!usages.length" class="cf-muted">{{ t('prompts.usagesEmpty') }}</div>
@@ -284,11 +335,15 @@
 
 <script setup lang="ts">
 import type { Prompt, PromptVarDef, PromptVersion, PromptUsage } from '@/composables/usePrompts'
+import { apiUrl } from '@/utils/apiBase'
+import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
 
 const { t, d } = useLocale()
 const toast = useToast()
+const config = useRuntimeConfig()
 const api = usePrompts()
 const { list: listAgents } = useAgents()
+const { list: listModels } = useModels()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -303,8 +358,36 @@ const showVer = ref(false)
 const showImport = ref(false)
 const importAgentId = ref('')
 const agentOptions = ref<{ label: string; value: string }[]>([])
+const modelOptions = ref<{ label: string; value: string }[]>([])
 const form = reactive({ name: '', description: '', content: '' })
 const verForm = reactive({ content: '', changelog: '', publish: true })
+
+const tryVersionId = ref('')
+const tryModel = ref('')
+const tryMessage = ref('')
+const tryVars = ref<Record<string, string>>({})
+const tryAnswer = ref('')
+const tryError = ref('')
+const trying = ref(false)
+let tryAbort: AbortController | null = null
+
+const tryVersionOptions = computed(() =>
+  versions.value.map(v => ({
+    label: [
+      `v${v.version}`,
+      v.status === 'published' ? t('prompts.published') : t('prompts.draft'),
+      v.id === active.value?.current_version_id ? t('prompts.current') : '',
+    ].filter(Boolean).join(' · '),
+    value: v.id,
+  })),
+)
+const canTry = computed(() =>
+  !!active.value
+  && !!tryVersionId.value
+  && !!tryModel.value
+  && !!tryMessage.value.trim()
+  && !trying.value,
+)
 
 const deleteVisible = ref(false)
 const deleteVerVisible = ref(false)
@@ -356,6 +439,25 @@ const load = async () => {
   items.value = res.data || []
 }
 
+const resetTry = (prompt: Prompt | null, vers: PromptVersion[]) => {
+  tryAbort?.abort()
+  tryAbort = null
+  trying.value = false
+  tryAnswer.value = ''
+  tryError.value = ''
+  tryMessage.value = ''
+  const defs = (prompt?.variables || []).map(v => ({ ...v }))
+  tryVars.value = initVarFormValues(defs)
+  tryVersionId.value =
+    prompt?.current_version_id
+    || vers.find(v => v.status === 'published')?.id
+    || vers[0]?.id
+    || ''
+  if (!tryModel.value && modelOptions.value[0]) {
+    tryModel.value = modelOptions.value[0].value
+  }
+}
+
 const openDetail = async (p: Prompt) => {
   active.value = p
   compareIds.value = []
@@ -374,14 +476,22 @@ const openDetail = async (p: Prompt) => {
   if (versions.value[0]) {
     verForm.content = versions.value[0].content
   }
+  resetTry(active.value, versions.value)
 }
 
 const closeDetail = () => {
+  tryAbort?.abort()
+  tryAbort = null
   active.value = null
   versions.value = []
   usages.value = []
   varDefs.value = []
   compareIds.value = []
+  tryAnswer.value = ''
+  tryError.value = ''
+  tryMessage.value = ''
+  tryVars.value = {}
+  tryVersionId.value = ''
 }
 
 const addVarDef = () => {
@@ -405,9 +515,120 @@ const saveVarDefs = async () => {
     toast.add({ title: res.error, color: 'error' })
     return
   }
-  if (res.data) active.value = res.data
+  if (res.data) {
+    active.value = res.data
+    tryVars.value = initVarFormValues(cleaned)
+  }
   toast.add({ title: t('common.saveOk'), color: 'success' })
   await load()
+}
+
+const doTry = async () => {
+  if (!active.value || !canTry.value) return
+  const defs = varDefs.value.filter(v => !!v.name?.trim())
+  const missing = missingRequiredVars(defs, tryVars.value)
+  if (missing.length) {
+    toast.add({
+      title: t('prompts.tryMissingVars', { names: missing.join(', ') }),
+      color: 'warning',
+    })
+    return
+  }
+
+  trying.value = true
+  tryAnswer.value = ''
+  tryError.value = ''
+  tryAbort?.abort()
+  tryAbort = new AbortController()
+
+  const variables = buildVariableMap(defs, tryVars.value)
+  const rendered = await api.render(active.value.id, {
+    version_id: tryVersionId.value,
+    variables,
+  })
+  if (rendered.error || !rendered.data?.content) {
+    trying.value = false
+    tryError.value = rendered.error || t('prompts.tryRenderFail')
+    toast.add({ title: tryError.value, color: 'error' })
+    return
+  }
+
+  try {
+    const endpoint = apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${useCookie('token').value}`,
+      },
+      body: JSON.stringify({
+        model: tryModel.value,
+        stream: true,
+        messages: [
+          { role: 'system', content: rendered.data.content },
+          { role: 'user', content: tryMessage.value.trim() },
+        ],
+      }),
+      signal: tryAbort.signal,
+    })
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '')
+      tryError.value = text || t('prompts.tryFail')
+      toast.add({ title: tryError.value, color: 'error' })
+      return
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      tryError.value = t('prompts.tryFail')
+      return
+    }
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data: ')) continue
+        const data = trimmed.slice(6).trim()
+        if (data === '[DONE]') continue
+        try {
+          const parsed = JSON.parse(data)
+          if (typeof parsed?.error === 'string' && parsed.error) {
+            tryError.value = parsed.error
+            continue
+          }
+          const delta = parsed?.choices?.[0]?.delta?.content
+          if (typeof delta === 'string' && delta) {
+            tryAnswer.value += delta
+            continue
+          }
+          const full = parsed?.choices?.[0]?.message?.content
+          if (typeof full === 'string' && full) {
+            tryAnswer.value = full
+          }
+        } catch {
+          // ignore partial JSON
+        }
+      }
+    }
+    if (!tryAnswer.value && !tryError.value) {
+      tryError.value = t('prompts.tryEmpty')
+    }
+  } catch (e: unknown) {
+    if ((e as { name?: string })?.name === 'AbortError') return
+    tryError.value = (e as Error)?.message || t('prompts.tryFail')
+    toast.add({ title: tryError.value, color: 'error' })
+  } finally {
+    trying.value = false
+    tryAbort = null
+  }
 }
 
 const doPublish = async (v: PromptVersion) => {
@@ -445,6 +666,17 @@ const doImport = async () => {
 const loadAgents = async () => {
   const res = await listAgents()
   agentOptions.value = (res.data || []).map(a => ({ label: a.name, value: a.id }))
+}
+
+const loadModels = async () => {
+  const res = await listModels()
+  modelOptions.value = (res.data || []).map(m => ({
+    label: m.name || m.id,
+    value: m.id,
+  }))
+  if (!tryModel.value && modelOptions.value[0]) {
+    tryModel.value = modelOptions.value[0].value
+  }
 }
 
 const doCreate = async () => {
@@ -579,6 +811,7 @@ const openCompare = () => {
 onMounted(() => {
   load()
   loadAgents()
+  loadModels()
 })
 </script>
 
@@ -645,4 +878,17 @@ onMounted(() => {
 .compare-body { max-height: 60vh; border: 1px solid var(--cf-line); border-radius: 8px; padding: 10px; }
 .usage-list { margin: 0; padding-left: 18px; font-size: 13px; }
 .usage-list li { margin-bottom: 4px; }
+.try-hint { margin: 0 0 12px; font-size: 12px; }
+.try-form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.try-select { min-width: 160px; flex: 1; }
+.try-answer { margin-top: 12px; }
+.try-answer-label { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.try-answer-body {
+  max-height: 280px;
+  border: 1px solid var(--cf-line);
+  border-radius: 8px;
+  padding: 10px;
+  background: color-mix(in oklab, var(--cf-ink) 3%, transparent);
+}
+.try-error { margin: 8px 0 0; font-size: 13px; color: var(--ui-error, #dc2626); }
 </style>
