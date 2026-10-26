@@ -51,6 +51,14 @@
         <span>{{ data.label }}</span>
       </div>
     </template>
+    <template #node-wait="{ data }">
+      <div class="flow-node flow-node-wait">
+        <Handle id="t" type="target" :position="Position.Left" />
+        <UIcon name="i-lucide-pause-circle" class="size-4" />
+        <span>{{ data.label }}</span>
+        <Handle id="s" type="source" :position="Position.Right" />
+      </div>
+    </template>
   </VueFlow>
 </template>
 
@@ -126,5 +134,9 @@ const handleEdgesChange = (changes: any[]) => emit('edges-change', changes)
 
 .flow-node-output {
   border-color: #a855f7;
+}
+
+.flow-node-wait {
+  border-color: #ea580c;
 }
 </style>

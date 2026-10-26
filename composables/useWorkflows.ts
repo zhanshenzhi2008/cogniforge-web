@@ -33,11 +33,13 @@ export interface WorkflowExecution {
   workflow_id: string
   user_id: string
   status: 'pending' | 'running' | 'completed' | 'failed' | 'debugging' | 'cancelled' | 'waiting' | 'succeeded'
+  wait_reason?: string
   input: Record<string, any>
   output: string
   error: string
   current_node?: string
   node_runs?: WorkflowNodeRun[]
+  latest_checkpoint_seq?: number
   started_at: string | null
   completed_at: string | null
   created_at: string
@@ -64,11 +66,14 @@ export interface WorkflowDefinition {
 export interface WorkflowNode {
   id: string
   type: string
+  name?: string
   position: { x: number; y: number }
   data: {
     label: string
     config?: Record<string, any>
+    [key: string]: any
   }
+  config?: Record<string, any>
 }
 
 export interface WorkflowEdge {
@@ -142,9 +147,9 @@ export const useWorkflows = () => {
     }
   }
 
-  const getExecution = async (id: string, executionId: string): Promise<{ data?: WorkflowExecution; error?: string }> => {
+  const getExecution = async (_id: string, executionId: string): Promise<{ data?: WorkflowExecution; error?: string }> => {
     try {
-      const res = await api.get<WorkflowExecution>(`/api/v1/workflows/${id}/executions/${executionId}`)
+      const res = await api.get<WorkflowExecution>(`/api/v1/workflows/executions/${executionId}`)
       if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
@@ -162,13 +167,31 @@ export const useWorkflows = () => {
     }
   }
 
-  const cancelExecution = async (id: string, executionId: string): Promise<{ error?: string }> => {
+  const cancelExecution = async (_id: string, executionId: string): Promise<{ error?: string }> => {
     try {
-      const res = await api.post(`/api/v1/workflows/${id}/executions/${executionId}/cancel`, {})
+      const res = await api.post(`/api/v1/workflows/executions/${executionId}/cancel`, {})
       if (res.error) return { error: res.error }
       return {}
     } catch (err: any) {
       return { error: err.message || '取消执行失败' }
+    }
+  }
+
+  const resumeExecution = async (
+    _id: string,
+    executionId: string,
+    seq?: number,
+  ): Promise<{ executionId?: string; status?: string; error?: string }> => {
+    try {
+      const body = seq != null ? { seq } : {}
+      const res = await api.post<{ execution_id: string; status: string }>(
+        `/api/v1/workflows/executions/${executionId}/resume`,
+        body,
+      )
+      if (res.error) return { error: res.error }
+      return { executionId: res.data?.execution_id, status: res.data?.status }
+    } catch (err: any) {
+      return { error: err.message || '继续执行失败' }
     }
   }
 
@@ -192,6 +215,7 @@ export const useWorkflows = () => {
     getExecution,
     listExecutions,
     cancelExecution,
+    resumeExecution,
     debug,
   }
 }

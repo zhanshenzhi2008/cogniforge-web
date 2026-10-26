@@ -60,6 +60,41 @@
       </div>
     </div>
 
+    <div v-if="currentExecution" class="exec-bar" :data-status="currentExecution.status">
+      <span class="exec-bar__label">{{ t('editor.runStatus') }}</span>
+      <UBadge size="sm" variant="subtle" :color="execStatusColor(currentExecution.status)">
+        {{ currentExecution.status }}
+      </UBadge>
+      <span v-if="currentExecution.status === 'waiting'" class="exec-bar__msg">
+        {{ t('editor.waitingBanner', {
+          reason: currentExecution.wait_reason || 'approval',
+          msg: currentExecution.error || '',
+        }) }}
+      </span>
+      <span v-else-if="isPolling" class="exec-bar__msg">{{ t('editor.polling') }}</span>
+      <div class="exec-bar__actions">
+        <CfButton
+          v-if="currentExecution.status === 'waiting'"
+          tone="primary"
+          size="sm"
+          icon="i-lucide-play"
+          :loading="resuming"
+          @click="handleResume"
+        >
+          {{ t('editor.resume') }}
+        </CfButton>
+        <CfButton
+          v-if="['running', 'waiting', 'debugging', 'pending'].includes(currentExecution.status)"
+          tone="secondary"
+          size="sm"
+          icon="i-lucide-square"
+          @click="cancelDebug"
+        >
+          {{ t('editor.cancelRun') }}
+        </CfButton>
+      </div>
+    </div>
+
     <div class="editor-container">
       <div class="node-palette">
         <div class="palette-title">{{ t('editor.nodes') }}</div>
@@ -174,6 +209,24 @@
             />
           </div>
 
+          <div v-if="selectedNode.type === 'wait'" class="field">
+            <label class="field__label">{{ t('editor.waitReason') }}</label>
+            <UInput
+              v-model="nodeConfig.waitReason"
+              class="w-full"
+              :placeholder="t('editor.waitReasonPh')"
+            />
+          </div>
+          <div v-if="selectedNode.type === 'wait'" class="field">
+            <label class="field__label">{{ t('editor.waitMessage') }}</label>
+            <UTextarea
+              v-model="nodeConfig.waitMessage"
+              class="w-full"
+              :rows="3"
+              :placeholder="t('editor.waitMessagePh')"
+            />
+          </div>
+
           <div v-if="selectedNode.type === 'search'" class="field">
             <label class="field__label">{{ t('editor.query') }}</label>
             <UInput v-model="nodeConfig.query" class="w-full" :placeholder="t('editor.queryPh')" />
@@ -222,7 +275,7 @@ definePageMeta({
 const route = useRoute()
 const toast = useToast()
 const { t } = useLocale()
-const { get, update, execute, listExecutions, getExecution, cancelExecution, debug } = useWorkflows()
+const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, debug } = useWorkflows()
 const { list: listModels } = useModels()
 
 const canvasRef = ref<HTMLElement>()
@@ -258,6 +311,8 @@ const nodeConfig = reactive({
   description: '',
   query: '',
   variable: '',
+  waitReason: 'approval',
+  waitMessage: '',
 })
 
 const currentWorkflow = ref<any>(null)
@@ -268,8 +323,10 @@ const currentExecution = ref<any>(null)
 const executionLogs = ref<any[]>([])
 const isDebugging = ref(false)
 const debugPollInterval = ref<number | null>(null)
+const isPolling = ref(false)
+const resuming = ref(false)
 
-const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay']
+const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
@@ -285,6 +342,7 @@ const getNodeIcon = (type: string) => {
     http: 'i-lucide-download',
     code: 'i-lucide-upload',
     delay: 'i-lucide-timer',
+    wait: 'i-lucide-pause-circle',
     search: 'i-lucide-search',
     input: 'i-lucide-download',
     output: 'i-lucide-upload',
@@ -293,7 +351,25 @@ const getNodeIcon = (type: string) => {
 }
 
 const getNodeLabel = (type: string) => {
-  return t(`editor.node.${type}`)
+  return t(`editor.node.${type}` as any)
+}
+
+const execStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed':
+    case 'succeeded':
+      return 'success' as const
+    case 'failed':
+    case 'cancelled':
+      return 'error' as const
+    case 'waiting':
+      return 'warning' as const
+    case 'running':
+    case 'debugging':
+      return 'info' as const
+    default:
+      return 'neutral' as const
+  }
 }
 
 const loadWorkflow = async () => {
@@ -463,6 +539,8 @@ const handleNodeClick = (event: any) => {
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
   nodeConfig.variable = event.node.data?.variable || ''
+  nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
+  nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
   configDrawer.value = true
 }
 
@@ -484,6 +562,8 @@ const saveNodeConfig = () => {
       description: nodeConfig.description,
       query: nodeConfig.query,
       variable: nodeConfig.variable,
+      waitReason: nodeConfig.waitReason,
+      waitMessage: nodeConfig.waitMessage,
     }
   }
 
@@ -511,6 +591,7 @@ const handleSave = async () => {
       nodes: nodes.value.map(n => ({
         id: n.id,
         type: n.type,
+        name: n.data?.label,
         position: n.position,
         data: {
           label: n.data?.label,
@@ -519,7 +600,12 @@ const handleSave = async () => {
           description: n.data?.description,
           query: n.data?.query,
           variable: n.data?.variable,
+          waitReason: n.data?.waitReason,
+          waitMessage: n.data?.waitMessage,
         },
+        config: n.type === 'wait'
+          ? { reason: n.data?.waitReason || 'approval', message: n.data?.waitMessage || '' }
+          : undefined,
       })),
       edges: edges.value.map(e => ({
         id: e.id,
@@ -572,10 +658,57 @@ const handleExecute = async () => {
       return
     }
     toast.add({ title: t('flows.started', { id: res.executionId }), color: 'success' })
+    if (res.executionId) {
+      currentExecution.value = { id: res.executionId, status: res.status || 'running' }
+      startExecutionPoll(res.executionId)
+    }
   } catch {
     toast.add({ title: t('editor.runFail'), color: 'error' })
   } finally {
     executing.value = false
+  }
+}
+
+const startExecutionPoll = (executionId: string) => {
+  stopPolling()
+  isPolling.value = true
+  debugPollInterval.value = window.setInterval(async () => {
+    const execRes = await getExecution(workflowId.value, executionId)
+    if (!execRes.data) return
+    currentExecution.value = execRes.data
+    applyNodeRunHighlight(execRes.data)
+    const st = execRes.data.status
+    if (st === 'waiting') {
+      stopPolling()
+      isPolling.value = false
+      return
+    }
+    if (st === 'completed' || st === 'succeeded' || st === 'failed' || st === 'cancelled') {
+      stopPolling()
+      isPolling.value = false
+      if (st === 'completed' || st === 'succeeded') {
+        toast.add({ title: t('editor.debugDone'), color: 'success' })
+      } else if (st === 'failed') {
+        toast.add({ title: t('editor.debugFail', { error: execRes.data.error || '' }), color: 'error' })
+      }
+    }
+  }, 1000)
+}
+
+const handleResume = async () => {
+  if (!currentExecution.value?.id) return
+  resuming.value = true
+  try {
+    const res = await resumeExecution(workflowId.value, currentExecution.value.id)
+    if (res.error) {
+      toast.add({ title: res.error || t('editor.resumeFail'), color: 'error' })
+      return
+    }
+    toast.add({ title: t('editor.resumed'), color: 'success' })
+    currentExecution.value = { ...currentExecution.value, status: 'running', wait_reason: '' }
+    startExecutionPoll(currentExecution.value.id)
+  } finally {
+    resuming.value = false
   }
 }
 
@@ -614,22 +747,7 @@ const startDebug = async () => {
     toast.add({ title: t('editor.debugStarted', { id: res.executionId }), color: 'success' })
     currentExecution.value = { id: res.executionId, status: 'debugging' }
 
-    debugPollInterval.value = window.setInterval(async () => {
-      const execRes = await getExecution(workflowId.value, res.executionId!)
-      if (execRes.data) {
-        currentExecution.value = execRes.data
-        applyNodeRunHighlight(execRes.data)
-        if (execRes.data.status === 'completed' || execRes.data.status === 'failed' || execRes.data.status === 'cancelled') {
-          stopPolling()
-          isDebugging.value = false
-          if (execRes.data.status === 'completed') {
-            toast.add({ title: t('editor.debugDone'), color: 'success' })
-          } else if (execRes.data.status === 'failed') {
-            toast.add({ title: t('editor.debugFail', { error: execRes.data.error }), color: 'error' })
-          }
-        }
-      }
-    }, 1000)
+    startExecutionPoll(res.executionId!)
   } catch {
     toast.add({ title: t('editor.debugStartFail'), color: 'error' })
     isDebugging.value = false
@@ -641,6 +759,7 @@ const stopPolling = () => {
     clearInterval(debugPollInterval.value)
     debugPollInterval.value = null
   }
+  isPolling.value = false
 }
 
 /** 按 node_runs / current_node 给画布节点上色（阶段十八 W1） */
@@ -659,6 +778,7 @@ const applyNodeRunHighlight = (exec: { current_node?: string; node_runs?: { node
     else if (st === 'succeeded' || st === 'completed') base.push('run-succeeded')
     else if (st === 'failed') base.push('run-failed')
     else if (st === 'skipped') base.push('run-skipped')
+    else if (st === 'waiting') base.push('run-waiting')
     return { ...n, class: base.filter(Boolean).join(' ') }
   })
 }
@@ -672,6 +792,9 @@ const cancelDebug = async () => {
   }
   stopPolling()
   isDebugging.value = false
+  if (currentExecution.value) {
+    currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
+  }
   toast.add({ title: t('editor.debugCancel'), color: 'success' })
 }
 
@@ -741,6 +864,34 @@ onMounted(() => {
   flex: 1;
   font-size: 16px;
   color: var(--cf-ink, inherit);
+}
+
+.exec-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--cf-line, #e2e8f0);
+  background: color-mix(in oklab, var(--cf-accent-soft, #f8fafc) 80%, transparent);
+  font-size: 13px;
+}
+.exec-bar[data-status='waiting'] {
+  background: color-mix(in oklab, #ffedd5 70%, transparent);
+}
+.exec-bar__label {
+  font-weight: 600;
+  color: var(--cf-ink-soft, #64748b);
+}
+.exec-bar__msg {
+  flex: 1;
+  min-width: 120px;
+  color: var(--cf-ink, #0f172a);
+}
+.exec-bar__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .header-actions {
@@ -868,6 +1019,9 @@ onMounted(() => {
 }
 .canvas-container :deep(.vue-flow__node.run-failed) {
   box-shadow: 0 0 0 2px #ef4444;
+}
+.canvas-container :deep(.vue-flow__node.run-waiting) {
+  box-shadow: 0 0 0 2px #ea580c;
 }
 .canvas-container :deep(.vue-flow__node.run-skipped) {
   opacity: 0.55;
