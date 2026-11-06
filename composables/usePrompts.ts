@@ -80,6 +80,8 @@ export function usePrompts() {
     post<RenderResult>(`/api/v1/prompts/${promptId}/render`, body)
   const importFromAgent = (body: { agent_id: string; name?: string }) =>
     post<{ prompt: Prompt; current_version: PromptVersion }>('/api/v1/prompts/import', body)
+  const importFromSkill = (body: { skill_id: string; name?: string }) =>
+    post<{ prompt: Prompt; current_version: PromptVersion }>('/api/v1/prompts/import', body)
   const listUsages = (promptId: string) => get<PromptUsage[]>(`/api/v1/prompts/${promptId}/usages`)
 
   return {
@@ -95,6 +97,7 @@ export function usePrompts() {
     setCurrentVersion,
     render,
     importFromAgent,
+    importFromSkill,
     listUsages,
   }
 }

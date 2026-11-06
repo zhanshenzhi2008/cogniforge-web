@@ -18,7 +18,7 @@
           {{ t('prompts.deletePrompt') }}
         </CfButton>
         <CfButton v-if="!active" tone="secondary" icon="i-lucide-download" @click="showImport = true">
-          {{ t('prompts.importAgent') }}
+          {{ t('prompts.import') }}
         </CfButton>
         <CfButton v-if="!active" tone="primary" icon="i-lucide-plus" @click="showCreate = true">
           {{ t('prompts.new') }}
@@ -270,8 +270,25 @@
     <CfModal v-model:open="showImport">
       <template #content>
         <div class="modal-body">
-          <h3>{{ t('prompts.importAgent') }}</h3>
-          <USelect v-model="importAgentId" class="w-full" :items="agentOptions" :placeholder="t('prompts.importAgentPh')" />
+          <h3>{{ t('prompts.import') }}</h3>
+          <div class="field">
+            <label class="field__label">{{ t('prompts.importFrom') }}</label>
+            <USelect v-model="importKind" class="w-full" :items="importKindOptions" />
+          </div>
+          <USelect
+            v-if="importKind === 'agent'"
+            v-model="importAgentId"
+            class="w-full"
+            :items="agentOptions"
+            :placeholder="t('prompts.importAgentPh')"
+          />
+          <USelect
+            v-else
+            v-model="importSkillId"
+            class="w-full"
+            :items="skillOptions"
+            :placeholder="t('prompts.importSkillPh')"
+          />
           <div class="modal-actions">
             <CfButton tone="secondary" @click="showImport = false">{{ t('common.cancel') }}</CfButton>
             <CfButton tone="primary" :loading="saving" @click="doImport">{{ t('common.create') }}</CfButton>
@@ -343,6 +360,7 @@ const toast = useToast()
 const config = useRuntimeConfig()
 const api = usePrompts()
 const { list: listAgents } = useAgents()
+const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 
 const loading = ref(true)
@@ -356,8 +374,15 @@ const varDefs = ref<PromptVarDef[]>([])
 const showCreate = ref(false)
 const showVer = ref(false)
 const showImport = ref(false)
+const importKind = ref<'agent' | 'skill'>('agent')
 const importAgentId = ref('')
+const importSkillId = ref('')
 const agentOptions = ref<{ label: string; value: string }[]>([])
+const skillOptions = ref<{ label: string; value: string }[]>([])
+const importKindOptions = computed(() => [
+  { label: t('prompts.importAgent'), value: 'agent' },
+  { label: t('prompts.importSkill'), value: 'skill' },
+])
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const form = reactive({ name: '', description: '', content: '' })
 const verForm = reactive({ content: '', changelog: '', publish: true })
@@ -644,9 +669,12 @@ const doPublish = async (v: PromptVersion) => {
 }
 
 const doImport = async () => {
-  if (!importAgentId.value) return
+  if (importKind.value === 'agent' && !importAgentId.value) return
+  if (importKind.value === 'skill' && !importSkillId.value) return
   saving.value = true
-  const res = await api.importFromAgent({ agent_id: importAgentId.value })
+  const res = importKind.value === 'skill'
+    ? await api.importFromSkill({ skill_id: importSkillId.value })
+    : await api.importFromAgent({ agent_id: importAgentId.value })
   saving.value = false
   if (res.error) {
     toast.add({ title: res.error, color: 'error' })
@@ -654,6 +682,7 @@ const doImport = async () => {
   }
   showImport.value = false
   importAgentId.value = ''
+  importSkillId.value = ''
   const ver = res.data?.current_version
   toast.add({
     title: ver && ver.version > 1 ? t('prompts.importUpdated') : t('prompts.importCreated'),
@@ -666,6 +695,14 @@ const doImport = async () => {
 const loadAgents = async () => {
   const res = await listAgents()
   agentOptions.value = (res.data || []).map(a => ({ label: a.name, value: a.id }))
+}
+
+const loadSkills = async () => {
+  const res = await listSkills()
+  skillOptions.value = (res.data || []).map(s => ({
+    label: s.is_built_in ? `${s.name}` : s.name,
+    value: s.id,
+  }))
 }
 
 const loadModels = async () => {
@@ -811,6 +848,7 @@ const openCompare = () => {
 onMounted(() => {
   load()
   loadAgents()
+  loadSkills()
   loadModels()
 })
 </script>
