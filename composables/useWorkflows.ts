@@ -34,6 +34,7 @@ export interface WorkflowExecution {
   user_id: string
   status: 'pending' | 'running' | 'completed' | 'failed' | 'debugging' | 'cancelled' | 'waiting' | 'succeeded'
   wait_reason?: string
+  wait_until?: string | null
   input: Record<string, any>
   output: string
   error: string
@@ -195,6 +196,40 @@ export const useWorkflows = () => {
     }
   }
 
+  const approveExecution = async (
+    _id: string,
+    executionId: string,
+    comment?: string,
+  ): Promise<{ executionId?: string; status?: string; error?: string }> => {
+    try {
+      const res = await api.post<{ execution_id: string; status: string }>(
+        `/api/v1/workflows/executions/${executionId}/approve`,
+        comment ? { comment } : {},
+      )
+      if (res.error) return { error: res.error }
+      return { executionId: res.data?.execution_id, status: res.data?.status }
+    } catch (err: any) {
+      return { error: err.message || '审批失败' }
+    }
+  }
+
+  const rejectExecution = async (
+    _id: string,
+    executionId: string,
+    reason?: string,
+  ): Promise<{ error?: string }> => {
+    try {
+      const res = await api.post(
+        `/api/v1/workflows/executions/${executionId}/reject`,
+        reason ? { reason } : {},
+      )
+      if (res.error) return { error: res.error }
+      return {}
+    } catch (err: any) {
+      return { error: err.message || '拒绝失败' }
+    }
+  }
+
   const debug = async (id: string, input?: Record<string, any>, breakpoints?: string[]): Promise<{ executionId?: string; error?: string }> => {
     try {
       const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/debug`, { input, node_breakpoints: breakpoints })
@@ -216,6 +251,8 @@ export const useWorkflows = () => {
     listExecutions,
     cancelExecution,
     resumeExecution,
+    approveExecution,
+    rejectExecution,
     debug,
   }
 }

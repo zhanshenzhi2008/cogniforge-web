@@ -70,9 +70,32 @@
           reason: currentExecution.wait_reason || 'approval',
           msg: currentExecution.error || '',
         }) }}
+        <template v-if="currentExecution.wait_until">
+          · {{ t('editor.waitUntil', { time: formatWaitUntil(currentExecution.wait_until) }) }}
+        </template>
       </span>
       <span v-else-if="isPolling" class="exec-bar__msg">{{ t('editor.polling') }}</span>
       <div class="exec-bar__actions">
+        <CfButton
+          v-if="currentExecution.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
+          tone="primary"
+          size="sm"
+          icon="i-lucide-check"
+          :loading="approving"
+          @click="handleApprove"
+        >
+          {{ t('editor.approve') }}
+        </CfButton>
+        <CfButton
+          v-if="currentExecution.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
+          tone="danger"
+          size="sm"
+          icon="i-lucide-x"
+          :loading="rejecting"
+          @click="handleReject"
+        >
+          {{ t('editor.reject') }}
+        </CfButton>
         <CfButton
           v-if="currentExecution.status === 'waiting'"
           tone="primary"
@@ -226,6 +249,15 @@
               :placeholder="t('editor.waitMessagePh')"
             />
           </div>
+          <div v-if="selectedNode.type === 'wait'" class="field">
+            <label class="field__label">{{ t('editor.waitTimeout') }}</label>
+            <UInput
+              v-model.number="nodeConfig.timeoutSec"
+              type="number"
+              class="w-full"
+              :placeholder="t('editor.waitTimeoutPh')"
+            />
+          </div>
 
           <div v-if="selectedNode.type === 'search'" class="field">
             <label class="field__label">{{ t('editor.query') }}</label>
@@ -275,7 +307,7 @@ definePageMeta({
 const route = useRoute()
 const toast = useToast()
 const { t } = useLocale()
-const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, debug } = useWorkflows()
+const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, approveExecution, rejectExecution, debug } = useWorkflows()
 const { list: listModels } = useModels()
 
 const canvasRef = ref<HTMLElement>()
@@ -313,6 +345,7 @@ const nodeConfig = reactive({
   variable: '',
   waitReason: 'approval',
   waitMessage: '',
+  timeoutSec: 0,
 })
 
 const currentWorkflow = ref<any>(null)
@@ -325,6 +358,8 @@ const isDebugging = ref(false)
 const debugPollInterval = ref<number | null>(null)
 const isPolling = ref(false)
 const resuming = ref(false)
+const approving = ref(false)
+const rejecting = ref(false)
 
 const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
 
@@ -541,6 +576,7 @@ const handleNodeClick = (event: any) => {
   nodeConfig.variable = event.node.data?.variable || ''
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
+  nodeConfig.timeoutSec = Number(event.node.data?.timeoutSec || event.node.data?.timeout_sec || 0)
   configDrawer.value = true
 }
 
@@ -564,6 +600,7 @@ const saveNodeConfig = () => {
       variable: nodeConfig.variable,
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
+      timeoutSec: nodeConfig.timeoutSec || 0,
     }
   }
 
@@ -602,9 +639,14 @@ const handleSave = async () => {
           variable: n.data?.variable,
           waitReason: n.data?.waitReason,
           waitMessage: n.data?.waitMessage,
+          timeoutSec: n.data?.timeoutSec || 0,
         },
         config: n.type === 'wait'
-          ? { reason: n.data?.waitReason || 'approval', message: n.data?.waitMessage || '' }
+          ? {
+              reason: n.data?.waitReason || 'approval',
+              message: n.data?.waitMessage || '',
+              timeout_sec: Number(n.data?.timeoutSec || 0) || undefined,
+            }
           : undefined,
       })),
       edges: edges.value.map(e => ({
@@ -705,10 +747,52 @@ const handleResume = async () => {
       return
     }
     toast.add({ title: t('editor.resumed'), color: 'success' })
-    currentExecution.value = { ...currentExecution.value, status: 'running', wait_reason: '' }
+    currentExecution.value = { ...currentExecution.value, status: 'running', wait_reason: '', wait_until: null }
     startExecutionPoll(currentExecution.value.id)
   } finally {
     resuming.value = false
+  }
+}
+
+const formatWaitUntil = (v: string) => {
+  try {
+    return new Date(v).toLocaleString()
+  } catch {
+    return v
+  }
+}
+
+const handleApprove = async () => {
+  if (!currentExecution.value?.id) return
+  approving.value = true
+  try {
+    const res = await approveExecution(workflowId.value, currentExecution.value.id)
+    if (res.error) {
+      toast.add({ title: res.error || t('editor.approveFail'), color: 'error' })
+      return
+    }
+    toast.add({ title: t('editor.approved'), color: 'success' })
+    currentExecution.value = { ...currentExecution.value, status: 'running', wait_reason: '', wait_until: null }
+    startExecutionPoll(currentExecution.value.id)
+  } finally {
+    approving.value = false
+  }
+}
+
+const handleReject = async () => {
+  if (!currentExecution.value?.id) return
+  rejecting.value = true
+  try {
+    const res = await rejectExecution(workflowId.value, currentExecution.value.id)
+    if (res.error) {
+      toast.add({ title: res.error || t('editor.rejectFail'), color: 'error' })
+      return
+    }
+    stopPolling()
+    currentExecution.value = { ...currentExecution.value, status: 'failed', wait_reason: '', wait_until: null }
+    toast.add({ title: t('editor.rejected'), color: 'warning' })
+  } finally {
+    rejecting.value = false
   }
 }
 

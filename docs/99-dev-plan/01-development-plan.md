@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-10-26 | v1.21 | W3：审批通过/拒绝；wait 超时秒数配置 | orjrs |
 | 2026-10-26 | v1.20 | W2：wait 节点 + 执行条继续/取消；修正 executions API 路径 | orjrs |
 | 2026-10-26 | v1.19 | W1：调试轮询按 node_runs 高亮画布节点 | orjrs |
 | 2026-10-26 | v1.18 | 阶段十八：工作流画布跟 Checkpoint/节点高亮（设计同步） | orjrs |
@@ -26,6 +27,11 @@
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
 
+## [变更] W3 审批 UI（2026-10-26）
+
+- **包含代码**：执行条「审批通过 / 拒绝」；wait 节点 `timeoutSec`；`approveExecution` / `rejectExecution`
+- **行为**：`wait_reason=approval` 时展示审批按钮；展示 `wait_until`
+
 ## [变更] W2 wait + resume UI（2026-10-26）
 
 - **包含代码**：`pages/workflows/[id].vue` 执行条；`WorkflowCanvas` wait 节点；`useWorkflows.resumeExecution`；修正 `GET/POST .../workflows/executions/:id`
@@ -46,6 +52,7 @@
   | W0 | 调试/结果展示真实 LLM/Agent 输出 |
   | W1 | ✅ 画布按 node_runs 高亮 |
   | W2 | ✅ 「继续 / 取消」；waiting 提示；wait 节点 |
+  | W3 | ✅ 审批通过 / 拒绝；超时秒数 |
 
 ## [变更] 提示词 P1：试跑 / 变量表单 / 顶栏邮箱（2026-10-24）
 
