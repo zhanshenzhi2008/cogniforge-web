@@ -181,7 +181,8 @@ test.describe('prompts e2e', () => {
 
     await expect(page.getByRole('heading', { name: '客服人设' })).toBeVisible()
     await expect(page.getByText('你是客服助手')).toBeVisible()
-    await expect(page.getByText('v1')).toBeVisible()
+    // 下拉也会含「v1 · 已发布 · 当前」，必须 exact，否则 strict mode 命中两个节点
+    await expect(page.getByText('v1', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: '发布新版本' }).click()
     await page.getByPlaceholder('System prompt 正文').fill('你是严格的客服，只答政策')
@@ -189,7 +190,7 @@ test.describe('prompts e2e', () => {
     await page.getByRole('button', { name: '创建' }).click()
 
     await expect(page.getByText('你是严格的客服，只答政策')).toBeVisible()
-    await expect(page.getByText('v2')).toBeVisible()
+    await expect(page.getByText('v2', { exact: true })).toBeVisible()
 
     // 删除旧版 v1（列表按 version DESC，v2 在上；卡片内最后一个 icon 为删）
     const verCards = page.locator('.ver-card')
