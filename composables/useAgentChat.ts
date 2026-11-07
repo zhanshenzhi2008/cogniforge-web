@@ -12,6 +12,11 @@ export interface ChatMessage {
 export interface AgentChatRequest {
   messages: ChatMessage[]
   stream?: boolean
+  /** 覆盖绑定 Prompt 的 {{var}}（17.14） */
+  variables?: Record<string, string>
+  model?: string
+  temperature?: number
+  max_tokens?: number
 }
 
 export interface AgentChatResponse {
@@ -41,11 +46,12 @@ export const useAgentChat = () => {
   const chat = async (
     agentId: string,
     messages: ChatMessage[],
+    extras?: Pick<AgentChatRequest, 'variables' | 'model' | 'temperature' | 'max_tokens'>,
   ): Promise<{ data?: AgentChatResponse; error?: string }> => {
     try {
       const res = await api.post<AgentChatResponse>(
         `/api/v1/agents/${agentId}/chat`,
-        { messages, stream: false },
+        { messages, stream: false, ...extras },
       )
       return { data: res.data }
     } catch (err: any) {
@@ -60,6 +66,7 @@ export const useAgentChat = () => {
     agentId: string,
     messages: ChatMessage[],
     onChunk: (content: string, done: boolean) => void,
+    extras?: Pick<AgentChatRequest, 'variables' | 'model' | 'temperature' | 'max_tokens'>,
   ): Promise<void> => {
     streaming.value = true
     error.value = null
@@ -75,7 +82,7 @@ export const useAgentChat = () => {
             'Content-Type': 'application/json',
             Authorization: token ? `Bearer ${token}` : '',
           },
-          body: JSON.stringify({ messages, stream: true }),
+          body: JSON.stringify({ messages, stream: true, ...extras }),
         },
       )
 

@@ -294,9 +294,11 @@
         <PlaygroundConfigPanel
           v-model:selected-agent="selectedAgent"
           v-model:selected-model="selectedModel"
+          v-model:prompt-vars="promptVars"
           :selected-agent-info="selectedAgentInfo"
           :agent-options="agentOptions"
           :model-options="modelOptions"
+          :prompt-var-defs="promptVarDefs"
           :params="params"
           @agent-change="handleAgentChange"
         />
@@ -328,7 +330,13 @@ import {
   type PendingAttachment,
 } from '~/utils/chatAttachments'
 import { apiUrl } from '~/utils/apiBase'
+import {
+  buildVariableMap,
+  initVarFormValues,
+  missingRequiredVars,
+} from '@/utils/promptVars'
 import type { Agent } from '@/composables/useAgents'
+import type { PromptVarDef } from '@/composables/usePrompts'
 import type {
   ConversationAttachment,
   ConversationMessage,
@@ -374,6 +382,7 @@ const config = useRuntimeConfig()
 const toast = useToast()
 const { t } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
+const { getOne: getPrompt } = usePrompts()
 const { list: listConversations, get: getConversation, create: createConversation, update: updateConversation, remove: removeConversation } = useConversations()
 const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
 const { get } = useApi()
@@ -402,6 +411,9 @@ const agents = ref<Agent[]>([])
 const NONE_AGENT = '__none__'
 const selectedAgent = ref(NONE_AGENT)
 const selectedAgentInfo = ref<Agent | null>(null)
+/** 绑定 Prompt 的变量定义（17.14） */
+const promptVarDefs = ref<PromptVarDef[]>([])
+const promptVars = ref<Record<string, string>>({})
 const abortController = ref<AbortController | null>(null)
 const configOpen = ref(false)
 const historyOpen = ref(false)
@@ -746,11 +758,36 @@ const fetchAgents = async () => {
   }
 }
 
+const clearPromptVars = () => {
+  promptVarDefs.value = []
+  promptVars.value = {}
+}
+
+const loadPromptVarsForAgent = async (agent: Agent | null) => {
+  const promptId = agent?.prompt_id?.trim()
+  if (!promptId) {
+    clearPromptVars()
+    return
+  }
+  const res = await getPrompt(promptId)
+  if (res.error) {
+    clearPromptVars()
+    notifyError(res.error)
+    return
+  }
+  const defs = (res.data?.prompt?.variables || [])
+    .map(v => ({ ...v }))
+    .filter(v => !!v.name?.trim())
+  promptVarDefs.value = defs
+  promptVars.value = initVarFormValues(defs)
+}
+
 const handleAgentChange = async (agentId: string | undefined | null) => {
   const id = !agentId || agentId === NONE_AGENT ? NONE_AGENT : agentId
   selectedAgent.value = id
   if (id === NONE_AGENT) {
     selectedAgentInfo.value = null
+    clearPromptVars()
     selectedModel.value = models.value[0]?.id || ''
     return
   }
@@ -763,6 +800,7 @@ const handleAgentChange = async (agentId: string | undefined | null) => {
   if (res.data?.model) {
     selectedModel.value = res.data.model
   }
+  await loadPromptVarsForAgent(res.data || null)
 }
 
 const fetchModels = async () => {
@@ -1112,6 +1150,17 @@ const sendMessage = async () => {
     return
   }
 
+  // 17.14：选中绑定 Prompt 的 Agent 时，校验并带上 variables
+  let agentVariables: Record<string, string> | undefined
+  if (selectedAgent.value !== NONE_AGENT && promptVarDefs.value.length) {
+    const missing = missingRequiredVars(promptVarDefs.value, promptVars.value)
+    if (missing.length) {
+      notifyError(t('play.promptVarsMissing', { names: missing.join(', ') }))
+      return
+    }
+    agentVariables = buildVariableMap(promptVarDefs.value, promptVars.value)
+  }
+
   const userMessage = inputMessage.value.trim()
   const images = [...pendingImages.value]
   const attachments = toSendAttachments(pendingAttachments.value)
@@ -1154,6 +1203,9 @@ const sendMessage = async () => {
     // 无 Agent 时把「网络搜索」开关映射为 mcp_servers（Agent 自带 tools）
     if (selectedAgent.value === NONE_AGENT && enable_web_search) {
       body.mcp_servers = ['web_search']
+    }
+    if (agentVariables && Object.keys(agentVariables).length) {
+      body.variables = agentVariables
     }
 
     const response = await fetch(endpoint, {

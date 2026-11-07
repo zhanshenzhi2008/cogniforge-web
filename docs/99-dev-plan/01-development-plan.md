@@ -4,6 +4,8 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-07 | v1.24 | 17.14：Playground Agent 对话传提示词变量 | orjrs |
+| 2026-11-07 | v1.23 | Agent：构成一览 + 新建表单三段分组 | orjrs |
 | 2026-11-06 | v1.22 | 提示词导入：Agent 或 Skill | orjrs |
 | 2026-10-26 | v1.21 | W3：审批通过/拒绝；wait 超时秒数配置 | orjrs |
 | 2026-10-26 | v1.20 | W2：wait 节点 + 执行条继续/取消；修正 executions API 路径 | orjrs |
@@ -27,6 +29,18 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 17.14 Playground 提示词变量（2026-11-07）
+
+- **行为**：选中绑定 Prompt 的 Agent → 参数面板出变量表单；发送 `/agents/:id/chat` 带 `variables`
+- **包含代码**：`pages/playground.vue`、`PlaygroundConfigPanel.vue`、`useAgentChat.ts`、i18n
+- **主仓**：`POST /agents/:id/chat` 已支持 `variables`；设计见 `09-prompt-engineering-design.md` v2.6
+
+## [变更] Agent 构成一览与新建分组（2026-11-07）
+
+- **详情**：构成卡片展示模型 / 人设 / MCP / 来源 Skill（可读摘要，运行时仍走库表）
+- **新建/编辑**：分段「从哪开始 → 它是谁 → 它能用什么」；空白或 Skill 预填
+- **包含代码**：`pages/agents.vue`、`i18n/messages.ts`
 
 ## [变更] 提示词从 Skill 导入（2026-11-06）
 

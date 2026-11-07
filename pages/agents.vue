@@ -93,10 +93,10 @@
       v-model:open="dialogVisible"
       :title="dialogTitle"
       :description="dialogDescription"
-      :ui="{ content: 'sm:max-w-lg' }"
+      :ui="{ content: 'sm:max-w-xl' }"
     >
       <template #body>
-        <!-- View: read-only detail sheet -->
+        <!-- View: composition overview + detail -->
         <div v-if="dialogMode === 'view' && viewingAgent" class="detail-sheet">
           <div class="detail-hero">
             <span class="detail-hero-icon">
@@ -117,49 +117,52 @@
             </div>
           </div>
 
+          <section class="compose-card" aria-label="composition">
+            <div class="compose-card__title">{{ t('agents.composeTitle') }}</div>
+            <p class="compose-card__sub">{{ t('agents.composeSub') }}</p>
+            <dl class="compose-grid">
+              <div class="compose-item">
+                <dt>{{ t('common.model') }}</dt>
+                <dd>{{ viewingAgent.model || '—' }}</dd>
+              </div>
+              <div class="compose-item">
+                <dt>{{ t('agents.persona') }}</dt>
+                <dd>{{ compositionPersona(viewingAgent) }}</dd>
+              </div>
+              <div class="compose-item">
+                <dt>{{ t('agents.tools') }}</dt>
+                <dd>
+                  <div v-if="viewingAgent.tools?.length" class="detail-tools">
+                    <UBadge
+                      v-for="tool in viewingAgent.tools"
+                      :key="tool"
+                      size="sm"
+                      variant="subtle"
+                      color="neutral"
+                    >
+                      {{ toolLabel(tool) }}
+                    </UBadge>
+                  </div>
+                  <span v-else>{{ t('agents.composeNone') }}</span>
+                </dd>
+              </div>
+              <div class="compose-item">
+                <dt>{{ t('agents.sourceSkill') }}</dt>
+                <dd>{{ compositionSkill(viewingAgent) }}</dd>
+              </div>
+            </dl>
+          </section>
+
           <dl class="detail-list">
-            <div class="detail-row">
-              <dt>{{ t('common.name') }}</dt>
-              <dd>{{ viewingAgent.name }}</dd>
-            </div>
             <div class="detail-row detail-row--block">
               <dt>{{ t('common.description') }}</dt>
               <dd>{{ viewingAgent.description || '—' }}</dd>
-            </div>
-            <div class="detail-row">
-              <dt>{{ t('common.model') }}</dt>
-              <dd>{{ viewingAgent.model }}</dd>
-            </div>
-            <div class="detail-row">
-              <dt>{{ t('common.status') }}</dt>
-              <dd>{{ viewingAgent.status === 'active' ? t('common.enabled') : t('common.disabled') }}</dd>
-            </div>
-            <div class="detail-row">
-              <dt>{{ t('agents.boundPrompt') }}</dt>
-              <dd>{{ viewingAgent.prompt_id ? (promptOptions.find(p => p.value === viewingAgent!.prompt_id)?.label || viewingAgent.prompt_id) : '—' }}</dd>
             </div>
             <div class="detail-row detail-row--block">
               <dt>{{ t('agents.systemPrompt') }}</dt>
               <dd>
                 <pre v-if="!viewingAgent.prompt_id && viewingAgent.system_prompt" class="detail-pre">{{ viewingAgent.system_prompt }}</pre>
                 <span v-else-if="viewingAgent.prompt_id">{{ t('agents.boundPromptActive') }}</span>
-                <span v-else>—</span>
-              </dd>
-            </div>
-            <div class="detail-row">
-              <dt>{{ t('agents.tools') }}</dt>
-              <dd>
-                <div v-if="viewingAgent.tools?.length" class="detail-tools">
-                  <UBadge
-                    v-for="tool in viewingAgent.tools"
-                    :key="tool"
-                    size="sm"
-                    variant="subtle"
-                    color="neutral"
-                  >
-                    {{ toolLabel(tool) }}
-                  </UBadge>
-                </div>
                 <span v-else>—</span>
               </dd>
             </div>
@@ -174,95 +177,116 @@
           </dl>
         </div>
 
-        <!-- Create / Edit form -->
+        <!-- Create / Edit form: start → who → can use -->
         <form v-else id="agent-form" class="form-grid" @submit.prevent="handleSubmit">
-          <!-- SKILL 快速选择（仅创建时显示） -->
-          <div v-if="dialogMode === 'create' && skills.length > 0" class="skill-picker">
-            <span class="skill-picker__label">{{ t('agents.fromSkill') }}</span>
-            <div class="skill-picker__items">
-              <button
-                v-for="skill in skills"
-                :key="skill.id"
-                type="button"
-                class="skill-chip"
-                :class="{ 'skill-chip--active': form.skill_id === skill.id }"
-                @click="applySkill(skill)"
-              >
-                <span>{{ skill.icon }}</span>
-                <span>{{ skill.name }}</span>
-              </button>
+          <section v-if="dialogMode === 'create' && skills.length > 0" class="form-section">
+            <div class="form-section__head">
+              <h4 class="form-section__title">{{ t('agents.sectionStart') }}</h4>
+              <p class="form-section__hint">{{ t('agents.sectionStartHint') }}</p>
             </div>
-          </div>
+            <div class="skill-picker">
+              <div class="skill-picker__items">
+                <button
+                  type="button"
+                  class="skill-chip"
+                  :class="{ 'skill-chip--active': !form.skill_id }"
+                  @click="clearSkillTemplate"
+                >
+                  <UIcon name="i-lucide-file" class="size-3.5" />
+                  <span>{{ t('agents.startBlank') }}</span>
+                </button>
+                <button
+                  v-for="skill in skills"
+                  :key="skill.id"
+                  type="button"
+                  class="skill-chip"
+                  :class="{ 'skill-chip--active': form.skill_id === skill.id }"
+                  @click="applySkill(skill)"
+                >
+                  <span>{{ skill.icon }}</span>
+                  <span>{{ skill.name }}</span>
+                </button>
+              </div>
+            </div>
+          </section>
 
-          <div class="field">
-            <label class="field__label">{{ t('common.name') }}</label>
-            <UInput v-model="form.name" class="w-full" :placeholder="t('agents.namePh')" />
-            <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
-          </div>
-
-          <div class="field">
-            <label class="field__label">{{ t('common.description') }}</label>
-            <UTextarea
-              v-model="form.description"
-              class="w-full"
-              :rows="2"
-              :placeholder="t('common.optionalDesc')"
-            />
-          </div>
-
-          <div class="field">
-            <label class="field__label">{{ t('common.model') }}</label>
-            <USelect
-              v-model="form.model"
-              class="w-full"
-              :items="modelOptions"
-              :placeholder="t('agents.pickModel')"
-            />
-            <p v-if="errors.model" class="field__error">{{ errors.model }}</p>
-          </div>
-
-          <div class="field">
-            <label class="field__label">{{ t('agents.boundPrompt') }}</label>
-            <USelect
-              v-model="form.prompt_id"
-              class="w-full"
-              :items="promptOptions"
-              :placeholder="t('agents.boundPromptPh')"
-            />
-            <p class="field__hint">{{ t('agents.boundPromptHint') }}</p>
-          </div>
-
-          <div class="field">
-            <label class="field__label">{{ t('agents.systemPrompt') }}</label>
-            <UTextarea
-              v-model="form.system_prompt"
-              class="w-full"
-              :rows="4"
-              :placeholder="t('agents.systemPh')"
-              :disabled="!!form.prompt_id"
-            />
-          </div>
-
-          <div class="field">
-            <label class="field__label">{{ t('agents.tools') }}</label>
-            <div class="tools">
-              <UCheckbox
-                v-for="tool in toolOptions"
-                :key="tool.value"
-                :model-value="form.tools.includes(tool.value)"
-                @update:model-value="(checked: boolean) => toggleTool(tool.value, checked)"
-                :label="tool.label"
+          <section class="form-section">
+            <div class="form-section__head">
+              <h4 class="form-section__title">{{ t('agents.sectionWho') }}</h4>
+              <p class="form-section__hint">{{ t('agents.sectionWhoHint') }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('common.name') }}</label>
+              <UInput v-model="form.name" class="w-full" :placeholder="t('agents.namePh')" />
+              <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('common.description') }}</label>
+              <UTextarea
+                v-model="form.description"
+                class="w-full"
+                :rows="2"
+                :placeholder="t('common.optionalDesc')"
               />
             </div>
-          </div>
-
-          <div class="field field--row">
-            <label class="field__label">{{ t('common.status') }}</label>
-            <div class="status-row">
-              <USwitch v-model="statusEnabled" />
-              <span>{{ statusEnabled ? t('common.enabled') : t('common.disabled') }}</span>
+            <div class="field">
+              <label class="field__label">{{ t('agents.boundPrompt') }}</label>
+              <USelect
+                v-model="form.prompt_id"
+                class="w-full"
+                :items="promptOptions"
+                :placeholder="t('agents.boundPromptPh')"
+              />
+              <p class="field__hint">{{ t('agents.boundPromptHint') }}</p>
             </div>
-          </div>
+            <div class="field">
+              <label class="field__label">{{ t('agents.systemPrompt') }}</label>
+              <UTextarea
+                v-model="form.system_prompt"
+                class="w-full"
+                :rows="4"
+                :placeholder="t('agents.systemPh')"
+                :disabled="!!form.prompt_id"
+              />
+            </div>
+          </section>
+
+          <section class="form-section">
+            <div class="form-section__head">
+              <h4 class="form-section__title">{{ t('agents.sectionCan') }}</h4>
+              <p class="form-section__hint">{{ t('agents.sectionCanHint') }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('common.model') }}</label>
+              <USelect
+                v-model="form.model"
+                class="w-full"
+                :items="modelOptions"
+                :placeholder="t('agents.pickModel')"
+              />
+              <p class="field__hint">{{ t('agents.modelKeyHint') }}</p>
+              <p v-if="errors.model" class="field__error">{{ errors.model }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('agents.tools') }}</label>
+              <div class="tools">
+                <UCheckbox
+                  v-for="tool in toolOptions"
+                  :key="tool.value"
+                  :model-value="form.tools.includes(tool.value)"
+                  :label="tool.label"
+                  @update:model-value="(checked: boolean) => toggleTool(tool.value, checked)"
+                />
+              </div>
+            </div>
+            <div class="field field--row">
+              <label class="field__label">{{ t('common.status') }}</label>
+              <div class="status-row">
+                <USwitch v-model="statusEnabled" />
+                <span>{{ statusEnabled ? t('common.enabled') : t('common.disabled') }}</span>
+              </div>
+            </div>
+          </section>
         </form>
       </template>
 
@@ -416,21 +440,47 @@ const fetchModelOptions = async () => {
   }
 }
 
-// 从 SKILL 加载配置
+function skillSystemPrompt(skill: Skill) {
+  const parts: string[] = []
+  if (skill.description) parts.push(skill.description)
+  if (skill.instructions) parts.push(skill.instructions)
+  return parts.join('\n\n')
+}
+
 const applySkill = (skill: Skill) => {
-  form.name = skill.name + ' (副本)'
-  form.description = skill.description
-  form.system_prompt = skill.system_prompt
+  form.skill_id = skill.id
+  form.name = `${skill.name} (副本)`
+  form.description = skill.description || ''
+  form.system_prompt = skillSystemPrompt(skill)
+  form.prompt_id = ''
   form.model = skill.model || form.model || firstConfiguredModel()
-  form.tools = [...skill.mcp_servers]
-  if (skill.memory_turns) {
-    // memory_turns 暂时不在表单里，等 UI 做完再加
-  }
-  toast.add({ title: `已应用「${skill.name}」模板`, color: 'success' })
+  form.tools = [...(skill.mcp_servers || [])]
+  toast.add({ title: t('agents.skillApplied', { name: skill.name }), color: 'success' })
+}
+
+const clearSkillTemplate = () => {
+  form.skill_id = ''
 }
 
 function toolLabel(value: string) {
   return toolOptions.value.find((item) => item.value === value)?.label || value
+}
+
+function compositionPersona(agent: Agent) {
+  if (agent.prompt_id) {
+    const label = promptOptions.value.find(p => p.value === agent.prompt_id)?.label
+    return label && label !== '—'
+      ? t('agents.composePrompt', { name: label })
+      : t('agents.composePromptBound', { id: agent.prompt_id })
+  }
+  if (agent.system_prompt?.trim()) return t('agents.composeInline')
+  return t('agents.composeNone')
+}
+
+function compositionSkill(agent: Agent) {
+  if (!agent.skill_id) return t('agents.composeNone')
+  const sk = skills.value.find(s => s.id === agent.skill_id)
+  return sk ? sk.name : agent.skill_id
 }
 
 function toggleTool(value: string, checked: boolean | string) {
@@ -661,31 +711,112 @@ onMounted(() => {
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.form-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.form-section__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.form-section__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.form-section__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.4;
 }
 
 .skill-picker {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--cf-line);
-  background: color-mix(in oklab, var(--cf-accent) 4%, transparent);
-}
-
-.skill-picker__label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--cf-ink-soft);
 }
 
 .skill-picker__items {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.field__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.4;
+}
+
+.compose-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in oklab, var(--cf-accent) 5%, var(--cf-bg-elevated, #fff));
+}
+
+.compose-card__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.compose-card__sub {
+  margin: 4px 0 10px;
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.4;
+}
+
+.compose-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.compose-item {
+  min-width: 0;
+}
+
+.compose-item dt {
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--cf-ink-soft);
+}
+
+.compose-item dd {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--cf-ink);
+  word-break: break-word;
+}
+
+@media (max-width: 520px) {
+  .compose-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .skill-chip {

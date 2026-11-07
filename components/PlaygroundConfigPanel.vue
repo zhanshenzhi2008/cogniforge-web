@@ -35,6 +35,22 @@
           <p class="meta-desc">{{ selectedAgentInfo.description || t('common.noDesc') }}</p>
         </div>
       </div>
+      <div v-if="hasAgent && promptVarDefs.length" class="agent-vars">
+        <div class="card-header card-header--sub">
+          <UIcon name="i-lucide-braces" class="size-3.5" />
+          <span>{{ t('play.promptVars') }}</span>
+        </div>
+        <PromptVarForm
+          :defs="promptVarDefs"
+          :model-value="promptVars"
+          :hint="t('play.promptVarsHint')"
+          :required-label="t('play.varRequired')"
+          @update:model-value="emit('update:promptVars', $event)"
+        />
+      </div>
+      <p v-else-if="hasAgent && selectedAgentInfo?.prompt_id && !promptVarDefs.length" class="param-hint">
+        {{ t('play.promptVarsNone') }}
+      </p>
     </section>
 
     <section class="config-block">
@@ -156,6 +172,8 @@
 
 <script setup lang="ts">
 import type { Agent } from '@/composables/useAgents'
+import type { PromptVarDef } from '@/composables/usePrompts'
+import PromptVarForm from '@/components/PromptVarForm.vue'
 
 const props = defineProps<{
   showBrand?: boolean
@@ -164,6 +182,8 @@ const props = defineProps<{
   selectedAgentInfo: Agent | null
   agentOptions: Array<{ label: string; value: string }>
   modelOptions: Array<{ label: string; value: string }>
+  promptVarDefs?: PromptVarDef[]
+  promptVars?: Record<string, string>
   params: {
     temperature: number
     max_tokens: number
@@ -178,10 +198,13 @@ const props = defineProps<{
 const { t } = useLocale()
 const NONE_AGENT = '__none__'
 const hasAgent = computed(() => !!props.selectedAgent && props.selectedAgent !== NONE_AGENT)
+const promptVarDefs = computed(() => props.promptVarDefs || [])
+const promptVars = computed(() => props.promptVars || {})
 
 const emit = defineEmits<{
   (e: 'update:selectedAgent', value: string): void
   (e: 'update:selectedModel', value: string): void
+  (e: 'update:promptVars', value: Record<string, string>): void
   (e: 'agent-change', value: string): void
 }>()
 
@@ -296,5 +319,17 @@ function onAgentChange(value: string) {
 .param-hint {
   font-size: 11px;
   color: var(--cf-ink-soft);
+}
+
+.card-header--sub {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.agent-vars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
 }
 </style>
