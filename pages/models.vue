@@ -281,6 +281,10 @@
 
           <dl class="detail-list">
             <div class="detail-row">
+              <dt>{{ t('models.vendor') }}</dt>
+              <dd>{{ providerLabel(viewingProvider.provider) }}</dd>
+            </div>
+            <div class="detail-row">
               <dt>{{ t('models.defaultModel') }}</dt>
               <dd><code class="model-code">{{ viewingProvider.default_model || '—' }}</code></dd>
             </div>
@@ -332,22 +336,35 @@
         <!-- Create / Edit form -->
         <form v-else id="provider-form" class="form-grid" @submit.prevent="handleSubmit">
           <div class="field">
-            <label class="field__label">{{ t('models.providerType') }}</label>
-            <div class="provider-type-grid" :class="{ 'is-locked': dialogMode === 'edit' }">
+            <label class="field__label">{{ t('models.vendor') }}</label>
+            <p class="field__hint">{{ t('models.presetHint') }}</p>
+            <div class="provider-type-grid">
               <div
                 v-for="[key, meta] in Object.entries(PROVIDER_META)"
                 :key="key"
                 class="provider-type-option"
-                :class="{ active: form.provider === key, disabled: dialogMode === 'edit' && form.provider !== key }"
-                @click="dialogMode === 'create' && selectProvider(key)"
+                :class="{ active: form.provider === key }"
+                @click="selectProvider(key)"
               >
                 <span class="option-icon">{{ meta.icon }}</span>
                 <span class="option-label" :class="meta.local ? 'local-hint' : ''">{{ meta.label }}</span>
                 <span v-if="meta.local" class="local-badge">{{ t('models.local') }}</span>
               </div>
             </div>
+            <div v-if="form.provider" class="vendor-preview">
+              <span class="vendor-preview-kicker">{{ t('models.cardPreviewKicker') }}</span>
+              <span class="provider-name">{{ form.name.trim() || t('models.cardPreviewName') }}</span>
+              <span class="provider-type">{{ cardVendorLabel }}</span>
+            </div>
+            <p v-else class="vendor-preview is-empty">{{ t('models.cardPreviewEmpty') }}</p>
+            <p v-if="vendorMismatch" class="field__hint vendor-mismatch">
+              <span>{{ t('models.urlLooksLike', { label: urlVendorLabel }) }}</span>
+              <button type="button" class="vendor-fix" @click="adoptUrlVendor">
+                {{ t('models.useThisVendor', { label: urlVendorLabel }) }}
+              </button>
+            </p>
+            <p v-if="form.provider === 'custom'" class="field__hint">{{ t('models.customHint') }}</p>
             <p v-if="errors.provider" class="field__error">{{ errors.provider }}</p>
-            <p v-if="dialogMode === 'edit'" class="field__hint">{{ t('models.typeLocked') }}</p>
           </div>
 
           <div class="field">
@@ -359,6 +376,7 @@
               :color="errors.name ? 'error' : undefined"
               @update:model-value="errors.name = ''"
             />
+            <p class="field__hint">{{ t('models.nameVsVendor') }}</p>
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
           </div>
 
@@ -381,6 +399,7 @@
               v-model="form.base_url"
               class="w-full"
               :placeholder="t('models.baseDefault', { url: form.provider ? PROVIDER_META[form.provider]?.defaultBaseURL : '' })"
+              @update:model-value="onBaseUrlInput"
             />
           </div>
 
@@ -395,39 +414,48 @@
 
           <div v-if="form.capabilities.includes('chat')" class="field">
             <label class="field__label">{{ t('models.defaultModel') }}</label>
-            <USelect
-              v-if="suggestedModelItems.length"
-              :model-value="form.default_model"
-              :items="suggestedModelItems"
-              value-key="value"
-              class="w-full"
-              @update:model-value="form.default_model = $event"
-            />
             <UInput
-              v-else
               v-model="form.default_model"
               class="w-full"
               :placeholder="t('models.modelPh')"
             />
+            <div v-if="suggestedModelItems.length" class="suggest-chips">
+              <span class="suggest-chips-label">{{ t('models.suggestModels') }}</span>
+              <button
+                v-for="m in suggestedModelItems"
+                :key="m.value"
+                type="button"
+                class="suggest-chip"
+                :class="{ active: form.default_model === m.value }"
+                @click="form.default_model = m.value"
+              >
+                {{ m.label }}
+              </button>
+            </div>
             <p v-if="form.provider === 'deepseek'" class="field__hint">{{ t('models.deepseekHint') }}</p>
+            <p v-else-if="form.provider === 'zhipu'" class="field__hint">{{ t('models.zhipuHint') }}</p>
           </div>
 
           <div v-if="form.capabilities.includes('embedding')" class="field">
             <label class="field__label">{{ t('models.embeddingModel') }}</label>
-            <USelect
-              v-if="suggestedEmbeddingItems.length"
-              :model-value="form.embedding_model"
-              :items="suggestedEmbeddingItems"
-              value-key="value"
-              class="w-full"
-              @update:model-value="form.embedding_model = $event"
-            />
             <UInput
-              v-else
               v-model="form.embedding_model"
               class="w-full"
               :placeholder="t('models.embedModelPh')"
             />
+            <div v-if="suggestedEmbeddingItems.length" class="suggest-chips">
+              <span class="suggest-chips-label">{{ t('models.suggestModels') }}</span>
+              <button
+                v-for="m in suggestedEmbeddingItems"
+                :key="m.value"
+                type="button"
+                class="suggest-chip"
+                :class="{ active: form.embedding_model === m.value }"
+                @click="form.embedding_model = m.value"
+              >
+                {{ m.label }}
+              </button>
+            </div>
           </div>
 
           <div v-if="form.provider === 'openrouter'" class="field">
@@ -557,6 +585,8 @@
 import {
   useProviders,
   PROVIDER_META,
+  matchProviderByBaseURL,
+  providerLabel,
   type AIProvider,
   type CreateProviderInput,
   type UpdateProviderInput,
@@ -623,7 +653,7 @@ const testResult = ref<TestResult | null>(null)
 const testingProviderId = ref('')
 
 const form = reactive({
-  provider: 'openai',
+  provider: '',
   name: '',
   api_key: '',
   base_url: '',
@@ -667,13 +697,54 @@ function formatExtraHeaders(headers: Record<string, any> | null) {
   }
 }
 
+const cardVendorLabel = computed(() => providerLabel(form.provider))
+const urlVendor = computed(() => matchProviderByBaseURL(form.base_url))
+const urlVendorLabel = computed(() => providerLabel(urlVendor.value))
+const vendorMismatch = computed(() => !!urlVendor.value && !!form.provider && urlVendor.value !== form.provider)
+
+function fillSuggestionsIfEmpty(key: string) {
+  const meta = PROVIDER_META[key]
+  if (!form.default_model && meta?.suggestedModels?.length) {
+    form.default_model = meta.suggestedModels[0].value
+  }
+  if (!form.embedding_model && meta?.suggestedEmbeddingModels?.length) {
+    form.embedding_model = meta.suggestedEmbeddingModels[0].value
+  }
+}
+
+/** 点厂商：卡片小字改成它，并预填地址和推荐模型。地址、模型名之后仍可改。 */
 function selectProvider(key: string) {
   form.provider = key
-  form.base_url = PROVIDER_META[key]?.defaultBaseURL || ''
-  const suggested = PROVIDER_META[key]?.suggestedModels
-  if (dialogMode.value === 'create' && suggested?.length) {
+  const meta = PROVIDER_META[key]
+  if (meta?.defaultBaseURL) {
+    form.base_url = meta.defaultBaseURL
+  }
+  const suggested = meta?.suggestedModels
+  if (suggested?.length && (!form.default_model || dialogMode.value === 'create')) {
     form.default_model = suggested[0].value
   }
+  const emb = meta?.suggestedEmbeddingModels
+  if (emb?.length && (!form.embedding_model || dialogMode.value === 'create')) {
+    form.embedding_model = emb[0].value
+  }
+  errors.provider = ''
+}
+
+/** 还没选厂商时，按地址自动对上（例如贴了智谱地址就选智谱）。已选手动点选优先。 */
+function onBaseUrlInput(value?: string) {
+  const matched = matchProviderByBaseURL(value ?? form.base_url)
+  if (!matched || form.provider) return
+  form.provider = matched
+  fillSuggestionsIfEmpty(matched)
+  errors.provider = ''
+}
+
+/** 地址和当前厂商不一致时，只改卡片小字，保留已经填好的地址和模型名。 */
+function adoptUrlVendor() {
+  const key = matchProviderByBaseURL(form.base_url)
+  if (!key) return
+  form.provider = key
+  fillSuggestionsIfEmpty(key)
   errors.provider = ''
 }
 
@@ -831,6 +902,7 @@ const handleSubmit = async () => {
     if (dialogMode.value === 'edit') {
       const input: UpdateProviderInput = {
         name: form.name,
+        provider: form.provider,
         base_url: form.base_url,
         api_key: form.api_key || undefined,
         default_model: form.default_model,
@@ -874,10 +946,10 @@ const handleSubmit = async () => {
 }
 
 const resetForm = () => {
-  form.provider = 'openai'
+  form.provider = ''
   form.name = ''
   form.api_key = ''
-  form.base_url = PROVIDER_META['openai']?.defaultBaseURL || ''
+  form.base_url = ''
   form.default_model = ''
   form.embedding_model = ''
   form.capabilities = ['chat']
@@ -1346,6 +1418,45 @@ onMounted(() => {
 .status-badge.testing { color: #ca8a04; }
 .status-badge.testing .dot { background: #ca8a04; }
 
+.vendor-preview {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed color-mix(in srgb, var(--cf-accent) 45%, var(--cf-line));
+  background: color-mix(in srgb, var(--cf-accent) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vendor-preview.is-empty {
+  font-size: 13px;
+  color: var(--cf-ink-soft);
+}
+
+.vendor-preview-kicker {
+  font-size: 11px;
+  color: var(--cf-ink-soft);
+  margin-bottom: 4px;
+}
+
+.vendor-mismatch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.vendor-fix {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--cf-accent);
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .provider-type-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1405,6 +1516,40 @@ onMounted(() => {
   border-radius: 6px;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.suggest-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.suggest-chips-label {
+  width: 100%;
+  font-size: 11px;
+  color: var(--cf-ink-soft);
+}
+
+.suggest-chip {
+  border: 1px solid var(--cf-line);
+  background: color-mix(in srgb, var(--cf-panel, #fff) 88%, transparent);
+  color: var(--cf-ink);
+  font-size: 11px;
+  line-height: 1.3;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.suggest-chip:hover {
+  border-color: color-mix(in srgb, var(--cf-accent) 45%, var(--cf-line));
+}
+
+.suggest-chip.active {
+  border-color: var(--cf-accent);
+  background: color-mix(in srgb, var(--cf-accent) 12%, transparent);
 }
 
 .form-grid {

@@ -7,7 +7,7 @@ import { useApi } from './useApi'
 export interface AIProvider {
   id: string
   name: string
-  provider: string       // openai | anthropic | openrouter | azure | gemini | siliconeglow | deepseek
+  provider: string       // 厂商键，卡片第二行小字用它。openai | zhipu | deepseek | custom 等
   base_url: string
   default_model: string
   embedding_model: string
@@ -41,6 +41,7 @@ export interface CreateProviderInput {
 
 export interface UpdateProviderInput {
   name?: string
+  provider?: string
   base_url?: string
   api_key?: string
   default_model?: string
@@ -57,7 +58,7 @@ export interface TestResult {
   latency_ms: number
 }
 
-// 供应商元信息（用于表单展示）
+// 供应商元信息（用于表单展示）。hostIncludes 用来从 Base URL 认出厂商，须与 Go VendorURLHints 一致。
 export const PROVIDER_META: Record<string, {
   label: string
   icon: string
@@ -65,6 +66,7 @@ export const PROVIDER_META: Record<string, {
   defaultBaseURL: string
   docURL: string
   local?: boolean
+  hostIncludes?: string[]
   suggestedModels?: Array<{ label: string; value: string }>
   suggestedEmbeddingModels?: Array<{ label: string; value: string }>
 }> = {
@@ -74,6 +76,7 @@ export const PROVIDER_META: Record<string, {
     color: '#10a37f',
     defaultBaseURL: 'https://api.openai.com/v1',
     docURL: 'https://platform.openai.com/docs/api-reference',
+    hostIncludes: ['api.openai.com'],
     suggestedEmbeddingModels: [
       { label: 'text-embedding-3-small', value: 'text-embedding-3-small' },
       { label: 'text-embedding-3-large', value: 'text-embedding-3-large' },
@@ -85,6 +88,7 @@ export const PROVIDER_META: Record<string, {
     color: '#d4a574',
     defaultBaseURL: 'https://api.anthropic.com',
     docURL: 'https://docs.anthropic.com/en/api/reference',
+    hostIncludes: ['api.anthropic.com'],
   },
   openrouter: {
     label: 'OpenRouter',
@@ -92,6 +96,7 @@ export const PROVIDER_META: Record<string, {
     color: '#7c3aed',
     defaultBaseURL: 'https://openrouter.ai/api/v1',
     docURL: 'https://openrouter.ai/docs',
+    hostIncludes: ['openrouter.ai'],
     suggestedEmbeddingModels: [
       { label: 'openai/text-embedding-3-small', value: 'openai/text-embedding-3-small' },
     ],
@@ -102,6 +107,7 @@ export const PROVIDER_META: Record<string, {
     color: '#0ea5e9',
     defaultBaseURL: 'https://api.siliconflow.cn/v1',
     docURL: 'https://docs.siliconflow.cn',
+    hostIncludes: ['api.siliconflow.cn'],
     suggestedEmbeddingModels: [
       { label: 'BAAI/bge-m3', value: 'BAAI/bge-m3' },
     ],
@@ -112,11 +118,34 @@ export const PROVIDER_META: Record<string, {
     color: '#6366f1',
     defaultBaseURL: 'https://api.deepseek.com/v1',
     docURL: 'https://api-docs.deepseek.com',
+    hostIncludes: ['api.deepseek.com'],
     suggestedModels: [
       { label: 'deepseek-chat', value: 'deepseek-chat' },
       { label: 'deepseek-reasoner', value: 'deepseek-reasoner' },
       { label: 'deepseek-v4-flash', value: 'deepseek-v4-flash' },
       { label: 'deepseek-v4-pro', value: 'deepseek-v4-pro' },
+    ],
+  },
+  zhipu: {
+    label: '智谱 BigModel',
+    icon: '🧩',
+    color: '#3859ff',
+    defaultBaseURL: 'https://open.bigmodel.cn/api/paas/v4',
+    docURL: 'https://docs.bigmodel.cn',
+    hostIncludes: ['open.bigmodel.cn'],
+    suggestedModels: [
+      { label: 'glm-4.7-flash（免费）', value: 'glm-4.7-flash' },
+      { label: 'glm-4.5-flash（免费）', value: 'glm-4.5-flash' },
+      { label: 'glm-4-flash-250414（免费）', value: 'glm-4-flash-250414' },
+      { label: 'glm-4.6v-flash（免费·识图）', value: 'glm-4.6v-flash' },
+      { label: 'glm-4.5-air（资源包常用）', value: 'glm-4.5-air' },
+      { label: 'glm-4.6', value: 'glm-4.6' },
+      { label: 'glm-4.7', value: 'glm-4.7' },
+      { label: 'glm-5.3-flash', value: 'glm-5.3-flash' },
+    ],
+    suggestedEmbeddingModels: [
+      { label: 'embedding-3', value: 'embedding-3' },
+      { label: 'embedding-2', value: 'embedding-2' },
     ],
   },
   aicore: {
@@ -125,6 +154,7 @@ export const PROVIDER_META: Record<string, {
     color: '#f59e0b',
     defaultBaseURL: 'https://api.xty.app/v1',
     docURL: '',
+    hostIncludes: ['api.xty.app'],
     suggestedEmbeddingModels: [
       { label: 'text-embedding-3-small', value: 'text-embedding-3-small' },
     ],
@@ -135,6 +165,7 @@ export const PROVIDER_META: Record<string, {
     color: '#0078d4',
     defaultBaseURL: '',
     docURL: 'https://learn.microsoft.com/en-us/azure/ai-services/openai/reference',
+    hostIncludes: ['openai.azure.com'],
   },
   gemini: {
     label: 'Google Gemini',
@@ -142,6 +173,7 @@ export const PROVIDER_META: Record<string, {
     color: '#4285f4',
     defaultBaseURL: 'https://generativelanguage.googleapis.com/v1beta',
     docURL: 'https://ai.google.dev/api/rest',
+    hostIncludes: ['generativelanguage.googleapis.com'],
   },
   groq: {
     label: 'Groq',
@@ -149,6 +181,7 @@ export const PROVIDER_META: Record<string, {
     color: '#f97316',
     defaultBaseURL: 'https://api.groq.com/openai/v1',
     docURL: 'https://console.groq.com/docs',
+    hostIncludes: ['api.groq.com'],
   },
   ollama: {
     label: 'Ollama 本地',
@@ -157,6 +190,14 @@ export const PROVIDER_META: Record<string, {
     defaultBaseURL: 'http://localhost:11434/v1',
     docURL: 'https://github.com/ollama/ollama',
     local: true,
+    hostIncludes: ['localhost:11434', '127.0.0.1:11434'],
+  },
+  custom: {
+    label: '自定义兼容',
+    icon: '✏️',
+    color: '#475569',
+    defaultBaseURL: '',
+    docURL: '',
   },
 }
 
@@ -164,6 +205,24 @@ export const PROVIDER_OPTIONS = Object.entries(PROVIDER_META).map(([value, meta]
   value,
   label: `${meta.icon} ${meta.label}`,
 }))
+
+/** 卡片第二行小字：已知厂商用中文名，否则原样显示。 */
+export function providerLabel(key: string): string {
+  const k = (key || '').trim()
+  if (!k) return ''
+  return PROVIDER_META[k]?.label || k
+}
+
+/** 从 Base URL 认出厂商键。认不出返回空字符串。 */
+export function matchProviderByBaseURL(url: string): string {
+  const hay = (url || '').trim().toLowerCase()
+  if (!hay) return ''
+  for (const [key, meta] of Object.entries(PROVIDER_META)) {
+    const hosts = meta.hostIncludes || []
+    if (hosts.some(h => hay.includes(h))) return key
+  }
+  return ''
+}
 
 export const useProviders = () => {
   const api = useApi()

@@ -135,18 +135,31 @@
               class="prompt-pick"
               :placeholder="t('evals.pickVersion')"
             />
-            <UInput
+            <USelect
               v-model="runModel"
-              class="w-full"
-              :placeholder="t('evals.chatModelPh')"
+              :items="modelOptions"
+              value-key="value"
+              class="prompt-pick"
+              :placeholder="t('evals.pickChatModel')"
             />
+            <p v-if="modelOptions.length === 0" class="param-hint full">{{ t('evals.noModels') }}</p>
             <p v-if="promptOptions.length === 0" class="param-hint full">{{ t('evals.noPrompts') }}</p>
+          </template>
+          <template v-else-if="runTargetType === 'model'">
+            <USelect
+              v-model="runTargetId"
+              :items="modelOptions"
+              value-key="value"
+              class="prompt-pick"
+              :placeholder="t('evals.pickChatModel')"
+            />
+            <p v-if="modelOptions.length === 0" class="param-hint full">{{ t('evals.noModels') }}</p>
           </template>
           <UInput
             v-else
             v-model="runTargetId"
             class="w-full"
-            :placeholder="targetIdPlaceholder"
+            :placeholder="t('evals.agentIdPh')"
           />
           <CfButton
             tone="primary"
@@ -273,6 +286,7 @@ const judgeOptions = [
   { label: 'llm_judge', value: 'llm_judge' },
 ]
 const promptApi = usePrompts()
+const { list: listModels } = useModels()
 const runTargetType = ref<'model' | 'agent' | 'prompt'>('model')
 const runTargetId = ref('')
 const runModel = ref('')
@@ -283,6 +297,7 @@ const runVars = ref<Record<string, string>>({})
 const selectedPromptId = ref('')
 const promptList = ref<{ id: string; name: string }[]>([])
 const versionList = ref<{ id: string; version: number; changelog?: string }[]>([])
+const modelOptions = ref<{ label: string; value: string }[]>([])
 const targetOptions = [
   { label: 'model', value: 'model' },
   { label: 'agent', value: 'agent' },
@@ -297,10 +312,6 @@ const versionOptions = computed(() =>
     value: v.id,
   })),
 )
-const targetIdPlaceholder = computed(() => {
-  if (runTargetType.value === 'agent') return t('evals.agentIdPh')
-  return t('evals.modelIdPh')
-})
 const canRun = computed(() => {
   if (!runTargetId.value.trim() || cases.value.length === 0) return false
   if (runTargetType.value === 'prompt' && !runModel.value.trim()) return false
@@ -308,6 +319,26 @@ const canRun = computed(() => {
 })
 const lastRun = ref<EvalRun | null>(null)
 const lastResults = ref<EvalResult[]>([])
+
+const ensureDefaultModelPick = () => {
+  const first = modelOptions.value[0]?.value || ''
+  if (!first) return
+  if (runTargetType.value === 'model' && !runTargetId.value) {
+    runTargetId.value = first
+  }
+  if (runTargetType.value === 'prompt' && !runModel.value) {
+    runModel.value = first
+  }
+}
+
+const loadModels = async () => {
+  const res = await listModels()
+  modelOptions.value = (res.data || []).map(m => ({
+    label: m.name || m.id,
+    value: m.id,
+  }))
+  ensureDefaultModelPick()
+}
 
 const loadPromptCatalog = async () => {
   const res = await promptApi.list()
@@ -326,7 +357,9 @@ watch(runTargetType, async (tt) => {
   runVars.value = {}
   runVariablesJson.value = ''
   if (tt === 'prompt') {
-    await loadPromptCatalog()
+    await Promise.all([loadPromptCatalog(), loadModels()])
+  } else if (tt === 'model') {
+    await loadModels()
   }
 })
 
@@ -372,12 +405,16 @@ const openSuite = async (s: EvalSuite) => {
   lastResults.value = []
   runTargetType.value = 'model'
   runTargetId.value = ''
+  runModel.value = ''
   selectedPromptId.value = ''
   versionList.value = []
   runVarDefs.value = []
   runVars.value = {}
   runVariablesJson.value = ''
-  const res = await api.listCases(s.id)
+  const [res] = await Promise.all([
+    api.listCases(s.id),
+    loadModels(),
+  ])
   cases.value = res.data || []
 }
 
