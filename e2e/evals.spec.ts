@@ -184,7 +184,8 @@ test.describe('evals e2e', () => {
 
     await expect(page.getByText('北京今天天气怎么样')).toBeVisible()
 
-    await page.getByPlaceholder('与模型页 default_model 一致').fill('deepseek-chat')
+    // 聊天模型已改为下拉；mock /models 给出 deepseek-chat，打开详情时默认选中即可跑
+    await expect(page.getByText('deepseek-chat').first()).toBeVisible()
     await expect(page.getByRole('button', { name: '运行评测' })).toBeEnabled()
     await page.getByRole('button', { name: '运行评测' }).click()
 
