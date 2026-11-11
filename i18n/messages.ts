@@ -287,6 +287,8 @@ export const M = {
   'play.sendFail': { 'zh-CN': '发送失败', 'en-US': 'Send failed' },
   'play.sendFailHttp': { 'zh-CN': '发送失败：HTTP {status}{detail}', 'en-US': 'Send failed: HTTP {status}{detail}' },
   'play.sendFailBody': { 'zh-CN': '发送失败：响应体不可用', 'en-US': 'Send failed: response body unavailable' },
+  'play.streamNetwork': { 'zh-CN': '连不上服务器，请检查网络后重试。', 'en-US': 'Could not reach the server. Check your network and try again.' },
+  'play.streamInterrupted': { 'zh-CN': '回答传到一半断线了，已保留已收到的内容。可再发一次继续。', 'en-US': 'The reply was interrupted. Kept what arrived — send again to continue.' },
   'quota.bar': { 'zh-CN': '今日 {used}/{limit} 条 · Token {pct}%', 'en-US': 'Today {used}/{limit} · Token {pct}%' },
   'quota.barUnlimited': { 'zh-CN': '管理员 · 不限额', 'en-US': 'Admin · unlimited' },
   'quota.exhausted': { 'zh-CN': '今日对话额度已用完，将在明天 0 点（北京时间）恢复。', 'en-US': 'Daily chat quota used up. It resets at midnight Beijing time.' },

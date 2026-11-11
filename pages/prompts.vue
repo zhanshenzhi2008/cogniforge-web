@@ -354,6 +354,12 @@
 import type { Prompt, PromptVarDef, PromptVersion, PromptUsage } from '@/composables/usePrompts'
 import { apiUrl } from '@/utils/apiBase'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
+import {
+  fetchSse,
+  isAbortError,
+  parseOpenAISseData,
+  SseStreamError,
+} from '@/utils/sseStream'
 
 const { t, d } = useLocale()
 const toast = useToast()
@@ -580,75 +586,60 @@ const doTry = async () => {
 
   try {
     const endpoint = apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${useCookie('token').value}`,
+    await fetchSse(
+      endpoint,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${useCookie('token').value}`,
+        },
+        body: JSON.stringify({
+          model: tryModel.value,
+          stream: true,
+          messages: [
+            { role: 'system', content: rendered.data.content },
+            { role: 'user', content: tryMessage.value.trim() },
+          ],
+        }),
+        signal: tryAbort.signal,
+        connectRetries: 1,
+        retryDelayMs: 400,
       },
-      body: JSON.stringify({
-        model: tryModel.value,
-        stream: true,
-        messages: [
-          { role: 'system', content: rendered.data.content },
-          { role: 'user', content: tryMessage.value.trim() },
-        ],
-      }),
-      signal: tryAbort.signal,
-    })
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      tryError.value = text || t('prompts.tryFail')
-      toast.add({ title: tryError.value, color: 'error' })
-      return
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      tryError.value = t('prompts.tryFail')
-      return
-    }
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (!trimmed.startsWith('data: ')) continue
-        const data = trimmed.slice(6).trim()
-        if (data === '[DONE]') continue
-        try {
-          const parsed = JSON.parse(data)
-          if (typeof parsed?.error === 'string' && parsed.error) {
+      {
+        onEvent: (ev) => {
+          const parsed = parseOpenAISseData(ev.data)
+          if (!parsed) return false
+          if (parsed.done) return false
+          if (parsed.error) {
             tryError.value = parsed.error
-            continue
+            return true
           }
-          const delta = parsed?.choices?.[0]?.delta?.content
-          if (typeof delta === 'string' && delta) {
-            tryAnswer.value += delta
-            continue
+          if (parsed.delta) {
+            tryAnswer.value += parsed.delta
+            return false
           }
-          const full = parsed?.choices?.[0]?.message?.content
-          if (typeof full === 'string' && full) {
-            tryAnswer.value = full
+          if (parsed.full) {
+            tryAnswer.value = parsed.full
           }
-        } catch {
-          // ignore partial JSON
-        }
-      }
-    }
+          return false
+        },
+      },
+    )
     if (!tryAnswer.value && !tryError.value) {
       tryError.value = t('prompts.tryEmpty')
     }
   } catch (e: unknown) {
-    if ((e as { name?: string })?.name === 'AbortError') return
-    tryError.value = (e as Error)?.message || t('prompts.tryFail')
+    if (isAbortError(e)) return
+    if (e instanceof SseStreamError && e.kind === 'http') {
+      tryError.value = e.bodyText || t('prompts.tryFail')
+    } else if (e instanceof SseStreamError && (e.kind === 'disconnect' || e.kind === 'network')) {
+      tryError.value = tryAnswer.value
+        ? t('play.streamInterrupted')
+        : t('play.streamNetwork')
+    } else {
+      tryError.value = (e as Error)?.message || t('prompts.tryFail')
+    }
     toast.add({ title: tryError.value, color: 'error' })
   } finally {
     trying.value = false

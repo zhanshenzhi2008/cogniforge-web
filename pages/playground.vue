@@ -331,6 +331,12 @@ import {
 } from '~/utils/chatAttachments'
 import { apiUrl } from '~/utils/apiBase'
 import {
+  fetchSse,
+  isAbortError,
+  parseOpenAISseData,
+  SseStreamError,
+} from '~/utils/sseStream'
+import {
   buildVariableMap,
   initVarFormValues,
   missingRequiredVars,
@@ -1208,31 +1214,6 @@ const sendMessage = async () => {
       body.variables = agentVariables
     }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${useCookie('token').value}`,
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    })
-
-    const decoder = new TextDecoder()
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      notifyChatHttpError(response.status, text)
-      messages.value.pop()
-      return
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      notifyError(t('play.sendFailBody'))
-      return
-    }
-
     messages.value.push({
       id: crypto.randomUUID(),
       role: 'assistant',
@@ -1240,84 +1221,91 @@ const sendMessage = async () => {
       time: new Date().toISOString(),
     })
     const assistantMessage = messages.value[messages.value.length - 1]
+    let gotContent = false
 
-    let buffer = ''
-
-    const consumeDataLine = (line: string): boolean => {
-      if (!line.startsWith('data: ')) return false
-      const data = line.slice(6).trim()
-      if (data === '[DONE]') return false
-
-      try {
-        const parsed = JSON.parse(data)
-        if (typeof parsed?.error === 'string' && parsed.error.length > 0) {
-          notifyError(parsed.error)
-          if (!assistantMessage.content) {
-            messages.value.pop()
-          } else {
-            assistantMessage.content = parsed.error
+    await fetchSse(
+      endpoint,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${useCookie('token').value}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+        connectRetries: 1,
+        retryDelayMs: 400,
+      },
+      {
+        onEvent: (ev) => {
+          const parsed = parseOpenAISseData(ev.data)
+          if (!parsed) return false
+          if (parsed.done) return false
+          if (parsed.error) {
+            notifyError(parsed.error)
+            if (!assistantMessage.content) {
+              messages.value.pop()
+            } else {
+              assistantMessage.content = parsed.error
+            }
+            return true
           }
-          return true
-        }
-        const delta = parsed?.choices?.[0]?.delta?.content
-        if (typeof delta === 'string' && delta.length > 0) {
-          assistantMessage.content += delta
+          if (parsed.delta) {
+            assistantMessage.content += parsed.delta
+            gotContent = true
+            return false
+          }
+          if (parsed.full) {
+            assistantMessage.content = parsed.full
+            gotContent = true
+          }
           return false
-        }
-        const full = parsed?.choices?.[0]?.message?.content
-        if (typeof full === 'string' && full.length > 0) {
-          assistantMessage.content = full
-        }
-      } catch {
-        // ignore parse errors
-      }
-      return false
-    }
+        },
+        onRawLeftover: (raw) => {
+          const parsed = parseOpenAISseData(raw.startsWith('data:') ? raw.slice(5) : raw)
+          if (parsed?.full) {
+            assistantMessage.content = parsed.full
+            gotContent = true
+            return
+          }
+          try {
+            const obj = JSON.parse(raw.trim())
+            const content =
+              obj?.choices?.[0]?.message?.content
+              ?? obj?.data?.choices?.[0]?.message?.content
+            if (typeof content === 'string' && content.length > 0) {
+              assistantMessage.content = content
+              gotContent = true
+            }
+          } catch {
+            // ignore
+          }
+        },
+      },
+    )
 
-    const consumeCompletionJSON = (raw: string): boolean => {
-      const text = raw.trim()
-      if (!text.startsWith('{')) return false
-      try {
-        const parsed = JSON.parse(text)
-        // Agent 非流式包在 { code, data }；流式则是 OpenAI chunk / 裸 completion
-        const content =
-          parsed?.choices?.[0]?.message?.content
-          ?? parsed?.data?.choices?.[0]?.message?.content
-        if (typeof content === 'string' && content.length > 0) {
-          assistantMessage.content = content
-          return true
-        }
-      } catch {
-        // ignore parse errors
-      }
-      return false
-    }
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const parts = buffer.split('\n\n')
-      buffer = parts.pop() || ''
-
-      for (const part of parts) {
-        for (const line of part.split('\n')) {
-          if (consumeDataLine(line)) return
-        }
-      }
-    }
-
-    if (buffer) {
-      if (consumeCompletionJSON(buffer)) {
-        return
-      }
-      for (const line of buffer.split('\n')) {
-        if (consumeDataLine(line)) return
-      }
-    }
   } catch (error: any) {
-    if (error?.name === 'AbortError') {
+    if (isAbortError(error)) {
+      return
+    }
+    if (error instanceof SseStreamError && error.kind === 'http') {
+      notifyChatHttpError(error.status || 0, error.bodyText || '')
+      messages.value.pop()
+      return
+    }
+    if (error instanceof SseStreamError && (error.kind === 'disconnect' || error.kind === 'network')) {
+      const last = messages.value[messages.value.length - 1]
+      if (last?.role === 'assistant' && last.content) {
+        notifyError(t('play.streamInterrupted'))
+      } else {
+        notifyError(t('play.streamNetwork'))
+        messages.value.pop()
+      }
+      return
+    }
+    if (error instanceof SseStreamError && error.kind === 'empty') {
+      notifyError(t('play.sendFailBody'))
+      messages.value.pop()
       return
     }
     notifyError(t('play.sendFail'))
