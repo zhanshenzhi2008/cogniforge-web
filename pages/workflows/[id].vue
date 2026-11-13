@@ -893,7 +893,7 @@ const cancelDebug = async () => {
   if (currentExecution.value) {
     currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
   }
-  toast.add({ title: t('editor.debugCancel'), color: 'success' })
+  toast.add({ title: t('editor.runCancelled'), color: 'success' })
 }
 
 const loadExecutionHistory = async () => {

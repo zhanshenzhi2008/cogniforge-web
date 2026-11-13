@@ -675,6 +675,7 @@ export const M = {
   'editor.debugFail': { 'zh-CN': '调试失败：{error}', 'en-US': 'Debug failed: {error}' },
   'editor.debugStartFail': { 'zh-CN': '启动调试失败', 'en-US': 'Could not start debug' },
   'editor.debugCancel': { 'zh-CN': '已取消调试', 'en-US': 'Debug cancelled' },
+  'editor.runCancelled': { 'zh-CN': '已取消执行', 'en-US': 'Run cancelled' },
   'editor.node.start': { 'zh-CN': '开始', 'en-US': 'Start' },
   'editor.node.end': { 'zh-CN': '结束', 'en-US': 'End' },
   'editor.node.llm': { 'zh-CN': 'LLM 节点', 'en-US': 'LLM' },
