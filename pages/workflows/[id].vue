@@ -222,6 +222,16 @@
             />
           </div>
 
+          <div v-if="selectedNode.type === 'llm'" class="field">
+            <label class="field__label">{{ t('editor.userPrompt') }}</label>
+            <UTextarea
+              v-model="nodeConfig.prompt"
+              class="w-full"
+              :rows="4"
+              :placeholder="t('editor.userPromptPh')"
+            />
+          </div>
+
           <div v-if="selectedNode.type === 'condition'" class="field">
             <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
@@ -340,6 +350,7 @@ const nodeConfig = reactive({
   name: '',
   model: '',
   systemPrompt: '',
+  prompt: '',
   description: '',
   query: '',
   variable: '',
@@ -571,6 +582,7 @@ const handleNodeClick = (event: any) => {
   nodeConfig.name = event.node.data?.label || ''
   nodeConfig.model = event.node.data?.model || firstConfiguredModel()
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
+  nodeConfig.prompt = event.node.data?.prompt || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
   nodeConfig.variable = event.node.data?.variable || ''
@@ -595,6 +607,7 @@ const saveNodeConfig = () => {
       label: nodeConfig.name,
       model: nodeConfig.model,
       systemPrompt: nodeConfig.systemPrompt,
+      prompt: nodeConfig.prompt,
       description: nodeConfig.description,
       query: nodeConfig.query,
       variable: nodeConfig.variable,
@@ -634,6 +647,7 @@ const handleSave = async () => {
           label: n.data?.label,
           model: n.data?.model,
           systemPrompt: n.data?.systemPrompt,
+          prompt: n.data?.prompt,
           description: n.data?.description,
           query: n.data?.query,
           variable: n.data?.variable,

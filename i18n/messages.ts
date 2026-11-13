@@ -646,6 +646,8 @@ export const M = {
   'editor.nodeName': { 'zh-CN': '节点名称', 'en-US': 'Node name' },
   'editor.nodeNamePh': { 'zh-CN': '请输入节点名称', 'en-US': 'Node name' },
   'editor.pickModel': { 'zh-CN': '请选择模型', 'en-US': 'Select a model' },
+  'editor.userPrompt': { 'zh-CN': '用户提示', 'en-US': 'User prompt' },
+  'editor.userPromptPh': { 'zh-CN': '可选；不填则自动用流程输入和上游输出', 'en-US': 'Optional; defaults to flow input and upstream outputs' },
   'editor.conditionPh': { 'zh-CN': '条件描述...', 'en-US': 'Condition…' },
   'editor.query': { 'zh-CN': '搜索词', 'en-US': 'Query' },
   'editor.queryPh': { 'zh-CN': '搜索关键词...', 'en-US': 'Search keywords…' },
