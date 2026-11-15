@@ -436,7 +436,8 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
   box-shadow:
     0 18px 50px color-mix(in oklab, #0b1220 28%, transparent),
     0 0 0 1px color-mix(in oklab, var(--cf-accent) 8%, transparent);
-  overflow: hidden;
+  /* 勿 overflow:hidden：弹窗内 USelect portal=false 时下拉会被裁切 */
+  overflow: visible;
   color: var(--cf-ink);
 }
 
@@ -517,12 +518,20 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
 .cf-modal__body {
   padding: 1rem 1.1rem;
   flex: 0 1 auto;
+  min-height: 0;
+  max-height: min(70vh, 720px);
+  overflow: auto;
+  border-radius: 0 0 0.85rem 0.85rem;
 }
 
 .cf-modal__panel--sized .cf-modal__body {
   flex: 1 1 auto;
-  min-height: 0;
+  max-height: none;
   overflow: auto;
+}
+
+.cf-modal__panel--max .cf-modal__body {
+  border-radius: 0;
 }
 
 .cf-modal__footer {
@@ -530,6 +539,8 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
   padding: 0.75rem 1rem;
   border-top: 1px solid color-mix(in oklab, var(--cf-line) 80%, transparent);
   background: color-mix(in oklab, var(--cf-nav-surface, var(--ui-bg)) 92%, transparent);
+  border-radius: 0 0 0.85rem 0.85rem;
+  overflow: hidden;
 }
 
 .cf-modal__handle {

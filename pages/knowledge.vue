@@ -185,7 +185,8 @@
               class="w-full"
               :items="folderSelectItems"
               :placeholder="t('kb.pickFolder')"
-              :ui="{ content: 'z-[300]' }"
+              :portal="false"
+              :ui="{ content: 'z-[10000]' }"
               @update:model-value="onFolderSelect"
             />
           </div>
@@ -207,7 +208,8 @@
               class="w-full"
               :items="vectorDbOptions"
               :placeholder="t('kb.pickVector')"
-              :ui="{ content: 'z-[300]' }"
+              :portal="false"
+              :ui="{ content: 'z-[10000]' }"
             />
           </div>
 
@@ -216,7 +218,8 @@
             <USelect
               v-model="form.embedding_model"
               class="w-full"
-              :ui="{ content: 'z-[300]' }"
+              :portal="false"
+              :ui="{ content: 'z-[10000]' }"
               :items="embeddingModelOptions"
               :placeholder="t('kb.pickEmbedding')"
             />
@@ -245,7 +248,7 @@
               </CfButton>
             </div>
             <div class="modal-actions__right">
-              <CfButton tone="secondary" icon="i-lucide-x" @click="dialogVisible = false">
+              <CfButton tone="secondary" @click="dialogVisible = false">
                 {{ t('common.cancel') }}
               </CfButton>
               <CfButton
@@ -273,7 +276,7 @@
       <template #footer>
         <div class="modal-actions">
           <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="secondary" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
             <CfButton
               tone="danger"
               strong
@@ -655,7 +658,8 @@
                 :items="splitModeOptions"
                 value-key="value"
                 class="w-full"
-                :ui="{ content: 'z-[300]' }"
+                :portal="false"
+                :ui="{ content: 'z-[10000]' }"
               />
             </div>
             <div class="field">
@@ -708,7 +712,7 @@
             </CfButton>
           </div>
           <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="handleUploadCancel">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="secondary" @click="handleUploadCancel">{{ t('common.cancel') }}</CfButton>
             <CfButton
               v-if="uploadStep === 1"
               tone="primary"
@@ -753,7 +757,7 @@
       <template #footer>
         <div class="modal-actions">
           <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="folderModalVisible = false">
+            <CfButton tone="secondary" @click="folderModalVisible = false">
               {{ t('common.cancel') }}
             </CfButton>
             <CfButton
@@ -779,7 +783,7 @@
       <template #footer>
         <div class="modal-actions">
           <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteDocVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="secondary" @click="deleteDocVisible = false">{{ t('common.cancel') }}</CfButton>
             <CfButton
               tone="danger"
               strong

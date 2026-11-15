@@ -18,6 +18,10 @@ const { mockApi, createMockKnowledgeBases } = vi.hoisted(() => {
     updateKB: vi.fn((id: string, input: any) => mockApi.put(`/api/v1/knowledge/${id}`, input)),
     deleteKB: vi.fn((id: string) => mockApi.del(`/api/v1/knowledge/${id}`)),
     listDocs: vi.fn((kbId: string) => mockApi.get(`/api/v1/knowledge/${kbId}/documents`)),
+    getDoc: vi.fn((kbId: string, docId: string) => mockApi.get(`/api/v1/knowledge/${kbId}/documents/${docId}`)),
+    updateDocContent: vi.fn((kbId: string, docId: string, input: any) =>
+      mockApi.put(`/api/v1/knowledge/${kbId}/documents/${docId}/content`, input),
+    ),
     uploadDoc: vi.fn((kbId: string, file: File) => mockApi.upload(`/api/v1/knowledge/${kbId}/documents/upload`, new FormData())),
     deleteDoc: vi.fn((kbId: string, docId: string) => mockApi.del(`/api/v1/knowledge/${kbId}/documents/${docId}`)),
     searchKB: vi.fn((kbId: string, input: any) => mockApi.post(`/api/v1/knowledge/${kbId}/search`, input)),

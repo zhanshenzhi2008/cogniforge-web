@@ -524,13 +524,12 @@ html[data-theme="inknight"] .cf-btn--primary:not(:disabled):not([aria-disabled="
 }
 
 /*
- * CfModal = z-index 200。Nuxt UI / Reka 的 Select、Dropdown 等内容层
- * 默认 position:fixed 且无 z-index，会画在弹窗下面，表现为「点了没下拉」。
- * app.config 已给 content 加 z-[300]；这里再兜一层，避免个别组件漏配。
+ * CfModal = z-index 200。挂到 body 的 Select/Menu 默认无 z-index，会被挡住。
+ * 知识库弹窗内优先用 portal=false；此处兜底抬高层级。
  */
 [data-slot="content"][data-state="open"],
 [role="listbox"] {
-  z-index: 300;
+  z-index: 10000 !important;
 }
 
 @media (max-width: 640px) {
