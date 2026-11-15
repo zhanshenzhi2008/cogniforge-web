@@ -51,6 +51,13 @@ export interface Document {
   updated_at: string
 }
 
+export interface DocumentPreview extends Document {
+  content: string
+  previewable: boolean
+  preview_note?: string
+  truncated?: boolean
+}
+
 export interface SearchResult {
   document_id: string
   document_name: string
@@ -135,6 +142,16 @@ export const useKnowledgeBases = () => {
     }
   }
 
+  const getDoc = async (kbId: string, docId: string): Promise<{ data?: DocumentPreview; error?: string }> => {
+    try {
+      const res = await api.get<DocumentPreview>(`/api/v1/knowledge/${kbId}/documents/${docId}`)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '获取文档失败' }
+    }
+  }
+
   const uploadDoc = async (kbId: string, file: File): Promise<{ data?: Document; error?: string }> => {
     try {
       const formData = new FormData()
@@ -185,6 +202,7 @@ export const useKnowledgeBases = () => {
     updateKB,
     deleteKB,
     listDocs,
+    getDoc,
     uploadDoc,
     deleteDoc,
     reparseDoc,

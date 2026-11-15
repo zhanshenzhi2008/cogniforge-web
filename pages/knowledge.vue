@@ -249,12 +249,12 @@
       </template>
     </CfModal>
 
-    <!-- Documents Slideover -->
+    <!-- Documents Slideover：列表 + 预览（对标 Dify / FastGPT） -->
     <USlideover
       v-model:open="drawerVisible"
       :title="selectedKB?.name || t('kb.fallbackTitle')"
       :description="t('kb.docsDrawer', { n: documents.length })"
-      :ui="{ content: 'max-w-2xl w-full' }"
+      :ui="{ content: 'max-w-5xl w-full' }"
     >
       <template #body>
         <div class="drawer-header-actions">
@@ -275,53 +275,108 @@
               <p>{{ t('kb.noDocs') }}</p>
             </div>
 
-            <div v-else class="cf-table-wrap">
-              <table class="cf-data-table">
-                <thead>
-                  <tr>
-                    <th>{{ t('common.name') }}</th>
-                    <th>{{ t('common.status') }}</th>
-                    <th>{{ t('kb.chunks') }}</th>
-                    <th>{{ t('kb.size') }}</th>
-                    <th>{{ t('kb.time') }}</th>
-                    <th class="cf-col-actions">{{ t('common.actions') }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="doc in documents" :key="doc.id">
-                    <td>
-                      <div class="doc-name-cell">
-                        <UIcon :name="getFileIcon(doc.file_type)" class="size-4 shrink-0 opacity-60" />
-                        <span class="doc-name">{{ doc.name }}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <UBadge size="sm" variant="subtle" :color="docStatusColor(doc.status)">
-                        {{ docStatusLabel(doc.status) }}
-                      </UBadge>
-                    </td>
-                    <td class="cf-muted">{{ doc.chunk_count || '—' }}</td>
-                    <td class="cf-muted">{{ formatFileSize(doc.file_size) }}</td>
-                    <td class="cf-muted">{{ d(doc.created_at) }}</td>
-                    <td>
-                      <div class="action-btns">
-                        <CfButton
-                          tone="icon"
-                          icon="i-lucide-refresh-cw"
-                          :tip="t('kb.reparse')"
-                          @click="handleReparseDoc(doc)"
-                        />
-                        <CfButton
-                          tone="icon-danger"
-                          icon="i-lucide-trash-2"
-                          :tip="t('common.delete')"
-                          @click="askDeleteDoc(doc)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div v-else class="docs-workspace" :class="{ 'docs-workspace--preview': !!previewDoc }">
+              <div class="docs-list-pane">
+                <div class="cf-table-wrap">
+                  <table class="cf-data-table">
+                    <thead>
+                      <tr>
+                        <th>{{ t('common.name') }}</th>
+                        <th>{{ t('common.status') }}</th>
+                        <th v-if="!previewDoc">{{ t('kb.chunks') }}</th>
+                        <th v-if="!previewDoc">{{ t('kb.size') }}</th>
+                        <th v-if="!previewDoc">{{ t('kb.time') }}</th>
+                        <th class="cf-col-actions">{{ t('common.actions') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="doc in documents"
+                        :key="doc.id"
+                        class="doc-row"
+                        :class="{ 'doc-row--active': previewDoc?.id === doc.id }"
+                        @click="openDocPreview(doc)"
+                      >
+                        <td>
+                          <button
+                            type="button"
+                            class="doc-name-cell doc-name-btn"
+                            :title="t('kb.openPreview')"
+                            @click.stop="openDocPreview(doc)"
+                          >
+                            <UIcon :name="getFileIcon(doc.file_type)" class="size-4 shrink-0 opacity-60" />
+                            <span class="doc-name">{{ doc.name }}</span>
+                          </button>
+                        </td>
+                        <td>
+                          <UBadge size="sm" variant="subtle" :color="docStatusColor(doc.status)">
+                            {{ docStatusLabel(doc.status) }}
+                          </UBadge>
+                        </td>
+                        <td v-if="!previewDoc" class="cf-muted">{{ doc.chunk_count || '—' }}</td>
+                        <td v-if="!previewDoc" class="cf-muted">{{ formatFileSize(doc.file_size) }}</td>
+                        <td v-if="!previewDoc" class="cf-muted">{{ d(doc.created_at) }}</td>
+                        <td @click.stop>
+                          <div class="action-btns">
+                            <CfButton
+                              tone="icon"
+                              icon="i-lucide-refresh-cw"
+                              :tip="t('kb.reparse')"
+                              @click="handleReparseDoc(doc)"
+                            />
+                            <CfButton
+                              tone="icon-danger"
+                              icon="i-lucide-trash-2"
+                              :tip="t('common.delete')"
+                              @click="askDeleteDoc(doc)"
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <aside v-if="previewDoc" class="docs-preview-pane">
+                <div class="preview-toolbar">
+                  <div class="preview-title-wrap">
+                    <UIcon :name="getFileIcon(previewDoc.file_type)" class="size-4 shrink-0 opacity-70" />
+                    <span class="preview-title">{{ previewDoc.name }}</span>
+                  </div>
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-x"
+                    :tip="t('kb.closePreview')"
+                    @click="closeDocPreview"
+                  />
+                </div>
+                <div class="preview-meta">
+                  <UBadge size="sm" variant="subtle" :color="docStatusColor(previewDoc.status)">
+                    {{ docStatusLabel(previewDoc.status) }}
+                  </UBadge>
+                  <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
+                  <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
+                </div>
+                <div v-if="previewDoc.error" class="preview-error">{{ previewDoc.error }}</div>
+                <div v-if="previewLoading" class="cf-state cf-state--compact">
+                  <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+                  <span>{{ t('common.loading') }}</span>
+                </div>
+                <div v-else-if="!previewDoc.previewable" class="preview-empty">
+                  <UIcon name="i-lucide-eye-off" class="size-7 opacity-50" />
+                  <p>{{ previewDoc.preview_note || t('kb.previewUnsupported') }}</p>
+                </div>
+                <template v-else>
+                  <p v-if="previewDoc.truncated" class="preview-truncated">{{ t('kb.previewTruncated') }}</p>
+                  <div
+                    v-if="previewDoc.file_type === 'md' || previewDoc.file_type === 'html'"
+                    class="preview-body preview-body--md chat-markdown"
+                    v-html="renderPreviewMarkdown(previewDoc.content)"
+                  />
+                  <pre v-else class="preview-body preview-body--plain">{{ previewDoc.content }}</pre>
+                </template>
+              </aside>
             </div>
           </template>
 
@@ -441,10 +496,12 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type {
   KnowledgeBase,
   Document,
+  DocumentPreview,
   CreateKBInput,
   UpdateKBInput,
   SearchResult,
 } from '@/composables/useKnowledgeBases'
+import { renderChatMarkdown } from '~/utils/chatMarkdown'
 
 definePageMeta({
   layout: 'default',
@@ -452,7 +509,7 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
-const { listKBs, createKB, updateKB, deleteKB, listDocs, uploadDoc, deleteDoc, reparseDoc, searchKB } =
+const { listKBs, createKB, updateKB, deleteKB, listDocs, getDoc, uploadDoc, deleteDoc, reparseDoc, searchKB } =
   useKnowledgeBases()
 
 const loading = ref(false)
@@ -508,6 +565,42 @@ const drawerActiveTab = ref('docs')
 const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const selectedKB = ref<KnowledgeBase | null>(null)
+const previewDoc = ref<DocumentPreview | null>(null)
+const previewLoading = ref(false)
+
+watch(drawerVisible, (open) => {
+  if (!open) closeDocPreview()
+})
+
+watch(drawerActiveTab, (tab) => {
+  if (tab !== 'docs') closeDocPreview()
+})
+
+function renderPreviewMarkdown(content: string) {
+  return renderChatMarkdown(content || '')
+}
+
+async function openDocPreview(doc: Document) {
+  if (!selectedKB.value) return
+  previewLoading.value = true
+  previewDoc.value = {
+    ...doc,
+    content: '',
+    previewable: false,
+  }
+  const res = await getDoc(selectedKB.value.id, doc.id)
+  previewLoading.value = false
+  if (res.error || !res.data) {
+    toast.add({ title: res.error || t('kb.previewFail'), color: 'error' })
+    return
+  }
+  previewDoc.value = res.data
+}
+
+function closeDocPreview() {
+  previewDoc.value = null
+  previewLoading.value = false
+}
 
 const deleteDocVisible = ref(false)
 const deletingDocLoading = ref(false)
@@ -672,6 +765,7 @@ watch(drawerVisible, (val) => {
 
 const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' = 'docs') => {
   selectedKB.value = kb
+  closeDocPreview()
   drawerVisible.value = true
   drawerActiveTab.value = tab
   await fetchDocuments(kb.id)
@@ -851,6 +945,7 @@ const confirmDeleteDoc = async () => {
       return
     }
     toast.add({ title: t('common.deleteOk'), color: 'success' })
+    if (previewDoc.value?.id === deletingDoc.value.id) closeDocPreview()
     deleteDocVisible.value = false
     await fetchDocuments(selectedKB.value!.id)
     await fetchKnowledgeBases()
@@ -1026,8 +1121,135 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 
+.docs-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 280px;
+}
+
+.docs-workspace--preview {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.95fr) minmax(280px, 1.2fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .docs-workspace--preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+.docs-list-pane {
+  min-width: 0;
+}
+
+.docs-preview-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  max-height: min(70vh, 640px);
+  border: 1px solid var(--cf-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cf-ink) 2.5%, transparent);
+  overflow: hidden;
+}
+
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.preview-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.preview-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--cf-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.preview-error {
+  margin: 8px 12px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #b42318;
+  background: color-mix(in srgb, #f04438 12%, transparent);
+}
+
+.preview-truncated {
+  margin: 8px 12px 0;
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+}
+
+.preview-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--cf-ink-soft);
+  text-align: center;
+}
+
+.preview-body {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 18px;
+  margin: 0;
+}
+
+.preview-body--md {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--cf-ink);
+}
+
+.preview-body--plain {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--cf-ink);
+}
+
 .cf-table-wrap {
   margin-top: 8px;
+}
+
+.doc-row {
+  cursor: pointer;
+}
+
+.doc-row--active {
+  background: color-mix(in srgb, var(--cf-accent) 10%, transparent);
 }
 
 .doc-name-cell {
@@ -1035,6 +1257,25 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   min-width: 0;
+}
+
+.doc-name-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.doc-name-btn:hover .doc-name {
+  color: var(--cf-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .doc-name {
