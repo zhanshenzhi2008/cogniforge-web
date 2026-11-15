@@ -168,22 +168,13 @@
 
           <div class="field">
             <label class="field__label">{{ t('kb.folder') }}</label>
-            <div class="folder-pick-row">
-              <USelect
-                v-model="form.folder_id"
-                class="folder-pick-select"
-                :items="folderSelectItems"
-                :placeholder="t('kb.pickFolder')"
-              />
-              <CfButton
-                type="button"
-                tone="secondary"
-                icon="i-lucide-plus"
-                label-mode="tip"
-                :tip="t('kb.newFolder')"
-                @click="openCreateFolder"
-              />
-            </div>
+            <USelect
+              v-model="form.folder_id"
+              class="w-full"
+              :items="folderSelectItems"
+              :placeholder="t('kb.pickFolder')"
+              @update:model-value="onFolderSelect"
+            />
           </div>
 
           <div class="field">
@@ -628,19 +619,42 @@ const deleteVisible = ref(false)
 const deletingLoading = ref(false)
 const deleting = ref<KnowledgeBase | null>(null)
 
+/** USelect 禁止空字符串 value；未分类 / 新建用哨兵 */
+const NONE_FOLDER = '__none__'
+const CREATE_FOLDER = '__create_folder__'
+
 const form = reactive({
   name: '',
   description: '',
-  folder_id: '' as string,
+  folder_id: NONE_FOLDER as string,
   vector_db: 'pgvector',
   embedding_model: 'text-embedding-ada-002',
 })
 const errors = reactive({ name: '' })
+/** 点「新建目录」前记下当前选项，取消时还原 */
+const folderIdBeforeCreate = ref(NONE_FOLDER)
 
 const folderSelectItems = computed(() => [
-  { label: t('kb.noFolder'), value: '' },
+  { label: t('kb.noFolder'), value: NONE_FOLDER },
   ...folders.value.map((f) => ({ label: f.name, value: f.id })),
+  { label: t('kb.newFolderInList'), value: CREATE_FOLDER, icon: 'i-lucide-plus' },
 ])
+
+function resolvedFolderId(raw: string) {
+  return !raw || raw === NONE_FOLDER || raw === CREATE_FOLDER ? '' : raw
+}
+
+function onFolderSelect(value: string) {
+  if (value === CREATE_FOLDER) {
+    const restore = folderIdBeforeCreate.value || NONE_FOLDER
+    nextTick(() => {
+      form.folder_id = restore
+      openCreateFolder()
+    })
+    return
+  }
+  folderIdBeforeCreate.value = value || NONE_FOLDER
+}
 
 const folderNameById = computed(() => {
   const map = new Map<string, string>()
@@ -890,6 +904,7 @@ async function submitCreateFolder() {
     }
     folders.value = [...folders.value, res.data]
     form.folder_id = res.data.id
+    folderIdBeforeCreate.value = res.data.id
     folderModalVisible.value = false
     toast.add({ title: t('kb.folderCreateOk'), color: 'success' })
   } finally {
@@ -973,7 +988,8 @@ const onCardDblClick = (kb: KnowledgeBase) => {
 const fillFormFromKB = (kb: KnowledgeBase) => {
   form.name = kb.name
   form.description = kb.description || ''
-  form.folder_id = kb.folder_id || ''
+  form.folder_id = kb.folder_id || NONE_FOLDER
+  folderIdBeforeCreate.value = form.folder_id
   form.vector_db = kb.vector_db || 'pgvector'
   form.embedding_model = kb.embedding_model || 'text-embedding-ada-002'
   errors.name = ''
@@ -1081,7 +1097,11 @@ const handleSearch = async () => {
 }
 
 const handleUploadSubmit = async () => {
-  if (!selectedKB.value || !uploadFiles.value?.length) return
+  if (!selectedKB.value) return
+  if (!uploadFiles.value?.length) {
+    toast.add({ title: t('kb.needFiles'), color: 'warning' })
+    return
+  }
 
   uploadLoading.value = true
   let successCount = 0
@@ -1159,7 +1179,7 @@ const handleSubmit = async () => {
       const input: UpdateKBInput = {
         name: form.name,
         description: form.description,
-        folder_id: form.folder_id,
+        folder_id: resolvedFolderId(form.folder_id),
         vector_db: form.vector_db,
         embedding_model: form.embedding_model,
       }
@@ -1170,10 +1190,11 @@ const handleSubmit = async () => {
       }
       toast.add({ title: t('common.saveOk'), color: 'success' })
     } else {
+      const folderId = resolvedFolderId(form.folder_id)
       const input: CreateKBInput = {
         name: form.name,
         description: form.description,
-        folder_id: form.folder_id || undefined,
+        folder_id: folderId || undefined,
         vector_db: form.vector_db,
         embedding_model: form.embedding_model,
       }
@@ -1196,7 +1217,8 @@ const handleSubmit = async () => {
 const resetForm = () => {
   form.name = ''
   form.description = ''
-  form.folder_id = ''
+  form.folder_id = NONE_FOLDER
+  folderIdBeforeCreate.value = NONE_FOLDER
   form.vector_db = 'pgvector'
   form.embedding_model = 'text-embedding-ada-002'
   errors.name = ''
@@ -1258,16 +1280,6 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.folder-pick-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.folder-pick-select {
-  flex: 1;
-  min-width: 0;
-}
 
 .kb-card {
   border-radius: 12px;

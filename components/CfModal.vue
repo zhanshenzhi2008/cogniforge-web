@@ -407,9 +407,12 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
 
 <style scoped>
 .cf-modal {
+  /* 高于 USlideover / UModal（Dialog 默认 ~z-50）；
+     Dialog 打开时 body 会 pointer-events:none，须在此开回，否则弹窗看得见但点不动 */
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 200;
+  pointer-events: auto;
 }
 
 .cf-modal__overlay {

@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-15 | v1.32 | CfModal 叠在 USlideover 上可点击（修知识库上传无反应） | orjrs |
 | 2026-11-13 | v1.31 | LLM 节点可配用户提示；与后端 execute 修复同步 | orjrs |
 | 2026-11-11 | v1.30 | 共用 SSE 读取：缓冲/取消/连接重试/断线提示 | orjrs |
 | 2026-11-09 | v1.29 | 评估 e2e：适配聊天模型下拉，修 CI | orjrs |
@@ -36,6 +37,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] CfModal 叠在侧栏可点（2026-11-15）
+
+- **原因**：知识库抽屉开着时，上传/删文档等 CfModal 看得见但点不动
+- **行为**：`CfModal` 设 `pointer-events: auto`、`z-index: 200`；未选文件点上传给 toast
+- **包含代码**：`components/CfModal.vue`、`pages/knowledge.vue`、i18n `kb.needFiles`
 
 ## [变更] LLM 节点用户提示（2026-11-13）
 
