@@ -483,45 +483,80 @@
 
           <template #search>
             <div class="search-panel">
-              <div class="search-row">
-                <UInput
+              <div class="field">
+                <label class="field__label">
+                  <span>{{ t('kb.searchQuery') }}</span>
+                  <UTooltip
+                    :text="t('kb.searchQueryTip')"
+                    :content="fieldHelpTooltipContent"
+                    :ui="fieldHelpTooltipUi"
+                  >
+                    <button type="button" class="field__help" :aria-label="t('kb.searchQueryTip')">
+                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                    </button>
+                  </UTooltip>
+                </label>
+                <UTextarea
                   v-model="searchQuery"
-                  class="search-input"
+                  class="search-textarea"
+                  :rows="4"
+                  autoresize
                   :placeholder="t('kb.searchPh')"
-                  icon="i-lucide-search"
-                  @keydown.enter.prevent="handleSearch"
-                />
-                <CfButton
-                  tone="primary"
-                  icon="i-lucide-search"
-                  label-mode="tip"
-                  :tip="t('kb.search')"
-                  :loading="searchLoading"
-                  @click="handleSearch"
-                />
-                <CfButton
-                  tone="secondary"
-                  icon="i-lucide-eraser"
-                  label-mode="tip"
-                  :tip="t('kb.clear')"
-                  @click="clearSearch"
+                  @keydown="onSearchKeydown"
                 />
               </div>
-              <div class="search-params">
-                <div class="field field--compact">
-                  <label class="field__label">{{ t('kb.ragTopK') }}</label>
-                  <UInput v-model.number="searchTopK" type="number" :min="1" :max="20" class="search-param-input" />
+              <div class="search-toolbar">
+                <div class="search-params">
+                  <div class="field field--compact">
+                    <label class="field__label">
+                      <span>{{ t('kb.ragTopK') }}</span>
+                      <UTooltip
+                        :text="t('kb.ragTopKTip')"
+                        :content="fieldHelpTooltipContent"
+                        :ui="fieldHelpTooltipUi"
+                      >
+                        <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput v-model.number="searchTopK" type="number" :min="1" :max="20" class="search-param-input" />
+                  </div>
+                  <div class="field field--compact">
+                    <label class="field__label">
+                      <span>{{ t('kb.ragMinScore') }}</span>
+                      <UTooltip
+                        :text="t('kb.ragMinScoreTip')"
+                        :content="fieldHelpTooltipContent"
+                        :ui="fieldHelpTooltipUi"
+                      >
+                        <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput
+                      v-model.number="searchMinScore"
+                      type="number"
+                      :min="0"
+                      :max="1"
+                      :step="0.05"
+                      class="search-param-input"
+                    />
+                  </div>
                 </div>
-                <div class="field field--compact">
-                  <label class="field__label">{{ t('kb.ragMinScore') }}</label>
-                  <UInput
-                    v-model.number="searchMinScore"
-                    type="number"
-                    :min="0"
-                    :max="1"
-                    :step="0.05"
-                    class="search-param-input"
-                  />
+                <div class="search-actions">
+                  <CfButton tone="secondary" icon="i-lucide-eraser" @click="clearSearch">
+                    {{ t('kb.clear') }}
+                  </CfButton>
+                  <CfButton
+                    tone="primary"
+                    icon="i-lucide-search"
+                    :loading="searchLoading"
+                    @click="handleSearch"
+                  >
+                    {{ t('kb.search') }}
+                  </CfButton>
                 </div>
               </div>
             </div>
@@ -556,7 +591,18 @@
                 <p class="settings-section__desc">{{ t('kb.settingsParseDesc') }}</p>
                 <div class="parse-grid">
                   <div class="field">
-                    <label class="field__label">{{ t('kb.splitMode') }}</label>
+                    <label class="field__label">
+                      <span>{{ t('kb.splitMode') }}</span>
+                      <UTooltip
+                        :text="t('kb.splitModeTip')"
+                        :content="fieldHelpTooltipContent"
+                        :ui="fieldHelpTooltipUi"
+                      >
+                        <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
                     <USelect
                       v-model="settingsForm.split_mode"
                       :items="splitModeOptions"
@@ -565,15 +611,36 @@
                     />
                   </div>
                   <div class="field">
-                    <label class="field__label">{{ t('kb.chunkSize') }}</label>
+                    <label class="field__label">
+                      <span>{{ t('kb.chunkSize') }}</span>
+                      <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
                     <UInput v-model.number="settingsForm.chunk_size" type="number" :min="64" :max="4000" />
                   </div>
                   <div class="field">
-                    <label class="field__label">{{ t('kb.chunkOverlap') }}</label>
+                    <label class="field__label">
+                      <span>{{ t('kb.chunkOverlap') }}</span>
+                      <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
                     <UInput v-model.number="settingsForm.chunk_overlap" type="number" :min="0" :max="2000" />
                   </div>
                   <div v-if="settingsForm.split_mode === 'separator'" class="field">
-                    <label class="field__label">{{ t('kb.splitSeparator') }}</label>
+                    <label class="field__label">
+                      <span>{{ t('kb.splitSeparator') }}</span>
+                      <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
                     <UInput v-model="settingsForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
                   </div>
                 </div>
@@ -584,11 +651,25 @@
                 <p class="settings-section__desc">{{ t('kb.settingsRetrieveDesc') }}</p>
                 <div class="parse-grid">
                   <div class="field">
-                    <label class="field__label">{{ t('kb.ragTopK') }}</label>
+                    <label class="field__label">
+                      <span>{{ t('kb.ragTopK') }}</span>
+                      <UTooltip :text="t('kb.ragTopKTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
                     <UInput v-model.number="settingsForm.rag_top_k" type="number" :min="1" :max="20" />
                   </div>
                   <div class="field">
-                    <label class="field__label">{{ t('kb.ragMinScore') }}</label>
+                    <label class="field__label">
+                      <span>{{ t('kb.ragMinScore') }}</span>
+                      <UTooltip :text="t('kb.ragMinScoreTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
                     <UInput
                       v-model.number="settingsForm.rag_min_score"
                       type="number"
@@ -652,7 +733,14 @@
           <p class="parse-step__hint">{{ t('kb.parseHint', { n: uploadFiles?.length || 0 }) }}</p>
           <div class="parse-grid">
             <div class="field">
-              <label class="field__label">{{ t('kb.splitMode') }}</label>
+              <label class="field__label">
+                <span>{{ t('kb.splitMode') }}</span>
+                <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                  <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
+                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                  </button>
+                </UTooltip>
+              </label>
               <USelect
                 v-model="parseForm.split_mode"
                 :items="splitModeOptions"
@@ -663,15 +751,36 @@
               />
             </div>
             <div class="field">
-              <label class="field__label">{{ t('kb.chunkSize') }}</label>
+              <label class="field__label">
+                <span>{{ t('kb.chunkSize') }}</span>
+                <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                  <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
+                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                  </button>
+                </UTooltip>
+              </label>
               <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
             </div>
             <div class="field">
-              <label class="field__label">{{ t('kb.chunkOverlap') }}</label>
+              <label class="field__label">
+                <span>{{ t('kb.chunkOverlap') }}</span>
+                <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                  <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
+                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                  </button>
+                </UTooltip>
+              </label>
               <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
             </div>
             <div v-if="parseForm.split_mode === 'separator'" class="field">
-              <label class="field__label">{{ t('kb.splitSeparator') }}</label>
+              <label class="field__label">
+                <span>{{ t('kb.splitSeparator') }}</span>
+                <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                  <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
+                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                  </button>
+                </UTooltip>
+              </label>
               <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
             </div>
           </div>
@@ -1096,6 +1205,8 @@ const splitModeOptions = computed(() => [
   { label: t('kb.splitFixed'), value: 'fixed' },
   { label: t('kb.splitSeparator'), value: 'separator' },
 ])
+const fieldHelpTooltipContent = { side: 'top' as const, collisionPadding: 8 }
+const fieldHelpTooltipUi = { content: 'max-w-xs whitespace-normal' }
 
 function currentParseOptions(): ParseOptions {
   return {
@@ -1496,6 +1607,13 @@ function clearSearch() {
   searchResults.value = []
   hasSearched.value = false
   searchDuration.value = 0
+}
+
+function onSearchKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Enter' || e.shiftKey) return
+  // Enter / Ctrl·Cmd+Enter 检索；Shift+Enter 换行
+  e.preventDefault()
+  void handleSearch()
 }
 
 const handleSearch = async () => {
@@ -2058,18 +2176,35 @@ onUnmounted(() => {
 }
 
 .search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 4px 0 12px;
 }
 
-.search-row {
+.search-textarea {
+  width: 100%;
+}
+
+.search-textarea :deep(textarea) {
+  min-height: 96px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.search-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 0;
+  margin-left: auto;
 }
 
 .search-results {
@@ -2129,9 +2264,30 @@ onUnmounted(() => {
 }
 
 .field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--cf-ink);
+}
+
+.field__help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cf-muted, #64748b);
+  cursor: help;
+  line-height: 1;
+}
+
+.field__help:hover,
+.field__help:focus-visible {
+  color: var(--cf-ink);
+  outline: none;
 }
 
 .field__error {
@@ -2325,7 +2481,6 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 10px;
 }
 
 .field--compact {
