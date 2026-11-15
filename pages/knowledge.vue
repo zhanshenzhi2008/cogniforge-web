@@ -25,53 +25,62 @@
       <p>{{ t('kb.empty') }}</p>
     </div>
 
-    <div v-else class="kb-grid">
-      <div
-        v-for="kb in knowledgeBases"
-        :key="kb.id"
-        class="kb-card cf-surface"
-        :title="t('kb.hint')"
-        @click="onCardClick(kb)"
-        @dblclick="onCardDblClick(kb)"
-      >
-        <div class="kb-header">
-          <div class="kb-name">
-            <UIcon name="i-lucide-book-open" class="size-5 shrink-0" />
-            <span>{{ kb.name }}</span>
-            <UBadge
-              size="sm"
-              variant="subtle"
-              :color="kb.status === 'active' ? 'success' : 'neutral'"
-            >
-              {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
-            </UBadge>
-          </div>
-          <UDropdownMenu :items="getKBMenuItems(kb)" @click.stop>
-            <CfButton
-              tone="icon"
-              icon="i-lucide-ellipsis"
-              :tip="t('common.more')"
-              @click.stop
-            />
-          </UDropdownMenu>
-        </div>
+    <div v-else class="kb-sections">
+      <section v-for="group in kbGroups" :key="group.key" class="kb-section">
+        <h2 class="kb-section-title">
+          <UIcon name="i-lucide-folder" class="size-4 shrink-0 opacity-70" />
+          <span>{{ group.label }}</span>
+          <span class="kb-section-count">{{ group.items.length }}</span>
+        </h2>
+        <div class="kb-grid">
+          <div
+            v-for="kb in group.items"
+            :key="kb.id"
+            class="kb-card cf-surface"
+            :title="t('kb.hint')"
+            @click="onCardClick(kb)"
+            @dblclick="onCardDblClick(kb)"
+          >
+            <div class="kb-header">
+              <div class="kb-name">
+                <UIcon name="i-lucide-book-open" class="size-5 shrink-0" />
+                <span>{{ kb.name }}</span>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="kb.status === 'active' ? 'success' : 'neutral'"
+                >
+                  {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+                </UBadge>
+              </div>
+              <UDropdownMenu :items="getKBMenuItems(kb)" @click.stop>
+                <CfButton
+                  tone="icon"
+                  icon="i-lucide-ellipsis"
+                  :tip="t('common.more')"
+                  @click.stop
+                />
+              </UDropdownMenu>
+            </div>
 
-        <p class="kb-description">{{ kb.description || t('common.noDesc') }}</p>
+            <p class="kb-description">{{ kb.description || t('common.noDesc') }}</p>
 
-        <div class="kb-meta">
-          <div class="meta-left">
-            <span class="meta-item">
-              <UIcon name="i-lucide-file-text" class="size-3.5" />
-              {{ t('kb.docs', { n: kb.doc_count }) }}
-            </span>
-            <span class="meta-item">
-              <UIcon name="i-lucide-server" class="size-3.5" />
-              {{ kb.vector_db || 'chroma' }}
-            </span>
+            <div class="kb-meta">
+              <div class="meta-left">
+                <span class="meta-item">
+                  <UIcon name="i-lucide-file-text" class="size-3.5" />
+                  {{ t('kb.docs', { n: kb.doc_count }) }}
+                </span>
+                <span class="meta-item">
+                  <UIcon name="i-lucide-server" class="size-3.5" />
+                  {{ kb.vector_db || 'chroma' }}
+                </span>
+              </div>
+              <span class="meta-item">{{ d(kb.created_at) }}</span>
+            </div>
           </div>
-          <span class="meta-item">{{ d(kb.created_at) }}</span>
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- Create / View / Edit KB -->
@@ -118,8 +127,12 @@
               <dd>{{ viewingKB.status === 'active' ? t('common.enabled') : t('common.disabled') }}</dd>
             </div>
             <div class="detail-row">
+              <dt>{{ t('kb.folder') }}</dt>
+              <dd>{{ folderNameById.get(viewingKB.folder_id || '') || t('kb.noFolder') }}</dd>
+            </div>
+            <div class="detail-row">
               <dt>{{ t('kb.vector') }}</dt>
-              <dd>{{ viewingKB.vector_db || 'chroma' }}</dd>
+              <dd>{{ viewingKB.vector_db || 'pgvector' }}</dd>
             </div>
             <div class="detail-row">
               <dt>{{ t('kb.embedding') }}</dt>
@@ -151,6 +164,26 @@
               @update:model-value="errors.name = ''"
             />
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
+          </div>
+
+          <div class="field">
+            <label class="field__label">{{ t('kb.folder') }}</label>
+            <div class="folder-pick-row">
+              <USelect
+                v-model="form.folder_id"
+                class="folder-pick-select"
+                :items="folderSelectItems"
+                :placeholder="t('kb.pickFolder')"
+              />
+              <CfButton
+                type="button"
+                tone="secondary"
+                icon="i-lucide-plus"
+                label-mode="tip"
+                :tip="t('kb.newFolder')"
+                @click="openCreateFolder"
+              />
+            </div>
           </div>
 
           <div class="field">
@@ -320,7 +353,7 @@
                           <div class="action-btns">
                             <CfButton
                               tone="icon"
-                              icon="i-lucide-refresh-cw"
+                              icon="i-lucide-scan-text"
                               :tip="t('kb.reparse')"
                               @click="handleReparseDoc(doc)"
                             />
@@ -382,24 +415,29 @@
 
           <template #search>
             <div class="search-panel">
-              <UTextarea
-                v-model="searchQuery"
-                class="w-full"
-                :rows="2"
-                :placeholder="t('kb.searchPh')"
-                @keydown.enter.ctrl="handleSearch"
-              />
-              <div class="search-actions">
+              <div class="search-row">
+                <UInput
+                  v-model="searchQuery"
+                  class="search-input"
+                  :placeholder="t('kb.searchPh')"
+                  icon="i-lucide-search"
+                  @keydown.enter.prevent="handleSearch"
+                />
                 <CfButton
                   tone="primary"
                   icon="i-lucide-search"
+                  label-mode="tip"
+                  :tip="t('kb.search')"
                   :loading="searchLoading"
                   @click="handleSearch"
-                >
-                  {{ t('kb.search') }}
-                </CfButton>
-                <CfButton tone="secondary" icon="i-lucide-eraser" @click="searchQuery = ''">{{ t('kb.clear') }}</CfButton>
-                <span class="search-hint">{{ t('kb.searchHint') }}</span>
+                />
+                <CfButton
+                  tone="secondary"
+                  icon="i-lucide-eraser"
+                  label-mode="tip"
+                  :tip="t('kb.clear')"
+                  @click="clearSearch"
+                />
               </div>
             </div>
 
@@ -464,6 +502,42 @@
       </template>
     </CfModal>
 
+    <!-- Create folder -->
+    <CfModal
+      v-model:open="folderModalVisible"
+      :title="t('kb.newFolder')"
+      :ui="{ content: 'sm:max-w-md' }"
+    >
+      <template #body>
+        <div class="field">
+          <label class="field__label">{{ t('kb.folderName') }}</label>
+          <UInput
+            v-model="folderNameInput"
+            class="w-full"
+            :placeholder="t('kb.folderNamePh')"
+            @keydown.enter.prevent="submitCreateFolder"
+          />
+        </div>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="folderModalVisible = false">
+              {{ t('common.cancel') }}
+            </CfButton>
+            <CfButton
+              tone="primary"
+              icon="i-lucide-plus"
+              :loading="folderSubmitting"
+              @click="submitCreateFolder"
+            >
+              {{ t('common.create') }}
+            </CfButton>
+          </div>
+        </div>
+      </template>
+    </CfModal>
+
     <!-- Delete Doc confirm -->
     <CfModal v-model:open="deleteDocVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>
@@ -495,6 +569,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type {
   KnowledgeBase,
+  KnowledgeFolder,
   Document,
   DocumentPreview,
   CreateKBInput,
@@ -509,17 +584,33 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
-const { listKBs, createKB, updateKB, deleteKB, listDocs, getDoc, uploadDoc, deleteDoc, reparseDoc, searchKB } =
-  useKnowledgeBases()
+const {
+  listFolders,
+  createFolder,
+  listKBs,
+  createKB,
+  updateKB,
+  deleteKB,
+  listDocs,
+  getDoc,
+  uploadDoc,
+  deleteDoc,
+  reparseDoc,
+  searchKB,
+} = useKnowledgeBases()
 
 const loading = ref(false)
 const submitting = ref(false)
 const knowledgeBases = ref<KnowledgeBase[]>([])
+const folders = ref<KnowledgeFolder[]>([])
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const cameFromView = ref(false)
 const editingId = ref('')
 const viewingKB = ref<KnowledgeBase | null>(null)
+const folderModalVisible = ref(false)
+const folderNameInput = ref('')
+const folderSubmitting = ref(false)
 
 const dialogTitle = computed(() => {
   if (dialogMode.value === 'create') return t('kb.createTitle')
@@ -540,10 +631,58 @@ const deleting = ref<KnowledgeBase | null>(null)
 const form = reactive({
   name: '',
   description: '',
-  vector_db: 'chroma',
+  folder_id: '' as string,
+  vector_db: 'pgvector',
   embedding_model: 'text-embedding-ada-002',
 })
 const errors = reactive({ name: '' })
+
+const folderSelectItems = computed(() => [
+  { label: t('kb.noFolder'), value: '' },
+  ...folders.value.map((f) => ({ label: f.name, value: f.id })),
+])
+
+const folderNameById = computed(() => {
+  const map = new Map<string, string>()
+  for (const f of folders.value) map.set(f.id, f.name)
+  return map
+})
+
+const kbGroups = computed(() => {
+  const groups: { key: string; label: string; items: KnowledgeBase[] }[] = []
+  const byFolder = new Map<string, KnowledgeBase[]>()
+  const uncategorized: KnowledgeBase[] = []
+
+  for (const kb of knowledgeBases.value) {
+    if (kb.folder_id) {
+      const list = byFolder.get(kb.folder_id) || []
+      list.push(kb)
+      byFolder.set(kb.folder_id, list)
+    } else {
+      uncategorized.push(kb)
+    }
+  }
+
+  for (const f of folders.value) {
+    const items = byFolder.get(f.id)
+    if (items?.length) {
+      groups.push({ key: f.id, label: f.name, items })
+      byFolder.delete(f.id)
+    }
+  }
+  // 目录已删但仍挂着 folder_id 的库
+  for (const [fid, items] of byFolder) {
+    groups.push({
+      key: fid,
+      label: folderNameById.value.get(fid) || t('kb.unknownFolder'),
+      items,
+    })
+  }
+  if (uncategorized.length || groups.length === 0) {
+    groups.push({ key: '__none__', label: t('kb.noFolder'), items: uncategorized })
+  }
+  return groups
+})
 
 const vectorDbOptions = [
   { label: 'PGVector', value: 'pgvector' },
@@ -706,19 +845,55 @@ function validate() {
   return !errors.name
 }
 
+const fetchFolders = async () => {
+  const res = await listFolders()
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  folders.value = res.data || []
+}
+
 const fetchKnowledgeBases = async () => {
   loading.value = true
   try {
-    const res = await listKBs()
-    if (res.error) {
-      toast.add({ title: res.error, color: 'error' })
+    const [kbRes] = await Promise.all([listKBs(), fetchFolders()])
+    if (kbRes.error) {
+      toast.add({ title: kbRes.error, color: 'error' })
       return
     }
-    knowledgeBases.value = res.data || []
+    knowledgeBases.value = kbRes.data || []
   } catch {
     toast.add({ title: t('kb.listFail'), color: 'error' })
   } finally {
     loading.value = false
+  }
+}
+
+function openCreateFolder() {
+  folderNameInput.value = ''
+  folderModalVisible.value = true
+}
+
+async function submitCreateFolder() {
+  const name = folderNameInput.value.trim()
+  if (!name) {
+    toast.add({ title: t('kb.folderNameRequired'), color: 'warning' })
+    return
+  }
+  folderSubmitting.value = true
+  try {
+    const res = await createFolder(name)
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.folderCreateFail'), color: 'error' })
+      return
+    }
+    folders.value = [...folders.value, res.data]
+    form.folder_id = res.data.id
+    folderModalVisible.value = false
+    toast.add({ title: t('kb.folderCreateOk'), color: 'success' })
+  } finally {
+    folderSubmitting.value = false
   }
 }
 
@@ -798,7 +973,8 @@ const onCardDblClick = (kb: KnowledgeBase) => {
 const fillFormFromKB = (kb: KnowledgeBase) => {
   form.name = kb.name
   form.description = kb.description || ''
-  form.vector_db = kb.vector_db || 'chroma'
+  form.folder_id = kb.folder_id || ''
+  form.vector_db = kb.vector_db || 'pgvector'
   form.embedding_model = kb.embedding_model || 'text-embedding-ada-002'
   errors.name = ''
 }
@@ -862,6 +1038,13 @@ const confirmDelete = async () => {
 const handleUploadCancel = () => {
   uploadFiles.value = null
   uploadModalVisible.value = false
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  searchResults.value = []
+  hasSearched.value = false
+  searchDuration.value = 0
 }
 
 const handleSearch = async () => {
@@ -976,6 +1159,7 @@ const handleSubmit = async () => {
       const input: UpdateKBInput = {
         name: form.name,
         description: form.description,
+        folder_id: form.folder_id,
         vector_db: form.vector_db,
         embedding_model: form.embedding_model,
       }
@@ -989,6 +1173,7 @@ const handleSubmit = async () => {
       const input: CreateKBInput = {
         name: form.name,
         description: form.description,
+        folder_id: form.folder_id || undefined,
         vector_db: form.vector_db,
         embedding_model: form.embedding_model,
       }
@@ -1011,7 +1196,8 @@ const handleSubmit = async () => {
 const resetForm = () => {
   form.name = ''
   form.description = ''
-  form.vector_db = 'chroma'
+  form.folder_id = ''
+  form.vector_db = 'pgvector'
   form.embedding_model = 'text-embedding-ada-002'
   errors.name = ''
 }
@@ -1044,10 +1230,43 @@ onUnmounted(() => {
   color: var(--cf-ink-soft);
 }
 
+.kb-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.kb-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.kb-section-count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--cf-ink-soft);
+}
+
 .kb-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
+}
+
+.folder-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-pick-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .kb-card {
@@ -1292,21 +1511,18 @@ onUnmounted(() => {
 }
 
 .search-panel {
-  padding: 12px 0;
+  padding: 4px 0 12px;
 }
 
-.search-actions {
+.search-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
-  flex-wrap: wrap;
 }
 
-.search-hint {
-  font-size: 0.75rem;
-  color: var(--cf-ink-soft);
-  margin-left: 4px;
+.search-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .search-results {

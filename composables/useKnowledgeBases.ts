@@ -4,9 +4,19 @@
 
 import { useApi } from './useApi'
 
+export interface KnowledgeFolder {
+  id: string
+  user_id: string
+  name: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
 export interface KnowledgeBase {
   id: string
   user_id: string
+  folder_id?: string
   name: string
   description: string
   vector_db: string
@@ -21,6 +31,7 @@ export interface KnowledgeBase {
 export interface CreateKBInput {
   name: string
   description?: string
+  folder_id?: string
   vector_db?: string
   embedding_model?: string
 }
@@ -28,6 +39,7 @@ export interface CreateKBInput {
 export interface UpdateKBInput {
   name?: string
   description?: string
+  folder_id?: string
   vector_db?: string
   embedding_model?: string
   status?: string
@@ -81,6 +93,26 @@ export interface SearchInput {
 
 export const useKnowledgeBases = () => {
   const api = useApi()
+
+  const listFolders = async (): Promise<{ data?: KnowledgeFolder[]; error?: string }> => {
+    try {
+      const res = await api.get<KnowledgeFolder[]>('/api/v1/knowledge/folders')
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取目录失败' }
+    }
+  }
+
+  const createFolder = async (name: string): Promise<{ data?: KnowledgeFolder; error?: string }> => {
+    try {
+      const res = await api.post<KnowledgeFolder>('/api/v1/knowledge/folders', { name })
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '创建目录失败' }
+    }
+  }
 
   const listKBs = async (): Promise<{ data?: KnowledgeBase[]; error?: string }> => {
     try {
@@ -196,6 +228,8 @@ export const useKnowledgeBases = () => {
   }
 
   return {
+    listFolders,
+    createFolder,
     listKBs,
     getKB,
     createKB,
