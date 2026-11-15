@@ -523,6 +523,16 @@ html[data-theme="inknight"] .cf-btn--primary:not(:disabled):not([aria-disabled="
   gap: 4px;
 }
 
+/*
+ * CfModal = z-index 200。Nuxt UI / Reka 的 Select、Dropdown 等内容层
+ * 默认 position:fixed 且无 z-index，会画在弹窗下面，表现为「点了没下拉」。
+ * app.config 已给 content 加 z-[300]；这里再兜一层，避免个别组件漏配。
+ */
+[data-slot="content"][data-state="open"],
+[role="listbox"] {
+  z-index: 300;
+}
+
 @media (max-width: 640px) {
   .cf-page {
     padding: 20px var(--cf-page-pad) 36px;

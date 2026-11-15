@@ -107,8 +107,14 @@ export interface Document {
 export interface DocumentPreview extends Document {
   content: string
   previewable: boolean
+  editable?: boolean
   preview_note?: string
   truncated?: boolean
+}
+
+export interface UpdateDocContentInput {
+  content: string
+  reparse?: boolean
 }
 
 export interface SearchResult {
@@ -225,6 +231,20 @@ export const useKnowledgeBases = () => {
     }
   }
 
+  const updateDocContent = async (
+    kbId: string,
+    docId: string,
+    input: UpdateDocContentInput
+  ): Promise<{ data?: DocumentPreview; error?: string }> => {
+    try {
+      const res = await api.put<DocumentPreview>(`/api/v1/knowledge/${kbId}/documents/${docId}/content`, input)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '保存文档失败' }
+    }
+  }
+
   const appendParseOptions = (formData: FormData, opts?: ParseOptions) => {
     if (!opts) return
     if (opts.chunk_size != null) formData.append('chunk_size', String(opts.chunk_size))
@@ -312,6 +332,7 @@ export const useKnowledgeBases = () => {
     deleteKB,
     listDocs,
     getDoc,
+    updateDocContent,
     uploadDoc,
     previewChunks,
     deleteDoc,

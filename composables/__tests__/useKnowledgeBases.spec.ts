@@ -72,6 +72,8 @@ describe('useKnowledgeBases', () => {
       expect(typeof kb.updateKB).toBe('function')
       expect(typeof kb.deleteKB).toBe('function')
       expect(typeof kb.listDocs).toBe('function')
+      expect(typeof kb.getDoc).toBe('function')
+      expect(typeof kb.updateDocContent).toBe('function')
       expect(typeof kb.uploadDoc).toBe('function')
       expect(typeof kb.deleteDoc).toBe('function')
       expect(typeof kb.searchKB).toBe('function')

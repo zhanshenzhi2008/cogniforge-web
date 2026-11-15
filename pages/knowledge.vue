@@ -53,14 +53,26 @@
                   {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
                 </UBadge>
               </div>
-              <UDropdownMenu :items="getKBMenuItems(kb)" @click.stop>
+              <div class="action-btns" @click.stop>
                 <CfButton
-                  tone="icon"
-                  icon="i-lucide-ellipsis"
-                  :tip="t('common.more')"
-                  @click.stop
+                  tone="icon-accent"
+                  icon="i-lucide-file-text"
+                  :tip="t('kb.docsManage')"
+                  @click="handleSelectKB(kb, 'docs')"
                 />
-              </UDropdownMenu>
+                <CfButton
+                  tone="icon-accent"
+                  icon="i-lucide-pencil"
+                  :tip="t('common.edit')"
+                  @click="handleEdit(kb)"
+                />
+                <CfButton
+                  tone="icon-danger"
+                  icon="i-lucide-trash-2"
+                  :tip="t('common.delete')"
+                  @click="askDelete(kb)"
+                />
+              </div>
             </div>
 
             <p class="kb-description">{{ kb.description || t('common.noDesc') }}</p>
@@ -173,6 +185,7 @@
               class="w-full"
               :items="folderSelectItems"
               :placeholder="t('kb.pickFolder')"
+              :ui="{ content: 'z-[300]' }"
               @update:model-value="onFolderSelect"
             />
           </div>
@@ -194,6 +207,7 @@
               class="w-full"
               :items="vectorDbOptions"
               :placeholder="t('kb.pickVector')"
+              :ui="{ content: 'z-[300]' }"
             />
           </div>
 
@@ -202,6 +216,7 @@
             <USelect
               v-model="form.embedding_model"
               class="w-full"
+              :ui="{ content: 'z-[300]' }"
               :items="embeddingModelOptions"
               :placeholder="t('kb.pickEmbedding')"
             />
@@ -372,12 +387,41 @@
                     <UIcon :name="getFileIcon(previewDoc.file_type)" class="size-4 shrink-0 opacity-70" />
                     <span class="preview-title">{{ previewDoc.name }}</span>
                   </div>
-                  <CfButton
-                    tone="icon"
-                    icon="i-lucide-x"
-                    :tip="t('kb.closePreview')"
-                    @click="closeDocPreview"
-                  />
+                  <div class="preview-toolbar__actions">
+                    <div
+                      v-if="previewDoc.previewable && previewDoc.editable"
+                      class="preview-mode-switch"
+                      role="tablist"
+                      :aria-label="t('kb.docViewMode')"
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        class="preview-mode-btn"
+                        :class="{ 'preview-mode-btn--active': previewMode === 'preview' }"
+                        :aria-selected="previewMode === 'preview'"
+                        @click="setPreviewMode('preview')"
+                      >
+                        {{ t('kb.modePreview') }}
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        class="preview-mode-btn"
+                        :class="{ 'preview-mode-btn--active': previewMode === 'edit' }"
+                        :aria-selected="previewMode === 'edit'"
+                        @click="setPreviewMode('edit')"
+                      >
+                        {{ t('kb.modeEdit') }}
+                      </button>
+                    </div>
+                    <CfButton
+                      tone="icon"
+                      icon="i-lucide-x"
+                      :tip="t('kb.closePreview')"
+                      @click="closeDocPreview"
+                    />
+                  </div>
                 </div>
                 <div class="preview-meta">
                   <UBadge size="sm" variant="subtle" :color="docStatusColor(previewDoc.status)">
@@ -385,6 +429,7 @@
                   </UBadge>
                   <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
                   <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
+                  <span v-if="previewDirty" class="preview-dirty">{{ t('kb.unsaved') }}</span>
                 </div>
                 <div v-if="previewDoc.error" class="preview-error">{{ previewDoc.error }}</div>
                 <div v-if="previewLoading" class="cf-state cf-state--compact">
@@ -395,14 +440,39 @@
                   <UIcon name="i-lucide-eye-off" class="size-7 opacity-50" />
                   <p>{{ previewDoc.preview_note || t('kb.previewUnsupported') }}</p>
                 </div>
-                <template v-else>
-                  <p v-if="previewDoc.truncated" class="preview-truncated">{{ t('kb.previewTruncated') }}</p>
-                  <div
-                    v-if="previewDoc.file_type === 'md' || previewDoc.file_type === 'html'"
-                    class="preview-body preview-body--md chat-markdown"
-                    v-html="renderPreviewMarkdown(previewDoc.content)"
+                <template v-else-if="previewMode === 'edit' && previewDoc.editable">
+                  <textarea
+                    v-model="previewEditContent"
+                    class="preview-editor"
+                    :placeholder="t('kb.editPlaceholder')"
+                    spellcheck="false"
                   />
-                  <pre v-else class="preview-body preview-body--plain">{{ previewDoc.content }}</pre>
+                  <div class="preview-edit-bar">
+                    <span class="cf-muted">{{ t('kb.editHint') }}</span>
+                    <div class="preview-edit-bar__actions">
+                      <CfButton tone="secondary" icon="i-lucide-rotate-ccw" :disabled="previewSaving || !previewDirty" @click="resetPreviewEdit">
+                        {{ t('common.reset') }}
+                      </CfButton>
+                      <CfButton
+                        tone="primary"
+                        icon="i-lucide-save"
+                        :loading="previewSaving"
+                        :disabled="!previewDirty"
+                        @click="savePreviewEdit"
+                      >
+                        {{ t('common.save') }}
+                      </CfButton>
+                    </div>
+                  </div>
+                </template>
+                <template v-else>
+                  <p v-if="previewDoc.truncated" class="preview-truncated">{{ previewDoc.preview_note || t('kb.previewTruncated') }}</p>
+                  <div
+                    v-if="previewDoc.file_type === 'md'"
+                    class="preview-body preview-body--md chat-markdown"
+                    v-html="renderPreviewMarkdown(previewDisplayContent)"
+                  />
+                  <pre v-else class="preview-body preview-body--plain">{{ previewDisplayContent }}</pre>
                 </template>
               </aside>
             </div>
@@ -585,6 +655,7 @@
                 :items="splitModeOptions"
                 value-key="value"
                 class="w-full"
+                :ui="{ content: 'z-[300]' }"
               />
             </div>
             <div class="field">
@@ -726,7 +797,6 @@
 </template>
 
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
 import type {
   KnowledgeBase,
   KnowledgeFolder,
@@ -755,6 +825,7 @@ const {
   deleteKB,
   listDocs,
   getDoc,
+  updateDocContent,
   uploadDoc,
   previewChunks,
   deleteDoc,
@@ -892,26 +963,74 @@ const documents = ref<Document[]>([])
 const selectedKB = ref<KnowledgeBase | null>(null)
 const previewDoc = ref<DocumentPreview | null>(null)
 const previewLoading = ref(false)
+const previewMode = ref<'preview' | 'edit'>('preview')
+const previewEditContent = ref('')
+const previewSaving = ref(false)
+
+const previewDirty = computed(() => {
+  if (!previewDoc.value || previewMode.value !== 'edit') return false
+  return previewEditContent.value !== (previewDoc.value.content || '')
+})
+
+const previewDisplayContent = computed(() => {
+  // 可编辑文档：预览也跟编辑稿走，方便「改完切预览」对照
+  if (previewDoc.value?.editable) return previewEditContent.value
+  return previewDoc.value?.content || ''
+})
+
+function clearPreviewState() {
+  previewDoc.value = null
+  previewLoading.value = false
+  previewMode.value = 'preview'
+  previewEditContent.value = ''
+  previewSaving.value = false
+}
 
 watch(drawerVisible, (open) => {
-  if (!open) closeDocPreview()
+  // 关掉侧栏直接清空，不再弹确认（侧栏已关）
+  if (!open) clearPreviewState()
 })
 
 watch(drawerActiveTab, (tab) => {
-  if (tab !== 'docs') closeDocPreview()
+  if (tab !== 'docs') {
+    if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) {
+      drawerActiveTab.value = 'docs'
+      return
+    }
+    clearPreviewState()
+  }
 })
 
 function renderPreviewMarkdown(content: string) {
   return renderChatMarkdown(content || '')
 }
 
+function setPreviewMode(mode: 'preview' | 'edit') {
+  if (!previewDoc.value?.editable && mode === 'edit') return
+  if (mode === 'preview' && previewDirty.value) {
+    // 切回预览时用当前编辑稿渲染，不丢未保存内容
+  }
+  if (mode === 'edit' && !previewDirty.value) {
+    previewEditContent.value = previewDoc.value?.content || ''
+  }
+  previewMode.value = mode
+}
+
+function resetPreviewEdit() {
+  previewEditContent.value = previewDoc.value?.content || ''
+}
+
 async function openDocPreview(doc: Document) {
   if (!selectedKB.value) return
+  if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) return
   previewLoading.value = true
+  previewMode.value = 'preview'
+  previewEditContent.value = ''
   previewDoc.value = {
     ...doc,
     content: '',
     previewable: false,
+    editable: false,
   }
   const res = await getDoc(selectedKB.value.id, doc.id)
   previewLoading.value = false
@@ -920,11 +1039,35 @@ async function openDocPreview(doc: Document) {
     return
   }
   previewDoc.value = res.data
+  previewEditContent.value = res.data.content || ''
 }
 
 function closeDocPreview() {
-  previewDoc.value = null
-  previewLoading.value = false
+  if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) return
+  clearPreviewState()
+}
+
+async function savePreviewEdit() {
+  if (!selectedKB.value || !previewDoc.value?.editable) return
+  previewSaving.value = true
+  try {
+    const res = await updateDocContent(selectedKB.value.id, previewDoc.value.id, {
+      content: previewEditContent.value,
+      reparse: true,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.saveDocFail'), color: 'error' })
+      return
+    }
+    previewDoc.value = res.data
+    previewEditContent.value = res.data.content || ''
+    previewMode.value = 'preview'
+    toast.add({ title: t('kb.saveDocOk'), color: 'success' })
+    await fetchDocuments(selectedKB.value.id)
+    startDocRefresh()
+  } finally {
+    previewSaving.value = false
+  }
 }
 
 const deleteDocVisible = ref(false)
@@ -1118,32 +1261,6 @@ function docStatusColor(status: string): 'success' | 'warning' | 'error' | 'neut
     failed: 'error',
   }
   return map[status] || 'neutral'
-}
-
-function getKBMenuItems(kb: KnowledgeBase): DropdownMenuItem[] {
-  return [
-    {
-      label: t('kb.docsManage'),
-      icon: 'i-lucide-file-text',
-      onSelect: () => handleSelectKB(kb, 'docs'),
-    },
-    {
-      label: t('kb.searchTest'),
-      icon: 'i-lucide-search',
-      onSelect: () => handleSelectKB(kb, 'search'),
-    },
-    {
-      label: t('common.edit'),
-      icon: 'i-lucide-pencil',
-      onSelect: () => handleEdit(kb),
-    },
-    {
-      label: t('common.delete'),
-      icon: 'i-lucide-trash-2',
-      color: 'error' as const,
-      onSelect: () => askDelete(kb),
-    },
-  ]
 }
 
 function formatFileSize(bytes: number): string {
@@ -1620,6 +1737,10 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+.kb-header .action-btns {
+  flex-shrink: 0;
+}
+
 .kb-name {
   display: flex;
   align-items: center;
@@ -1628,6 +1749,13 @@ onUnmounted(() => {
   font-size: 1rem;
   color: var(--cf-ink);
   min-width: 0;
+  flex: 1;
+}
+
+.kb-name > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kb-description {
@@ -1713,6 +1841,43 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--cf-line);
 }
 
+.preview-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.preview-mode-switch {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line);
+  background: color-mix(in srgb, var(--cf-ink) 4%, transparent);
+}
+
+.preview-mode-btn {
+  border: 0;
+  background: transparent;
+  color: var(--cf-ink-soft);
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.preview-mode-btn--active {
+  background: var(--cf-nav-surface, var(--ui-bg, #fff));
+  color: var(--cf-ink);
+  box-shadow: 0 1px 2px color-mix(in srgb, #0b1220 12%, transparent);
+}
+
+.preview-dirty {
+  color: #b54708;
+  font-weight: 600;
+}
+
 .preview-title-wrap {
   display: flex;
   align-items: center;
@@ -1786,6 +1951,39 @@ onUnmounted(() => {
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--cf-ink);
+}
+
+.preview-editor {
+  flex: 1;
+  min-height: 200px;
+  width: 100%;
+  border: 0;
+  resize: none;
+  padding: 14px 16px;
+  margin: 0;
+  background: transparent;
+  color: var(--cf-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  outline: none;
+}
+
+.preview-edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--cf-line);
+  background: color-mix(in srgb, var(--cf-ink) 3%, transparent);
+}
+
+.preview-edit-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .cf-table-wrap {

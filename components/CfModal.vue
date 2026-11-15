@@ -407,17 +407,18 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
 
 <style scoped>
 .cf-modal {
-  /* 高于 USlideover / UModal（Dialog 默认 ~z-50）；
-     Dialog 打开时 body 会 pointer-events:none，须在此开回，否则弹窗看得见但点不动 */
+  /* 高于 USlideover（~50）；Select/Popover 需 ≥300（见 app.config / main.css）
+     Dialog 打开时 body 会 pointer-events:none，根节点开回后由子层接管点击 */
   position: fixed;
   inset: 0;
   z-index: 200;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .cf-modal__overlay {
   position: absolute;
   inset: 0;
+  pointer-events: auto;
   background: color-mix(in oklab, #0b1220 48%, transparent);
   backdrop-filter: blur(2px);
 }
@@ -428,6 +429,7 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
   flex-direction: column;
   min-width: 320px;
   min-height: 200px;
+  pointer-events: auto;
   border-radius: 0.85rem;
   border: 1px solid color-mix(in oklab, var(--cf-line) 90%, transparent);
   background: var(--cf-nav-surface, var(--ui-bg, #fff));
