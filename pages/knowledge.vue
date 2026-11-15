@@ -1739,6 +1739,22 @@ onUnmounted(() => {
 
 .kb-header .action-btns {
   flex-shrink: 0;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+/* 鼠标设备：悬停/焦点才显示操作图标，减少视觉噪音 */
+@media (hover: hover) and (pointer: fine) {
+  .kb-header .action-btns {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .kb-card:hover .kb-header .action-btns,
+  .kb-card:focus-within .kb-header .action-btns {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .kb-name {

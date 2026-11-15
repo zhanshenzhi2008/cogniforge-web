@@ -769,7 +769,7 @@ export const M = {
   'kb.visibilityPrivate': { 'zh-CN': '仅自己', 'en-US': 'Private' },
   'kb.visibilityOrgSoon': { 'zh-CN': '组织内（即将支持）', 'en-US': 'Organization (coming soon)' },
   'kb.visibilityNote': { 'zh-CN': '权限模型占位：库级 ACL 优先于文档级，后续再细做成员与角色。', 'en-US': 'Placeholder: KB-level ACL first; member roles come later.' },
-  'kb.deleteDocText': { 'zh-CN': '确定要删除文档「{name}」吗？', 'en-US': 'Delete document “{name}”?' },
+  'kb.deleteDocText': { 'zh-CN': '确定要删除文档「{name}」吗？删除后无法恢复。', 'en-US': 'Delete document “{name}”? This cannot be undone.' },
   'kb.createTitle': { 'zh-CN': '创建知识库', 'en-US': 'Create knowledge base' },
   'kb.viewTitle': { 'zh-CN': '知识库详情', 'en-US': 'Knowledge base details' },
   'kb.editTitle': { 'zh-CN': '编辑知识库', 'en-US': 'Edit knowledge base' },
