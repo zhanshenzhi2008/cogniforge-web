@@ -281,7 +281,7 @@
       :ui="{ content: 'max-w-5xl w-full' }"
     >
       <template #body>
-        <div class="drawer-header-actions">
+        <div v-if="drawerActiveTab === 'docs'" class="drawer-header-actions">
           <CfButton
             tone="primary"
             icon="i-lucide-cloud-upload"
@@ -473,6 +473,85 @@
             <div v-else-if="!searchLoading && hasSearched" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-search-x" class="size-7 opacity-50" />
               <p>{{ t('kb.noHits') }}</p>
+            </div>
+          </template>
+
+          <template #settings>
+            <div class="settings-panel">
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsParse') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsParseDesc') }}</p>
+                <div class="parse-grid">
+                  <div class="field">
+                    <label class="field__label">{{ t('kb.splitMode') }}</label>
+                    <USelect
+                      v-model="settingsForm.split_mode"
+                      :items="splitModeOptions"
+                      value-key="value"
+                      class="w-full"
+                    />
+                  </div>
+                  <div class="field">
+                    <label class="field__label">{{ t('kb.chunkSize') }}</label>
+                    <UInput v-model.number="settingsForm.chunk_size" type="number" :min="64" :max="4000" />
+                  </div>
+                  <div class="field">
+                    <label class="field__label">{{ t('kb.chunkOverlap') }}</label>
+                    <UInput v-model.number="settingsForm.chunk_overlap" type="number" :min="0" :max="2000" />
+                  </div>
+                  <div v-if="settingsForm.split_mode === 'separator'" class="field">
+                    <label class="field__label">{{ t('kb.splitSeparator') }}</label>
+                    <UInput v-model="settingsForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
+                  </div>
+                </div>
+              </section>
+
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsRetrieve') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsRetrieveDesc') }}</p>
+                <div class="parse-grid">
+                  <div class="field">
+                    <label class="field__label">{{ t('kb.ragTopK') }}</label>
+                    <UInput v-model.number="settingsForm.rag_top_k" type="number" :min="1" :max="20" />
+                  </div>
+                  <div class="field">
+                    <label class="field__label">{{ t('kb.ragMinScore') }}</label>
+                    <UInput
+                      v-model.number="settingsForm.rag_min_score"
+                      type="number"
+                      :min="0"
+                      :max="1"
+                      :step="0.05"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsAccess') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsAccessDesc') }}</p>
+                <div class="field">
+                  <label class="field__label">{{ t('kb.visibility') }}</label>
+                  <USelect
+                    v-model="settingsForm.visibility"
+                    :items="visibilityOptions"
+                    value-key="value"
+                    class="w-full"
+                  />
+                </div>
+                <p class="settings-note">{{ t('kb.visibilityNote') }}</p>
+              </section>
+
+              <div class="settings-actions">
+                <CfButton
+                  tone="primary"
+                  icon="i-lucide-save"
+                  :loading="settingsSaving"
+                  @click="saveKBSettings"
+                >
+                  {{ t('common.save') }}
+                </CfButton>
+              </div>
             </div>
           </template>
         </UTabs>
@@ -933,6 +1012,66 @@ function syncSearchDefaultsFromKB(kb: KnowledgeBase | null) {
   searchMinScore.value = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
 }
 
+const settingsSaving = ref(false)
+const settingsForm = reactive({
+  chunk_size: 512,
+  chunk_overlap: 50,
+  split_mode: 'recursive',
+  split_separator: '\\n\\n',
+  rag_top_k: 5,
+  rag_min_score: 0.3,
+  visibility: 'private',
+})
+const visibilityOptions = computed(() => [
+  { label: t('kb.visibilityPrivate'), value: 'private' },
+])
+
+function syncSettingsFromKB(kb: KnowledgeBase | null) {
+  settingsForm.chunk_size = kb?.chunk_size && kb.chunk_size > 0 ? kb.chunk_size : 512
+  settingsForm.chunk_overlap = kb?.chunk_overlap != null ? kb.chunk_overlap : 50
+  settingsForm.split_mode = kb?.split_mode || 'recursive'
+  const sep = kb?.split_separator || '\n\n'
+  settingsForm.split_separator = sep === '\n\n' ? '\\n\\n' : sep
+  settingsForm.rag_top_k = kb?.rag_top_k && kb.rag_top_k > 0 ? kb.rag_top_k : 5
+  settingsForm.rag_min_score = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
+  settingsForm.visibility = kb?.visibility === 'org' ? 'private' : (kb?.visibility || 'private')
+}
+
+async function saveKBSettings() {
+  if (!selectedKB.value) return
+  settingsSaving.value = true
+  try {
+    const sep =
+      settingsForm.split_mode === 'separator'
+        ? settingsForm.split_separator.replace(/\\n/g, '\n')
+        : '\n\n'
+    const input: UpdateKBInput = {
+      chunk_size: Math.min(4000, Math.max(64, Number(settingsForm.chunk_size) || 512)),
+      chunk_overlap: Math.max(0, Number(settingsForm.chunk_overlap) || 0),
+      split_mode: settingsForm.split_mode || 'recursive',
+      split_separator: sep,
+      rag_top_k: Math.min(20, Math.max(1, Number(settingsForm.rag_top_k) || 5)),
+      rag_min_score: Math.min(1, Math.max(0, Number(settingsForm.rag_min_score) || 0.3)),
+      visibility: 'private',
+    }
+    const res = await updateKB(selectedKB.value.id, input)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    if (res.data) {
+      selectedKB.value = res.data
+      const idx = knowledgeBases.value.findIndex((k) => k.id === res.data!.id)
+      if (idx >= 0) knowledgeBases.value[idx] = res.data
+      syncSearchDefaultsFromKB(res.data)
+      syncSettingsFromKB(res.data)
+    }
+    toast.add({ title: t('common.saveOk'), color: 'success' })
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
 const drawerTabs = computed(() => [
   {
     label: t('kb.docsManage'),
@@ -945,6 +1084,11 @@ const drawerTabs = computed(() => [
     value: 'search',
     slot: 'search' as const,
     badge: searchResults.value.length || undefined,
+  },
+  {
+    label: t('kb.settings'),
+    value: 'settings',
+    slot: 'settings' as const,
   },
 ])
 
@@ -1115,9 +1259,10 @@ watch(drawerVisible, (val) => {
   if (!val) stopDocRefresh()
 })
 
-const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' = 'docs') => {
+const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' | 'settings' = 'docs') => {
   selectedKB.value = kb
   syncSearchDefaultsFromKB(kb)
+  syncSettingsFromKB(kb)
   clearSearch()
   closeDocPreview()
   drawerVisible.value = true
@@ -1972,5 +2117,41 @@ onUnmounted(() => {
 
 .search-param-input {
   width: 120px;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 4px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+}
+
+.settings-section__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.settings-section__desc,
+.settings-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.45;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
