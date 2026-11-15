@@ -434,6 +434,23 @@
                   @click="clearSearch"
                 />
               </div>
+              <div class="search-params">
+                <div class="field field--compact">
+                  <label class="field__label">{{ t('kb.ragTopK') }}</label>
+                  <UInput v-model.number="searchTopK" type="number" :min="1" :max="20" class="search-param-input" />
+                </div>
+                <div class="field field--compact">
+                  <label class="field__label">{{ t('kb.ragMinScore') }}</label>
+                  <UInput
+                    v-model.number="searchMinScore"
+                    type="number"
+                    :min="0"
+                    :max="1"
+                    :step="0.05"
+                    class="search-param-input"
+                  />
+                </div>
+              </div>
             </div>
 
             <div v-if="searchResults.length > 0" class="search-results">
@@ -908,6 +925,13 @@ const searchLoading = ref(false)
 const searchResults = ref<SearchResult[]>([])
 const searchDuration = ref(0)
 const hasSearched = ref(false)
+const searchTopK = ref(5)
+const searchMinScore = ref(0.3)
+
+function syncSearchDefaultsFromKB(kb: KnowledgeBase | null) {
+  searchTopK.value = kb?.rag_top_k && kb.rag_top_k > 0 ? kb.rag_top_k : 5
+  searchMinScore.value = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
+}
 
 const drawerTabs = computed(() => [
   {
@@ -1093,6 +1117,8 @@ watch(drawerVisible, (val) => {
 
 const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' = 'docs') => {
   selectedKB.value = kb
+  syncSearchDefaultsFromKB(kb)
+  clearSearch()
   closeDocPreview()
   drawerVisible.value = true
   drawerActiveTab.value = tab
@@ -1217,10 +1243,12 @@ const handleSearch = async () => {
   searchResults.value = []
 
   try {
+    const topK = Math.min(20, Math.max(1, Number(searchTopK.value) || 5))
+    const minScore = Math.min(1, Math.max(0, Number(searchMinScore.value) || 0.3))
     const res = await searchKB(selectedKB.value!.id, {
       query: searchQuery.value.trim(),
-      top_k: 10,
-      min_score: 0.3,
+      top_k: topK,
+      min_score: minScore,
     })
 
     if (res.error) {
@@ -1928,5 +1956,21 @@ onUnmounted(() => {
   .parse-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.search-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.field--compact {
+  min-width: 140px;
+  flex: 0 0 auto;
+}
+
+.search-param-input {
+  width: 120px;
 }
 </style>

@@ -756,6 +756,8 @@ export const M = {
   'kb.previewChunks': { 'zh-CN': '预览分块', 'en-US': 'Preview chunks' },
   'kb.previewSummary': { 'zh-CN': '共 {total} 块 · 原文约 {chars} 字', 'en-US': '{total} chunks · ~{chars} chars' },
   'kb.chars': { 'zh-CN': '字', 'en-US': 'chars' },
+  'kb.ragTopK': { 'zh-CN': '返回条数 Top-K', 'en-US': 'Top-K' },
+  'kb.ragMinScore': { 'zh-CN': '最低相似度', 'en-US': 'Min score' },
   'kb.deleteDocText': { 'zh-CN': '确定要删除文档「{name}」吗？', 'en-US': 'Delete document “{name}”?' },
   'kb.createTitle': { 'zh-CN': '创建知识库', 'en-US': 'Create knowledge base' },
   'kb.viewTitle': { 'zh-CN': '知识库详情', 'en-US': 'Knowledge base details' },
