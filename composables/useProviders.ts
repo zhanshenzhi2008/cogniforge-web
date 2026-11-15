@@ -13,6 +13,11 @@ export interface AIProvider {
   embedding_model: string
   capabilities: string[]
   extra_headers: Record<string, any> | null
+  owner_user_id?: string
+  scope?: 'private' | 'public' | string
+  can_write?: boolean
+  is_preferred_chat?: boolean
+  is_preferred_embedding?: boolean
   is_enabled: boolean
   is_default: boolean
   is_default_embedding: boolean
@@ -37,6 +42,7 @@ export interface CreateProviderInput {
   extra_headers?: Record<string, any>
   is_enabled?: boolean
   priority?: number
+  scope?: 'private' | 'public'
 }
 
 export interface UpdateProviderInput {
@@ -50,6 +56,7 @@ export interface UpdateProviderInput {
   extra_headers?: Record<string, any>
   is_enabled?: boolean
   priority?: number
+  scope?: 'private' | 'public'
 }
 
 export interface TestResult {
@@ -287,9 +294,15 @@ export const useProviders = () => {
     }
   }
 
-  const setDefault = async (id: string, purpose: 'chat' | 'embedding' = 'chat'): Promise<{ error?: string }> => {
+  const setDefault = async (
+    id: string,
+    purpose: 'chat' | 'embedding' = 'chat',
+    opts?: { personal?: boolean },
+  ): Promise<{ error?: string }> => {
     try {
-      const res = await api.post(`/api/v1/providers/${id}/default`, { purpose })
+      const body: { purpose: string; personal?: boolean } = { purpose }
+      if (opts?.personal != null) body.personal = opts.personal
+      const res = await api.post(`/api/v1/providers/${id}/default`, body)
       if (res.error) return { error: res.error }
       return {}
     } catch (err: any) {

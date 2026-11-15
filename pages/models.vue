@@ -34,7 +34,7 @@
         <span class="active-strip-name">{{ activeProvider.name }}</span>
         <span class="active-strip-sep">·</span>
         <span class="active-strip-model">{{ activeProvider.default_model }}</span>
-        <div class="active-strip-actions">
+        <div v-if="canWrite(activeProvider)" class="active-strip-actions">
           <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(activeProvider)" />
         </div>
       </div>
@@ -44,7 +44,7 @@
         <span class="active-strip-name">{{ embeddingProvider.name }}</span>
         <span class="active-strip-sep">·</span>
         <span class="active-strip-model">{{ embeddingProvider.embedding_model || embeddingProvider.default_model }}</span>
-        <div class="active-strip-actions">
+        <div v-if="canWrite(embeddingProvider)" class="active-strip-actions">
           <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(embeddingProvider)" />
         </div>
       </div>
@@ -99,7 +99,10 @@
             <div class="provider-cell-text">
               <div class="provider-name-row">
                 <span class="provider-name" :title="p.name">{{ p.name }}</span>
+                <UBadge v-if="p.scope === 'public'" size="sm" variant="subtle" color="info">{{ t('models.scopePublic') }}</UBadge>
+                <UBadge v-else size="sm" variant="subtle">{{ t('models.scopePrivate') }}</UBadge>
                 <UBadge v-if="p.is_default" size="sm" variant="subtle" color="warning">{{ t('models.default') }}</UBadge>
+                <UBadge v-if="p.is_preferred_chat" size="sm" variant="subtle" color="success">{{ t('models.myDefault') }}</UBadge>
               </div>
               <span class="provider-type">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
             </div>
@@ -122,28 +125,41 @@
           <USwitch
             :model-value="p.is_enabled"
             size="sm"
+            :disabled="!canWrite(p)"
             @update:model-value="handleToggleEnable(p)"
           />
           <div class="action-btns">
             <CfButton
-              v-if="hasCap(p, 'chat') && !p.is_default"
+              v-if="hasCap(p, 'chat') && showSetDefaultChat(p)"
               tone="icon"
               icon="i-lucide-star"
-              :tip="t('models.setDefaultChat')"
+              :tip="defaultChatTip(p)"
               :loading="settingDefaultId === p.id + ':chat'"
               @click="handleSetDefault(p.id, 'chat')"
             />
             <CfButton
-              v-if="hasCap(p, 'embedding') && !p.is_default_embedding"
+              v-if="hasCap(p, 'embedding') && showSetDefaultEmbed(p)"
               tone="icon"
               icon="i-lucide-database"
-              :tip="t('models.setDefaultEmbed')"
+              :tip="defaultEmbedTip(p)"
               :loading="settingDefaultId === p.id + ':embedding'"
               @click="handleSetDefault(p.id, 'embedding')"
             />
             <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(p.id)" />
-            <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(p)" />
-            <CfButton tone="icon-danger" icon="i-lucide-trash-2" :tip="t('common.delete')" @click="askDelete(p)" />
+            <CfButton
+              v-if="canWrite(p)"
+              tone="icon-accent"
+              icon="i-lucide-pencil"
+              :tip="t('common.edit')"
+              @click="handleEdit(p)"
+            />
+            <CfButton
+              v-if="canWrite(p)"
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(p)"
+            />
           </div>
         </div>
       </div>
@@ -186,7 +202,10 @@
                   <div class="provider-cell-text">
                     <div class="provider-name-row">
                       <span class="provider-name">{{ p.name }}</span>
+                      <UBadge v-if="p.scope === 'public'" size="sm" variant="subtle" color="info">{{ t('models.scopePublic') }}</UBadge>
+                      <UBadge v-else size="sm" variant="subtle">{{ t('models.scopePrivate') }}</UBadge>
                       <UBadge v-if="p.is_default" size="sm" variant="subtle" color="warning">{{ t('models.default') }}</UBadge>
+                      <UBadge v-if="p.is_preferred_chat" size="sm" variant="subtle" color="success">{{ t('models.myDefault') }}</UBadge>
                     </div>
                     <span class="provider-type">{{ getProviderMeta(p.provider)?.label || p.provider }}</span>
                   </div>
@@ -205,30 +224,43 @@
                 <USwitch
                   :model-value="p.is_enabled"
                   size="sm"
+                  :disabled="!canWrite(p)"
                   @update:model-value="handleToggleEnable(p)"
                 />
               </td>
               <td @dblclick.stop>
                 <div class="action-btns">
                   <CfButton
-                    v-if="hasCap(p, 'chat') && !p.is_default"
+                    v-if="hasCap(p, 'chat') && showSetDefaultChat(p)"
                     tone="icon"
                     icon="i-lucide-star"
-                    :tip="t('models.setDefaultChat')"
+                    :tip="defaultChatTip(p)"
                     :loading="settingDefaultId === p.id + ':chat'"
                     @click="handleSetDefault(p.id, 'chat')"
                   />
                   <CfButton
-                    v-if="hasCap(p, 'embedding') && !p.is_default_embedding"
+                    v-if="hasCap(p, 'embedding') && showSetDefaultEmbed(p)"
                     tone="icon"
                     icon="i-lucide-database"
-                    :tip="t('models.setDefaultEmbed')"
+                    :tip="defaultEmbedTip(p)"
                     :loading="settingDefaultId === p.id + ':embedding'"
                     @click="handleSetDefault(p.id, 'embedding')"
                   />
                   <CfButton tone="icon" icon="i-lucide-refresh-cw" :tip="t('models.test')" @click="handleTest(p.id)" />
-                  <CfButton tone="icon-accent" icon="i-lucide-pencil" :tip="t('common.edit')" @click="handleEdit(p)" />
-                  <CfButton tone="icon-danger" icon="i-lucide-trash-2" :tip="t('common.delete')" @click="askDelete(p)" />
+                  <CfButton
+                    v-if="canWrite(p)"
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(p)"
+                  />
+                  <CfButton
+                    v-if="canWrite(p)"
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="askDelete(p)"
+                  />
                 </div>
               </td>
             </tr>
@@ -267,7 +299,10 @@
                 </span>
               </div>
               <div class="detail-hero-badges">
+                <UBadge v-if="viewingProvider.scope === 'public'" size="sm" variant="subtle" color="info">{{ t('models.scopePublic') }}</UBadge>
+                <UBadge v-else size="sm" variant="subtle">{{ t('models.scopePrivate') }}</UBadge>
                 <UBadge v-if="viewingProvider.is_default" size="sm" variant="subtle" color="warning">{{ t('models.default') }}</UBadge>
+                <UBadge v-if="viewingProvider.is_preferred_chat" size="sm" variant="subtle" color="success">{{ t('models.myDefault') }}</UBadge>
                 <UBadge
                   size="sm"
                   variant="subtle"
@@ -283,6 +318,10 @@
             <div class="detail-row">
               <dt>{{ t('models.vendor') }}</dt>
               <dd>{{ providerLabel(viewingProvider.provider) }}</dd>
+            </div>
+            <div class="detail-row">
+              <dt>{{ t('models.scope') }}</dt>
+              <dd>{{ viewingProvider.scope === 'public' ? t('models.scopePublic') : t('models.scopePrivate') }}</dd>
             </div>
             <div class="detail-row">
               <dt>{{ t('models.defaultModel') }}</dt>
@@ -482,6 +521,14 @@
             />
             <p class="field__hint">{{ t('models.priorityHint') }}</p>
           </div>
+
+          <div v-if="isAdmin" class="field">
+            <label class="field__label">{{ t('models.scopePublic') }}</label>
+            <div class="scope-toggle">
+              <USwitch v-model="form.is_public" />
+              <span class="field__hint">{{ t('models.scopePublicHint') }}</span>
+            </div>
+          </div>
         </form>
       </template>
 
@@ -496,7 +543,12 @@
               >
                 {{ t('models.test') }}
               </CfButton>
-              <CfButton tone="primary" icon="i-lucide-pencil" @click="enterEditFromView">
+              <CfButton
+                v-if="viewingProvider && canWrite(viewingProvider)"
+                tone="primary"
+                icon="i-lucide-pencil"
+                @click="enterEditFromView"
+              >
                 {{ t('common.edit') }}
               </CfButton>
             </div>
@@ -597,20 +649,45 @@ definePageMeta({ layout: 'default' })
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { user } = useAuth()
 const { list, getActive, create, update, remove, setDefault, test } = useProviders()
 
 const loading = ref(false)
 const submitting = ref(false)
 const providers = ref<AIProvider[]>([])
 const activeProvider = ref<AIProvider | null>(null)
+const isAdmin = computed(() => user.value?.role === 'admin')
 
 function hasCap(p: AIProvider, cap: string) {
   const caps = p.capabilities?.length ? p.capabilities : ['chat']
   return caps.includes(cap)
 }
 
+function canWrite(p: AIProvider) {
+  return p.can_write === true
+}
+
+function showSetDefaultChat(p: AIProvider) {
+  if (isAdmin.value) return !p.is_default
+  return !p.is_preferred_chat
+}
+
+function showSetDefaultEmbed(p: AIProvider) {
+  if (isAdmin.value) return !p.is_default_embedding
+  return !p.is_preferred_embedding
+}
+
+function defaultChatTip(_p?: AIProvider) {
+  return isAdmin.value ? t('models.setDefaultChat') : t('models.setMyDefaultChat')
+}
+
+function defaultEmbedTip(_p?: AIProvider) {
+  return isAdmin.value ? t('models.setDefaultEmbed') : t('models.setMyDefaultEmbed')
+}
+
 const embeddingProvider = computed(() => {
-  return providers.value.find(p => p.is_default_embedding && p.is_enabled)
+  return providers.value.find(p => p.is_preferred_embedding && p.is_enabled)
+    || providers.value.find(p => p.is_default_embedding && p.is_enabled)
     || providers.value.find(p => p.is_enabled && hasCap(p, 'embedding'))
     || null
 })
@@ -662,6 +739,7 @@ const form = reactive({
   capabilities: ['chat'] as string[],
   extra_headers_raw: '',
   priority: 10,
+  is_public: false,
 })
 
 const errors = reactive({
@@ -771,6 +849,7 @@ function fillFormFromProvider(p: AIProvider) {
   form.embedding_model = p.embedding_model || ''
   form.capabilities = p.capabilities?.length ? [...p.capabilities] : ['chat']
   form.priority = p.priority
+  form.is_public = p.scope === 'public'
   if (p.extra_headers) {
     try {
       form.extra_headers_raw = JSON.stringify(p.extra_headers, null, 2)
@@ -802,6 +881,10 @@ const handleView = (p: AIProvider) => {
 }
 
 const handleEdit = (p: AIProvider) => {
+  if (!canWrite(p)) {
+    handleView(p)
+    return
+  }
   dialogMode.value = 'edit'
   viewingProvider.value = p
   editingId.value = p.id
@@ -810,7 +893,7 @@ const handleEdit = (p: AIProvider) => {
 }
 
 const enterEditFromView = () => {
-  if (!viewingProvider.value) return
+  if (!viewingProvider.value || !canWrite(viewingProvider.value)) return
   dialogMode.value = 'edit'
   fillFormFromProvider(viewingProvider.value)
 }
@@ -838,6 +921,7 @@ const confirmDelete = async () => {
 }
 
 const handleToggleEnable = async (p: AIProvider) => {
+  if (!canWrite(p)) return
   const newEnabled = !p.is_enabled
   const input: UpdateProviderInput = { is_enabled: newEnabled }
   const res = await update(p.id, input)
@@ -852,12 +936,16 @@ const handleToggleEnable = async (p: AIProvider) => {
 const handleSetDefault = async (id: string, purpose: 'chat' | 'embedding' = 'chat') => {
   settingDefaultId.value = id + ':' + purpose
   try {
-    const res = await setDefault(id, purpose)
+    const personal = !isAdmin.value
+    const res = await setDefault(id, purpose, { personal })
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    toast.add({ title: purpose === 'embedding' ? t('models.defaultEmbedToast') : t('models.defaultToast'), color: 'success' })
+    const toastKey = personal
+      ? (purpose === 'embedding' ? 'models.myDefaultEmbedToast' : 'models.myDefaultToast')
+      : (purpose === 'embedding' ? 'models.defaultEmbedToast' : 'models.defaultToast')
+    toast.add({ title: t(toastKey), color: 'success' })
     await fetchAll()
   } finally {
     settingDefaultId.value = ''
@@ -899,6 +987,8 @@ const handleSubmit = async () => {
       }
     }
 
+    const scope = isAdmin.value && form.is_public ? 'public' as const : 'private' as const
+
     if (dialogMode.value === 'edit') {
       const input: UpdateProviderInput = {
         name: form.name,
@@ -911,6 +1001,7 @@ const handleSubmit = async () => {
         extra_headers: extraHeaders,
         priority: form.priority,
       }
+      if (isAdmin.value) input.scope = scope
       const res = await update(editingId.value, input)
       if (res.error) {
         toast.add({ title: res.error, color: 'error' })
@@ -928,6 +1019,7 @@ const handleSubmit = async () => {
         capabilities: form.capabilities,
         extra_headers: extraHeaders,
         priority: form.priority,
+        scope,
       }
       const res = await create(input)
       if (res.error) {
@@ -955,6 +1047,7 @@ const resetForm = () => {
   form.capabilities = ['chat']
   form.extra_headers_raw = ''
   form.priority = 10
+  form.is_public = false
   errors.provider = ''
   errors.name = ''
   errors.api_key = ''
@@ -1248,6 +1341,11 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+.scope-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
 .cap-check {
   display: inline-flex;
