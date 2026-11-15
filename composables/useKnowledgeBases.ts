@@ -21,6 +21,13 @@ export interface KnowledgeBase {
   description: string
   vector_db: string
   embedding_model: string
+  chunk_size?: number
+  chunk_overlap?: number
+  split_mode?: string
+  split_separator?: string
+  rag_top_k?: number
+  rag_min_score?: number
+  visibility?: string
   status: 'active' | 'disabled'
   metadata: Record<string, any>
   doc_count: number
@@ -34,6 +41,13 @@ export interface CreateKBInput {
   folder_id?: string
   vector_db?: string
   embedding_model?: string
+  chunk_size?: number
+  chunk_overlap?: number
+  split_mode?: string
+  split_separator?: string
+  rag_top_k?: number
+  rag_min_score?: number
+  visibility?: string
 }
 
 export interface UpdateKBInput {
@@ -42,7 +56,34 @@ export interface UpdateKBInput {
   folder_id?: string
   vector_db?: string
   embedding_model?: string
+  chunk_size?: number
+  chunk_overlap?: number
+  split_mode?: string
+  split_separator?: string
+  rag_top_k?: number
+  rag_min_score?: number
+  visibility?: string
   status?: string
+}
+
+export interface ParseOptions {
+  chunk_size?: number
+  chunk_overlap?: number
+  split_mode?: string
+  split_separator?: string
+}
+
+export interface ChunkPreviewItem {
+  index: number
+  content: string
+  char_count: number
+}
+
+export interface ChunkPreviewResponse {
+  total_chunks: number
+  preview_count: number
+  char_count: number
+  chunks: ChunkPreviewItem[]
 }
 
 export interface Document {
@@ -184,16 +225,50 @@ export const useKnowledgeBases = () => {
     }
   }
 
-  const uploadDoc = async (kbId: string, file: File): Promise<{ data?: Document; error?: string }> => {
+  const appendParseOptions = (formData: FormData, opts?: ParseOptions) => {
+    if (!opts) return
+    if (opts.chunk_size != null) formData.append('chunk_size', String(opts.chunk_size))
+    if (opts.chunk_overlap != null) formData.append('chunk_overlap', String(opts.chunk_overlap))
+    if (opts.split_mode) formData.append('split_mode', opts.split_mode)
+    if (opts.split_separator != null) formData.append('split_separator', opts.split_separator)
+  }
+
+  const uploadDoc = async (
+    kbId: string,
+    file: File,
+    opts?: ParseOptions
+  ): Promise<{ data?: Document; error?: string }> => {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      appendParseOptions(formData, opts)
 
       const res = await api.upload<Document>(`/api/v1/knowledge/${kbId}/documents/upload`, formData)
       if (res.error) return { error: res.error }
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '上传文档失败' }
+    }
+  }
+
+  const previewChunks = async (
+    kbId: string,
+    file: File,
+    opts?: ParseOptions
+  ): Promise<{ data?: ChunkPreviewResponse; error?: string }> => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      appendParseOptions(formData, opts)
+
+      const res = await api.upload<ChunkPreviewResponse>(
+        `/api/v1/knowledge/${kbId}/documents/preview`,
+        formData
+      )
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '预览分块失败' }
     }
   }
 
@@ -238,6 +313,7 @@ export const useKnowledgeBases = () => {
     listDocs,
     getDoc,
     uploadDoc,
+    previewChunks,
     deleteDoc,
     reparseDoc,
     searchKB,

@@ -282,7 +282,11 @@
     >
       <template #body>
         <div class="drawer-header-actions">
-          <CfButton tone="primary" icon="i-lucide-cloud-upload" @click="uploadModalVisible = true">
+          <CfButton
+            tone="primary"
+            icon="i-lucide-cloud-upload"
+            @click="openUploadModal"
+          >
             {{ t('kb.upload') }}
           </CfButton>
         </div>
@@ -458,28 +462,97 @@
       </template>
     </USlideover>
 
-    <!-- Upload Modal -->
+    <!-- Upload Modal：选文件 → 分段配置/预览 → 确认上传 -->
     <CfModal
       v-model:open="uploadModalVisible"
-      :title="t('kb.uploadTitle')"
-      :ui="{ content: 'sm:max-w-lg' }"
+      :title="uploadStep === 1 ? t('kb.uploadTitle') : t('kb.parseTitle')"
+      :ui="{ content: uploadStep === 1 ? 'sm:max-w-lg' : 'sm:max-w-2xl' }"
     >
       <template #body>
-        <UFileUpload
-          v-model="uploadFiles"
-          multiple
-          accept=".pdf,.txt,.md,.docx,.html"
-          :label="t('kb.uploadLabel')"
-          :description="t('kb.uploadDesc')"
-          layout="list"
-        />
+        <div v-if="uploadStep === 1">
+          <UFileUpload
+            v-model="uploadFiles"
+            multiple
+            accept=".pdf,.txt,.md,.docx,.html"
+            :label="t('kb.uploadLabel')"
+            :description="t('kb.uploadDesc')"
+            layout="list"
+          />
+        </div>
+        <div v-else class="parse-step">
+          <p class="parse-step__hint">{{ t('kb.parseHint', { n: uploadFiles?.length || 0 }) }}</p>
+          <div class="parse-grid">
+            <div class="field">
+              <label class="field__label">{{ t('kb.splitMode') }}</label>
+              <USelect
+                v-model="parseForm.split_mode"
+                :items="splitModeOptions"
+                value-key="value"
+                class="w-full"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('kb.chunkSize') }}</label>
+              <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('kb.chunkOverlap') }}</label>
+              <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
+            </div>
+            <div v-if="parseForm.split_mode === 'separator'" class="field">
+              <label class="field__label">{{ t('kb.splitSeparator') }}</label>
+              <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
+            </div>
+          </div>
+          <div class="parse-preview-actions">
+            <CfButton
+              tone="secondary"
+              icon="i-lucide-eye"
+              :loading="chunkPreviewLoading"
+              :disabled="!uploadFiles?.length"
+              @click="handlePreviewChunks"
+            >
+              {{ t('kb.previewChunks') }}
+            </CfButton>
+            <span v-if="chunkPreview" class="cf-muted">
+              {{ t('kb.previewSummary', { total: chunkPreview.total_chunks, chars: chunkPreview.char_count }) }}
+            </span>
+          </div>
+          <div v-if="chunkPreview?.chunks?.length" class="chunk-preview-list">
+            <div
+              v-for="chunk in chunkPreview.chunks"
+              :key="chunk.index"
+              class="chunk-preview-item"
+            >
+              <div class="chunk-preview-item__meta">
+                #{{ chunk.index + 1 }} · {{ chunk.char_count }} {{ t('kb.chars') }}
+              </div>
+              <pre class="chunk-preview-item__body">{{ chunk.content }}</pre>
+            </div>
+          </div>
+        </div>
       </template>
 
       <template #footer>
         <div class="modal-actions">
+          <div class="modal-actions__left">
+            <CfButton v-if="uploadStep === 2" tone="secondary" icon="i-lucide-arrow-left" @click="uploadStep = 1">
+              {{ t('common.back') }}
+            </CfButton>
+          </div>
           <div class="modal-actions__right">
             <CfButton tone="secondary" icon="i-lucide-x" @click="handleUploadCancel">{{ t('common.cancel') }}</CfButton>
             <CfButton
+              v-if="uploadStep === 1"
+              tone="primary"
+              icon="i-lucide-arrow-right"
+              :disabled="!uploadFiles?.length"
+              @click="goParseStep"
+            >
+              {{ t('kb.nextParse') }}
+            </CfButton>
+            <CfButton
+              v-else
               tone="primary"
               icon="i-lucide-cloud-upload"
               :loading="uploadLoading"
@@ -566,6 +639,8 @@ import type {
   CreateKBInput,
   UpdateKBInput,
   SearchResult,
+  ParseOptions,
+  ChunkPreviewResponse,
 } from '@/composables/useKnowledgeBases'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 
@@ -585,6 +660,7 @@ const {
   listDocs,
   getDoc,
   uploadDoc,
+  previewChunks,
   deleteDoc,
   reparseDoc,
   searchKB,
@@ -763,6 +839,68 @@ const deletingDoc = ref<Document | null>(null)
 const uploadModalVisible = ref(false)
 const uploadFiles = ref<File[] | null>(null)
 const uploadLoading = ref(false)
+const uploadStep = ref<1 | 2>(1)
+const chunkPreviewLoading = ref(false)
+const chunkPreview = ref<ChunkPreviewResponse | null>(null)
+const parseForm = reactive({
+  chunk_size: 512,
+  chunk_overlap: 50,
+  split_mode: 'recursive',
+  split_separator: '\\n\\n',
+})
+const splitModeOptions = computed(() => [
+  { label: t('kb.splitRecursive'), value: 'recursive' },
+  { label: t('kb.splitFixed'), value: 'fixed' },
+  { label: t('kb.splitSeparator'), value: 'separator' },
+])
+
+function currentParseOptions(): ParseOptions {
+  return {
+    chunk_size: Number(parseForm.chunk_size) || 512,
+    chunk_overlap: Number(parseForm.chunk_overlap) || 0,
+    split_mode: parseForm.split_mode || 'recursive',
+    split_separator:
+      parseForm.split_mode === 'separator'
+        ? parseForm.split_separator.replace(/\\n/g, '\n')
+        : '\n\n',
+  }
+}
+
+function resetUploadState() {
+  uploadFiles.value = null
+  uploadStep.value = 1
+  chunkPreview.value = null
+  chunkPreviewLoading.value = false
+  parseForm.chunk_size = selectedKB.value?.chunk_size || 512
+  parseForm.chunk_overlap = selectedKB.value?.chunk_overlap ?? 50
+  parseForm.split_mode = selectedKB.value?.split_mode || 'recursive'
+  const sep = selectedKB.value?.split_separator || '\n\n'
+  parseForm.split_separator = sep === '\n\n' ? '\\n\\n' : sep
+}
+
+function goParseStep() {
+  if (!uploadFiles.value?.length) {
+    toast.add({ title: t('kb.needFiles'), color: 'warning' })
+    return
+  }
+  chunkPreview.value = null
+  uploadStep.value = 2
+}
+
+async function handlePreviewChunks() {
+  if (!selectedKB.value || !uploadFiles.value?.length) return
+  chunkPreviewLoading.value = true
+  try {
+    const res = await previewChunks(selectedKB.value.id, uploadFiles.value[0], currentParseOptions())
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    chunkPreview.value = res.data || null
+  } finally {
+    chunkPreviewLoading.value = false
+  }
+}
 
 // Search
 const searchQuery = ref('')
@@ -1051,8 +1189,13 @@ const confirmDelete = async () => {
   }
 }
 
+function openUploadModal() {
+  resetUploadState()
+  uploadModalVisible.value = true
+}
+
 const handleUploadCancel = () => {
-  uploadFiles.value = null
+  resetUploadState()
   uploadModalVisible.value = false
 }
 
@@ -1107,8 +1250,9 @@ const handleUploadSubmit = async () => {
   let successCount = 0
   let failCount = 0
 
+  const opts = currentParseOptions()
   for (const file of uploadFiles.value) {
-    const res = await uploadDoc(selectedKB.value!.id, file)
+    const res = await uploadDoc(selectedKB.value!.id, file, opts)
     if (res.error) {
       failCount++
     } else {
@@ -1720,5 +1864,69 @@ onUnmounted(() => {
   margin: 0;
   color: var(--cf-ink-soft);
   line-height: 1.5;
+}
+
+.parse-step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.parse-step__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--cf-ink-soft);
+}
+
+.parse-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.parse-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chunk-preview-list {
+  max-height: 280px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.chunk-preview-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--cf-ink) 3%, transparent);
+}
+
+.chunk-preview-item__meta {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  margin-bottom: 4px;
+}
+
+.chunk-preview-item__body {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--cf-ink);
+}
+
+@media (max-width: 640px) {
+  .parse-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
