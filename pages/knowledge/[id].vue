@@ -30,18 +30,7 @@
         v-model="drawerActiveTab"
         :items="drawerTabs"
         class="w-full"
-        :ui="{ list: 'drawer-tabs-list' }"
       >
-        <template #list-trailing>
-          <CfButton
-            tone="secondary"
-            icon="i-lucide-sliders-horizontal"
-            class="drawer-tabs-settings"
-            @click="openDefaultsModal"
-          >
-            {{ t('kb.setDefaults') }}
-          </CfButton>
-        </template>
         <template #docs>
           <div class="docs-toolbar">
             <div class="docs-toolbar__left">
@@ -250,19 +239,24 @@
 
           <template #search>
             <div class="search-panel">
-              <div class="field">
-                <label class="field__label">
-                  <span>{{ t('kb.searchQuery') }}</span>
-                  <UTooltip
-                    :text="t('kb.searchQueryTip')"
-                    :content="fieldHelpTooltipContent"
-                    :ui="fieldHelpTooltipUi"
+              <div class="search-compose">
+                <div class="search-compose__bar">
+                  <button
+                    type="button"
+                    class="search-mode-chip"
+                    :aria-label="t('kb.searchSettings')"
+                    @click="openSearchSettings"
                   >
+                    <UIcon :name="searchModeIcon(searchMode)" class="size-3.5 shrink-0" />
+                    <span>{{ searchModeLabel(searchMode) }}</span>
+                    <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 shrink-0 opacity-70" />
+                  </button>
+                  <UTooltip :text="t('kb.searchQueryTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
                     <button type="button" class="field__help" :aria-label="t('kb.searchQueryTip')">
                       <UIcon name="i-lucide-circle-help" class="size-3.5" />
                     </button>
                   </UTooltip>
-                </label>
+                </div>
                 <UTextarea
                   v-model="searchQuery"
                   class="search-textarea"
@@ -273,52 +267,16 @@
                 />
               </div>
               <div class="search-toolbar">
-                <div class="search-params">
-                  <div class="field field--compact">
-                    <label class="field__label">
-                      <span>{{ t('kb.ragTopK') }}</span>
-                      <UTooltip
-                        :text="t('kb.ragTopKTip')"
-                        :content="fieldHelpTooltipContent"
-                        :ui="fieldHelpTooltipUi"
-                      >
-                        <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="searchTopK" type="number" :min="1" :max="20" class="search-param-input" />
-                  </div>
-                  <div class="field field--compact">
-                    <label class="field__label">
-                      <span>{{ t('kb.ragMinScore') }}</span>
-                      <UTooltip
-                        :text="t('kb.ragMinScoreTip')"
-                        :content="fieldHelpTooltipContent"
-                        :ui="fieldHelpTooltipUi"
-                      >
-                        <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput
-                      v-model.number="searchMinScore"
-                      type="number"
-                      :min="0"
-                      :max="1"
-                      :step="0.05"
-                      class="search-param-input"
-                    />
-                  </div>
-                </div>
+                <span class="search-toolbar__meta cf-muted">
+                  {{ t('kb.searchTestMeta', { mode: searchModeLabel(searchMode), k: searchTopK }) }}
+                </span>
                 <div class="search-actions">
                   <CfButton tone="secondary" icon="i-lucide-eraser" @click="clearSearch">
                     {{ t('kb.clear') }}
                   </CfButton>
                   <CfButton
                     tone="primary"
-                    icon="i-lucide-search"
+                    icon="i-lucide-play"
                     :loading="searchLoading"
                     @click="handleSearch"
                   >
@@ -351,7 +309,280 @@
             </div>
           </template>
 
+          <template #settings>
+            <div class="settings-panel">
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsSearchMode') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsSearchModeDesc') }}</p>
+                <div class="search-mode-list" role="radiogroup" :aria-label="t('kb.settingsSearchMode')">
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.search_mode === 'semantic' }"
+                  >
+                    <input
+                      v-model="settingsForm.search_mode"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-search-mode"
+                      value="semantic"
+                    >
+                    <div class="search-mode-card__body">
+                      <div class="search-mode-card__head">
+                        <span class="search-mode-card__title">{{ t('kb.searchModeSemantic') }}</span>
+                        <span class="search-mode-card__hint">{{ t('kb.searchModeSemanticDesc') }}</span>
+                      </div>
+                      <div class="search-mode-card__rerank" @click.stop>
+                        <span>{{ t('kb.rerankEnable') }}</span>
+                        <USwitch v-model="settingsForm.rerank_semantic" size="sm" />
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.search_mode === 'keyword' }"
+                  >
+                    <input
+                      v-model="settingsForm.search_mode"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-search-mode"
+                      value="keyword"
+                    >
+                    <div class="search-mode-card__body">
+                      <div class="search-mode-card__head">
+                        <span class="search-mode-card__title">{{ t('kb.searchModeKeyword') }}</span>
+                        <span class="search-mode-card__hint">{{ t('kb.searchModeKeywordDesc') }}</span>
+                      </div>
+                      <div class="search-mode-card__rerank" @click.stop>
+                        <span>{{ t('kb.rerankEnable') }}</span>
+                        <USwitch v-model="settingsForm.rerank_keyword" size="sm" />
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.search_mode === 'hybrid' }"
+                  >
+                    <input
+                      v-model="settingsForm.search_mode"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-search-mode"
+                      value="hybrid"
+                    >
+                    <div class="search-mode-card__body">
+                      <div class="search-mode-card__head">
+                        <span class="search-mode-card__title">{{ t('kb.searchModeHybrid') }}</span>
+                        <span class="search-mode-card__hint">{{ t('kb.searchModeHybridDesc') }}</span>
+                      </div>
+                      <div class="search-mode-card__rerank" @click.stop>
+                        <span>{{ t('kb.rerankEnable') }}</span>
+                        <USwitch v-model="settingsForm.rerank_hybrid" size="sm" />
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsRetrieveParams') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsRetrieveParamsDesc') }}</p>
+                <div class="parse-grid">
+                  <div class="field">
+                    <label class="field__label">
+                      <span>{{ t('kb.ragTopK') }}</span>
+                      <UTooltip :text="t('kb.ragTopKTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput v-model.number="settingsForm.rag_top_k" type="number" :min="1" :max="20" />
+                  </div>
+                  <div class="field">
+                    <label class="field__label">
+                      <span>{{ t('kb.ragMinScore') }}</span>
+                      <UTooltip :text="t('kb.ragMinScoreTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput
+                      v-model.number="settingsForm.rag_min_score"
+                      type="number"
+                      :min="0"
+                      :max="1"
+                      :step="0.05"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <div class="settings-actions">
+                <CfButton
+                  tone="primary"
+                  icon="i-lucide-save"
+                  :loading="settingsSaving"
+                  @click="saveKBSettings"
+                >
+                  {{ t('common.save') }}
+                </CfButton>
+              </div>
+            </div>
+          </template>
+
         </UTabs>
+
+    <USlideover
+      v-model:open="searchSettingsOpen"
+      :title="t('kb.searchSettings')"
+      :description="t('kb.searchSettingsDesc')"
+      :ui="{ content: 'max-w-md w-full' }"
+    >
+      <template #body>
+        <div class="search-settings">
+          <section class="settings-section">
+            <h3 class="settings-section__title">{{ t('kb.settingsSearchMode') }}</h3>
+            <div class="search-mode-list" role="radiogroup" :aria-label="t('kb.settingsSearchMode')">
+              <label
+                class="search-mode-card"
+                :class="{ 'search-mode-card--on': searchDraft.mode === 'semantic' }"
+              >
+                <input
+                  v-model="searchDraft.mode"
+                  class="search-mode-card__radio"
+                  type="radio"
+                  name="kb-search-test-mode"
+                  value="semantic"
+                >
+                <div class="search-mode-card__body">
+                  <div class="search-mode-card__head">
+                    <span class="search-mode-card__title">
+                      <UIcon :name="searchModeIcon('semantic')" class="size-4" />
+                      {{ t('kb.searchModeSemantic') }}
+                    </span>
+                    <span class="search-mode-card__hint">{{ t('kb.searchModeSemanticDesc') }}</span>
+                  </div>
+                  <div v-if="searchDraft.mode === 'semantic'" class="search-mode-card__rerank" @click.stop>
+                    <span>{{ t('kb.rerankEnable') }}</span>
+                    <USwitch v-model="searchDraft.rerank" size="sm" />
+                  </div>
+                </div>
+              </label>
+              <label
+                class="search-mode-card"
+                :class="{ 'search-mode-card--on': searchDraft.mode === 'keyword' }"
+              >
+                <input
+                  v-model="searchDraft.mode"
+                  class="search-mode-card__radio"
+                  type="radio"
+                  name="kb-search-test-mode"
+                  value="keyword"
+                >
+                <div class="search-mode-card__body">
+                  <div class="search-mode-card__head">
+                    <span class="search-mode-card__title">
+                      <UIcon :name="searchModeIcon('keyword')" class="size-4" />
+                      {{ t('kb.searchModeKeyword') }}
+                    </span>
+                    <span class="search-mode-card__hint">{{ t('kb.searchModeKeywordDesc') }}</span>
+                  </div>
+                  <div v-if="searchDraft.mode === 'keyword'" class="search-mode-card__rerank" @click.stop>
+                    <span>{{ t('kb.rerankEnable') }}</span>
+                    <USwitch v-model="searchDraft.rerank" size="sm" />
+                  </div>
+                </div>
+              </label>
+              <label
+                class="search-mode-card"
+                :class="{ 'search-mode-card--on': searchDraft.mode === 'hybrid' }"
+              >
+                <input
+                  v-model="searchDraft.mode"
+                  class="search-mode-card__radio"
+                  type="radio"
+                  name="kb-search-test-mode"
+                  value="hybrid"
+                >
+                <div class="search-mode-card__body">
+                  <div class="search-mode-card__head">
+                    <span class="search-mode-card__title">
+                      <UIcon :name="searchModeIcon('hybrid')" class="size-4" />
+                      {{ t('kb.searchModeHybrid') }}
+                    </span>
+                    <span class="search-mode-card__hint">{{ t('kb.searchModeHybridDesc') }}</span>
+                  </div>
+                  <div v-if="searchDraft.mode === 'hybrid'" class="search-mode-card__rerank" @click.stop>
+                    <span>{{ t('kb.rerankEnable') }}</span>
+                    <USwitch v-model="searchDraft.rerank" size="sm" />
+                  </div>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="field">
+              <label class="field__label">
+                <span>{{ t('kb.ragTopK') }}</span>
+                <UTooltip :text="t('kb.ragTopKTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                  <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
+                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                  </button>
+                </UTooltip>
+              </label>
+              <div class="search-topk-row">
+                <UInput
+                  v-model.number="searchDraft.top_k"
+                  type="number"
+                  :min="1"
+                  :max="20"
+                  class="search-topk-input"
+                />
+                <input
+                  v-model.number="searchDraft.top_k"
+                  class="search-topk-slider"
+                  type="range"
+                  min="1"
+                  max="20"
+                  step="1"
+                >
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label">
+                <span>{{ t('kb.ragMinScore') }}</span>
+                <UTooltip :text="t('kb.ragMinScoreTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                  <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
+                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                  </button>
+                </UTooltip>
+              </label>
+              <UInput
+                v-model.number="searchDraft.min_score"
+                type="number"
+                :min="0"
+                :max="1"
+                :step="0.05"
+              />
+            </div>
+          </section>
+        </div>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" @click="searchSettingsOpen = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="primary" icon="i-lucide-check" @click="applySearchSettings">
+              {{ t('common.save') }}
+            </CfButton>
+          </div>
+        </div>
+      </template>
+    </USlideover>
+
     <CfModal
       v-model:open="uploadModalVisible"
       :title="t('kb.addFile')"
@@ -546,136 +777,6 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="defaultsModalVisible" :title="t('kb.setDefaults')" :ui="{ content: 'sm:max-w-2xl' }">
-      <template #body>
-            <div class="settings-panel">
-              <section class="settings-section">
-                <h3 class="settings-section__title">{{ t('kb.settingsParse') }}</h3>
-                <p class="settings-section__desc">{{ t('kb.settingsParseDesc') }}</p>
-                <div class="parse-grid">
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.splitMode') }}</span>
-                      <UTooltip
-                        :text="t('kb.splitModeTip')"
-                        :content="fieldHelpTooltipContent"
-                        :ui="fieldHelpTooltipUi"
-                      >
-                        <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <USelect
-                      v-model="settingsForm.split_mode"
-                      :items="splitModeOptions"
-                      value-key="value"
-                      class="w-full"
-                      :portal="false"
-                      :ui="{ content: 'z-[10000]' }"
-                    />
-                  </div>
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.chunkSize') }}</span>
-                      <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="settingsForm.chunk_size" type="number" :min="64" :max="4000" />
-                  </div>
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.chunkOverlap') }}</span>
-                      <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="settingsForm.chunk_overlap" type="number" :min="0" :max="2000" />
-                  </div>
-                  <div v-if="settingsForm.split_mode === 'separator'" class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.splitSeparator') }}</span>
-                      <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model="settingsForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
-                  </div>
-                </div>
-              </section>
-
-              <section class="settings-section">
-                <h3 class="settings-section__title">{{ t('kb.settingsRetrieve') }}</h3>
-                <p class="settings-section__desc">{{ t('kb.settingsRetrieveDesc') }}</p>
-                <div class="parse-grid">
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.ragTopK') }}</span>
-                      <UTooltip :text="t('kb.ragTopKTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="settingsForm.rag_top_k" type="number" :min="1" :max="20" />
-                  </div>
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.ragMinScore') }}</span>
-                      <UTooltip :text="t('kb.ragMinScoreTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput
-                      v-model.number="settingsForm.rag_min_score"
-                      type="number"
-                      :min="0"
-                      :max="1"
-                      :step="0.05"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              <section class="settings-section">
-                <h3 class="settings-section__title">{{ t('kb.settingsAccess') }}</h3>
-                <p class="settings-section__desc">{{ t('kb.settingsAccessDesc') }}</p>
-                <div class="field">
-                  <label class="field__label">{{ t('kb.visibility') }}</label>
-                  <USelect
-                    v-model="settingsForm.visibility"
-                    :items="visibilityOptions"
-                    value-key="value"
-                    class="w-full"
-                    :portal="false"
-                    :ui="{ content: 'z-[10000]' }"
-                  />
-                </div>
-                <p class="settings-note">{{ t('kb.visibilityNote') }}</p>
-              </section>
-
-            </div>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" @click="defaultsModalVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton tone="primary" icon="i-lucide-save" :loading="settingsSaving" @click="saveKBSettings">
-              {{ t('common.save') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
 
     <!-- Delete Doc confirm -->
     <CfModal v-model:open="deleteDocVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
@@ -857,7 +958,6 @@ const deletingDocLoading = ref(false)
 const deletingDoc = ref<Document | null>(null)
 
 // Upload
-const defaultsModalVisible = ref(false)
 const DOC_PAGE_SIZE = 8
 const docPage = ref(1)
 const docPageCount = computed(() => Math.max(1, Math.ceil(documents.value.length / DOC_PAGE_SIZE)))
@@ -984,53 +1084,100 @@ const searchDuration = ref(0)
 const hasSearched = ref(false)
 const searchTopK = ref(5)
 const searchMinScore = ref(0.3)
+const searchMode = ref<'semantic' | 'keyword' | 'hybrid'>('semantic')
+const searchRerank = ref(false)
+const searchSettingsOpen = ref(false)
+const searchDraft = reactive({
+  mode: 'semantic' as 'semantic' | 'keyword' | 'hybrid',
+  rerank: false,
+  top_k: 5,
+  min_score: 0.3,
+})
+
+function searchModeLabel(mode: string) {
+  if (mode === 'keyword') return t('kb.searchModeKeyword')
+  if (mode === 'hybrid') return t('kb.searchModeHybrid')
+  return t('kb.searchModeSemantic')
+}
+
+function searchModeIcon(mode: string) {
+  if (mode === 'keyword') return 'i-lucide-layout-grid'
+  if (mode === 'hybrid') return 'i-lucide-layers'
+  return 'i-lucide-sparkles'
+}
+
+function rerankForMode(kb: KnowledgeBase | null, mode: string) {
+  if (mode === 'keyword') return !!kb?.rerank_keyword
+  if (mode === 'hybrid') return !!kb?.rerank_hybrid
+  return !!kb?.rerank_semantic
+}
 
 function syncSearchDefaultsFromKB(kb: KnowledgeBase | null) {
   searchTopK.value = kb?.rag_top_k && kb.rag_top_k > 0 ? kb.rag_top_k : 5
   searchMinScore.value = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
+  searchMode.value = normalizeSearchMode(kb?.search_mode)
+  searchRerank.value = rerankForMode(kb, searchMode.value)
 }
+
+function openSearchSettings() {
+  searchDraft.mode = searchMode.value
+  searchDraft.rerank = searchRerank.value
+  searchDraft.top_k = searchTopK.value
+  searchDraft.min_score = searchMinScore.value
+  searchSettingsOpen.value = true
+}
+
+function applySearchSettings() {
+  searchMode.value = normalizeSearchMode(searchDraft.mode)
+  searchRerank.value = !!searchDraft.rerank
+  searchTopK.value = Math.min(20, Math.max(1, Number(searchDraft.top_k) || 5))
+  searchMinScore.value = Math.min(1, Math.max(0, Number(searchDraft.min_score) || 0.3))
+  searchSettingsOpen.value = false
+}
+
+watch(
+  () => searchDraft.mode,
+  (mode) => {
+    if (!searchSettingsOpen.value || !selectedKB.value) return
+    searchDraft.rerank = rerankForMode(selectedKB.value, mode)
+  },
+)
 
 const settingsSaving = ref(false)
 const settingsForm = reactive({
-  chunk_size: 512,
-  chunk_overlap: 50,
-  split_mode: 'recursive',
-  split_separator: '\\n\\n',
+  search_mode: 'semantic',
+  rerank_semantic: false,
+  rerank_keyword: false,
+  rerank_hybrid: false,
   rag_top_k: 5,
   rag_min_score: 0.3,
-  visibility: 'private',
 })
-const visibilityOptions = computed(() => [
-  { label: t('kb.visibilityPrivate'), value: 'private' },
-])
+
+function normalizeSearchMode(mode?: string) {
+  if (mode === 'keyword' || mode === 'hybrid' || mode === 'semantic') return mode
+  return 'semantic'
+}
 
 function syncSettingsFromKB(kb: KnowledgeBase | null) {
-  settingsForm.chunk_size = kb?.chunk_size && kb.chunk_size > 0 ? kb.chunk_size : 512
-  settingsForm.chunk_overlap = kb?.chunk_overlap != null ? kb.chunk_overlap : 50
-  settingsForm.split_mode = kb?.split_mode || 'recursive'
-  const sep = kb?.split_separator || '\n\n'
-  settingsForm.split_separator = sep === '\n\n' ? '\\n\\n' : sep
+  settingsForm.search_mode = normalizeSearchMode(kb?.search_mode)
+  settingsForm.rerank_semantic = !!kb?.rerank_semantic
+  settingsForm.rerank_keyword = !!kb?.rerank_keyword
+  settingsForm.rerank_hybrid = !!kb?.rerank_hybrid
   settingsForm.rag_top_k = kb?.rag_top_k && kb.rag_top_k > 0 ? kb.rag_top_k : 5
   settingsForm.rag_min_score = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
-  settingsForm.visibility = kb?.visibility === 'org' ? 'private' : (kb?.visibility || 'private')
 }
 
 async function saveKBSettings() {
   if (!selectedKB.value) return
   settingsSaving.value = true
   try {
-    const sep =
-      settingsForm.split_mode === 'separator'
-        ? settingsForm.split_separator.replace(/\\n/g, '\n')
-        : '\n\n'
     const input: UpdateKBInput = {
-      chunk_size: Math.min(4000, Math.max(64, Number(settingsForm.chunk_size) || 512)),
-      chunk_overlap: Math.max(0, Number(settingsForm.chunk_overlap) || 0),
-      split_mode: settingsForm.split_mode || 'recursive',
-      split_separator: sep,
+      search_mode: normalizeSearchMode(settingsForm.search_mode),
+      rerank_semantic: !!settingsForm.rerank_semantic,
+      rerank_keyword: !!settingsForm.rerank_keyword,
+      rerank_hybrid: !!settingsForm.rerank_hybrid,
       rag_top_k: Math.min(20, Math.max(1, Number(settingsForm.rag_top_k) || 5)),
       rag_min_score: Math.min(1, Math.max(0, Number(settingsForm.rag_min_score) || 0.3)),
-      visibility: 'private',
     }
     const res = await updateKB(selectedKB.value.id, input)
     if (res.error) {
@@ -1042,7 +1189,6 @@ async function saveKBSettings() {
       syncSearchDefaultsFromKB(res.data)
       syncSettingsFromKB(res.data)
     }
-    defaultsModalVisible.value = false
     toast.add({ title: t('common.saveOk'), color: 'success' })
   } finally {
     settingsSaving.value = false
@@ -1061,6 +1207,11 @@ const drawerTabs = computed(() => [
     value: 'search',
     slot: 'search' as const,
     badge: searchResults.value.length || undefined,
+  },
+  {
+    label: t('kb.settings'),
+    value: 'settings',
+    slot: 'settings' as const,
   },
 ])
 
@@ -1142,11 +1293,6 @@ const stopDocRefresh = () => {
   }
 }
 
-function openDefaultsModal() {
-  if (selectedKB.value) syncSettingsFromKB(selectedKB.value)
-  defaultsModalVisible.value = true
-}
-
 function clearSearch() {
   searchQuery.value = ''
   searchResults.value = []
@@ -1178,6 +1324,8 @@ const handleSearch = async () => {
       query: searchQuery.value.trim(),
       top_k: topK,
       min_score: minScore,
+      search_mode: searchMode.value,
+      rerank: searchRerank.value,
     })
 
     if (res.error) {
@@ -1483,15 +1631,6 @@ onBeforeUnmount(() => {
   border: 1px solid var(--cf-line);
   border-radius: 12px;
   background: color-mix(in srgb, var(--cf-ink) 2.5%, transparent);
-}
-
-.drawer-tabs-list {
-  align-items: center;
-}
-
-.drawer-tabs-settings {
-  margin-left: auto;
-  flex-shrink: 0;
 }
 
 .upload-panel__head {
@@ -1901,6 +2040,44 @@ onBeforeUnmount(() => {
   padding: 4px 0 12px;
 }
 
+.search-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--cf-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cf-ink) 2%, transparent);
+}
+
+.search-compose__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.search-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--cf-line);
+  border-radius: 999px;
+  background: var(--cf-bg, #fff);
+  color: var(--cf-ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.search-mode-chip:hover {
+  border-color: color-mix(in srgb, var(--cf-accent, #0f9f8a) 45%, var(--cf-line));
+  background: color-mix(in srgb, var(--cf-accent, #0f9f8a) 8%, transparent);
+}
+
 .search-textarea {
   width: 100%;
 }
@@ -1909,14 +2086,23 @@ onBeforeUnmount(() => {
   min-height: 96px;
   line-height: 1.5;
   resize: vertical;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 .search-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.search-toolbar__meta {
+  font-size: 0.8125rem;
 }
 
 .search-actions {
@@ -1924,6 +2110,29 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+}
+
+.search-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.search-topk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-topk-input {
+  width: 88px;
+  flex-shrink: 0;
+}
+
+.search-topk-slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--cf-accent, #0f9f8a);
 }
 
 .search-results {
@@ -2282,6 +2491,79 @@ onBeforeUnmount(() => {
 .settings-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.search-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-mode-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--cf-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cf-ink) 2%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.search-mode-card:hover {
+  border-color: color-mix(in srgb, var(--cf-accent, #0f9f8a) 40%, var(--cf-line));
+}
+
+.search-mode-card--on {
+  border-color: var(--cf-accent, #0f9f8a);
+  background: color-mix(in srgb, var(--cf-accent, #0f9f8a) 8%, transparent);
+}
+
+.search-mode-card__radio {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.search-mode-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-mode-card__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-mode-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--cf-ink);
+}
+
+.search-mode-card__hint {
+  font-size: 0.8125rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.4;
+}
+
+.search-mode-card__rerank {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cf-line);
+  font-size: 0.8125rem;
+  color: var(--cf-ink);
 }
 
 .kb-detail-header {

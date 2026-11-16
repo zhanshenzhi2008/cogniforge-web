@@ -27,6 +27,10 @@ export interface KnowledgeBase {
   split_separator?: string
   rag_top_k?: number
   rag_min_score?: number
+  search_mode?: 'semantic' | 'keyword' | 'hybrid' | string
+  rerank_semantic?: boolean
+  rerank_keyword?: boolean
+  rerank_hybrid?: boolean
   visibility?: string
   status: 'active' | 'disabled'
   metadata: Record<string, any>
@@ -47,6 +51,10 @@ export interface CreateKBInput {
   split_separator?: string
   rag_top_k?: number
   rag_min_score?: number
+  search_mode?: string
+  rerank_semantic?: boolean
+  rerank_keyword?: boolean
+  rerank_hybrid?: boolean
   visibility?: string
 }
 
@@ -62,6 +70,10 @@ export interface UpdateKBInput {
   split_separator?: string
   rag_top_k?: number
   rag_min_score?: number
+  search_mode?: string
+  rerank_semantic?: boolean
+  rerank_keyword?: boolean
+  rerank_hybrid?: boolean
   visibility?: string
   status?: string
 }
@@ -136,6 +148,8 @@ export interface SearchInput {
   query: string
   top_k?: number
   min_score?: number
+  search_mode?: string
+  rerank?: boolean
 }
 
 export const useKnowledgeBases = () => {
