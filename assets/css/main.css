@@ -524,7 +524,7 @@ html[data-theme="inknight"] .cf-btn--primary:not(:disabled):not([aria-disabled="
 }
 
 /*
- * CfModal = z-index 200。挂到 body 的 Select/Menu 默认无 z-index，会被挡住。
+ * CfModal = z-index 1100（高于抽屉）。挂到 body 的 Select/Menu 默认无 z-index，会被挡住。
  * 知识库弹窗内优先用 portal=false；此处兜底抬高层级。
  */
 [data-slot="content"][data-state="open"],

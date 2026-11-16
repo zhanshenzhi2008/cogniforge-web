@@ -11,7 +11,13 @@
     </div>
 
     <div class="list-toolbar">
-      <span class="list-count">{{ t('kb.count', { n: knowledgeBases.length }) }}</span>
+      <UInput
+        v-model="listQuery"
+        class="kb-list-search"
+        icon="i-lucide-search"
+        :placeholder="t('kb.listSearchPh')"
+      />
+      <span class="list-count">{{ t('kb.count', { n: filteredKnowledgeBases.length }) }}</span>
       <span class="list-hint">{{ t('kb.hint') }}</span>
     </div>
 
@@ -25,16 +31,14 @@
       <p>{{ t('kb.empty') }}</p>
     </div>
 
-    <div v-else class="kb-sections">
-      <section v-for="group in kbGroups" :key="group.key" class="kb-section">
-        <h2 class="kb-section-title">
-          <UIcon name="i-lucide-folder" class="size-4 shrink-0 opacity-70" />
-          <span>{{ group.label }}</span>
-          <span class="kb-section-count">{{ group.items.length }}</span>
-        </h2>
-        <div class="kb-grid">
+    <div v-else-if="filteredKnowledgeBases.length === 0" class="cf-state">
+      <UIcon name="i-lucide-search-x" class="size-8 opacity-50" />
+      <p>{{ t('kb.listNoMatch') }}</p>
+    </div>
+
+    <div v-else class="kb-grid">
           <div
-            v-for="kb in group.items"
+            v-for="kb in filteredKnowledgeBases"
             :key="kb.id"
             class="kb-card cf-surface"
             :title="t('kb.hint')"
@@ -91,8 +95,6 @@
               <span class="meta-item">{{ d(kb.created_at) }}</span>
             </div>
           </div>
-        </div>
-      </section>
     </div>
 
     <!-- Create / View / Edit KB -->
@@ -139,10 +141,6 @@
               <dd>{{ viewingKB.status === 'active' ? t('common.enabled') : t('common.disabled') }}</dd>
             </div>
             <div class="detail-row">
-              <dt>{{ t('kb.folder') }}</dt>
-              <dd>{{ folderNameById.get(viewingKB.folder_id || '') || t('kb.noFolder') }}</dd>
-            </div>
-            <div class="detail-row">
               <dt>{{ t('kb.vector') }}</dt>
               <dd>{{ viewingKB.vector_db || 'pgvector' }}</dd>
             </div>
@@ -179,19 +177,6 @@
           </div>
 
           <div class="field">
-            <label class="field__label">{{ t('kb.folder') }}</label>
-            <USelect
-              v-model="form.folder_id"
-              class="w-full"
-              :items="folderSelectItems"
-              :placeholder="t('kb.pickFolder')"
-              :portal="false"
-              :ui="{ content: 'z-[10000]' }"
-              @update:model-value="onFolderSelect"
-            />
-          </div>
-
-          <div class="field">
             <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
               v-model="form.description"
@@ -208,6 +193,7 @@
               class="w-full"
               :items="vectorDbOptions"
               :placeholder="t('kb.pickVector')"
+              :disabled="dialogMode === 'edit'"
               :portal="false"
               :ui="{ content: 'z-[10000]' }"
             />
@@ -219,10 +205,12 @@
               v-model="form.embedding_model"
               class="w-full"
               :portal="false"
+              :disabled="dialogMode === 'edit'"
               :ui="{ content: 'z-[10000]' }"
               :items="embeddingModelOptions"
               :placeholder="t('kb.pickEmbedding')"
             />
+            <p class="field__hint">{{ t('kb.embeddingLockHint') }}</p>
           </div>
         </form>
       </template>
@@ -295,20 +283,9 @@
     <USlideover
       v-model:open="drawerVisible"
       :title="selectedKB?.name || t('kb.fallbackTitle')"
-      :description="t('kb.docsDrawer', { n: documents.length })"
-      :ui="{ content: 'max-w-5xl w-full' }"
+      :ui="{ content: 'max-w-5xl w-full', header: 'px-4 py-2.5 sm:px-6 min-h-0' }"
     >
       <template #body>
-        <div v-if="drawerActiveTab === 'docs'" class="drawer-header-actions">
-          <CfButton
-            tone="primary"
-            icon="i-lucide-cloud-upload"
-            @click="openUploadModal"
-          >
-            {{ t('kb.upload') }}
-          </CfButton>
-        </div>
-
         <UTabs v-model="drawerActiveTab" :items="drawerTabs" class="w-full">
           <template #docs>
             <div v-if="docsLoading" class="cf-state cf-state--compact">
@@ -316,13 +293,147 @@
               <span>{{ t('common.loading') }}</span>
             </div>
 
-            <div v-else-if="documents.length === 0" class="cf-state cf-state--compact">
+            <div class="upload-panel">
+              <div class="upload-panel__head">
+                <ol class="upload-steps">
+                  <li :class="{ 'upload-steps__item--on': uploadStep === 1, 'upload-steps__item--done': uploadStep > 1 }">
+                    <span>1</span>{{ t('kb.uploadStepFile') }}
+                  </li>
+                  <li :class="{ 'upload-steps__item--on': uploadStep === 2 }">
+                    <span>2</span>{{ t('kb.uploadStepParse') }}
+                  </li>
+                </ol>
+                <CfButton tone="secondary" icon="i-lucide-sliders-horizontal" @click="openDefaultsModal">
+                  {{ t('kb.setDefaults') }}
+                </CfButton>
+              </div>
+              <div v-if="uploadStep === 1">
+                <UFileUpload
+                  v-model="uploadFiles"
+                  multiple
+                  accept=".pdf,.txt,.md,.docx,.html"
+                  :label="t('kb.uploadLabel')"
+                  :description="t('kb.uploadDesc')"
+                  layout="list"
+                />
+              </div>
+              <div v-else class="parse-step">
+                <p class="parse-step__hint">{{ t('kb.parseHint', { n: uploadFiles?.length || 0 }) }}</p>
+                <div class="parse-grid">
+                  <div class="field">
+                    <label class="field__label">
+                      <span>{{ t('kb.splitMode') }}</span>
+                      <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <USelect
+                      v-model="parseForm.split_mode"
+                      :items="splitModeOptions"
+                      value-key="value"
+                      class="w-full"
+                    />
+                  </div>
+                  <div class="field">
+                    <label class="field__label">
+                      <span>{{ t('kb.chunkSize') }}</span>
+                      <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
+                  </div>
+                  <div class="field">
+                    <label class="field__label">
+                      <span>{{ t('kb.chunkOverlap') }}</span>
+                      <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
+                  </div>
+                  <div v-if="parseForm.split_mode === 'separator'" class="field">
+                    <label class="field__label">
+                      <span>{{ t('kb.splitSeparator') }}</span>
+                      <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                        <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
+                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                        </button>
+                      </UTooltip>
+                    </label>
+                    <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
+                  </div>
+                </div>
+                <div class="parse-preview-actions">
+                  <CfButton
+                    tone="secondary"
+                    icon="i-lucide-eye"
+                    :loading="chunkPreviewLoading"
+                    :disabled="!uploadFiles?.length"
+                    @click="handlePreviewChunks"
+                  >
+                    {{ t('kb.previewChunks') }}
+                  </CfButton>
+                  <span v-if="chunkPreview" class="cf-muted">
+                    {{ t('kb.previewSummary', { total: chunkPreview.total_chunks, chars: chunkPreview.char_count }) }}
+                  </span>
+                </div>
+                <div v-if="chunkPreview?.chunks?.length" class="chunk-preview-list">
+                  <div v-for="chunk in chunkPreview.chunks" :key="chunk.index" class="chunk-preview-item">
+                    <div class="chunk-preview-item__meta">
+                      #{{ chunk.index + 1 }} · {{ chunk.char_count }} {{ t('kb.chars') }}
+                    </div>
+                    <pre class="chunk-preview-item__body">{{ chunk.content }}</pre>
+                  </div>
+                </div>
+              </div>
+              <div class="upload-panel__actions">
+                <CfButton v-if="uploadStep === 2" tone="secondary" icon="i-lucide-arrow-left" @click="uploadStep = 1">
+                  {{ t('common.back') }}
+                </CfButton>
+                <CfButton tone="secondary" @click="resetUploadState">{{ t('common.reset') }}</CfButton>
+                <CfButton
+                  v-if="uploadStep === 1"
+                  tone="primary"
+                  icon="i-lucide-arrow-right"
+                  :disabled="!uploadFiles?.length"
+                  @click="goParseStep"
+                >
+                  {{ t('kb.nextParse') }}
+                </CfButton>
+                <CfButton
+                  v-else
+                  tone="primary"
+                  icon="i-lucide-cloud-upload"
+                  :loading="uploadLoading"
+                  :disabled="!uploadFiles?.length"
+                  @click="handleUploadSubmit"
+                >
+                  {{ t('kb.upload') }}
+                </CfButton>
+              </div>
+            </div>
+
+            <div v-if="!docsLoading && documents.length === 0" class="cf-state cf-state--compact">
               <UIcon name="i-lucide-file" class="size-7 opacity-50" />
               <p>{{ t('kb.noDocs') }}</p>
             </div>
 
-            <div v-else class="docs-workspace" :class="{ 'docs-workspace--preview': !!previewDoc }">
-              <div class="docs-list-pane">
+            <div
+              v-else-if="!docsLoading"
+              class="docs-workspace"
+              :class="{
+                'docs-workspace--preview': !!previewDoc,
+                'docs-workspace--preview-max': !!previewDoc && previewMaximized,
+              }"
+            >
+              <div v-show="!(previewDoc && previewMaximized)" class="docs-list-pane">
                 <div class="cf-table-wrap">
                   <table class="cf-data-table">
                     <thead>
@@ -337,7 +448,7 @@
                     </thead>
                     <tbody>
                       <tr
-                        v-for="doc in documents"
+                        v-for="doc in pagedDocuments"
                         :key="doc.id"
                         class="doc-row"
                         :class="{ 'doc-row--active': previewDoc?.id === doc.id }"
@@ -382,9 +493,22 @@
                     </tbody>
                   </table>
                 </div>
+                <div v-if="documents.length > 0" class="doc-pager">
+                  <CfButton tone="secondary" icon="i-lucide-chevron-left" :disabled="docPage <= 1" @click="docPage -= 1">
+                    {{ t('common.prev') }}
+                  </CfButton>
+                  <span class="cf-muted">{{ t('kb.pageOf', { page: docPage, total: docPageCount }) }}</span>
+                  <CfButton tone="secondary" icon="i-lucide-chevron-right" :disabled="docPage >= docPageCount" @click="docPage += 1">
+                    {{ t('common.next') }}
+                  </CfButton>
+                </div>
               </div>
 
-              <aside v-if="previewDoc" class="docs-preview-pane">
+              <aside
+                v-if="previewDoc"
+                class="docs-preview-pane"
+                :class="{ 'docs-preview-pane--max': previewMaximized }"
+              >
                 <div class="preview-toolbar">
                   <div class="preview-title-wrap">
                     <UIcon :name="getFileIcon(previewDoc.file_type)" class="size-4 shrink-0 opacity-70" />
@@ -418,6 +542,12 @@
                         {{ t('kb.modeEdit') }}
                       </button>
                     </div>
+                    <CfButton
+                      tone="icon"
+                      :icon="previewMaximized ? 'i-lucide-minimize-2' : 'i-lucide-maximize-2'"
+                      :tip="previewMaximized ? t('common.restore') : t('common.maximize')"
+                      @click="previewMaximized = !previewMaximized"
+                    />
                     <CfButton
                       tone="icon"
                       icon="i-lucide-x"
@@ -584,7 +714,12 @@
             </div>
           </template>
 
-          <template #settings>
+        </UTabs>
+      </template>
+    </USlideover>
+
+    <CfModal v-model:open="defaultsModalVisible" :title="t('kb.setDefaults')" :ui="{ content: 'sm:max-w-2xl' }">
+      <template #body>
             <div class="settings-panel">
               <section class="settings-section">
                 <h3 class="settings-section__title">{{ t('kb.settingsParse') }}</h3>
@@ -608,6 +743,8 @@
                       :items="splitModeOptions"
                       value-key="value"
                       class="w-full"
+                      :portal="false"
+                      :ui="{ content: 'z-[10000]' }"
                     />
                   </div>
                   <div class="field">
@@ -691,191 +828,21 @@
                     :items="visibilityOptions"
                     value-key="value"
                     class="w-full"
+                    :portal="false"
+                    :ui="{ content: 'z-[10000]' }"
                   />
                 </div>
                 <p class="settings-note">{{ t('kb.visibilityNote') }}</p>
               </section>
 
-              <div class="settings-actions">
-                <CfButton
-                  tone="primary"
-                  icon="i-lucide-save"
-                  :loading="settingsSaving"
-                  @click="saveKBSettings"
-                >
-                  {{ t('common.save') }}
-                </CfButton>
-              </div>
             </div>
-          </template>
-        </UTabs>
-      </template>
-    </USlideover>
-
-    <!-- Upload Modal：选文件 → 分段配置/预览 → 确认上传 -->
-    <CfModal
-      v-model:open="uploadModalVisible"
-      :title="uploadStep === 1 ? t('kb.uploadTitle') : t('kb.parseTitle')"
-      :ui="{ content: uploadStep === 1 ? 'sm:max-w-lg' : 'sm:max-w-2xl' }"
-    >
-      <template #body>
-        <div v-if="uploadStep === 1">
-          <UFileUpload
-            v-model="uploadFiles"
-            multiple
-            accept=".pdf,.txt,.md,.docx,.html"
-            :label="t('kb.uploadLabel')"
-            :description="t('kb.uploadDesc')"
-            layout="list"
-          />
-        </div>
-        <div v-else class="parse-step">
-          <p class="parse-step__hint">{{ t('kb.parseHint', { n: uploadFiles?.length || 0 }) }}</p>
-          <div class="parse-grid">
-            <div class="field">
-              <label class="field__label">
-                <span>{{ t('kb.splitMode') }}</span>
-                <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                  <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
-                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                  </button>
-                </UTooltip>
-              </label>
-              <USelect
-                v-model="parseForm.split_mode"
-                :items="splitModeOptions"
-                value-key="value"
-                class="w-full"
-                :portal="false"
-                :ui="{ content: 'z-[10000]' }"
-              />
-            </div>
-            <div class="field">
-              <label class="field__label">
-                <span>{{ t('kb.chunkSize') }}</span>
-                <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                  <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
-                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                  </button>
-                </UTooltip>
-              </label>
-              <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
-            </div>
-            <div class="field">
-              <label class="field__label">
-                <span>{{ t('kb.chunkOverlap') }}</span>
-                <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                  <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
-                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                  </button>
-                </UTooltip>
-              </label>
-              <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
-            </div>
-            <div v-if="parseForm.split_mode === 'separator'" class="field">
-              <label class="field__label">
-                <span>{{ t('kb.splitSeparator') }}</span>
-                <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                  <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
-                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                  </button>
-                </UTooltip>
-              </label>
-              <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
-            </div>
-          </div>
-          <div class="parse-preview-actions">
-            <CfButton
-              tone="secondary"
-              icon="i-lucide-eye"
-              :loading="chunkPreviewLoading"
-              :disabled="!uploadFiles?.length"
-              @click="handlePreviewChunks"
-            >
-              {{ t('kb.previewChunks') }}
-            </CfButton>
-            <span v-if="chunkPreview" class="cf-muted">
-              {{ t('kb.previewSummary', { total: chunkPreview.total_chunks, chars: chunkPreview.char_count }) }}
-            </span>
-          </div>
-          <div v-if="chunkPreview?.chunks?.length" class="chunk-preview-list">
-            <div
-              v-for="chunk in chunkPreview.chunks"
-              :key="chunk.index"
-              class="chunk-preview-item"
-            >
-              <div class="chunk-preview-item__meta">
-                #{{ chunk.index + 1 }} · {{ chunk.char_count }} {{ t('kb.chars') }}
-              </div>
-              <pre class="chunk-preview-item__body">{{ chunk.content }}</pre>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__left">
-            <CfButton v-if="uploadStep === 2" tone="secondary" icon="i-lucide-arrow-left" @click="uploadStep = 1">
-              {{ t('common.back') }}
-            </CfButton>
-          </div>
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" @click="handleUploadCancel">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              v-if="uploadStep === 1"
-              tone="primary"
-              icon="i-lucide-arrow-right"
-              :disabled="!uploadFiles?.length"
-              @click="goParseStep"
-            >
-              {{ t('kb.nextParse') }}
-            </CfButton>
-            <CfButton
-              v-else
-              tone="primary"
-              icon="i-lucide-cloud-upload"
-              :loading="uploadLoading"
-              :disabled="!uploadFiles?.length"
-              @click="handleUploadSubmit"
-            >
-              {{ t('kb.upload') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
-
-    <!-- Create folder -->
-    <CfModal
-      v-model:open="folderModalVisible"
-      :title="t('kb.newFolder')"
-      :ui="{ content: 'sm:max-w-md' }"
-    >
-      <template #body>
-        <div class="field">
-          <label class="field__label">{{ t('kb.folderName') }}</label>
-          <UInput
-            v-model="folderNameInput"
-            class="w-full"
-            :placeholder="t('kb.folderNamePh')"
-            @keydown.enter.prevent="submitCreateFolder"
-          />
-        </div>
       </template>
       <template #footer>
         <div class="modal-actions">
           <div class="modal-actions__right">
-            <CfButton tone="secondary" @click="folderModalVisible = false">
-              {{ t('common.cancel') }}
-            </CfButton>
-            <CfButton
-              tone="primary"
-              icon="i-lucide-plus"
-              :loading="folderSubmitting"
-              @click="submitCreateFolder"
-            >
-              {{ t('common.create') }}
+            <CfButton tone="secondary" @click="defaultsModalVisible = false">{{ t('common.cancel') }}</CfButton>
+            <CfButton tone="primary" icon="i-lucide-save" :loading="settingsSaving" @click="saveKBSettings">
+              {{ t('common.save') }}
             </CfButton>
           </div>
         </div>
@@ -912,7 +879,6 @@
 <script setup lang="ts">
 import type {
   KnowledgeBase,
-  KnowledgeFolder,
   Document,
   DocumentPreview,
   CreateKBInput,
@@ -930,8 +896,6 @@ definePageMeta({
 const toast = useToast()
 const { t, d } = useLocale()
 const {
-  listFolders,
-  createFolder,
   listKBs,
   createKB,
   updateKB,
@@ -949,15 +913,21 @@ const {
 const loading = ref(false)
 const submitting = ref(false)
 const knowledgeBases = ref<KnowledgeBase[]>([])
-const folders = ref<KnowledgeFolder[]>([])
+const listQuery = ref('')
+const filteredKnowledgeBases = computed(() => {
+  const q = listQuery.value.trim().toLowerCase()
+  if (!q) return knowledgeBases.value
+  return knowledgeBases.value.filter((kb) => {
+    const name = kb.name.toLowerCase()
+    const desc = (kb.description || '').toLowerCase()
+    return name.includes(q) || desc.includes(q)
+  })
+})
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const cameFromView = ref(false)
 const editingId = ref('')
 const viewingKB = ref<KnowledgeBase | null>(null)
-const folderModalVisible = ref(false)
-const folderNameInput = ref('')
-const folderSubmitting = ref(false)
 
 const dialogTitle = computed(() => {
   if (dialogMode.value === 'create') return t('kb.createTitle')
@@ -975,84 +945,13 @@ const deleteVisible = ref(false)
 const deletingLoading = ref(false)
 const deleting = ref<KnowledgeBase | null>(null)
 
-/** USelect 禁止空字符串 value；未分类 / 新建用哨兵 */
-const NONE_FOLDER = '__none__'
-const CREATE_FOLDER = '__create_folder__'
-
 const form = reactive({
   name: '',
   description: '',
-  folder_id: NONE_FOLDER as string,
   vector_db: 'pgvector',
   embedding_model: 'text-embedding-ada-002',
 })
 const errors = reactive({ name: '' })
-/** 点「新建目录」前记下当前选项，取消时还原 */
-const folderIdBeforeCreate = ref(NONE_FOLDER)
-
-const folderSelectItems = computed(() => [
-  { label: t('kb.noFolder'), value: NONE_FOLDER },
-  ...folders.value.map((f) => ({ label: f.name, value: f.id })),
-  { label: t('kb.newFolderInList'), value: CREATE_FOLDER, icon: 'i-lucide-plus' },
-])
-
-function resolvedFolderId(raw: string) {
-  return !raw || raw === NONE_FOLDER || raw === CREATE_FOLDER ? '' : raw
-}
-
-function onFolderSelect(value: string) {
-  if (value === CREATE_FOLDER) {
-    const restore = folderIdBeforeCreate.value || NONE_FOLDER
-    nextTick(() => {
-      form.folder_id = restore
-      openCreateFolder()
-    })
-    return
-  }
-  folderIdBeforeCreate.value = value || NONE_FOLDER
-}
-
-const folderNameById = computed(() => {
-  const map = new Map<string, string>()
-  for (const f of folders.value) map.set(f.id, f.name)
-  return map
-})
-
-const kbGroups = computed(() => {
-  const groups: { key: string; label: string; items: KnowledgeBase[] }[] = []
-  const byFolder = new Map<string, KnowledgeBase[]>()
-  const uncategorized: KnowledgeBase[] = []
-
-  for (const kb of knowledgeBases.value) {
-    if (kb.folder_id) {
-      const list = byFolder.get(kb.folder_id) || []
-      list.push(kb)
-      byFolder.set(kb.folder_id, list)
-    } else {
-      uncategorized.push(kb)
-    }
-  }
-
-  for (const f of folders.value) {
-    const items = byFolder.get(f.id)
-    if (items?.length) {
-      groups.push({ key: f.id, label: f.name, items })
-      byFolder.delete(f.id)
-    }
-  }
-  // 目录已删但仍挂着 folder_id 的库
-  for (const [fid, items] of byFolder) {
-    groups.push({
-      key: fid,
-      label: folderNameById.value.get(fid) || t('kb.unknownFolder'),
-      items,
-    })
-  }
-  if (uncategorized.length || groups.length === 0) {
-    groups.push({ key: '__none__', label: t('kb.noFolder'), items: uncategorized })
-  }
-  return groups
-})
 
 const vectorDbOptions = [
   { label: 'PGVector', value: 'pgvector' },
@@ -1079,6 +978,7 @@ const previewLoading = ref(false)
 const previewMode = ref<'preview' | 'edit'>('preview')
 const previewEditContent = ref('')
 const previewSaving = ref(false)
+const previewMaximized = ref(false)
 
 const previewDirty = computed(() => {
   if (!previewDoc.value || previewMode.value !== 'edit') return false
@@ -1097,6 +997,7 @@ function clearPreviewState() {
   previewMode.value = 'preview'
   previewEditContent.value = ''
   previewSaving.value = false
+  previewMaximized.value = false
 }
 
 watch(drawerVisible, (open) => {
@@ -1188,7 +1089,17 @@ const deletingDocLoading = ref(false)
 const deletingDoc = ref<Document | null>(null)
 
 // Upload
-const uploadModalVisible = ref(false)
+const defaultsModalVisible = ref(false)
+const DOC_PAGE_SIZE = 8
+const docPage = ref(1)
+const docPageCount = computed(() => Math.max(1, Math.ceil(documents.value.length / DOC_PAGE_SIZE)))
+const pagedDocuments = computed(() => {
+  const start = (docPage.value - 1) * DOC_PAGE_SIZE
+  return documents.value.slice(start, start + DOC_PAGE_SIZE)
+})
+watch(docPageCount, (n) => {
+  if (docPage.value > n) docPage.value = n
+})
 const uploadFiles = ref<File[] | null>(null)
 const uploadLoading = ref(false)
 const uploadStep = ref<1 | 2>(1)
@@ -1324,6 +1235,7 @@ async function saveKBSettings() {
       syncSearchDefaultsFromKB(res.data)
       syncSettingsFromKB(res.data)
     }
+    defaultsModalVisible.value = false
     toast.add({ title: t('common.saveOk'), color: 'success' })
   } finally {
     settingsSaving.value = false
@@ -1342,11 +1254,6 @@ const drawerTabs = computed(() => [
     value: 'search',
     slot: 'search' as const,
     badge: searchResults.value.length || undefined,
-  },
-  {
-    label: t('kb.settings'),
-    value: 'settings',
-    slot: 'settings' as const,
   },
 ])
 
@@ -1397,19 +1304,10 @@ function validate() {
   return !errors.name
 }
 
-const fetchFolders = async () => {
-  const res = await listFolders()
-  if (res.error) {
-    toast.add({ title: res.error, color: 'error' })
-    return
-  }
-  folders.value = res.data || []
-}
-
 const fetchKnowledgeBases = async () => {
   loading.value = true
   try {
-    const [kbRes] = await Promise.all([listKBs(), fetchFolders()])
+    const kbRes = await listKBs()
     if (kbRes.error) {
       toast.add({ title: kbRes.error, color: 'error' })
       return
@@ -1419,34 +1317,6 @@ const fetchKnowledgeBases = async () => {
     toast.add({ title: t('kb.listFail'), color: 'error' })
   } finally {
     loading.value = false
-  }
-}
-
-function openCreateFolder() {
-  folderNameInput.value = ''
-  folderModalVisible.value = true
-}
-
-async function submitCreateFolder() {
-  const name = folderNameInput.value.trim()
-  if (!name) {
-    toast.add({ title: t('kb.folderNameRequired'), color: 'warning' })
-    return
-  }
-  folderSubmitting.value = true
-  try {
-    const res = await createFolder(name)
-    if (res.error || !res.data) {
-      toast.add({ title: res.error || t('kb.folderCreateFail'), color: 'error' })
-      return
-    }
-    folders.value = [...folders.value, res.data]
-    form.folder_id = res.data.id
-    folderIdBeforeCreate.value = res.data.id
-    folderModalVisible.value = false
-    toast.add({ title: t('kb.folderCreateOk'), color: 'success' })
-  } finally {
-    folderSubmitting.value = false
   }
 }
 
@@ -1491,12 +1361,14 @@ watch(drawerVisible, (val) => {
   if (!val) stopDocRefresh()
 })
 
-const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' | 'settings' = 'docs') => {
+const handleSelectKB = async (kb: KnowledgeBase, tab: 'docs' | 'search' = 'docs') => {
   selectedKB.value = kb
   syncSearchDefaultsFromKB(kb)
   syncSettingsFromKB(kb)
   clearSearch()
   closeDocPreview()
+  resetUploadState()
+  docPage.value = 1
   drawerVisible.value = true
   drawerActiveTab.value = tab
   await fetchDocuments(kb.id)
@@ -1529,8 +1401,6 @@ const onCardDblClick = (kb: KnowledgeBase) => {
 const fillFormFromKB = (kb: KnowledgeBase) => {
   form.name = kb.name
   form.description = kb.description || ''
-  form.folder_id = kb.folder_id || NONE_FOLDER
-  folderIdBeforeCreate.value = form.folder_id
   form.vector_db = kb.vector_db || 'pgvector'
   form.embedding_model = kb.embedding_model || 'text-embedding-ada-002'
   errors.name = ''
@@ -1592,14 +1462,9 @@ const confirmDelete = async () => {
   }
 }
 
-function openUploadModal() {
-  resetUploadState()
-  uploadModalVisible.value = true
-}
-
-const handleUploadCancel = () => {
-  resetUploadState()
-  uploadModalVisible.value = false
+function openDefaultsModal() {
+  if (selectedKB.value) syncSettingsFromKB(selectedKB.value)
+  defaultsModalVisible.value = true
 }
 
 function clearSearch() {
@@ -1680,7 +1545,8 @@ const handleUploadSubmit = async () => {
     toast.add({ title: t('kb.uploadPartial', { ok: successCount, fail: failCount }), color: 'warning' })
   }
 
-  handleUploadCancel()
+  resetUploadState()
+  docPage.value = 1
   if (selectedKB.value) {
     await fetchDocuments(selectedKB.value.id)
     await fetchKnowledgeBases()
@@ -1735,9 +1601,6 @@ const handleSubmit = async () => {
       const input: UpdateKBInput = {
         name: form.name,
         description: form.description,
-        folder_id: resolvedFolderId(form.folder_id),
-        vector_db: form.vector_db,
-        embedding_model: form.embedding_model,
       }
       const res = await updateKB(editingId.value, input)
       if (res.error) {
@@ -1746,11 +1609,9 @@ const handleSubmit = async () => {
       }
       toast.add({ title: t('common.saveOk'), color: 'success' })
     } else {
-      const folderId = resolvedFolderId(form.folder_id)
       const input: CreateKBInput = {
         name: form.name,
         description: form.description,
-        folder_id: folderId || undefined,
         vector_db: form.vector_db,
         embedding_model: form.embedding_model,
       }
@@ -1773,8 +1634,6 @@ const handleSubmit = async () => {
 const resetForm = () => {
   form.name = ''
   form.description = ''
-  form.folder_id = NONE_FOLDER
-  folderIdBeforeCreate.value = NONE_FOLDER
   form.vector_db = 'pgvector'
   form.embedding_model = 'text-embedding-ada-002'
   errors.name = ''
@@ -1798,6 +1657,18 @@ onUnmounted(() => {
   min-height: 160px;
 }
 
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kb-list-search {
+  width: min(100%, 280px);
+}
+
 .list-count {
   font-size: 0.8rem;
   color: var(--cf-ink-soft);
@@ -1805,28 +1676,6 @@ onUnmounted(() => {
 
 .list-hint {
   font-size: 0.8rem;
-  color: var(--cf-ink-soft);
-}
-
-.kb-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.kb-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--cf-ink);
-}
-
-.kb-section-count {
-  font-size: 0.75rem;
-  font-weight: 500;
   color: var(--cf-ink-soft);
 }
 
@@ -1930,9 +1779,82 @@ onUnmounted(() => {
 }
 
 .drawer-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--cf-line);
   margin-bottom: 12px;
+}
+
+.upload-panel {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--cf-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cf-ink) 2.5%, transparent);
+}
+
+.upload-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.upload-steps {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cf-ink-soft);
+  font-size: 0.875rem;
+}
+
+.upload-steps li span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line);
+  font-size: 0.75rem;
+}
+
+.upload-steps__item--on {
+  color: var(--cf-ink);
+  font-weight: 600;
+}
+
+.upload-steps__item--on span,
+.upload-steps__item--done span {
+  border-color: var(--cf-accent, #0f9f8a);
+  background: var(--cf-accent, #0f9f8a);
+  color: #fff;
+}
+
+.upload-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.doc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .docs-workspace {
@@ -1947,6 +1869,10 @@ onUnmounted(() => {
   grid-template-columns: minmax(240px, 0.95fr) minmax(280px, 1.2fr);
   gap: 14px;
   align-items: stretch;
+}
+
+.docs-workspace--preview-max {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 900px) {
@@ -1968,6 +1894,11 @@ onUnmounted(() => {
   border-radius: 12px;
   background: color-mix(in srgb, var(--cf-ink) 2.5%, transparent);
   overflow: hidden;
+}
+
+.docs-preview-pane--max {
+  min-height: min(78vh, 820px);
+  max-height: min(82vh, 900px);
 }
 
 .preview-toolbar {
@@ -2294,6 +2225,13 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.75rem;
   color: var(--cf-danger);
+}
+
+.field__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--cf-muted, #64748b);
 }
 
 .detail-sheet {

@@ -411,7 +411,7 @@ const useContentSlot = computed(() => Boolean(slots.content) && !slots.body)
      Dialog 打开时 body 会 pointer-events:none，根节点开回后由子层接管点击 */
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 1100;
   pointer-events: none;
 }
 
