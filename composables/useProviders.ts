@@ -199,6 +199,22 @@ export const PROVIDER_META: Record<string, {
     local: true,
     hostIncludes: ['localhost:11434', '127.0.0.1:11434'],
   },
+  jina: {
+    label: 'Jina Reader',
+    icon: '📖',
+    color: '#0d9488',
+    defaultBaseURL: 'https://r.jina.ai',
+    docURL: 'https://jina.ai/reader',
+    hostIncludes: ['r.jina.ai'],
+  },
+  firecrawl: {
+    label: 'Firecrawl',
+    icon: '🔥',
+    color: '#ea580c',
+    defaultBaseURL: 'https://api.firecrawl.dev',
+    docURL: 'https://docs.firecrawl.dev',
+    hostIncludes: ['api.firecrawl.dev'],
+  },
   custom: {
     label: '自定义兼容',
     icon: '✏️',
@@ -206,6 +222,13 @@ export const PROVIDER_META: Record<string, {
     defaultBaseURL: '',
     docURL: '',
   },
+}
+
+/** 网页抓取类厂商（无对话/向量模型字段） */
+export const WEB_FETCH_PROVIDERS = new Set(['jina', 'firecrawl'])
+
+export function isWebFetchProvider(key: string) {
+  return WEB_FETCH_PROVIDERS.has((key || '').trim())
 }
 
 export const PROVIDER_OPTIONS = Object.entries(PROVIDER_META).map(([value, meta]) => ({

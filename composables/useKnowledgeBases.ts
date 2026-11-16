@@ -85,6 +85,19 @@ export interface ParseOptions {
   split_separator?: string
 }
 
+export interface CreateTextDocInput extends ParseOptions {
+  name: string
+  content: string
+  file_type?: 'md' | 'txt' | string
+}
+
+export interface CreateURLDocInput extends ParseOptions {
+  url: string
+  name?: string
+  /** auto | jina | firecrawl | basic */
+  engine?: string
+}
+
 export interface ChunkPreviewItem {
   index: number
   content: string
@@ -306,6 +319,32 @@ export const useKnowledgeBases = () => {
     }
   }
 
+  const createTextDoc = async (
+    kbId: string,
+    input: CreateTextDocInput
+  ): Promise<{ data?: Document; error?: string }> => {
+    try {
+      const res = await api.post<Document>(`/api/v1/knowledge/${kbId}/documents/text`, input)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '创建文本文档失败' }
+    }
+  }
+
+  const createURLDoc = async (
+    kbId: string,
+    input: CreateURLDocInput
+  ): Promise<{ data?: Document; error?: string }> => {
+    try {
+      const res = await api.post<Document>(`/api/v1/knowledge/${kbId}/documents/url`, input)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '抓取网页失败' }
+    }
+  }
+
   const deleteDoc = async (kbId: string, docId: string): Promise<{ error?: string }> => {
     try {
       const res = await api.del(`/api/v1/knowledge/${kbId}/documents/${docId}`)
@@ -349,6 +388,8 @@ export const useKnowledgeBases = () => {
     updateDocContent,
     uploadDoc,
     previewChunks,
+    createTextDoc,
+    createURLDoc,
     deleteDoc,
     reparseDoc,
     searchKB,

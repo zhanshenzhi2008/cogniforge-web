@@ -592,169 +592,338 @@
     >
       <template #body>
         <div class="upload-panel upload-panel--modal">
+          <div class="upload-panel__head">
+            <nav class="upload-stepper" :aria-label="t('kb.uploadSteps')">
+              <ol class="upload-stepper__list">
+                <li
+                  class="upload-stepper__item"
+                  :class="{
+                    'upload-stepper__item--on': uploadStep === 1,
+                    'upload-stepper__item--done': uploadStep > 1,
+                  }"
+                >
+                  <button
+                    type="button"
+                    class="upload-stepper__btn"
+                    :aria-current="uploadStep === 1 ? 'step' : undefined"
+                    @click="goUploadStep(1)"
+                  >
+                    <span class="upload-stepper__index" aria-hidden="true">
+                      <UIcon v-if="uploadStep > 1" name="i-lucide-check" class="size-3.5" />
+                      <template v-else>1</template>
+                    </span>
+                    <span class="upload-stepper__text">
+                      <span class="upload-stepper__title">{{ t('kb.uploadStepSource') }}</span>
+                      <span class="upload-stepper__desc">{{ t('kb.uploadStepSourceDesc') }}</span>
+                    </span>
+                  </button>
+                </li>
+                <li class="upload-stepper__rail" aria-hidden="true" />
+                <li
+                  class="upload-stepper__item"
+                  :class="{
+                    'upload-stepper__item--on': uploadStep === 2,
+                    'upload-stepper__item--done': uploadStep > 2,
+                    'upload-stepper__item--locked': uploadStep === 1 && !uploadItems.length,
+                  }"
+                >
+                  <button
+                    type="button"
+                    class="upload-stepper__btn"
+                    :aria-current="uploadStep === 2 ? 'step' : undefined"
+                    :disabled="uploadStep === 1 && !uploadItems.length"
+                    @click="goUploadStep(2)"
+                  >
+                    <span class="upload-stepper__index" aria-hidden="true">
+                      <UIcon v-if="uploadStep > 2" name="i-lucide-check" class="size-3.5" />
+                      <template v-else>2</template>
+                    </span>
+                    <span class="upload-stepper__text">
+                      <span class="upload-stepper__title">{{ t('kb.uploadStepParse') }}</span>
+                      <span class="upload-stepper__desc">{{ t('kb.uploadStepParseDesc') }}</span>
+                    </span>
+                  </button>
+                </li>
+                <li class="upload-stepper__rail" aria-hidden="true" />
+                <li
+                  class="upload-stepper__item"
+                  :class="{
+                    'upload-stepper__item--on': uploadStep === 3,
+                    'upload-stepper__item--locked': uploadStep < 3 && !uploadItems.length,
+                  }"
+                >
+                  <button
+                    type="button"
+                    class="upload-stepper__btn"
+                    :aria-current="uploadStep === 3 ? 'step' : undefined"
+                    :disabled="!uploadItems.length || (uploadStep === 1)"
+                    @click="goUploadStep(3)"
+                  >
+                    <span class="upload-stepper__index" aria-hidden="true">3</span>
+                    <span class="upload-stepper__text">
+                      <span class="upload-stepper__title">{{ t('kb.uploadStepConfirm') }}</span>
+                      <span class="upload-stepper__desc">{{ t('kb.uploadStepConfirmDesc') }}</span>
+                    </span>
+                  </button>
+                </li>
+              </ol>
+            </nav>
+          </div>
 
-              <div class="upload-panel__head">
-                <nav class="upload-stepper" :aria-label="t('kb.uploadSteps')">
-                  <ol class="upload-stepper__list">
-                    <li
-                      class="upload-stepper__item"
-                      :class="{
-                        'upload-stepper__item--on': uploadStep === 1,
-                        'upload-stepper__item--done': uploadStep > 1,
-                      }"
-                    >
-                      <button
-                        type="button"
-                        class="upload-stepper__btn"
-                        :aria-current="uploadStep === 1 ? 'step' : undefined"
-                        @click="goUploadStep(1)"
-                      >
-                        <span class="upload-stepper__index" aria-hidden="true">
-                          <UIcon v-if="uploadStep > 1" name="i-lucide-check" class="size-3.5" />
-                          <template v-else>1</template>
-                        </span>
-                        <span class="upload-stepper__text">
-                          <span class="upload-stepper__title">{{ t('kb.uploadStepFile') }}</span>
-                          <span class="upload-stepper__desc">{{ t('kb.uploadStepFileDesc') }}</span>
-                        </span>
-                      </button>
-                    </li>
-                    <li class="upload-stepper__rail" aria-hidden="true" />
-                    <li
-                      class="upload-stepper__item"
-                      :class="{
-                        'upload-stepper__item--on': uploadStep === 2,
-                        'upload-stepper__item--locked': uploadStep === 1 && !uploadFiles?.length,
-                      }"
-                    >
-                      <button
-                        type="button"
-                        class="upload-stepper__btn"
-                        :aria-current="uploadStep === 2 ? 'step' : undefined"
-                        :disabled="uploadStep === 1 && !uploadFiles?.length"
-                        @click="goUploadStep(2)"
-                      >
-                        <span class="upload-stepper__index" aria-hidden="true">2</span>
-                        <span class="upload-stepper__text">
-                          <span class="upload-stepper__title">{{ t('kb.uploadStepParse') }}</span>
-                          <span class="upload-stepper__desc">{{ t('kb.uploadStepParseDesc') }}</span>
-                        </span>
-                      </button>
-                    </li>
-                  </ol>
-                </nav>
+          <!-- Step 1: data source -->
+          <div v-if="uploadStep === 1" class="source-step">
+            <div class="source-tabs" role="tablist">
+              <button
+                v-for="tab in sourceTabs"
+                :key="tab.value"
+                type="button"
+                role="tab"
+                class="source-tabs__btn"
+                :class="{ 'source-tabs__btn--on': dataSourceKind === tab.value }"
+                :aria-selected="dataSourceKind === tab.value"
+                @click="dataSourceKind = tab.value"
+              >
+                <UIcon :name="tab.icon" class="size-4" />
+                {{ tab.label }}
+              </button>
+            </div>
+
+            <div v-if="dataSourceKind === 'local'" class="source-pane">
+              <UFileUpload
+                v-model="uploadFiles"
+                multiple
+                accept=".pdf,.txt,.md,.docx,.html"
+                icon="i-lucide-cloud-upload"
+                file-icon="i-lucide-file-text"
+                :file-image="false"
+                :label="t('kb.uploadLabel')"
+                :description="t('kb.uploadDesc')"
+                layout="list"
+              />
+            </div>
+
+            <div v-else-if="dataSourceKind === 'web'" class="source-pane">
+              <p class="source-pane__hint">{{ t('kb.sourceWebHint') }}</p>
+              <div class="source-form">
+                <div class="field">
+                  <label class="field__label">{{ t('kb.sourceWebUrl') }}</label>
+                  <UInput v-model="webForm.url" :placeholder="t('kb.sourceWebUrlPh')" />
+                </div>
+                <div class="field">
+                  <label class="field__label">{{ t('kb.sourceWebName') }}</label>
+                  <UInput v-model="webForm.name" :placeholder="t('kb.sourceWebNamePh')" />
+                </div>
+                <div class="field">
+                  <label class="field__label">{{ t('kb.sourceWebEngine') }}</label>
+                  <USelect
+                    v-model="webForm.engine"
+                    :items="webEngineOptions"
+                    value-key="value"
+                    class="w-full"
+                  />
+                </div>
+                <CfButton tone="secondary" icon="i-lucide-plus" @click="addWebItem">
+                  {{ t('kb.sourceAdd') }}
+                </CfButton>
               </div>
-              <div v-if="uploadStep === 1">
-                <UFileUpload
-                  v-model="uploadFiles"
-                  multiple
-                  accept=".pdf,.txt,.md,.docx,.html"
-                  icon="i-lucide-cloud-upload"
-                  file-icon="i-lucide-file-text"
-                  :file-image="false"
-                  :label="t('kb.uploadLabel')"
-                  :description="t('kb.uploadDesc')"
-                  layout="list"
+            </div>
+
+            <div v-else class="source-pane">
+              <p class="source-pane__hint">{{ t('kb.sourceTextHint') }}</p>
+              <div class="source-form source-form--text">
+                <div class="field">
+                  <label class="field__label">{{ t('kb.sourceTextName') }}</label>
+                  <UInput v-model="textForm.name" :placeholder="t('kb.sourceTextNamePh')" />
+                </div>
+                <div class="field">
+                  <label class="field__label">{{ t('kb.sourceTextFormat') }}</label>
+                  <USelect
+                    v-model="textForm.format"
+                    :items="textFormatOptions"
+                    value-key="value"
+                    class="w-full"
+                  />
+                </div>
+                <div class="field field--full">
+                  <label class="field__label">{{ t('kb.sourceTextContent') }}</label>
+                  <UTextarea
+                    v-model="textForm.content"
+                    :rows="8"
+                    :placeholder="t('kb.sourceTextContentPh')"
+                    class="w-full"
+                  />
+                </div>
+                <CfButton tone="secondary" icon="i-lucide-plus" @click="addTextItem">
+                  {{ t('kb.sourceAdd') }}
+                </CfButton>
+              </div>
+            </div>
+
+            <div v-if="uploadItems.length" class="source-queue">
+              <p class="source-queue__title">{{ t('kb.sourceQueue', { n: uploadItems.length }) }}</p>
+              <ul class="upload-confirm-table upload-confirm-table--compact">
+                <li
+                  v-for="item in uploadItems"
+                  :key="item.id"
+                  class="upload-confirm-row"
+                  :class="{ 'upload-confirm-row--bad': item.file && item.file.size > MAX_UPLOAD_BYTES }"
+                >
+                  <div class="upload-confirm-row__main">
+                    <span class="upload-confirm-row__name">{{ item.name }}</span>
+                    <span class="upload-confirm-row__meta">{{ sourceKindLabel(item.source) }}{{ itemMeta(item) }}</span>
+                  </div>
+                  <CfButton
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="removeUploadItem(item.id)"
+                  />
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Step 2: parse -->
+          <div v-else-if="uploadStep === 2" class="parse-step">
+            <p class="parse-step__hint">{{ t('kb.parseHint', { n: uploadItems.length }) }}</p>
+            <ul v-if="uploadItems.length" class="upload-file-list">
+              <li
+                v-for="item in uploadItems"
+                :key="item.id"
+                class="upload-file-list__item"
+                :class="{ 'upload-file-list__item--bad': item.file && item.file.size > MAX_UPLOAD_BYTES }"
+              >
+                <span class="upload-file-list__name">{{ item.name }}</span>
+                <span>{{ sourceKindLabel(item.source) }}{{ itemMeta(item) }}</span>
+              </li>
+            </ul>
+            <p v-if="chunkPreviewError" class="field__error" role="alert">{{ chunkPreviewError }}</p>
+            <div class="parse-grid">
+              <div class="field">
+                <label class="field__label">
+                  <span>{{ t('kb.splitMode') }}</span>
+                  <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                    <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
+                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                    </button>
+                  </UTooltip>
+                </label>
+                <USelect
+                  v-model="parseForm.split_mode"
+                  :items="splitModeOptions"
+                  value-key="value"
+                  class="w-full"
                 />
               </div>
-              <div v-else class="parse-step">
-                <p class="parse-step__hint">{{ t('kb.parseHint', { n: uploadFiles?.length || 0 }) }}</p>
-                <ul v-if="uploadFiles?.length" class="upload-file-list">
-                  <li
-                    v-for="file in uploadFiles"
-                    :key="file.name + file.size"
-                    class="upload-file-list__item"
-                    :class="{ 'upload-file-list__item--bad': file.size > MAX_UPLOAD_BYTES }"
-                  >
-                    <span class="upload-file-list__name">{{ file.name }}</span>
-                    <span>{{ formatBytes(file.size) }}</span>
-                  </li>
-                </ul>
-                <p v-if="chunkPreviewError" class="field__error" role="alert">{{ chunkPreviewError }}</p>
-                <div class="parse-grid">
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.splitMode') }}</span>
-                      <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <USelect
-                      v-model="parseForm.split_mode"
-                      :items="splitModeOptions"
-                      value-key="value"
-                      class="w-full"
-                    />
-                  </div>
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.chunkSize') }}</span>
-                      <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
-                  </div>
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.chunkOverlap') }}</span>
-                      <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
-                  </div>
-                  <div v-if="parseForm.split_mode === 'separator'" class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.splitSeparator') }}</span>
-                      <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
-                  </div>
+              <div class="field">
+                <label class="field__label">
+                  <span>{{ t('kb.chunkSize') }}</span>
+                  <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                    <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
+                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                    </button>
+                  </UTooltip>
+                </label>
+                <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
+              </div>
+              <div class="field">
+                <label class="field__label">
+                  <span>{{ t('kb.chunkOverlap') }}</span>
+                  <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                    <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
+                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                    </button>
+                  </UTooltip>
+                </label>
+                <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
+              </div>
+              <div v-if="parseForm.split_mode === 'separator'" class="field">
+                <label class="field__label">
+                  <span>{{ t('kb.splitSeparator') }}</span>
+                  <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
+                    <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
+                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
+                    </button>
+                  </UTooltip>
+                </label>
+                <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
+              </div>
+            </div>
+            <div class="parse-preview-actions">
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-eye"
+                :loading="chunkPreviewLoading"
+                :disabled="!previewableItem || !!oversizedFile()"
+                @click="handlePreviewChunks"
+              >
+                {{ t('kb.previewChunks') }}
+              </CfButton>
+              <span v-if="!previewableItem && uploadItems.length" class="cf-muted">
+                {{ t('kb.previewWebOnly') }}
+              </span>
+              <span v-if="chunkPreview" class="cf-muted">
+                {{ t('kb.previewSummary', { total: chunkPreview.total_chunks, chars: chunkPreview.char_count }) }}
+              </span>
+            </div>
+            <div v-if="chunkPreview?.chunks?.length" class="chunk-preview-list">
+              <div v-for="chunk in chunkPreview.chunks" :key="chunk.index" class="chunk-preview-item">
+                <div class="chunk-preview-item__meta">
+                  #{{ chunk.index + 1 }} · {{ chunk.char_count }} {{ t('kb.chars') }}
                 </div>
-                <div class="parse-preview-actions">
+                <pre class="chunk-preview-item__body">{{ chunk.content }}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: confirm -->
+          <div v-else class="confirm-step">
+            <p class="parse-step__hint">{{ t('kb.confirmHint', { n: uploadItems.length }) }}</p>
+            <div class="upload-confirm-table" role="table">
+              <div class="upload-confirm-head" role="row">
+                <span role="columnheader">{{ t('kb.confirmColName') }}</span>
+                <span role="columnheader">{{ t('kb.confirmColStatus') }}</span>
+                <span role="columnheader">{{ t('kb.confirmColAction') }}</span>
+              </div>
+              <div
+                v-for="item in uploadItems"
+                :key="item.id"
+                class="upload-confirm-row upload-confirm-row--grid"
+                role="row"
+                :class="{ 'upload-confirm-row--bad': item.file && item.file.size > MAX_UPLOAD_BYTES }"
+              >
+                <div class="upload-confirm-row__main" role="cell">
+                  <span class="upload-confirm-row__name">{{ item.name }}</span>
+                  <span class="upload-confirm-row__meta">{{ sourceKindLabel(item.source) }}{{ itemMeta(item) }}</span>
+                  <span v-if="item.error" class="upload-confirm-row__err">{{ item.error }}</span>
+                </div>
+                <span class="upload-confirm-status" role="cell" :data-status="item.status">
+                  {{ uploadStatusLabel(item.status) }}
+                </span>
+                <div class="upload-confirm-row__ops" role="cell">
                   <CfButton
-                    tone="secondary"
-                    icon="i-lucide-eye"
-                    :loading="chunkPreviewLoading"
-                    :disabled="!uploadFiles?.length || !!oversizedFile()"
-                    @click="handlePreviewChunks"
-                  >
-                    {{ t('kb.previewChunks') }}
-                  </CfButton>
-                  <span v-if="chunkPreview" class="cf-muted">
-                    {{ t('kb.previewSummary', { total: chunkPreview.total_chunks, chars: chunkPreview.char_count }) }}
-                  </span>
-                </div>
-                <div v-if="chunkPreview?.chunks?.length" class="chunk-preview-list">
-                  <div v-for="chunk in chunkPreview.chunks" :key="chunk.index" class="chunk-preview-item">
-                    <div class="chunk-preview-item__meta">
-                      #{{ chunk.index + 1 }} · {{ chunk.char_count }} {{ t('kb.chars') }}
-                    </div>
-                    <pre class="chunk-preview-item__body">{{ chunk.content }}</pre>
-                  </div>
+                    v-if="item.status === 'ready' || item.status === 'error'"
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    :disabled="uploadLoading"
+                    @click="removeUploadItem(item.id)"
+                  />
                 </div>
               </div>
+            </div>
+          </div>
         </div>
       </template>
       <template #footer>
         <div class="modal-actions">
           <div class="modal-actions__left">
             <CfButton
-              v-if="uploadStep === 2"
+              v-if="uploadStep > 1"
               tone="secondary"
               icon="i-lucide-arrow-left"
-              @click="uploadStep = 1"
+              :disabled="uploadLoading"
+              @click="uploadStep = (uploadStep - 1) as 1 | 2 | 3"
             >
               {{ t('common.back') }}
             </CfButton>
@@ -764,17 +933,26 @@
               v-if="uploadStep === 1"
               tone="primary"
               icon="i-lucide-arrow-right"
-              :disabled="!uploadFiles?.length"
+              :disabled="!uploadItems.length"
               @click="goParseStep"
             >
               {{ t('kb.nextParse') }}
+            </CfButton>
+            <CfButton
+              v-else-if="uploadStep === 2"
+              tone="primary"
+              icon="i-lucide-arrow-right"
+              :disabled="!uploadItems.length || !!oversizedFile()"
+              @click="goConfirmStep"
+            >
+              {{ t('kb.nextConfirm') }}
             </CfButton>
             <CfButton
               v-else
               tone="primary"
               icon="i-lucide-cloud-upload"
               :loading="uploadLoading"
-              :disabled="!uploadFiles?.length || !!oversizedFile()"
+              :disabled="!uploadItems.length || !!oversizedFile()"
               @click="handleUploadSubmit"
             >
               {{ t('kb.upload') }}
@@ -841,10 +1019,27 @@ const {
   updateDocContent,
   uploadDoc,
   previewChunks,
+  createTextDoc,
+  createURLDoc,
   deleteDoc,
   reparseDoc,
   searchKB,
 } = useKnowledgeBases()
+
+type UploadSourceKind = 'local' | 'web' | 'text'
+type UploadItemStatus = 'ready' | 'uploading' | 'ok' | 'error'
+interface UploadItem {
+  id: string
+  source: UploadSourceKind
+  name: string
+  status: UploadItemStatus
+  error?: string
+  file?: File
+  url?: string
+  engine?: string
+  content?: string
+  textFormat?: 'md' | 'txt'
+}
 
 const pageLoading = ref(true)
 const selectedKB = ref<KnowledgeBase | null>(null)
@@ -977,8 +1172,18 @@ watch(docPageCount, (n) => {
 })
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 const uploadFiles = ref<File[] | null>(null)
+const uploadItems = ref<UploadItem[]>([])
+const dataSourceKind = ref<UploadSourceKind>('local')
+const webForm = reactive({ url: '', name: '', engine: 'auto' })
+const webEngineOptions = computed(() => [
+  { label: t('kb.engineAuto'), value: 'auto' },
+  { label: t('kb.engineJina'), value: 'jina' },
+  { label: t('kb.engineFirecrawl'), value: 'firecrawl' },
+  { label: t('kb.engineBasic'), value: 'basic' },
+])
+const textForm = reactive({ name: '', content: '', format: 'md' as 'md' | 'txt' })
 const uploadLoading = ref(false)
-const uploadStep = ref<1 | 2>(1)
+const uploadStep = ref<1 | 2 | 3>(1)
 const chunkPreviewLoading = ref(false)
 const chunkPreview = ref<ChunkPreviewResponse | null>(null)
 const chunkPreviewError = ref('')
@@ -993,8 +1198,142 @@ const splitModeOptions = computed(() => [
   { label: t('kb.splitFixed'), value: 'fixed' },
   { label: t('kb.splitSeparator'), value: 'separator' },
 ])
+const textFormatOptions = computed(() => [
+  { label: 'Markdown (.md)', value: 'md' },
+  { label: 'Plain text (.txt)', value: 'txt' },
+])
+const sourceTabs = computed(() => [
+  { value: 'local' as const, label: t('kb.sourceLocal'), icon: 'i-lucide-hard-drive' },
+  { value: 'web' as const, label: t('kb.sourceWeb'), icon: 'i-lucide-globe' },
+  { value: 'text' as const, label: t('kb.sourceText'), icon: 'i-lucide-file-pen-line' },
+])
 const fieldHelpTooltipContent = { side: 'top' as const, collisionPadding: 8 }
 const fieldHelpTooltipUi = { content: 'max-w-xs whitespace-normal' }
+
+function newUploadId() {
+  return `up_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+}
+
+function sourceKindLabel(kind: UploadSourceKind) {
+  if (kind === 'local') return t('kb.sourceLocal')
+  if (kind === 'web') return t('kb.sourceWeb')
+  return t('kb.sourceText')
+}
+
+function itemMeta(item: UploadItem) {
+  if (item.source === 'local' && item.file) return ` · ${formatBytes(item.file.size)}`
+  if (item.source === 'web' && item.url) {
+    const eng = item.engine && item.engine !== 'auto' ? item.engine : 'auto'
+    return ` · ${eng} · ${item.url}`
+  }
+  if (item.source === 'text') return ` · .${item.textFormat || 'md'}`
+  return ''
+}
+
+function uploadStatusLabel(status: UploadItemStatus) {
+  if (status === 'uploading') return t('kb.statusUploading')
+  if (status === 'ok') return t('kb.statusOk')
+  if (status === 'error') return t('kb.statusError')
+  return t('kb.statusReady')
+}
+
+function syncLocalItemsFromFiles(files: File[] | null) {
+  const nonLocal = uploadItems.value.filter((item) => item.source !== 'local')
+  const locals = (files || []).map((file) => {
+    const existing = uploadItems.value.find(
+      (item) => item.source === 'local' && item.file === file
+    )
+    return (
+      existing || {
+        id: newUploadId(),
+        source: 'local' as const,
+        name: file.name,
+        status: 'ready' as const,
+        file,
+      }
+    )
+  })
+  uploadItems.value = [...nonLocal, ...locals]
+}
+
+watch(uploadFiles, (files) => {
+  syncLocalItemsFromFiles(files)
+})
+
+function removeUploadItem(id: string) {
+  const item = uploadItems.value.find((row) => row.id === id)
+  uploadItems.value = uploadItems.value.filter((row) => row.id !== id)
+  if (item?.source === 'local' && item.file && uploadFiles.value) {
+    uploadFiles.value = uploadFiles.value.filter((file) => file !== item.file)
+  }
+  if (!uploadItems.value.length && uploadStep.value > 1) {
+    uploadStep.value = 1
+  }
+}
+
+function addWebItem() {
+  const url = webForm.url.trim()
+  if (!url) {
+    toast.add({ title: t('kb.needWebUrl'), color: 'warning' })
+    return
+  }
+  try {
+    const parsed = new URL(url)
+    if (!/^https?:$/.test(parsed.protocol)) throw new Error('bad protocol')
+  } catch {
+    toast.add({ title: t('kb.invalidWebUrl'), color: 'warning' })
+    return
+  }
+  const name = webForm.name.trim() || url
+  uploadItems.value.push({
+    id: newUploadId(),
+    source: 'web',
+    name,
+    url,
+    engine: webForm.engine || 'auto',
+    status: 'ready',
+  })
+  webForm.url = ''
+  webForm.name = ''
+}
+
+function addTextItem() {
+  const content = textForm.content.trim()
+  if (!content) {
+    toast.add({ title: t('kb.needTextContent'), color: 'warning' })
+    return
+  }
+  const format = textForm.format === 'txt' ? 'txt' : 'md'
+  const name = textForm.name.trim() || `note.${format}`
+  uploadItems.value.push({
+    id: newUploadId(),
+    source: 'text',
+    name: name.endsWith(`.${format}`) ? name : `${name}.${format}`,
+    content,
+    textFormat: format,
+    status: 'ready',
+  })
+  textForm.name = ''
+  textForm.content = ''
+}
+
+const previewableItem = computed(() => {
+  return (
+    uploadItems.value.find((item) => item.source === 'local' && item.file) ||
+    uploadItems.value.find((item) => item.source === 'text' && item.content) ||
+    null
+  )
+})
+
+function fileForPreview(item: UploadItem): File | null {
+  if (item.source === 'local' && item.file) return item.file
+  if (item.source === 'text' && item.content) {
+    const format = item.textFormat || 'md'
+    const mime = format === 'txt' ? 'text/plain' : 'text/markdown'
+    return new File([item.content], item.name || `preview.${format}`, { type: mime })
+  }
+  return null
+}
 
 function currentParseOptions(): ParseOptions {
   return {
@@ -1015,7 +1354,11 @@ function formatBytes(n: number) {
 }
 
 function oversizedFile() {
-  return uploadFiles.value?.find((file) => file.size > MAX_UPLOAD_BYTES) || null
+  return (
+    uploadItems.value.find(
+      (item) => item.source === 'local' && item.file && item.file.size > MAX_UPLOAD_BYTES
+    )?.file || null
+  )
 }
 
 function tooLargeMessage(file: File) {
@@ -1024,6 +1367,14 @@ function tooLargeMessage(file: File) {
 
 function resetUploadState() {
   uploadFiles.value = null
+  uploadItems.value = []
+  dataSourceKind.value = 'local'
+  webForm.url = ''
+  webForm.name = ''
+  webForm.engine = 'auto'
+  textForm.name = ''
+  textForm.content = ''
+  textForm.format = 'md'
   uploadStep.value = 1
   chunkPreview.value = null
   chunkPreviewError.value = ''
@@ -1036,8 +1387,8 @@ function resetUploadState() {
 }
 
 function goParseStep() {
-  if (!uploadFiles.value?.length) {
-    toast.add({ title: t('kb.needFiles'), color: 'warning' })
+  if (!uploadItems.value.length) {
+    toast.add({ title: t('kb.needSources'), color: 'warning' })
     return
   }
   chunkPreview.value = null
@@ -1046,17 +1397,49 @@ function goParseStep() {
   uploadStep.value = 2
 }
 
-function goUploadStep(step: 1 | 2) {
+function goConfirmStep() {
+  if (!uploadItems.value.length) {
+    toast.add({ title: t('kb.needSources'), color: 'warning' })
+    return
+  }
+  const big = oversizedFile()
+  if (big) {
+    chunkPreviewError.value = tooLargeMessage(big)
+    toast.add({ title: chunkPreviewError.value, color: 'error' })
+    return
+  }
+  for (const item of uploadItems.value) {
+    if (item.status !== 'ok') {
+      item.status = 'ready'
+      item.error = undefined
+    }
+  }
+  uploadStep.value = 3
+}
+
+function goUploadStep(step: 1 | 2 | 3) {
   if (step === 1) {
     uploadStep.value = 1
     return
   }
-  goParseStep()
+  if (step === 2) {
+    goParseStep()
+    return
+  }
+  if (uploadStep.value < 2) {
+    goParseStep()
+    if (uploadStep.value !== 2) return
+  }
+  goConfirmStep()
 }
 
 async function handlePreviewChunks() {
-  const file = uploadFiles.value?.[0]
-  if (!selectedKB.value || !file) return
+  const item = previewableItem.value
+  const file = item ? fileForPreview(item) : null
+  if (!selectedKB.value || !file) {
+    toast.add({ title: t('kb.previewWebOnly'), color: 'warning' })
+    return
+  }
   const big = oversizedFile()
   if (big) {
     chunkPreviewError.value = tooLargeMessage(big)
@@ -1353,8 +1736,8 @@ const handleSearch = async () => {
 
 const handleUploadSubmit = async () => {
   if (!selectedKB.value) return
-  if (!uploadFiles.value?.length) {
-    toast.add({ title: t('kb.needFiles'), color: 'warning' })
+  if (!uploadItems.value.length) {
+    toast.add({ title: t('kb.needSources'), color: 'warning' })
     return
   }
   const big = oversizedFile()
@@ -1367,13 +1750,42 @@ const handleUploadSubmit = async () => {
   uploadLoading.value = true
   let successCount = 0
   let failCount = 0
-
   const opts = currentParseOptions()
-  for (const file of uploadFiles.value) {
-    const res = await uploadDoc(selectedKB.value!.id, file, opts)
+  const kbId = selectedKB.value.id
+
+  for (const item of uploadItems.value) {
+    if (item.status === 'ok') {
+      successCount++
+      continue
+    }
+    item.status = 'uploading'
+    item.error = undefined
+    let res: { data?: unknown; error?: string }
+    if (item.source === 'local' && item.file) {
+      res = await uploadDoc(kbId, item.file, opts)
+    } else if (item.source === 'web' && item.url) {
+      res = await createURLDoc(kbId, {
+        url: item.url,
+        name: item.name,
+        engine: item.engine || 'auto',
+        ...opts,
+      })
+    } else if (item.source === 'text' && item.content) {
+      res = await createTextDoc(kbId, {
+        name: item.name,
+        content: item.content,
+        file_type: item.textFormat || 'md',
+        ...opts,
+      })
+    } else {
+      res = { error: t('kb.uploadItemInvalid') }
+    }
     if (res.error) {
+      item.status = 'error'
+      item.error = res.error
       failCount++
     } else {
+      item.status = 'ok'
       successCount++
     }
   }
@@ -1382,12 +1794,12 @@ const handleUploadSubmit = async () => {
 
   if (failCount === 0) {
     toast.add({ title: t('kb.uploadOk', { n: successCount }), color: 'success' })
+    resetUploadState()
+    uploadModalVisible.value = false
   } else {
     toast.add({ title: t('kb.uploadPartial', { ok: successCount, fail: failCount }), color: 'warning' })
   }
 
-  resetUploadState()
-  uploadModalVisible.value = false
   docPage.value = 1
   if (selectedKB.value) {
     await fetchDocuments(selectedKB.value.id)
@@ -2361,6 +2773,184 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--cf-ink-soft);
   line-height: 1.5;
+}
+
+.source-step {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.source-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-tabs__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--cf-ink-soft);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.source-tabs__btn:hover {
+  color: var(--cf-ink);
+  background: color-mix(in srgb, var(--cf-ink) 4%, transparent);
+}
+
+.source-tabs__btn--on {
+  color: var(--cf-ink);
+  border-color: color-mix(in srgb, var(--cf-accent, #0f9f8a) 45%, var(--cf-line));
+  background: color-mix(in srgb, var(--cf-accent, #0f9f8a) 12%, transparent);
+}
+
+.source-pane__hint {
+  margin: 0 0 10px;
+  font-size: 0.875rem;
+  color: var(--cf-ink-soft);
+}
+
+.source-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+
+.source-form--text .field--full {
+  grid-column: 1 / -1;
+}
+
+.source-queue__title {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cf-ink-soft);
+}
+
+.confirm-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upload-confirm-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--cf-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.upload-confirm-table--compact {
+  border: 0;
+  gap: 6px;
+  overflow: visible;
+}
+
+.upload-confirm-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 72px;
+  gap: 12px;
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cf-ink-soft);
+  background: color-mix(in srgb, var(--cf-ink) 3%, transparent);
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.upload-confirm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cf-ink) 1.5%, transparent);
+}
+
+.upload-confirm-row--grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px 72px;
+  gap: 12px;
+  align-items: center;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--cf-line);
+  background: transparent;
+}
+
+.upload-confirm-row--grid:last-child {
+  border-bottom: 0;
+}
+
+.upload-confirm-row__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.upload-confirm-row__name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cf-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-confirm-row__meta {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-confirm-row__err {
+  font-size: 0.75rem;
+  color: var(--cf-danger, #c0392b);
+}
+
+.upload-confirm-row--bad .upload-confirm-row__name,
+.upload-confirm-row--bad .upload-confirm-row__meta {
+  color: var(--cf-danger, #c0392b);
+}
+
+.upload-confirm-status {
+  font-size: 0.8125rem;
+  color: var(--cf-ink-soft);
+}
+
+.upload-confirm-status[data-status='uploading'] {
+  color: var(--cf-accent, #0f9f8a);
+}
+
+.upload-confirm-status[data-status='ok'] {
+  color: var(--cf-accent-ink, #087a6a);
+}
+
+.upload-confirm-status[data-status='error'] {
+  color: var(--cf-danger, #c0392b);
+}
+
+.upload-confirm-row__ops {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .parse-step {

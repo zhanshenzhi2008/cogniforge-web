@@ -113,6 +113,7 @@
           <div class="cap-row">
             <UBadge v-if="hasCap(p, 'chat')" size="sm" variant="subtle">{{ t('models.capChat') }}</UBadge>
             <UBadge v-if="hasCap(p, 'embedding')" size="sm" variant="subtle">{{ t('models.capEmbed') }}</UBadge>
+            <UBadge v-if="hasCap(p, 'web_fetch')" size="sm" variant="subtle" color="warning">{{ t('models.capWebFetch') }}</UBadge>
           </div>
           <code class="model-code" :title="p.default_model || ''">{{ p.default_model || '—' }}</code>
           <span :class="['status-badge', p.status]" :title="p.status === 'error' ? p.last_error || '' : undefined">
@@ -445,10 +446,11 @@
           <div class="field">
             <label class="field__label">{{ t('models.capabilities') }}</label>
             <div class="cap-checks">
-              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="chat"> {{ t('models.capChat') }}</label>
-              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="embedding"> {{ t('models.capEmbed') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="chat" :disabled="isWebFetchForm"> {{ t('models.capChat') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="embedding" :disabled="isWebFetchForm"> {{ t('models.capEmbed') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="web_fetch"> {{ t('models.capWebFetch') }}</label>
             </div>
-            <p class="field__hint">{{ t('models.capabilitiesHint') }}</p>
+            <p class="field__hint">{{ isWebFetchForm ? t('models.capabilitiesWebFetchHint') : t('models.capabilitiesHint') }}</p>
           </div>
 
           <div v-if="form.capabilities.includes('chat')" class="field">
@@ -639,6 +641,7 @@ import {
   PROVIDER_META,
   matchProviderByBaseURL,
   providerLabel,
+  isWebFetchProvider,
   type AIProvider,
   type CreateProviderInput,
   type UpdateProviderInput,
@@ -790,12 +793,21 @@ function fillSuggestionsIfEmpty(key: string) {
   }
 }
 
+const isWebFetchForm = computed(() => isWebFetchProvider(form.provider))
+
 /** 点厂商：卡片小字改成它，并预填地址和推荐模型。地址、模型名之后仍可改。 */
 function selectProvider(key: string) {
   form.provider = key
   const meta = PROVIDER_META[key]
   if (meta?.defaultBaseURL) {
     form.base_url = meta.defaultBaseURL
+  }
+  if (isWebFetchProvider(key)) {
+    form.capabilities = ['web_fetch']
+    form.default_model = ''
+    form.embedding_model = ''
+  } else if (dialogMode.value === 'create' && form.capabilities.includes('web_fetch') && form.capabilities.length === 1) {
+    form.capabilities = ['chat']
   }
   const suggested = meta?.suggestedModels
   if (suggested?.length && (!form.default_model || dialogMode.value === 'create')) {
