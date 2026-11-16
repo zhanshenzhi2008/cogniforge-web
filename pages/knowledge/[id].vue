@@ -745,34 +745,41 @@
                   </div>
                 </div>
               </div>
-              <div class="upload-panel__actions">
-                <CfButton v-if="uploadStep === 2" tone="secondary" icon="i-lucide-arrow-left" @click="uploadStep = 1">
-                  {{ t('common.back') }}
-                </CfButton>
-                <div class="upload-panel__actions-end">
-                  <CfButton tone="secondary" @click="resetUploadState">{{ t('common.reset') }}</CfButton>
-                  <CfButton
-                    v-if="uploadStep === 1"
-                    tone="primary"
-                    icon="i-lucide-arrow-right"
-                    :disabled="!uploadFiles?.length"
-                    @click="goParseStep"
-                  >
-                    {{ t('kb.nextParse') }}
-                  </CfButton>
-                  <CfButton
-                    v-else
-                    tone="primary"
-                    icon="i-lucide-cloud-upload"
-                    :loading="uploadLoading"
-                    :disabled="!uploadFiles?.length || !!oversizedFile()"
-                    @click="handleUploadSubmit"
-                  >
-                    {{ t('kb.upload') }}
-                  </CfButton>
-                </div>
-              </div>
-            
+        </div>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__left">
+            <CfButton
+              v-if="uploadStep === 2"
+              tone="secondary"
+              icon="i-lucide-arrow-left"
+              @click="uploadStep = 1"
+            >
+              {{ t('common.back') }}
+            </CfButton>
+          </div>
+          <div class="modal-actions__right">
+            <CfButton
+              v-if="uploadStep === 1"
+              tone="primary"
+              icon="i-lucide-arrow-right"
+              :disabled="!uploadFiles?.length"
+              @click="goParseStep"
+            >
+              {{ t('kb.nextParse') }}
+            </CfButton>
+            <CfButton
+              v-else
+              tone="primary"
+              icon="i-lucide-cloud-upload"
+              :loading="uploadLoading"
+              :disabled="!uploadFiles?.length || !!oversizedFile()"
+              @click="handleUploadSubmit"
+            >
+              {{ t('kb.upload') }}
+            </CfButton>
+          </div>
         </div>
       </template>
     </CfModal>
@@ -2328,6 +2335,13 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .modal-actions__right {
   display: flex;
   align-items: center;
@@ -2340,6 +2354,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin-right: auto;
+  min-height: 36px;
 }
 
 .delete-text {
