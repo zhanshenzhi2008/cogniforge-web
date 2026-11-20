@@ -11,6 +11,7 @@ export interface AIProvider {
   base_url: string
   default_model: string
   embedding_model: string
+  rerank_model: string
   capabilities: string[]
   extra_headers: Record<string, any> | null
   owner_user_id?: string
@@ -38,6 +39,7 @@ export interface CreateProviderInput {
   api_key: string
   default_model?: string
   embedding_model?: string
+  rerank_model?: string
   capabilities?: string[]
   extra_headers?: Record<string, any>
   is_enabled?: boolean
@@ -52,6 +54,7 @@ export interface UpdateProviderInput {
   api_key?: string
   default_model?: string
   embedding_model?: string
+  rerank_model?: string
   capabilities?: string[]
   extra_headers?: Record<string, any>
   is_enabled?: boolean
@@ -76,6 +79,7 @@ export const PROVIDER_META: Record<string, {
   hostIncludes?: string[]
   suggestedModels?: Array<{ label: string; value: string }>
   suggestedEmbeddingModels?: Array<{ label: string; value: string }>
+  suggestedRerankModels?: Array<{ label: string; value: string }>
 }> = {
   openai: {
     label: 'OpenAI',
@@ -117,6 +121,10 @@ export const PROVIDER_META: Record<string, {
     hostIncludes: ['api.siliconflow.cn'],
     suggestedEmbeddingModels: [
       { label: 'BAAI/bge-m3', value: 'BAAI/bge-m3' },
+    ],
+    suggestedRerankModels: [
+      { label: 'BAAI/bge-reranker-v2-m3', value: 'BAAI/bge-reranker-v2-m3' },
+      { label: 'netease-youdao/bce-reranker-base_v1', value: 'netease-youdao/bce-reranker-base_v1' },
     ],
   },
   deepseek: {
@@ -200,12 +208,16 @@ export const PROVIDER_META: Record<string, {
     hostIncludes: ['localhost:11434', '127.0.0.1:11434'],
   },
   jina: {
-    label: 'Jina Reader',
+    label: 'Jina',
     icon: '📖',
     color: '#0d9488',
     defaultBaseURL: 'https://r.jina.ai',
-    docURL: 'https://jina.ai/reader',
-    hostIncludes: ['r.jina.ai'],
+    docURL: 'https://jina.ai',
+    hostIncludes: ['r.jina.ai', 'api.jina.ai'],
+    suggestedRerankModels: [
+      { label: 'jina-reranker-v2-base-multilingual', value: 'jina-reranker-v2-base-multilingual' },
+      { label: 'jina-reranker-v2-base-en', value: 'jina-reranker-v2-base-en' },
+    ],
   },
   firecrawl: {
     label: 'Firecrawl',
@@ -224,11 +236,26 @@ export const PROVIDER_META: Record<string, {
   },
 }
 
-/** 网页抓取类厂商（无对话/向量模型字段） */
+/** 网页抓取类厂商（Firecrawl 仅抓取；Jina 可抓取或 Rerank） */
 export const WEB_FETCH_PROVIDERS = new Set(['jina', 'firecrawl'])
+/** 强制仅网页抓取、不可勾对话/向量的厂商 */
+export const WEB_FETCH_ONLY_PROVIDERS = new Set(['firecrawl'])
 
 export function isWebFetchProvider(key: string) {
   return WEB_FETCH_PROVIDERS.has((key || '').trim())
+}
+
+export function isWebFetchOnlyProvider(key: string) {
+  return WEB_FETCH_ONLY_PROVIDERS.has((key || '').trim())
+}
+
+export function hasCap(p: Pick<AIProvider, 'capabilities'> | null | undefined, cap: string) {
+  return !!p?.capabilities?.includes(cap)
+}
+
+export function rerankModelLabel(p: AIProvider) {
+  const model = (p.rerank_model || (!hasCap(p, 'chat') ? p.default_model : '') || '').trim()
+  return model ? `${p.name} · ${model}` : p.name
 }
 
 export const PROVIDER_OPTIONS = Object.entries(PROVIDER_META).map(([value, meta]) => ({

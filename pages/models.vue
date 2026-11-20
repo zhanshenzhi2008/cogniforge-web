@@ -113,6 +113,7 @@
           <div class="cap-row">
             <UBadge v-if="hasCap(p, 'chat')" size="sm" variant="subtle">{{ t('models.capChat') }}</UBadge>
             <UBadge v-if="hasCap(p, 'embedding')" size="sm" variant="subtle">{{ t('models.capEmbed') }}</UBadge>
+            <UBadge v-if="hasCap(p, 'rerank')" size="sm" variant="subtle" color="info">{{ t('models.capRerank') }}</UBadge>
             <UBadge v-if="hasCap(p, 'web_fetch')" size="sm" variant="subtle" color="warning">{{ t('models.capWebFetch') }}</UBadge>
           </div>
           <code class="model-code" :title="p.default_model || ''">{{ p.default_model || '—' }}</code>
@@ -333,6 +334,10 @@
               <dd><code class="model-code">{{ viewingProvider.embedding_model || '—' }}</code></dd>
             </div>
             <div class="detail-row">
+              <dt>{{ t('models.rerankModel') }}</dt>
+              <dd><code class="model-code">{{ viewingProvider.rerank_model || '—' }}</code></dd>
+            </div>
+            <div class="detail-row">
               <dt>{{ t('models.capabilities') }}</dt>
               <dd>{{ (viewingProvider.capabilities || ['chat']).join(', ') }}</dd>
             </div>
@@ -446,11 +451,12 @@
           <div class="field">
             <label class="field__label">{{ t('models.capabilities') }}</label>
             <div class="cap-checks">
-              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="chat" :disabled="isWebFetchForm"> {{ t('models.capChat') }}</label>
-              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="embedding" :disabled="isWebFetchForm"> {{ t('models.capEmbed') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="chat" :disabled="isFirecrawlForm"> {{ t('models.capChat') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="embedding" :disabled="isFirecrawlForm"> {{ t('models.capEmbed') }}</label>
+              <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="rerank" :disabled="isFirecrawlForm"> {{ t('models.capRerank') }}</label>
               <label class="cap-check"><input v-model="form.capabilities" type="checkbox" value="web_fetch"> {{ t('models.capWebFetch') }}</label>
             </div>
-            <p class="field__hint">{{ isWebFetchForm ? t('models.capabilitiesWebFetchHint') : t('models.capabilitiesHint') }}</p>
+            <p class="field__hint">{{ isFirecrawlForm ? t('models.capabilitiesWebFetchHint') : t('models.capabilitiesHint') }}</p>
           </div>
 
           <div v-if="form.capabilities.includes('chat')" class="field">
@@ -497,6 +503,29 @@
                 {{ m.label }}
               </button>
             </div>
+          </div>
+
+          <div v-if="form.capabilities.includes('rerank')" class="field">
+            <label class="field__label">{{ t('models.rerankModel') }}</label>
+            <UInput
+              v-model="form.rerank_model"
+              class="w-full"
+              :placeholder="t('models.rerankModelPh')"
+            />
+            <div v-if="suggestedRerankItems.length" class="suggest-chips">
+              <span class="suggest-chips-label">{{ t('models.suggestModels') }}</span>
+              <button
+                v-for="m in suggestedRerankItems"
+                :key="m.value"
+                type="button"
+                class="suggest-chip"
+                :class="{ active: form.rerank_model === m.value }"
+                @click="form.rerank_model = m.value"
+              >
+                {{ m.label }}
+              </button>
+            </div>
+            <p class="field__hint">{{ t('models.rerankModelHint') }}</p>
           </div>
 
           <div v-if="form.provider === 'openrouter'" class="field">
@@ -642,6 +671,7 @@ import {
   matchProviderByBaseURL,
   providerLabel,
   isWebFetchProvider,
+  isWebFetchOnlyProvider,
   type AIProvider,
   type CreateProviderInput,
   type UpdateProviderInput,
@@ -739,6 +769,7 @@ const form = reactive({
   base_url: '',
   default_model: '',
   embedding_model: '',
+  rerank_model: '',
   capabilities: ['chat'] as string[],
   extra_headers_raw: '',
   priority: 10,
@@ -791,9 +822,12 @@ function fillSuggestionsIfEmpty(key: string) {
   if (!form.embedding_model && meta?.suggestedEmbeddingModels?.length) {
     form.embedding_model = meta.suggestedEmbeddingModels[0].value
   }
+  if (!form.rerank_model && meta?.suggestedRerankModels?.length) {
+    form.rerank_model = meta.suggestedRerankModels[0].value
+  }
 }
 
-const isWebFetchForm = computed(() => isWebFetchProvider(form.provider))
+const isFirecrawlForm = computed(() => isWebFetchOnlyProvider(form.provider))
 
 /** 点厂商：卡片小字改成它，并预填地址和推荐模型。地址、模型名之后仍可改。 */
 function selectProvider(key: string) {
@@ -802,10 +836,28 @@ function selectProvider(key: string) {
   if (meta?.defaultBaseURL) {
     form.base_url = meta.defaultBaseURL
   }
-  if (isWebFetchProvider(key)) {
+  if (isWebFetchOnlyProvider(key)) {
     form.capabilities = ['web_fetch']
     form.default_model = ''
     form.embedding_model = ''
+    form.rerank_model = ''
+  } else if (isWebFetchProvider(key) && dialogMode.value === 'create') {
+    // Jina：默认网页抓取；若地址已是 api.jina.ai 则默认 Rerank
+    const url = (form.base_url || '').toLowerCase()
+    if (url.includes('api.jina.ai')) {
+      form.capabilities = ['rerank']
+      form.default_model = ''
+      form.embedding_model = ''
+      if (!form.rerank_model && meta?.suggestedRerankModels?.length) {
+        form.rerank_model = meta.suggestedRerankModels[0].value
+        form.default_model = form.rerank_model
+      }
+    } else {
+      form.capabilities = ['web_fetch']
+      form.default_model = ''
+      form.embedding_model = ''
+      form.rerank_model = ''
+    }
   } else if (dialogMode.value === 'create' && form.capabilities.includes('web_fetch') && form.capabilities.length === 1) {
     form.capabilities = ['chat']
   }
@@ -816,6 +868,10 @@ function selectProvider(key: string) {
   const emb = meta?.suggestedEmbeddingModels
   if (emb?.length && (!form.embedding_model || dialogMode.value === 'create')) {
     form.embedding_model = emb[0].value
+  }
+  const rr = meta?.suggestedRerankModels
+  if (rr?.length && form.capabilities.includes('rerank') && (!form.rerank_model || dialogMode.value === 'create')) {
+    form.rerank_model = rr[0].value
   }
   errors.provider = ''
 }
@@ -840,6 +896,7 @@ function adoptUrlVendor() {
 
 const suggestedModelItems = computed(() => PROVIDER_META[form.provider]?.suggestedModels || [])
 const suggestedEmbeddingItems = computed(() => PROVIDER_META[form.provider]?.suggestedEmbeddingModels || [])
+const suggestedRerankItems = computed(() => PROVIDER_META[form.provider]?.suggestedRerankModels || [])
 
 function validate() {
   errors.provider = form.provider ? '' : t('models.needType')
@@ -859,6 +916,7 @@ function fillFormFromProvider(p: AIProvider) {
   form.base_url = p.base_url || ''
   form.default_model = p.default_model || ''
   form.embedding_model = p.embedding_model || ''
+  form.rerank_model = p.rerank_model || ''
   form.capabilities = p.capabilities?.length ? [...p.capabilities] : ['chat']
   form.priority = p.priority
   form.is_public = p.scope === 'public'
@@ -1009,6 +1067,7 @@ const handleSubmit = async () => {
         api_key: form.api_key || undefined,
         default_model: form.default_model,
         embedding_model: form.embedding_model,
+        rerank_model: form.rerank_model,
         capabilities: form.capabilities,
         extra_headers: extraHeaders,
         priority: form.priority,
@@ -1028,6 +1087,7 @@ const handleSubmit = async () => {
         base_url: form.base_url,
         default_model: form.default_model,
         embedding_model: form.embedding_model,
+        rerank_model: form.rerank_model,
         capabilities: form.capabilities,
         extra_headers: extraHeaders,
         priority: form.priority,
@@ -1056,6 +1116,7 @@ const resetForm = () => {
   form.base_url = ''
   form.default_model = ''
   form.embedding_model = ''
+  form.rerank_model = ''
   form.capabilities = ['chat']
   form.extra_headers_raw = ''
   form.priority = 10

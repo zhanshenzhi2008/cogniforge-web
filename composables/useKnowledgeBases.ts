@@ -27,10 +27,20 @@ export interface KnowledgeBase {
   split_separator?: string
   rag_top_k?: number
   rag_min_score?: number
+  rag_top_k_semantic?: number
+  rag_min_score_semantic?: number
+  rag_top_k_keyword?: number
+  rag_min_score_keyword?: number
+  rag_top_k_hybrid?: number
+  rag_min_score_hybrid?: number
+  hybrid_semantic_weight?: number
   search_mode?: 'semantic' | 'keyword' | 'hybrid' | string
   rerank_semantic?: boolean
   rerank_keyword?: boolean
   rerank_hybrid?: boolean
+  rerank_provider_semantic?: string
+  rerank_provider_keyword?: string
+  rerank_provider_hybrid?: string
   visibility?: string
   status: 'active' | 'disabled'
   metadata: Record<string, any>
@@ -51,10 +61,20 @@ export interface CreateKBInput {
   split_separator?: string
   rag_top_k?: number
   rag_min_score?: number
+  rag_top_k_semantic?: number
+  rag_min_score_semantic?: number
+  rag_top_k_keyword?: number
+  rag_min_score_keyword?: number
+  rag_top_k_hybrid?: number
+  rag_min_score_hybrid?: number
+  hybrid_semantic_weight?: number
   search_mode?: string
   rerank_semantic?: boolean
   rerank_keyword?: boolean
   rerank_hybrid?: boolean
+  rerank_provider_semantic?: string
+  rerank_provider_keyword?: string
+  rerank_provider_hybrid?: string
   visibility?: string
 }
 
@@ -70,10 +90,20 @@ export interface UpdateKBInput {
   split_separator?: string
   rag_top_k?: number
   rag_min_score?: number
+  rag_top_k_semantic?: number
+  rag_min_score_semantic?: number
+  rag_top_k_keyword?: number
+  rag_min_score_keyword?: number
+  rag_top_k_hybrid?: number
+  rag_min_score_hybrid?: number
+  hybrid_semantic_weight?: number
   search_mode?: string
   rerank_semantic?: boolean
   rerank_keyword?: boolean
   rerank_hybrid?: boolean
+  rerank_provider_semantic?: string
+  rerank_provider_keyword?: string
+  rerank_provider_hybrid?: string
   visibility?: string
   status?: string
 }
@@ -163,6 +193,8 @@ export interface SearchInput {
   min_score?: number
   search_mode?: string
   rerank?: boolean
+  rerank_provider_id?: string
+  hybrid_semantic_weight?: number
 }
 
 export const useKnowledgeBases = () => {

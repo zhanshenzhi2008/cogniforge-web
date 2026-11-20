@@ -331,9 +331,43 @@
                         <span class="search-mode-card__title">{{ t('kb.searchModeSemantic') }}</span>
                         <span class="search-mode-card__hint">{{ t('kb.searchModeSemanticDesc') }}</span>
                       </div>
+                      <div class="search-mode-card__params" @click.stop>
+                        <div class="search-mode-card__param">
+                          <span class="search-mode-card__param-label">{{ t('kb.ragTopK') }}</span>
+                          <UInput
+                            v-model.number="settingsForm.rag_top_k_semantic"
+                            type="number"
+                            :min="1"
+                            :max="20"
+                            size="sm"
+                          />
+                        </div>
+                        <div class="search-mode-card__param">
+                          <span class="search-mode-card__param-label">{{ t('kb.ragMinScore') }}</span>
+                          <UInput
+                            v-model.number="settingsForm.rag_min_score_semantic"
+                            type="number"
+                            :min="0"
+                            :max="1"
+                            :step="0.05"
+                            size="sm"
+                          />
+                        </div>
+                      </div>
                       <div class="search-mode-card__rerank" @click.stop>
                         <span>{{ t('kb.rerankEnable') }}</span>
                         <USwitch v-model="settingsForm.rerank_semantic" size="sm" />
+                      </div>
+                      <div v-if="settingsForm.rerank_semantic" class="search-mode-card__rerank-model" @click.stop>
+                        <span class="search-mode-card__param-label">{{ t('kb.rerankModel') }}</span>
+                        <USelect
+                          v-model="settingsForm.rerank_provider_semantic"
+                          :items="rerankProviderOptions"
+                          value-key="value"
+                          :placeholder="rerankSelectPlaceholder"
+                          class="w-full"
+                          :disabled="!rerankProviderOptions.length"
+                        />
                       </div>
                     </div>
                   </label>
@@ -353,9 +387,43 @@
                         <span class="search-mode-card__title">{{ t('kb.searchModeKeyword') }}</span>
                         <span class="search-mode-card__hint">{{ t('kb.searchModeKeywordDesc') }}</span>
                       </div>
+                      <div class="search-mode-card__params" @click.stop>
+                        <div class="search-mode-card__param">
+                          <span class="search-mode-card__param-label">{{ t('kb.ragTopK') }}</span>
+                          <UInput
+                            v-model.number="settingsForm.rag_top_k_keyword"
+                            type="number"
+                            :min="1"
+                            :max="20"
+                            size="sm"
+                          />
+                        </div>
+                        <div class="search-mode-card__param">
+                          <span class="search-mode-card__param-label">{{ t('kb.ragMinScore') }}</span>
+                          <UInput
+                            v-model.number="settingsForm.rag_min_score_keyword"
+                            type="number"
+                            :min="0"
+                            :max="1"
+                            :step="0.05"
+                            size="sm"
+                          />
+                        </div>
+                      </div>
                       <div class="search-mode-card__rerank" @click.stop>
                         <span>{{ t('kb.rerankEnable') }}</span>
                         <USwitch v-model="settingsForm.rerank_keyword" size="sm" />
+                      </div>
+                      <div v-if="settingsForm.rerank_keyword" class="search-mode-card__rerank-model" @click.stop>
+                        <span class="search-mode-card__param-label">{{ t('kb.rerankModel') }}</span>
+                        <USelect
+                          v-model="settingsForm.rerank_provider_keyword"
+                          :items="rerankProviderOptions"
+                          value-key="value"
+                          :placeholder="rerankSelectPlaceholder"
+                          class="w-full"
+                          :disabled="!rerankProviderOptions.length"
+                        />
                       </div>
                     </div>
                   </label>
@@ -375,47 +443,70 @@
                         <span class="search-mode-card__title">{{ t('kb.searchModeHybrid') }}</span>
                         <span class="search-mode-card__hint">{{ t('kb.searchModeHybridDesc') }}</span>
                       </div>
+                      <div class="search-mode-card__params" @click.stop>
+                        <div class="search-mode-card__param">
+                          <span class="search-mode-card__param-label">{{ t('kb.ragTopK') }}</span>
+                          <UInput
+                            v-model.number="settingsForm.rag_top_k_hybrid"
+                            type="number"
+                            :min="1"
+                            :max="20"
+                            size="sm"
+                          />
+                        </div>
+                        <div class="search-mode-card__param">
+                          <span class="search-mode-card__param-label">{{ t('kb.ragMinScore') }}</span>
+                          <UInput
+                            v-model.number="settingsForm.rag_min_score_hybrid"
+                            type="number"
+                            :min="0"
+                            :max="1"
+                            :step="0.05"
+                            size="sm"
+                          />
+                        </div>
+                      </div>
+                      <div class="hybrid-weight" @click.stop>
+                        <div
+                          class="hybrid-weight__track"
+                          :style="{ '--semantic-pct': `${Math.round(settingsForm.hybrid_semantic_weight * 100)}%` }"
+                        >
+                          <input
+                            v-model.number="settingsForm.hybrid_semantic_weight"
+                            class="hybrid-weight__range"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            :aria-label="t('kb.hybridWeight')"
+                          >
+                        </div>
+                        <div class="hybrid-weight__labels">
+                          <span class="hybrid-weight__semantic">
+                            {{ t('kb.hybridWeightSemantic') }} {{ formatHybridWeight(settingsForm.hybrid_semantic_weight) }}
+                          </span>
+                          <span class="hybrid-weight__keyword">
+                            {{ formatHybridWeight(1 - settingsForm.hybrid_semantic_weight) }} {{ t('kb.hybridWeightKeyword') }}
+                          </span>
+                        </div>
+                      </div>
                       <div class="search-mode-card__rerank" @click.stop>
                         <span>{{ t('kb.rerankEnable') }}</span>
                         <USwitch v-model="settingsForm.rerank_hybrid" size="sm" />
                       </div>
+                      <div v-if="settingsForm.rerank_hybrid" class="search-mode-card__rerank-model" @click.stop>
+                        <span class="search-mode-card__param-label">{{ t('kb.rerankModel') }}</span>
+                        <USelect
+                          v-model="settingsForm.rerank_provider_hybrid"
+                          :items="rerankProviderOptions"
+                          value-key="value"
+                          :placeholder="rerankSelectPlaceholder"
+                          class="w-full"
+                          :disabled="!rerankProviderOptions.length"
+                        />
+                      </div>
                     </div>
                   </label>
-                </div>
-              </section>
-
-              <section class="settings-section">
-                <h3 class="settings-section__title">{{ t('kb.settingsRetrieveParams') }}</h3>
-                <p class="settings-section__desc">{{ t('kb.settingsRetrieveParamsDesc') }}</p>
-                <div class="parse-grid">
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.ragTopK') }}</span>
-                      <UTooltip :text="t('kb.ragTopKTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput v-model.number="settingsForm.rag_top_k" type="number" :min="1" :max="20" />
-                  </div>
-                  <div class="field">
-                    <label class="field__label">
-                      <span>{{ t('kb.ragMinScore') }}</span>
-                      <UTooltip :text="t('kb.ragMinScoreTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                        <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
-                          <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                        </button>
-                      </UTooltip>
-                    </label>
-                    <UInput
-                      v-model.number="settingsForm.rag_min_score"
-                      type="number"
-                      :min="0"
-                      :max="1"
-                      :step="0.05"
-                    />
-                  </div>
                 </div>
               </section>
 
@@ -464,10 +555,40 @@
                     </span>
                     <span class="search-mode-card__hint">{{ t('kb.searchModeSemanticDesc') }}</span>
                   </div>
-                  <div v-if="searchDraft.mode === 'semantic'" class="search-mode-card__rerank" @click.stop>
-                    <span>{{ t('kb.rerankEnable') }}</span>
-                    <USwitch v-model="searchDraft.rerank" size="sm" />
-                  </div>
+                  <template v-if="searchDraft.mode === 'semantic'">
+                    <div class="search-mode-card__params" @click.stop>
+                      <div class="search-mode-card__param">
+                        <span class="search-mode-card__param-label">{{ t('kb.ragTopK') }}</span>
+                        <UInput v-model.number="searchDraft.top_k_semantic" type="number" :min="1" :max="20" size="sm" />
+                      </div>
+                      <div class="search-mode-card__param">
+                        <span class="search-mode-card__param-label">{{ t('kb.ragMinScore') }}</span>
+                        <UInput
+                          v-model.number="searchDraft.min_score_semantic"
+                          type="number"
+                          :min="0"
+                          :max="1"
+                          :step="0.05"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                    <div class="search-mode-card__rerank" @click.stop>
+                      <span>{{ t('kb.rerankEnable') }}</span>
+                      <USwitch v-model="searchDraft.rerank" size="sm" />
+                    </div>
+                    <div v-if="searchDraft.rerank" class="search-mode-card__rerank-model" @click.stop>
+                      <span class="search-mode-card__param-label">{{ t('kb.rerankModel') }}</span>
+                      <USelect
+                        v-model="searchDraft.rerank_provider_id"
+                        :items="rerankProviderOptions"
+                        value-key="value"
+                        :placeholder="rerankSelectPlaceholder"
+                        class="w-full"
+                        :disabled="!rerankProviderOptions.length"
+                      />
+                    </div>
+                  </template>
                 </div>
               </label>
               <label
@@ -489,10 +610,40 @@
                     </span>
                     <span class="search-mode-card__hint">{{ t('kb.searchModeKeywordDesc') }}</span>
                   </div>
-                  <div v-if="searchDraft.mode === 'keyword'" class="search-mode-card__rerank" @click.stop>
-                    <span>{{ t('kb.rerankEnable') }}</span>
-                    <USwitch v-model="searchDraft.rerank" size="sm" />
-                  </div>
+                  <template v-if="searchDraft.mode === 'keyword'">
+                    <div class="search-mode-card__params" @click.stop>
+                      <div class="search-mode-card__param">
+                        <span class="search-mode-card__param-label">{{ t('kb.ragTopK') }}</span>
+                        <UInput v-model.number="searchDraft.top_k_keyword" type="number" :min="1" :max="20" size="sm" />
+                      </div>
+                      <div class="search-mode-card__param">
+                        <span class="search-mode-card__param-label">{{ t('kb.ragMinScore') }}</span>
+                        <UInput
+                          v-model.number="searchDraft.min_score_keyword"
+                          type="number"
+                          :min="0"
+                          :max="1"
+                          :step="0.05"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                    <div class="search-mode-card__rerank" @click.stop>
+                      <span>{{ t('kb.rerankEnable') }}</span>
+                      <USwitch v-model="searchDraft.rerank" size="sm" />
+                    </div>
+                    <div v-if="searchDraft.rerank" class="search-mode-card__rerank-model" @click.stop>
+                      <span class="search-mode-card__param-label">{{ t('kb.rerankModel') }}</span>
+                      <USelect
+                        v-model="searchDraft.rerank_provider_id"
+                        :items="rerankProviderOptions"
+                        value-key="value"
+                        :placeholder="rerankSelectPlaceholder"
+                        class="w-full"
+                        :disabled="!rerankProviderOptions.length"
+                      />
+                    </div>
+                  </template>
                 </div>
               </label>
               <label
@@ -514,59 +665,66 @@
                     </span>
                     <span class="search-mode-card__hint">{{ t('kb.searchModeHybridDesc') }}</span>
                   </div>
-                  <div v-if="searchDraft.mode === 'hybrid'" class="search-mode-card__rerank" @click.stop>
-                    <span>{{ t('kb.rerankEnable') }}</span>
-                    <USwitch v-model="searchDraft.rerank" size="sm" />
-                  </div>
+                  <template v-if="searchDraft.mode === 'hybrid'">
+                    <div class="search-mode-card__params" @click.stop>
+                      <div class="search-mode-card__param">
+                        <span class="search-mode-card__param-label">{{ t('kb.ragTopK') }}</span>
+                        <UInput v-model.number="searchDraft.top_k_hybrid" type="number" :min="1" :max="20" size="sm" />
+                      </div>
+                      <div class="search-mode-card__param">
+                        <span class="search-mode-card__param-label">{{ t('kb.ragMinScore') }}</span>
+                        <UInput
+                          v-model.number="searchDraft.min_score_hybrid"
+                          type="number"
+                          :min="0"
+                          :max="1"
+                          :step="0.05"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                    <div class="hybrid-weight" @click.stop>
+                      <div
+                        class="hybrid-weight__track"
+                        :style="{ '--semantic-pct': `${Math.round(searchDraft.hybrid_semantic_weight * 100)}%` }"
+                      >
+                        <input
+                          v-model.number="searchDraft.hybrid_semantic_weight"
+                          class="hybrid-weight__range"
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          :aria-label="t('kb.hybridWeight')"
+                        >
+                      </div>
+                      <div class="hybrid-weight__labels">
+                        <span class="hybrid-weight__semantic">
+                          {{ t('kb.hybridWeightSemantic') }} {{ formatHybridWeight(searchDraft.hybrid_semantic_weight) }}
+                        </span>
+                        <span class="hybrid-weight__keyword">
+                          {{ formatHybridWeight(1 - searchDraft.hybrid_semantic_weight) }} {{ t('kb.hybridWeightKeyword') }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="search-mode-card__rerank" @click.stop>
+                      <span>{{ t('kb.rerankEnable') }}</span>
+                      <USwitch v-model="searchDraft.rerank" size="sm" />
+                    </div>
+                    <div v-if="searchDraft.rerank" class="search-mode-card__rerank-model" @click.stop>
+                      <span class="search-mode-card__param-label">{{ t('kb.rerankModel') }}</span>
+                      <USelect
+                        v-model="searchDraft.rerank_provider_id"
+                        :items="rerankProviderOptions"
+                        value-key="value"
+                        :placeholder="rerankSelectPlaceholder"
+                        class="w-full"
+                        :disabled="!rerankProviderOptions.length"
+                      />
+                    </div>
+                  </template>
                 </div>
               </label>
-            </div>
-          </section>
-
-          <section class="settings-section">
-            <div class="field">
-              <label class="field__label">
-                <span>{{ t('kb.ragTopK') }}</span>
-                <UTooltip :text="t('kb.ragTopKTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                  <button type="button" class="field__help" :aria-label="t('kb.ragTopKTip')">
-                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                  </button>
-                </UTooltip>
-              </label>
-              <div class="search-topk-row">
-                <UInput
-                  v-model.number="searchDraft.top_k"
-                  type="number"
-                  :min="1"
-                  :max="20"
-                  class="search-topk-input"
-                />
-                <input
-                  v-model.number="searchDraft.top_k"
-                  class="search-topk-slider"
-                  type="range"
-                  min="1"
-                  max="20"
-                  step="1"
-                >
-              </div>
-            </div>
-            <div class="field">
-              <label class="field__label">
-                <span>{{ t('kb.ragMinScore') }}</span>
-                <UTooltip :text="t('kb.ragMinScoreTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                  <button type="button" class="field__help" :aria-label="t('kb.ragMinScoreTip')">
-                    <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                  </button>
-                </UTooltip>
-              </label>
-              <UInput
-                v-model.number="searchDraft.min_score"
-                type="number"
-                :min="0"
-                :max="1"
-                :step="0.05"
-              />
             </div>
           </section>
         </div>
@@ -1003,6 +1161,7 @@ import type {
   ChunkPreviewResponse,
 } from '@/composables/useKnowledgeBases'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
+import { useProviders, hasCap, rerankModelLabel, type AIProvider } from '@/composables/useProviders'
 
 definePageMeta({
   layout: 'default',
@@ -1025,6 +1184,27 @@ const {
   reparseDoc,
   searchKB,
 } = useKnowledgeBases()
+const { list: listProviders } = useProviders()
+const providers = ref<AIProvider[]>([])
+
+const rerankProviders = computed(() =>
+  providers.value.filter((p) => p.is_enabled && hasCap(p, 'rerank')),
+)
+const rerankProviderOptions = computed(() =>
+  rerankProviders.value.map((p) => ({
+    label: rerankModelLabel(p),
+    value: p.id,
+  })),
+)
+const rerankSelectPlaceholder = computed(() =>
+  rerankProviderOptions.value.length ? t('kb.rerankModelPh') : t('kb.rerankModelEmpty'),
+)
+
+async function ensureProvidersLoaded() {
+  if (providers.value.length) return
+  const res = await listProviders()
+  if (res.data) providers.value = res.data
+}
 
 type UploadSourceKind = 'local' | 'web' | 'text'
 type UploadItemStatus = 'ready' | 'uploading' | 'ok' | 'error'
@@ -1474,14 +1654,22 @@ const searchDuration = ref(0)
 const hasSearched = ref(false)
 const searchTopK = ref(5)
 const searchMinScore = ref(0.3)
+const searchHybridWeight = ref(0.7)
 const searchMode = ref<'semantic' | 'keyword' | 'hybrid'>('semantic')
 const searchRerank = ref(false)
+const searchRerankProviderId = ref('')
 const searchSettingsOpen = ref(false)
 const searchDraft = reactive({
   mode: 'semantic' as 'semantic' | 'keyword' | 'hybrid',
   rerank: false,
-  top_k: 5,
-  min_score: 0.3,
+  rerank_provider_id: '',
+  top_k_semantic: 5,
+  min_score_semantic: 0.3,
+  top_k_keyword: 5,
+  min_score_keyword: 0.3,
+  top_k_hybrid: 5,
+  min_score_hybrid: 0.3,
+  hybrid_semantic_weight: 0.7,
 })
 
 function searchModeLabel(mode: string) {
@@ -1496,32 +1684,120 @@ function searchModeIcon(mode: string) {
   return 'i-lucide-sparkles'
 }
 
+function formatHybridWeight(v: number) {
+  const n = Math.min(1, Math.max(0, Number(v) || 0))
+  return n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '') || '0'
+}
+
+function clampTopK(v: unknown, fallback = 5) {
+  const n = Number(v)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.min(20, Math.max(1, Math.round(n)))
+}
+
+function clampMinScore(v: unknown, fallback = 0.3) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(1, Math.max(0, n))
+}
+
+function clampHybridWeight(v: unknown, fallback = 0.7) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(1, Math.max(0, n))
+}
+
+function modeTopK(kb: KnowledgeBase | null, mode: string) {
+  if (mode === 'keyword') return clampTopK(kb?.rag_top_k_keyword ?? kb?.rag_top_k, 5)
+  if (mode === 'hybrid') return clampTopK(kb?.rag_top_k_hybrid ?? kb?.rag_top_k, 5)
+  return clampTopK(kb?.rag_top_k_semantic ?? kb?.rag_top_k, 5)
+}
+
+function modeMinScore(kb: KnowledgeBase | null, mode: string) {
+  if (mode === 'keyword') return clampMinScore(kb?.rag_min_score_keyword ?? kb?.rag_min_score, 0.3)
+  if (mode === 'hybrid') return clampMinScore(kb?.rag_min_score_hybrid ?? kb?.rag_min_score, 0.3)
+  return clampMinScore(kb?.rag_min_score_semantic ?? kb?.rag_min_score, 0.3)
+}
+
 function rerankForMode(kb: KnowledgeBase | null, mode: string) {
   if (mode === 'keyword') return !!kb?.rerank_keyword
   if (mode === 'hybrid') return !!kb?.rerank_hybrid
   return !!kb?.rerank_semantic
 }
 
-function syncSearchDefaultsFromKB(kb: KnowledgeBase | null) {
-  searchTopK.value = kb?.rag_top_k && kb.rag_top_k > 0 ? kb.rag_top_k : 5
-  searchMinScore.value = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
-  searchMode.value = normalizeSearchMode(kb?.search_mode)
-  searchRerank.value = rerankForMode(kb, searchMode.value)
+function rerankProviderForMode(kb: KnowledgeBase | null, mode: string) {
+  if (mode === 'keyword') return kb?.rerank_provider_keyword || ''
+  if (mode === 'hybrid') return kb?.rerank_provider_hybrid || ''
+  return kb?.rerank_provider_semantic || ''
 }
 
-function openSearchSettings() {
+function syncSearchDefaultsFromKB(kb: KnowledgeBase | null) {
+  searchMode.value = normalizeSearchMode(kb?.search_mode)
+  searchTopK.value = modeTopK(kb, searchMode.value)
+  searchMinScore.value = modeMinScore(kb, searchMode.value)
+  searchHybridWeight.value = clampHybridWeight(kb?.hybrid_semantic_weight, 0.7)
+  searchRerank.value = rerankForMode(kb, searchMode.value)
+  searchRerankProviderId.value = rerankProviderForMode(kb, searchMode.value)
+}
+
+async function openSearchSettings() {
+  await ensureProvidersLoaded()
+  const kb = selectedKB.value
   searchDraft.mode = searchMode.value
   searchDraft.rerank = searchRerank.value
-  searchDraft.top_k = searchTopK.value
-  searchDraft.min_score = searchMinScore.value
+  searchDraft.rerank_provider_id = searchRerankProviderId.value || rerankProviderForMode(kb, searchMode.value)
+  searchDraft.top_k_semantic = modeTopK(kb, 'semantic')
+  searchDraft.min_score_semantic = modeMinScore(kb, 'semantic')
+  searchDraft.top_k_keyword = modeTopK(kb, 'keyword')
+  searchDraft.min_score_keyword = modeMinScore(kb, 'keyword')
+  searchDraft.top_k_hybrid = modeTopK(kb, 'hybrid')
+  searchDraft.min_score_hybrid = modeMinScore(kb, 'hybrid')
+  searchDraft.hybrid_semantic_weight = clampHybridWeight(
+    searchMode.value === 'hybrid' ? searchHybridWeight.value : kb?.hybrid_semantic_weight,
+    0.7,
+  )
+  // 当前测试会话已改过的参数优先
+  if (searchMode.value === 'semantic') {
+    searchDraft.top_k_semantic = searchTopK.value
+    searchDraft.min_score_semantic = searchMinScore.value
+  } else if (searchMode.value === 'keyword') {
+    searchDraft.top_k_keyword = searchTopK.value
+    searchDraft.min_score_keyword = searchMinScore.value
+  } else {
+    searchDraft.top_k_hybrid = searchTopK.value
+    searchDraft.min_score_hybrid = searchMinScore.value
+    searchDraft.hybrid_semantic_weight = searchHybridWeight.value
+  }
   searchSettingsOpen.value = true
 }
 
 function applySearchSettings() {
-  searchMode.value = normalizeSearchMode(searchDraft.mode)
+  const mode = normalizeSearchMode(searchDraft.mode)
+  if (searchDraft.rerank && !String(searchDraft.rerank_provider_id || '').trim()) {
+    toast.add({ title: t('kb.rerankNeedModel'), color: 'warning' })
+    return
+  }
+  searchMode.value = mode
   searchRerank.value = !!searchDraft.rerank
-  searchTopK.value = Math.min(20, Math.max(1, Number(searchDraft.top_k) || 5))
-  searchMinScore.value = Math.min(1, Math.max(0, Number(searchDraft.min_score) || 0.3))
+  searchRerankProviderId.value = searchDraft.rerank ? String(searchDraft.rerank_provider_id || '') : ''
+  searchDraft.top_k_semantic = clampTopK(searchDraft.top_k_semantic)
+  searchDraft.min_score_semantic = clampMinScore(searchDraft.min_score_semantic)
+  searchDraft.top_k_keyword = clampTopK(searchDraft.top_k_keyword)
+  searchDraft.min_score_keyword = clampMinScore(searchDraft.min_score_keyword)
+  searchDraft.top_k_hybrid = clampTopK(searchDraft.top_k_hybrid)
+  searchDraft.min_score_hybrid = clampMinScore(searchDraft.min_score_hybrid)
+  searchDraft.hybrid_semantic_weight = clampHybridWeight(searchDraft.hybrid_semantic_weight)
+  if (mode === 'keyword') {
+    searchTopK.value = searchDraft.top_k_keyword
+    searchMinScore.value = searchDraft.min_score_keyword
+  } else if (mode === 'hybrid') {
+    searchTopK.value = searchDraft.top_k_hybrid
+    searchMinScore.value = searchDraft.min_score_hybrid
+    searchHybridWeight.value = searchDraft.hybrid_semantic_weight
+  } else {
+    searchTopK.value = searchDraft.top_k_semantic
+    searchMinScore.value = searchDraft.min_score_semantic
+  }
   searchSettingsOpen.value = false
 }
 
@@ -1530,6 +1806,7 @@ watch(
   (mode) => {
     if (!searchSettingsOpen.value || !selectedKB.value) return
     searchDraft.rerank = rerankForMode(selectedKB.value, mode)
+    searchDraft.rerank_provider_id = rerankProviderForMode(selectedKB.value, mode)
   },
 )
 
@@ -1539,8 +1816,16 @@ const settingsForm = reactive({
   rerank_semantic: false,
   rerank_keyword: false,
   rerank_hybrid: false,
-  rag_top_k: 5,
-  rag_min_score: 0.3,
+  rerank_provider_semantic: '',
+  rerank_provider_keyword: '',
+  rerank_provider_hybrid: '',
+  rag_top_k_semantic: 5,
+  rag_min_score_semantic: 0.3,
+  rag_top_k_keyword: 5,
+  rag_min_score_keyword: 0.3,
+  rag_top_k_hybrid: 5,
+  rag_min_score_hybrid: 0.3,
+  hybrid_semantic_weight: 0.7,
 })
 
 function normalizeSearchMode(mode?: string) {
@@ -1553,12 +1838,28 @@ function syncSettingsFromKB(kb: KnowledgeBase | null) {
   settingsForm.rerank_semantic = !!kb?.rerank_semantic
   settingsForm.rerank_keyword = !!kb?.rerank_keyword
   settingsForm.rerank_hybrid = !!kb?.rerank_hybrid
-  settingsForm.rag_top_k = kb?.rag_top_k && kb.rag_top_k > 0 ? kb.rag_top_k : 5
-  settingsForm.rag_min_score = kb?.rag_min_score && kb.rag_min_score > 0 ? kb.rag_min_score : 0.3
+  settingsForm.rerank_provider_semantic = kb?.rerank_provider_semantic || ''
+  settingsForm.rerank_provider_keyword = kb?.rerank_provider_keyword || ''
+  settingsForm.rerank_provider_hybrid = kb?.rerank_provider_hybrid || ''
+  settingsForm.rag_top_k_semantic = modeTopK(kb, 'semantic')
+  settingsForm.rag_min_score_semantic = modeMinScore(kb, 'semantic')
+  settingsForm.rag_top_k_keyword = modeTopK(kb, 'keyword')
+  settingsForm.rag_min_score_keyword = modeMinScore(kb, 'keyword')
+  settingsForm.rag_top_k_hybrid = modeTopK(kb, 'hybrid')
+  settingsForm.rag_min_score_hybrid = modeMinScore(kb, 'hybrid')
+  settingsForm.hybrid_semantic_weight = clampHybridWeight(kb?.hybrid_semantic_weight, 0.7)
 }
 
 async function saveKBSettings() {
   if (!selectedKB.value) return
+  if (
+    (settingsForm.rerank_semantic && !settingsForm.rerank_provider_semantic) ||
+    (settingsForm.rerank_keyword && !settingsForm.rerank_provider_keyword) ||
+    (settingsForm.rerank_hybrid && !settingsForm.rerank_provider_hybrid)
+  ) {
+    toast.add({ title: t('kb.rerankNeedModel'), color: 'warning' })
+    return
+  }
   settingsSaving.value = true
   try {
     const input: UpdateKBInput = {
@@ -1566,8 +1867,16 @@ async function saveKBSettings() {
       rerank_semantic: !!settingsForm.rerank_semantic,
       rerank_keyword: !!settingsForm.rerank_keyword,
       rerank_hybrid: !!settingsForm.rerank_hybrid,
-      rag_top_k: Math.min(20, Math.max(1, Number(settingsForm.rag_top_k) || 5)),
-      rag_min_score: Math.min(1, Math.max(0, Number(settingsForm.rag_min_score) || 0.3)),
+      rerank_provider_semantic: settingsForm.rerank_provider_semantic || '',
+      rerank_provider_keyword: settingsForm.rerank_provider_keyword || '',
+      rerank_provider_hybrid: settingsForm.rerank_provider_hybrid || '',
+      rag_top_k_semantic: clampTopK(settingsForm.rag_top_k_semantic),
+      rag_min_score_semantic: clampMinScore(settingsForm.rag_min_score_semantic),
+      rag_top_k_keyword: clampTopK(settingsForm.rag_top_k_keyword),
+      rag_min_score_keyword: clampMinScore(settingsForm.rag_min_score_keyword),
+      rag_top_k_hybrid: clampTopK(settingsForm.rag_top_k_hybrid),
+      rag_min_score_hybrid: clampMinScore(settingsForm.rag_min_score_hybrid),
+      hybrid_semantic_weight: clampHybridWeight(settingsForm.hybrid_semantic_weight),
     }
     const res = await updateKB(selectedKB.value.id, input)
     if (res.error) {
@@ -1708,14 +2017,20 @@ const handleSearch = async () => {
   searchResults.value = []
 
   try {
-    const topK = Math.min(20, Math.max(1, Number(searchTopK.value) || 5))
-    const minScore = Math.min(1, Math.max(0, Number(searchMinScore.value) || 0.3))
+    const topK = clampTopK(searchTopK.value)
+    const minScore = clampMinScore(searchMinScore.value)
     const res = await searchKB(selectedKB.value!.id, {
       query: searchQuery.value.trim(),
       top_k: topK,
       min_score: minScore,
       search_mode: searchMode.value,
       rerank: searchRerank.value,
+      ...(searchMode.value === 'hybrid'
+        ? { hybrid_semantic_weight: clampHybridWeight(searchHybridWeight.value) }
+        : {}),
+      ...(searchRerank.value && searchRerankProviderId.value
+        ? { rerank_provider_id: searchRerankProviderId.value }
+        : {}),
     })
 
     if (res.error) {
@@ -1885,7 +2200,7 @@ async function loadKnowledgePage() {
     selectedKB.value = res.data
     syncSearchDefaultsFromKB(res.data)
     syncSettingsFromKB(res.data)
-    await fetchDocuments(res.data.id)
+    await Promise.all([fetchDocuments(res.data.id), ensureProvidersLoaded()])
     const hasProcessing = documents.value.some(
       (d) => d.status === 'pending' || d.status === 'processing',
     )
@@ -3160,6 +3475,26 @@ onBeforeUnmount(() => {
   line-height: 1.4;
 }
 
+.search-mode-card__params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cf-line);
+}
+
+.search-mode-card__param {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.search-mode-card__param-label {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+}
+
 .search-mode-card__rerank {
   display: flex;
   align-items: center;
@@ -3169,6 +3504,79 @@ onBeforeUnmount(() => {
   border-top: 1px dashed var(--cf-line);
   font-size: 0.8125rem;
   color: var(--cf-ink);
+}
+
+.search-mode-card__rerank-model {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hybrid-weight {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cf-line);
+}
+
+.hybrid-weight__track {
+  --semantic-pct: 70%;
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    #3b82f6 0%,
+    #3b82f6 var(--semantic-pct),
+    #14b8a6 var(--semantic-pct),
+    #14b8a6 100%
+  );
+}
+
+.hybrid-weight__range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.hybrid-weight__range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid #fff;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 25%);
+}
+
+.hybrid-weight__range::-moz-range-thumb {
+  width: 14px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid #fff;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 25%);
+}
+
+.hybrid-weight__labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hybrid-weight__semantic {
+  color: #3b82f6;
+}
+
+.hybrid-weight__keyword {
+  color: #0d9488;
 }
 
 .kb-detail-header {
