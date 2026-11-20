@@ -3,6 +3,7 @@
  */
 
 import { resolveApiBase } from '~/utils/apiBase'
+import { mapChatHttpError } from '~/utils/chatHttpError'
 import {
   fetchSse,
   isAbortError,
@@ -70,19 +71,6 @@ export const useAgentChat = () => {
     } catch (err: any) {
       return { error: err.message || '对话请求失败' }
     }
-  }
-
-  const mapHttpError = (status: number, text: string): string => {
-    try {
-      const parsed = JSON.parse(text)
-      if (parsed?.code === 4010) return t('play.noProvider')
-      if (parsed?.code === 5016) return t('quota.exhausted')
-      if (parsed?.code === 5014) return t('quota.rate')
-      if (parsed?.message) return parsed.message
-    } catch {
-      // 不是 JSON
-    }
-    return `HTTP ${status}`
   }
 
   /**
@@ -154,7 +142,7 @@ export const useAgentChat = () => {
         return
       }
       if (err instanceof SseStreamError && err.kind === 'http') {
-        error.value = mapHttpError(err.status || 0, err.bodyText || '')
+        error.value = mapChatHttpError(err.status || 0, err.bodyText || '', t)
       } else if (err instanceof SseStreamError && (err.kind === 'disconnect' || err.kind === 'network')) {
         error.value = fullContent
           ? t('play.streamInterrupted')

@@ -6,20 +6,7 @@
         <p class="cf-page-sub">{{ t('models.sub') }}</p>
       </div>
       <div class="header-actions">
-        <div class="view-toggle" role="group" :aria-label="t('models.viewMode')">
-          <CfButton
-            :tone="viewMode === 'card' ? 'icon-accent' : 'icon'"
-            icon="i-lucide-layout-grid"
-            :tip="t('models.cards')"
-            @click="setViewMode('card')"
-          />
-          <CfButton
-            :tone="viewMode === 'list' ? 'icon-accent' : 'icon'"
-            icon="i-lucide-list"
-            :tip="t('models.list')"
-            @click="setViewMode('list')"
-          />
-        </div>
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-models-view" :aria-label="t('models.viewMode')" />
         <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
           {{ t('models.add') }}
         </CfButton>
@@ -677,6 +664,7 @@ import {
   type UpdateProviderInput,
   type TestResult,
 } from '@/composables/useProviders'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -729,9 +717,7 @@ const dialogMode = ref<'create' | 'view' | 'edit'>('create')
 const editingId = ref('')
 const viewingProvider = ref<AIProvider | null>(null)
 
-type ModelsViewMode = 'card' | 'list'
-const VIEW_STORAGE_KEY = 'cf-models-view'
-const viewMode = ref<ModelsViewMode>('card')
+const viewMode = ref<ViewMode>('card')
 
 const dialogTitle = computed(() => {
   if (dialogMode.value === 'create') return t('models.createTitle')
@@ -744,13 +730,6 @@ const dialogDescription = computed(() => {
   if (dialogMode.value === 'view') return t('models.viewDesc')
   return t('models.editDesc')
 })
-
-function setViewMode(mode: ModelsViewMode) {
-  viewMode.value = mode
-  if (import.meta.client) {
-    localStorage.setItem(VIEW_STORAGE_KEY, mode)
-  }
-}
 
 const deleteVisible = ref(false)
 const deletingLoading = ref(false)
@@ -1144,12 +1123,6 @@ const fetchAll = async () => {
 }
 
 onMounted(() => {
-  if (import.meta.client) {
-    const saved = localStorage.getItem(VIEW_STORAGE_KEY)
-    if (saved === 'card' || saved === 'list') {
-      viewMode.value = saved
-    }
-  }
   fetchAll()
 })
 </script>
@@ -1160,16 +1133,6 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.view-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 10px;
-  border: 1px solid var(--cf-line);
-  background: var(--cf-nav-surface, var(--cf-bg-elevated));
 }
 
 .list-count {

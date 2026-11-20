@@ -4,6 +4,10 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-20 | v1.68 | 共用 CfChatPanel / useChatStream；重复代码 backlog | orjrs |
+| 2026-11-20 | v1.67 | 智能体工作室未做能力记入后续 TODO | orjrs |
+| 2026-11-20 | v1.66 | 智能体工作室左右分栏；列表卡片 + CfViewModeToggle | orjrs |
+| 2026-11-20 | v1.65 | 新建智能体改为 `/agents/new` 页面 | orjrs |
 | 2026-11-19 | v1.64 | Rerank 可选模型页已配置的 rerank 类型 | orjrs |
 | 2026-11-19 | v1.63 | 知识库：三种检索各自 TopK/阈值；混合加权重滑条 | orjrs |
 | 2026-11-16 | v1.62 | 模型页 Jina/Firecrawl Key；网页入库可选抓取引擎 | orjrs |
@@ -67,6 +71,54 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 共用聊天框架 + 重复代码 backlog（2026-11-20）
+
+- **原因**：工作室右侧聊天与对话页各自实现气泡/输入框；SSE 发送逻辑多处复制
+- **行为**：
+  - 新增 `CfChatPanel`（`UChatMessages` + `UChatPrompt`）：Playground 与 `AgentStudio` 共用
+  - 新增 `useChatStream`（`/chat/stream`）、`mapChatHttpError`、`chatUi` 映射；`useAgentChat` 仍专责 Agent 对话
+  - 提示词试跑改为走 `useChatStream`
+- **后续 TODO（跨模块去重，未做）**：
+  - [ ] Playground 选 Agent 时改为调 `useAgentChat`（去掉内联 agent SSE）
+  - [ ] `CfConfirmModal`：列表页删除确认（agents/models/mcp/knowledge/workflows/keys/prompts/users）
+  - [ ] `CfEmptyState` / `CfLoadingState`：统一空态与加载
+  - [ ] `CfFieldHelp`：表单旁帮助图标（知识库等）
+  - [ ] 可选 `CfResourceCard` 壳：agents/models/mcp/knowledge 卡片骨架
+  - [ ] MCP/知识库等列表复用 `CfViewModeToggle`（若需要卡片+表格）
+- **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`
+- **主仓**：前端设计同步
+
+## [变更] 智能体工作室未做能力 TODO（2026-11-20）
+
+- **原因**：本期只落地左配置/右构建预览与列表卡片；截图里其余能力需排期，避免遗忘
+- **后续 TODO（智能体工作室 backlog）**：
+  - **优先（有现成能力可接）**
+    - [ ] 工作室绑定知识库（多选；对话走 `rag_kb_ids`；可选「使用者鉴权」）
+    - [ ] 对话开场白 + 预设问题（保存到 Agent；预览/Playground 首屏展示）
+    - [ ] 预览区文件上传开关（对齐 Playground attachments）
+    - [ ] 提示词 `/` 插变量、`@` 插技能/工具/知识库（编辑器增强）
+    - [ ] 「了解更多」链到帮助文档/空状态说明页
+    - [ ] 顶栏「对话日志」：该 Agent 历史会话列表（只读跳 Playground）
+    - [ ] 配置版本历史（时钟图标：快照列表 / 回滚；需后端版本表）
+  - **中期（要新 API / 产品设计）**
+    - [ ] 顶栏「发布渠道」（Web 嵌入 / API / 第三方 IM 等）
+    - [ ] 「猜你想问」推荐问句（可与开场白预设合并设计）
+  - **远期 / 依赖套餐或基础设施**
+    - [ ] 虚拟机（套餐门禁 + 沙箱运行时）
+    - [ ] 语音播放（浏览器 TTS 可先做；云 TTS 另排）
+    - [ ] 语音输入（浏览器 STT / 云 ASR）
+- **主仓**：同步 `docs/05-frontend/03-ui-redesign-shadcn.md`、开发计划「后续待办」
+
+## [变更] 智能体工作室与卡片列表（2026-11-20）
+
+- **原因**：对齐常见 Agent 配置（左配置 / 右构建预览）；列表要卡片并能切回表格
+- **行为**：
+  - `/agents/new`、`/agents/:id` 共用 `AgentStudio`：左模型/提示词/技能/工具/状态；右「构建」「预览」+ 帮助图标悬浮说明（构建含「了解更多」）
+  - 列表默认卡片；公共 `CfViewModeToggle`（模型页复用）可切列表；偏好记 localStorage
+  - 虚拟机/语音/发布渠道/开场白等未做，见上方 v1.67 TODO；预览需先保存后再试聊
+- **包含代码**：`components/AgentStudio.vue`、`CfViewModeToggle.vue`、`pages/agents/*`、`pages/models.vue`、i18n
+- **主仓**：见主仓前端设计 v1.85
 
 ## [变更] 模型页网页抓取 Key + 入库引擎（2026-11-16）
 

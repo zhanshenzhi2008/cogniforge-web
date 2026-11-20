@@ -352,19 +352,12 @@
 
 <script setup lang="ts">
 import type { Prompt, PromptVarDef, PromptVersion, PromptUsage } from '@/composables/usePrompts'
-import { apiUrl } from '@/utils/apiBase'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
-import {
-  fetchSse,
-  isAbortError,
-  parseOpenAISseData,
-  SseStreamError,
-} from '@/utils/sseStream'
 
 const { t, d } = useLocale()
 const toast = useToast()
-const config = useRuntimeConfig()
 const api = usePrompts()
+const { streamChat: streamModelChat, stopStream: stopModelStream, error: modelChatError } = useChatStream()
 const { list: listAgents } = useAgents()
 const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
@@ -400,7 +393,6 @@ const tryVars = ref<Record<string, string>>({})
 const tryAnswer = ref('')
 const tryError = ref('')
 const trying = ref(false)
-let tryAbort: AbortController | null = null
 
 const tryVersionOptions = computed(() =>
   versions.value.map(v => ({
@@ -471,8 +463,7 @@ const load = async () => {
 }
 
 const resetTry = (prompt: Prompt | null, vers: PromptVersion[]) => {
-  tryAbort?.abort()
-  tryAbort = null
+  stopModelStream()
   trying.value = false
   tryAnswer.value = ''
   tryError.value = ''
@@ -511,8 +502,8 @@ const openDetail = async (p: Prompt) => {
 }
 
 const closeDetail = () => {
-  tryAbort?.abort()
-  tryAbort = null
+  stopModelStream()
+  trying.value = false
   active.value = null
   versions.value = []
   usages.value = []
@@ -569,8 +560,6 @@ const doTry = async () => {
   trying.value = true
   tryAnswer.value = ''
   tryError.value = ''
-  tryAbort?.abort()
-  tryAbort = new AbortController()
 
   const variables = buildVariableMap(defs, tryVars.value)
   const rendered = await api.render(active.value.id, {
@@ -585,65 +574,24 @@ const doTry = async () => {
   }
 
   try {
-    const endpoint = apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
-    await fetchSse(
-      endpoint,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${useCookie('token').value}`,
-        },
-        body: JSON.stringify({
-          model: tryModel.value,
-          stream: true,
-          messages: [
-            { role: 'system', content: rendered.data.content },
-            { role: 'user', content: tryMessage.value.trim() },
-          ],
-        }),
-        signal: tryAbort.signal,
-        connectRetries: 1,
-        retryDelayMs: 400,
+    await streamModelChat(
+      [
+        { role: 'system', content: rendered.data.content },
+        { role: 'user', content: tryMessage.value.trim() },
+      ],
+      (content) => {
+        tryAnswer.value = content
       },
-      {
-        onEvent: (ev) => {
-          const parsed = parseOpenAISseData(ev.data)
-          if (!parsed) return false
-          if (parsed.done) return false
-          if (parsed.error) {
-            tryError.value = parsed.error
-            return true
-          }
-          if (parsed.delta) {
-            tryAnswer.value += parsed.delta
-            return false
-          }
-          if (parsed.full) {
-            tryAnswer.value = parsed.full
-          }
-          return false
-        },
-      },
+      { model: tryModel.value },
     )
-    if (!tryAnswer.value && !tryError.value) {
+    if (modelChatError.value) {
+      tryError.value = modelChatError.value
+      toast.add({ title: tryError.value, color: 'error' })
+    } else if (!tryAnswer.value) {
       tryError.value = t('prompts.tryEmpty')
     }
-  } catch (e: unknown) {
-    if (isAbortError(e)) return
-    if (e instanceof SseStreamError && e.kind === 'http') {
-      tryError.value = e.bodyText || t('prompts.tryFail')
-    } else if (e instanceof SseStreamError && (e.kind === 'disconnect' || e.kind === 'network')) {
-      tryError.value = tryAnswer.value
-        ? t('play.streamInterrupted')
-        : t('play.streamNetwork')
-    } else {
-      tryError.value = (e as Error)?.message || t('prompts.tryFail')
-    }
-    toast.add({ title: tryError.value, color: 'error' })
   } finally {
     trying.value = false
-    tryAbort = null
   }
 }
 

@@ -46,94 +46,8 @@
           </div>
         </div>
 
-        <div class="messages-wrapper">
-          <div v-if="messages.length === 0" class="empty-state">
-            <div class="empty-glow" />
-            <UIcon name="i-lucide-messages-square" class="size-14 empty-icon" />
-            <p class="empty-title font-display">{{ t('play.emptyTitle') }}</p>
-            <p class="empty-sub">{{ t('play.emptySub') }}</p>
-            <div class="suggestion-chips">
-              <CfButton
-                v-for="chip in suggestionChips"
-                :key="chip"
-                tone="secondary"
-                icon="i-lucide-sparkles"
-                @click="sendSuggestion(chip)"
-              >
-                {{ chip }}
-              </CfButton>
-            </div>
-          </div>
-
-          <div v-else class="chat-column">
-            <UChatMessages
-              :messages="uiMessages"
-              :status="chatStatus"
-              :should-auto-scroll="true"
-              :user="{ side: 'right', variant: 'soft', icon: 'i-lucide-user' }"
-              :assistant="{ side: 'left', variant: 'naked', icon: 'i-lucide-sparkles' }"
-              :spacing-offset="24"
-              class="chat-messages"
-            >
-              <template #content="{ message }">
-                <div class="message-body">
-                  <div
-                    v-if="messageImages(message?.id).length > 0"
-                    class="message-images"
-                  >
-                    <a
-                      v-for="(src, idx) in messageImages(message?.id)"
-                      :key="`${message?.id}-${idx}`"
-                      class="message-md-img-link"
-                      :href="src"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <img class="message-md-img" :src="src" alt="" loading="lazy" />
-                    </a>
-                  </div>
-                  <div
-                    v-if="messageAttachments(message?.id).length > 0"
-                    class="message-attachments"
-                  >
-                    <span
-                      v-for="(att, idx) in messageAttachments(message?.id)"
-                      :key="`${message?.id}-att-${idx}`"
-                      class="message-attachment-chip"
-                      :title="att.name"
-                    >
-                      <UIcon name="i-lucide-paperclip" class="message-attachment-icon" />
-                      {{ att.name }}
-                    </span>
-                  </div>
-                  <div
-                    v-if="partsToText(message?.parts)"
-                    class="message-md"
-                    v-html="renderMarkdown(partsToText(message?.parts))"
-                  />
-                  <div
-                    v-if="message?.role === 'user' && !streaming && !insertAfterId"
-                    class="message-actions"
-                  >
-                    <CfButton
-                      tone="secondary"
-                      icon="i-lucide-corner-down-left"
-                      @click="beginInsert(message.id)"
-                    >
-                      {{ t('play.insertAfter') }}
-                    </CfButton>
-                  </div>
-                </div>
-              </template>
-              <template #indicator>
-                <UChatShimmer :text="t('play.thinking')" />
-              </template>
-            </UChatMessages>
-          </div>
-        </div>
-
         <div
-          class="composer-area"
+          class="play-chat-shell"
           :class="{ 'is-dragover': imageDragOver }"
           @paste="onComposerPaste"
           @dragenter.prevent="onComposerDragEnter"
@@ -142,136 +56,199 @@
           @drop.prevent="onComposerDrop"
           @keydown.escape="onComposerEscape"
         >
-          <div v-if="imageDragOver" class="composer-drop-hint">
-            {{ t('play.dropImages') }}
-          </div>
-          <QuotaBar :snap="quotaSnap" />
-          <div class="composer-meta">
-            <span class="token-hint">{{ tokenCount }} tokens</span>
-          </div>
-
-          <div v-if="insertAfterId" class="insert-bar">
-            <p class="insert-bar-hint">{{ t('play.insertHint') }}</p>
-            <div class="insert-bar-actions">
-              <CfButton tone="secondary" icon="i-lucide-x" @click="cancelInsert">
-                {{ t('play.insertCancel') }}
-              </CfButton>
+        <CfChatPanel
+          v-model="inputMessage"
+          class="play-chat"
+          :messages="cfChatMessages"
+          :status="chatStatus"
+          :disabled="quotaGone"
+          :placeholder="composerPlaceholder"
+          :hint="composerHint"
+          :submit-status="queueEditingId ? 'ready' : chatStatus"
+          :submit-disabled="quotaGone || (!canSend && (queueEditingId ? true : chatStatus === 'ready'))"
+          @submit="onComposerSubmit"
+          @stop="stopStreaming"
+        >
+          <template #empty>
+            <div class="empty-state">
+              <div class="empty-glow" />
+              <UIcon name="i-lucide-messages-square" class="size-14 empty-icon" />
+              <p class="empty-title font-display">{{ t('play.emptyTitle') }}</p>
+              <p class="empty-sub">{{ t('play.emptySub') }}</p>
+              <div class="suggestion-chips">
+                <CfButton
+                  v-for="chip in suggestionChips"
+                  :key="chip"
+                  tone="secondary"
+                  icon="i-lucide-sparkles"
+                  @click="sendSuggestion(chip)"
+                >
+                  {{ chip }}
+                </CfButton>
+              </div>
             </div>
-          </div>
+          </template>
 
-          <PlaygroundQueueBar
-            :items="messageQueue"
-            :editing-id="queueEditingId"
-            @update="onQueueUpdate"
-            @move="onQueueMove"
-            @edit="startQueueEdit"
-            @cancel-edit="cancelQueueEdit"
-          />
-
-          <div v-if="pendingImages.length > 0" class="pending-images">
-            <div
-              v-for="(src, idx) in pendingImages"
-              :key="idx"
-              class="pending-image"
-            >
-              <a
-                class="pending-image-link"
-                :href="src"
-                target="_blank"
-                rel="noopener noreferrer"
-                :title="t('play.previewImage')"
+          <template #content="{ message, text }">
+            <div class="message-body">
+              <div
+                v-if="messageImages(message?.id).length > 0"
+                class="message-images"
               >
-                <img :src="src" alt="" />
-              </a>
-              <CfButton
-                tone="icon-danger"
-                icon="i-lucide-x"
-                :tip="t('play.removeImage')"
-                @click.stop="removePendingImage(idx)"
-              />
-            </div>
-          </div>
-          <div v-if="pendingAttachments.length > 0" class="pending-attachments">
-            <div
-              v-for="att in pendingAttachments"
-              :key="att.localId"
-              class="pending-attachment"
-              :class="`is-${att.status}`"
-            >
-              <UIcon name="i-lucide-file-text" class="pending-attachment-icon" />
-              <div class="pending-attachment-meta">
-                <span class="pending-attachment-name">{{ att.name }}</span>
-                <span class="pending-attachment-status">
-                  {{ att.status === 'uploading' ? t('play.docUploading') : (att.status || '') }}
+                <a
+                  v-for="(src, idx) in messageImages(message?.id)"
+                  :key="`${message?.id}-${idx}`"
+                  class="message-md-img-link"
+                  :href="src"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img class="message-md-img" :src="src" alt="" loading="lazy" />
+                </a>
+              </div>
+              <div
+                v-if="messageAttachments(message?.id).length > 0"
+                class="message-attachments"
+              >
+                <span
+                  v-for="(att, idx) in messageAttachments(message?.id)"
+                  :key="`${message?.id}-att-${idx}`"
+                  class="message-attachment-chip"
+                  :title="att.name"
+                >
+                  <UIcon name="i-lucide-paperclip" class="message-attachment-icon" />
+                  {{ att.name }}
                 </span>
               </div>
-              <CfButton
-                tone="icon-danger"
-                icon="i-lucide-x"
-                :tip="t('play.removeFile')"
-                @click.stop="removePendingAttachment(att.localId)"
+              <div
+                v-if="text"
+                class="message-md"
+                v-html="renderMarkdown(text)"
               />
+              <div
+                v-if="message?.role === 'user' && !streaming && !insertAfterId"
+                class="message-actions"
+              >
+                <CfButton
+                  tone="secondary"
+                  icon="i-lucide-corner-down-left"
+                  @click="beginInsert(message.id)"
+                >
+                  {{ t('play.insertAfter') }}
+                </CfButton>
+              </div>
             </div>
-          </div>
-          <p v-if="pendingImages.length > 0" class="vision-hint">{{ t('play.visionHint') }}</p>
-          <p v-if="pendingAttachments.length > 0" class="vision-hint">{{ t('play.ragHint') }}</p>
-          <UChatPrompt
-            v-model="inputMessage"
-            :disabled="quotaGone"
-            :submit-on-enter="true"
-            :placeholder="composerPlaceholder"
-            variant="subtle"
-            :rows="2"
-            :maxrows="6"
-            class="composer-prompt"
-            @submit="onComposerSubmit"
-          >
-            <template #footer>
-              <div class="composer-footer">
-                <div class="composer-footer-left">
-                  <input
-                    ref="imageInput"
-                    type="file"
-                    :accept="CHAT_IMAGE_ACCEPT"
-                    multiple
-                    class="sr-only"
-                    @change="onImageInputChange"
-                  >
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    :accept="CHAT_DOC_ACCEPT"
-                    multiple
-                    class="sr-only"
-                    @change="onFileInputChange"
-                  >
-                  <CfButton
-                    tone="icon"
-                    icon="i-lucide-image-plus"
-                    :tip="t('play.attachImage')"
-                    :disabled="quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
-                    @click="imageInput?.click()"
-                  />
-                  <CfButton
-                    tone="icon"
-                    icon="i-lucide-paperclip"
-                    :tip="t('play.attachFile')"
-                    :disabled="quotaGone || pendingAttachments.length >= CHAT_DOC_MAX_COUNT"
-                    @click="fileInput?.click()"
-                  />
-                  <span class="composer-hint">{{ composerHint }}</span>
-                </div>
-                <UChatPromptSubmit
-                  class="cf-btn cf-btn--primary"
-                  :status="queueEditingId ? 'ready' : chatStatus"
-                  color="primary"
-                  variant="solid"
-                  :disabled="quotaGone || (!canSend && (queueEditingId ? true : chatStatus === 'ready'))"
-                  @stop="stopStreaming"
+          </template>
+
+          <template #before-composer>
+            <div v-if="imageDragOver" class="composer-drop-hint">
+              {{ t('play.dropImages') }}
+            </div>
+            <QuotaBar :snap="quotaSnap" />
+            <div class="composer-meta">
+              <span class="token-hint">{{ tokenCount }} tokens</span>
+            </div>
+
+            <div v-if="insertAfterId" class="insert-bar">
+              <p class="insert-bar-hint">{{ t('play.insertHint') }}</p>
+              <div class="insert-bar-actions">
+                <CfButton tone="secondary" icon="i-lucide-x" @click="cancelInsert">
+                  {{ t('play.insertCancel') }}
+                </CfButton>
+              </div>
+            </div>
+
+            <PlaygroundQueueBar
+              :items="messageQueue"
+              :editing-id="queueEditingId"
+              @update="onQueueUpdate"
+              @move="onQueueMove"
+              @edit="startQueueEdit"
+              @cancel-edit="cancelQueueEdit"
+            />
+
+            <div v-if="pendingImages.length > 0" class="pending-images">
+              <div
+                v-for="(src, idx) in pendingImages"
+                :key="idx"
+                class="pending-image"
+              >
+                <a
+                  class="pending-image-link"
+                  :href="src"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :title="t('play.previewImage')"
+                >
+                  <img :src="src" alt="" />
+                </a>
+                <CfButton
+                  tone="icon-danger"
+                  icon="i-lucide-x"
+                  :tip="t('play.removeImage')"
+                  @click.stop="removePendingImage(idx)"
                 />
               </div>
-            </template>
-          </UChatPrompt>
+            </div>
+            <div v-if="pendingAttachments.length > 0" class="pending-attachments">
+              <div
+                v-for="att in pendingAttachments"
+                :key="att.localId"
+                class="pending-attachment"
+                :class="`is-${att.status}`"
+              >
+                <UIcon name="i-lucide-file-text" class="pending-attachment-icon" />
+                <div class="pending-attachment-meta">
+                  <span class="pending-attachment-name">{{ att.name }}</span>
+                  <span class="pending-attachment-status">
+                    {{ att.status === 'uploading' ? t('play.docUploading') : (att.status || '') }}
+                  </span>
+                </div>
+                <CfButton
+                  tone="icon-danger"
+                  icon="i-lucide-x"
+                  :tip="t('play.removeFile')"
+                  @click.stop="removePendingAttachment(att.localId)"
+                />
+              </div>
+            </div>
+            <p v-if="pendingImages.length > 0" class="vision-hint">{{ t('play.visionHint') }}</p>
+            <p v-if="pendingAttachments.length > 0" class="vision-hint">{{ t('play.ragHint') }}</p>
+          </template>
+
+          <template #composer-actions>
+            <input
+              ref="imageInput"
+              type="file"
+              :accept="CHAT_IMAGE_ACCEPT"
+              multiple
+              class="sr-only"
+              @change="onImageInputChange"
+            >
+            <input
+              ref="fileInput"
+              type="file"
+              :accept="CHAT_DOC_ACCEPT"
+              multiple
+              class="sr-only"
+              @change="onFileInputChange"
+            >
+            <CfButton
+              tone="icon"
+              icon="i-lucide-image-plus"
+              :tip="t('play.attachImage')"
+              :disabled="quotaGone || pendingImages.length >= CHAT_IMAGE_MAX_COUNT"
+              @click="imageInput?.click()"
+            />
+            <CfButton
+              tone="icon"
+              icon="i-lucide-paperclip"
+              :tip="t('play.attachFile')"
+              :disabled="quotaGone || pendingAttachments.length >= CHAT_DOC_MAX_COUNT"
+              @click="fileInput?.click()"
+            />
+          </template>
+        </CfChatPanel>
         </div>
       </main>
     </div>
@@ -309,6 +286,8 @@
 
 <script setup lang="ts">
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
+import { mapChatHttpError } from '~/utils/chatHttpError'
+import type { CfChatStatus } from '~/utils/chatUi'
 import {
   CHAT_IMAGE_ACCEPT,
   CHAT_IMAGE_MAX_COUNT,
@@ -368,19 +347,10 @@ interface Message {
   time?: string
 }
 
-/** Thin AI-SDK-shaped message for Nuxt UI Chat (parts). */
-interface UIChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  parts: Array<{ type: 'text'; text: string }>
-}
-
 interface Model {
   id: string
   name: string
 }
-
-type ChatStatus = 'submitted' | 'streaming' | 'ready' | 'error'
 
 const route = useRoute()
 const router = useRouter()
@@ -499,26 +469,16 @@ const canSend = computed(
     || hasReadyAttachments.value,
 )
 
-const chatStatus = computed<ChatStatus>(() => (streaming.value ? 'streaming' : 'ready'))
+const chatStatus = computed<CfChatStatus>(() => (streaming.value ? 'streaming' : 'ready'))
 
-/** Map local messages → UIMessage-like `{ id, role, parts }` for UChat*. */
-function mapToUIMessage(msg: Message): UIChatMessage {
-  return {
-    id: msg.id,
-    role: msg.role,
-    parts: msg.content ? [{ type: 'text', text: msg.content }] : [],
-  }
-}
-
-const uiMessages = computed(() => messages.value.map(mapToUIMessage))
-
-function partsToText(parts?: Array<{ type: string; text?: string }>): string {
-  if (!parts?.length) return ''
-  return parts
-    .filter(p => p.type === 'text' && typeof p.text === 'string')
-    .map(p => p.text as string)
-    .join('')
-}
+/** Shared CfChatPanel message shape (id preserved for image/attachment lookup). */
+const cfChatMessages = computed(() =>
+  messages.value.map(m => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+  })),
+)
 
 function messageImages(id?: string): string[] {
   if (!id) return []
@@ -712,10 +672,6 @@ const notifyError = (title: string) => {
   toast.add({ title, color: 'error' })
 }
 
-const NO_ACTIVE_PROVIDER = 4010
-const USER_QUOTA = 5016
-const RATE_LIMIT = 5014
-
 const refreshQuota = async () => {
   const res = await fetchQuota()
   if (res.data) quotaSnap.value = res.data
@@ -724,31 +680,19 @@ const refreshQuota = async () => {
 const notifyChatHttpError = (status: number, text: string) => {
   try {
     const parsed = JSON.parse(text)
-    if (parsed?.code === NO_ACTIVE_PROVIDER) {
-      notifyError(t('play.noProvider'))
-      return
-    }
-    if (parsed?.code === USER_QUOTA) {
-      notifyError(t('quota.exhausted'))
-      void refreshQuota()
-      return
-    }
-    if (parsed?.code === RATE_LIMIT) {
-      notifyError(t('quota.rate'))
-      return
-    }
-    const msg = parsed?.message || parsed?.error
-    if (typeof msg === 'string' && msg.length > 0) {
-      notifyError(msg)
-      return
-    }
+    if (parsed?.code === 5016) void refreshQuota()
   } catch {
-    // 不是 JSON
+    // ignore
   }
-  notifyError(t('play.sendFailHttp', {
-    status,
-    detail: text ? ` - ${text}` : '',
-  }))
+  const mapped = mapChatHttpError(status, text, t)
+  if (mapped.startsWith('HTTP ')) {
+    notifyError(t('play.sendFailHttp', {
+      status,
+      detail: text ? ` - ${text}` : '',
+    }))
+    return
+  }
+  notifyError(mapped)
 }
 
 const fetchAgents = async () => {
@@ -1530,21 +1474,39 @@ watch(sidebarCollapsed, (collapsed) => {
   text-overflow: ellipsis;
 }
 
-.messages-wrapper {
+.play-chat-shell {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.play-chat-shell.is-dragover {
+  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--cf-accent) 45%, transparent);
+}
+
+.play-chat {
+  flex: 1;
+  min-height: 0;
+}
+
+.play-chat :deep(.cf-chat-panel__body) {
   padding: 20px 24px;
   scroll-behavior: smooth;
 }
 
-.chat-column {
+.play-chat :deep(.cf-chat-panel__messages) {
   width: min(780px, 100%);
   margin: 0 auto;
-  min-height: 100%;
 }
 
-.chat-messages {
-  min-height: 100%;
+.play-chat :deep(.cf-chat-panel__composer-wrap) {
+  width: min(780px, 100%);
+  margin: 0 auto;
+  padding: 0 24px 20px;
+  border-top: 0;
 }
 
 .empty-state {
@@ -1860,21 +1822,6 @@ watch(sidebarCollapsed, (collapsed) => {
   border: 0;
 }
 
-.composer-area {
-  position: relative;
-  width: min(780px, 100%);
-  margin: 0 auto;
-  padding: 0 24px 20px;
-  flex-shrink: 0;
-  border-radius: 16px;
-  transition: box-shadow 0.15s ease, background 0.15s ease;
-}
-
-.composer-area.is-dragover {
-  background: color-mix(in oklab, var(--cf-accent) 8%, transparent);
-  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--cf-accent) 45%, transparent);
-}
-
 .composer-drop-hint {
   position: absolute;
   inset: 8px 24px 12px;
@@ -1903,25 +1850,8 @@ watch(sidebarCollapsed, (collapsed) => {
   font-family: var(--font-mono);
 }
 
-.composer-prompt {
-  width: 100%;
-}
-
-.composer-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  gap: 12px;
-}
-
-.composer-hint {
-  font-size: 11px;
-  color: var(--cf-ink-soft);
-}
-
-.composer-prompt :deep(button:disabled),
-.composer-prompt :deep(button[aria-disabled="true"]) {
+.play-chat :deep(.cf-chat-panel__prompt button:disabled),
+.play-chat :deep(.cf-chat-panel__prompt button[aria-disabled="true"]) {
   background: var(--cf-btn-disabled-bg) !important;
   color: var(--cf-btn-disabled-fg) !important;
   border-color: transparent !important;
@@ -1940,13 +1870,13 @@ watch(sidebarCollapsed, (collapsed) => {
   }
 
   .chat-topbar,
-  .messages-wrapper,
-  .composer-area {
+  .play-chat :deep(.cf-chat-panel__body),
+  .play-chat :deep(.cf-chat-panel__composer-wrap) {
     padding-left: 12px;
     padding-right: 12px;
   }
 
-  .composer-hint {
+  .play-chat :deep(.cf-chat-panel__hint) {
     display: none;
   }
 }
