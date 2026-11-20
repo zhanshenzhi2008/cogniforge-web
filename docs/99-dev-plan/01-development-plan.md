@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-20 | v1.69 | 修 playground e2e：发送按钮选择器对齐 CfChatPanel | orjrs |
 | 2026-11-20 | v1.68 | 共用 CfChatPanel / useChatStream；重复代码 backlog | orjrs |
 | 2026-11-20 | v1.67 | 智能体工作室未做能力记入后续 TODO | orjrs |
 | 2026-11-20 | v1.66 | 智能体工作室左右分栏；列表卡片 + CfViewModeToggle | orjrs |
@@ -71,6 +72,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 修 playground e2e 选择器（2026-11-20）
+
+- **原因**：抽 `CfChatPanel` 后发送按钮类名变了，CI e2e 找不到 `.composer-prompt`
+- **行为**：e2e 改用 `.cf-chat-panel__prompt`；组件保留 `composer-prompt` 兼容类；密码成功提示改精确匹配防 flaky
+- **包含代码**：`e2e/playground.spec.ts`、`e2e/password.spec.ts`、`components/CfChatPanel.vue`
 
 ## [变更] 共用聊天框架 + 重复代码 backlog（2026-11-20）
 

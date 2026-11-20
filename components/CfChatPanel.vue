@@ -49,7 +49,7 @@
         variant="subtle"
         :rows="rows"
         :maxrows="maxrows"
-        class="cf-chat-panel__prompt"
+        class="cf-chat-panel__prompt composer-prompt"
         @update:model-value="onInput"
         @submit="onSubmit"
       >

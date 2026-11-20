@@ -11,7 +11,7 @@ test.describe('playground quota e2e', () => {
     await page.goto('/playground')
     await expect(page.getByText('AI 对话')).toBeVisible()
 
-    const send = page.locator('.composer-prompt button.cf-btn--primary')
+    const send = page.locator('.cf-chat-panel__prompt button.cf-btn--primary')
     await expect(send).toBeVisible()
     await expect(send).toBeDisabled()
 
@@ -26,7 +26,8 @@ test.describe('playground quota e2e', () => {
     await page.goto('/playground')
 
     await expect(page.getByPlaceholder('今日额度已用完')).toBeVisible()
-    const send = page.locator('.composer-prompt button.cf-btn--primary')
+    const send = page.locator('.cf-chat-panel__prompt button.cf-btn--primary')
     await expect(send).toBeDisabled()
   })
 })
+

@@ -38,6 +38,7 @@ test.describe('change password e2e', () => {
     const body = req.postDataJSON() as { old_password?: string; new_password?: string }
     expect(body.old_password).toBe('password123')
     expect(body.new_password).toBe('NewPass1!')
-    await expect(page.getByText('密码修改成功')).toBeVisible()
+    await expect(page.getByText('密码修改成功，请使用新密码重新登录', { exact: true })).toBeVisible()
   })
 })
+
