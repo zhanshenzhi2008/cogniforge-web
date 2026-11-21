@@ -4,6 +4,8 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-21 | v1.71 | 构建/预览说明只留标签悬浮，去掉聊天区常驻提示 | orjrs |
+| 2026-11-21 | v1.70 | 工作室工具复选框未勾选时边框可见 | orjrs |
 | 2026-11-20 | v1.69 | 修 playground e2e：发送按钮选择器对齐 CfChatPanel | orjrs |
 | 2026-11-20 | v1.68 | 共用 CfChatPanel / useChatStream；重复代码 backlog | orjrs |
 | 2026-11-20 | v1.67 | 智能体工作室未做能力记入后续 TODO | orjrs |
@@ -72,6 +74,18 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 构建/预览说明改仅悬浮（2026-11-21）
+
+- **原因**：聊天区空态常驻大段说明与标签旁帮助悬浮重复
+- **行为**：去掉 `CfChatPanel` 空态 tip；说明只在「构建」「预览」帮助图标悬停显示
+- **包含代码**：`components/AgentStudio.vue`
+
+## [变更] 工作室工具复选框边框（2026-11-21）
+
+- **原因**：未勾选时 Nuxt UI 默认 `ring-accented` 几乎看不见
+- **行为**：工具区 checkbox 未勾选加实线框
+- **包含代码**：`components/AgentStudio.vue`
 
 ## [变更] 修 playground e2e 选择器（2026-11-20）
 

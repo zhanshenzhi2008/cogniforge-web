@@ -110,6 +110,7 @@
               :key="tool.value"
               :model-value="form.tools.includes(tool.value)"
               :label="tool.label"
+              :ui="toolCheckboxUi"
               @update:model-value="(checked: boolean) => toggleTool(tool.value, checked)"
             />
           </div>
@@ -186,20 +187,6 @@
           @submit="sendComposer"
           @stop="stopActiveStream"
         >
-          <template #empty>
-            <div v-if="stage === 'build'" class="stage-tip">
-              <strong>{{ t('agents.studioBuild') }}</strong>
-              <p>{{ t('agents.studioBuildTip') }}</p>
-              <p class="stage-tip__muted">{{ t('agents.studioBuildEmpty') }}</p>
-            </div>
-            <div v-else class="stage-tip">
-              <strong>{{ t('agents.studioPreview') }}</strong>
-              <p>{{ t('agents.studioPreviewTip') }}</p>
-              <p class="stage-tip__muted">
-                {{ agentId ? t('agents.studioPreviewEmpty') : t('agents.studioPreviewNeedSave') }}
-              </p>
-            </div>
-          </template>
           <template #content="{ message, text }">
             <div class="stage-msg-body">
               <div
@@ -258,6 +245,10 @@ const stage = ref<'build' | 'preview'>('build')
 const composer = ref('')
 const stageTipContent = { side: 'bottom' as const, align: 'start' as const, collisionPadding: 8 }
 const stageTipUi = { content: 'max-w-sm whitespace-normal text-left' }
+/** 未勾选时 Nuxt UI 默认 ring-accented 几乎看不见，加实线框 */
+const toolCheckboxUi = {
+  base: 'rounded-sm ring-1 ring-inset ring-[color-mix(in_oklab,var(--cf-ink)_45%,transparent)] bg-[var(--cf-bg-elevated,#fff)]',
+}
 const mcpServers = ref<McpServer[]>([])
 const skills = ref<Skill[]>([])
 const modelOptions = ref<{ label: string; value: string }[]>([])
@@ -680,6 +671,11 @@ onMounted(async () => {
   gap: 10px 14px;
 }
 
+.tools :deep(button[role='checkbox'][data-state='unchecked']) {
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--cf-ink) 42%, transparent);
+  background: var(--cf-bg-elevated, #fff);
+}
+
 .status-row {
   display: inline-flex;
   align-items: center;
@@ -741,31 +737,6 @@ onMounted(async () => {
 
 .stage-chat :deep(.cf-chat-panel__body) {
   padding: 16px;
-}
-
-.stage-tip {
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: color-mix(in oklab, var(--cf-accent) 6%, transparent);
-  border: 1px solid color-mix(in oklab, var(--cf-accent) 18%, var(--cf-line));
-}
-
-.stage-tip strong {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--cf-ink);
-}
-
-.stage-tip p {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: var(--cf-ink-soft);
-}
-
-.stage-tip__muted {
-  margin-top: 8px !important;
-  font-size: 0.78rem !important;
 }
 
 .stage-msg-body {
