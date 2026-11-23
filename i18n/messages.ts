@@ -364,6 +364,9 @@ export const M = {
   'teams.supervisor': { 'zh-CN': '主管智能体', 'en-US': 'Supervisor agent' },
   'teams.workerAgents': { 'zh-CN': '工人智能体', 'en-US': 'Worker agents' },
   'teams.activeAgent': { 'zh-CN': '当前角色：{id}', 'en-US': 'Active agent: {id}' },
+  'teams.newChat': { 'zh-CN': '新对话', 'en-US': 'New chat' },
+  'teams.previewEmpty': { 'zh-CN': '还没有历史，发一句试试', 'en-US': 'No history yet — say something' },
+  'teams.workerFailToast': { 'zh-CN': '工人失败已回传主管', 'en-US': 'Worker failure returned to supervisor' },
   'teams.deleteText': { 'zh-CN': '确定删除小队「{name}」？', 'en-US': 'Delete team “{name}”?' },
 
   'agents.title': { 'zh-CN': '智能体', 'en-US': 'Agents' },

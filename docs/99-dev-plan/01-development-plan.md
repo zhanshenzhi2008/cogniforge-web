@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-23 | v1.80 | 小队预览：conversation_id 续聊、拉历史、工人失败提示 | orjrs |
 | 2026-11-23 | v1.79 | 小队页：列表/新建/预览对话（对接 /teams） | orjrs |
 | 2026-11-23 | v1.78 | 跨仓：Go 已落 /teams CRUD；前端小队页待跟 | orjrs |
 | 2026-11-23 | v1.77 | 跨仓：多 Agent 框架设计草案（Go 仓需求文档，前端后跟） | orjrs |
@@ -82,6 +83,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 小队预览续聊与失败展示（2026-11-23）
+
+- **落地**：打开预览按 `team_id` 拉最近会话；chat 带 `conversation_id`；展示工人失败提示与「新对话」
+- **含代码**：`pages/teams/index.vue`、`useTeams`、`useConversations`（`?team_id=`）、i18n
+- **跨仓**：对齐 Go §12 跟拍（API v1.69）
 
 ## [变更] 小队页对接 /teams（2026-11-23）
 
