@@ -31,4 +31,8 @@ describe('mapChatHttpError', () => {
     expect(mapChatHttpError(429, JSON.stringify({ code: 5016 }), t)).toBe('quota.exhausted')
     expect(mapChatHttpError(429, JSON.stringify({ code: 5014 }), t)).toBe('quota.rate')
   })
+
+  it('maps 401 to auth expired', () => {
+    expect(mapChatHttpError(401, '{"error":"Invalid or expired token"}', t)).toBe('play.authExpired')
+  })
 })

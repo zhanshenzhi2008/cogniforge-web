@@ -133,7 +133,7 @@
       <!-- Right: build / preview -->
       <section class="studio-stage">
         <div class="stage-tabs" role="tablist">
-          <UTooltip :content="stageTipContent" :ui="stageTipUi">
+          <div class="stage-tab-group">
             <button
               type="button"
               class="stage-tab"
@@ -144,17 +144,26 @@
             >
               <UIcon name="i-lucide-hammer" class="size-3.5" />
               {{ t('agents.studioBuild') }}
-              <UIcon name="i-lucide-circle-help" class="size-3.5 stage-tab__help" />
             </button>
-            <template #content>
-              <div class="flex flex-col gap-1.5 text-left">
-                <strong class="text-sm">{{ t('agents.studioBuild') }}</strong>
-                <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioBuildTip') }}</p>
-                <span class="text-xs font-medium underline underline-offset-2 opacity-95">{{ t('agents.studioLearnMore') }}</span>
-              </div>
-            </template>
-          </UTooltip>
-          <UTooltip :content="stageTipContent" :ui="stageTipUi">
+            <UTooltip :content="stageTipContent" :ui="stageTipUi">
+              <button
+                type="button"
+                class="stage-tab__help-btn"
+                :aria-label="t('agents.studioBuildTip')"
+                @click.stop
+              >
+                <UIcon name="i-lucide-circle-help" class="size-3.5" />
+              </button>
+              <template #content>
+                <div class="flex flex-col gap-1.5 text-left">
+                  <strong class="text-sm">{{ t('agents.studioBuild') }}</strong>
+                  <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioBuildTip') }}</p>
+                  <span class="text-xs font-medium underline underline-offset-2 opacity-95">{{ t('agents.studioLearnMore') }}</span>
+                </div>
+              </template>
+            </UTooltip>
+          </div>
+          <div class="stage-tab-group">
             <button
               type="button"
               class="stage-tab"
@@ -163,17 +172,26 @@
               :aria-selected="stage === 'preview'"
               @click="stage = 'preview'"
             >
-              <UIcon name="i-lucide-play" class="size-3.5" />
+              <UIcon name="i-lucide-message-circle" class="size-3.5" />
               {{ t('agents.studioPreview') }}
-              <UIcon name="i-lucide-circle-help" class="size-3.5 stage-tab__help" />
             </button>
-            <template #content>
-              <div class="flex flex-col gap-1.5 text-left">
-                <strong class="text-sm">{{ t('agents.studioPreview') }}</strong>
-                <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioPreviewTip') }}</p>
-              </div>
-            </template>
-          </UTooltip>
+            <UTooltip :content="stageTipContent" :ui="stageTipUi">
+              <button
+                type="button"
+                class="stage-tab__help-btn"
+                :aria-label="t('agents.studioPreviewTip')"
+                @click.stop
+              >
+                <UIcon name="i-lucide-circle-help" class="size-3.5" />
+              </button>
+              <template #content>
+                <div class="flex flex-col gap-1.5 text-left">
+                  <strong class="text-sm">{{ t('agents.studioPreview') }}</strong>
+                  <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioPreviewTip') }}</p>
+                </div>
+              </template>
+            </UTooltip>
+          </div>
         </div>
 
         <CfChatPanel
@@ -181,28 +199,63 @@
           class="stage-chat"
           :messages="activeMessages"
           :status="chatStatus"
-          :placeholder="t('agents.studioChatPh', { name: form.name || t('agents.title') })"
-          :submit-disabled="chatBusy || !composer.trim()"
+          :placeholder="stagePlaceholder"
+          :submit-label="stageSubmitLabel"
+          :submit-disabled="chatBusy || !composer.trim() || (stage === 'preview' && !agentId)"
           :markdown="true"
+          composer-wrap-class="stage-composer-wrap"
+          prompt-class="stage-prompt"
           @submit="sendComposer"
           @stop="stopActiveStream"
         >
+          <template #empty>
+            <div class="stage-hero">
+              <div class="stage-hero__mark" aria-hidden="true">
+                <img src="/favicon.svg" alt="" class="stage-hero__logo">
+              </div>
+              <h2 class="stage-hero__title">
+                {{ stage === 'build' ? t('agents.studioBuildHeroTitle') : t('agents.studioPreviewHeroTitle') }}
+              </h2>
+              <p class="stage-hero__sub">
+                {{ stage === 'build' ? t('agents.studioBuildHeroSub') : t('agents.studioPreviewHeroSub') }}
+              </p>
+              <p
+                v-if="stage === 'build' && !agentId"
+                class="stage-hero__warn"
+              >
+                <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+                <span>{{ t('agents.studioBuildWarnUnsaved') }}</span>
+              </p>
+              <p
+                v-else-if="stage === 'preview' && !agentId"
+                class="stage-hero__warn"
+              >
+                <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+                <span>{{ t('agents.studioPreviewNeedSave') }}</span>
+              </p>
+            </div>
+          </template>
           <template #content="{ message, text }">
             <div class="stage-msg-body">
               <div
                 v-if="text"
                 class="stage-msg-md"
-                v-html="renderChatMarkdown(text)"
+                v-html="renderChatMarkdown(displayBuildText(text))"
               />
               <CfButton
                 v-if="canApplyBuild(message)"
                 tone="secondary"
                 icon="i-lucide-check"
                 class="stage-msg__apply"
-                @click="applyBuildToPrompt(text)"
+                @click="applyBuildFromContent(text)"
               >
-                {{ t('agents.studioApplyPrompt') }}
+                {{ t('agents.studioApplyConfig') }}
               </CfButton>
+            </div>
+          </template>
+          <template #after-composer>
+            <div class="stage-composer-foot">
+              {{ stage === 'build' ? t('agents.studioBuildFoot') : t('agents.studioPreviewFoot') }}
             </div>
           </template>
         </CfChatPanel>
@@ -216,6 +269,14 @@ import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/us
 import type { ChatMessage } from '@/composables/useAgentChat'
 import type { McpServer } from '@/composables/useMcpServers'
 import type { Skill } from '@/composables/useSkills'
+import {
+  detectUnsupportedBuildIntents,
+  extractAgentBuildConfig,
+  listUnresolvedBuildTools,
+  resolveBuildToolIds,
+  stripAgentBuildFence,
+  type UnsupportedBuildKind,
+} from '~/utils/agentBuildConfig'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
 
@@ -243,8 +304,13 @@ const saving = ref(false)
 const dirty = ref(false)
 const stage = ref<'build' | 'preview'>('build')
 const composer = ref('')
-const stageTipContent = { side: 'bottom' as const, align: 'start' as const, collisionPadding: 8 }
-const stageTipUi = { content: 'max-w-sm whitespace-normal text-left' }
+const stageTipContent = {
+  side: 'bottom' as const,
+  align: 'start' as const,
+  sideOffset: 10,
+  collisionPadding: 12,
+}
+const stageTipUi = { content: 'max-w-sm whitespace-normal text-left z-50' }
 /** 未勾选时 Nuxt UI 默认 ring-accented 几乎看不见，加实线框 */
 const toolCheckboxUi = {
   base: 'rounded-sm ring-1 ring-inset ring-[color-mix(in_oklab,var(--cf-ink)_45%,transparent)] bg-[var(--cf-bg-elevated,#fff)]',
@@ -255,6 +321,8 @@ const modelOptions = ref<{ label: string; value: string }[]>([])
 const promptOptions = ref<{ label: string; value: string }[]>([{ label: '—', value: '' }])
 const buildMessages = ref<ChatMessage[]>([])
 const previewMessages = ref<ChatMessage[]>([])
+/** Last build reply already applied into the left form (avoid double-apply). */
+const buildAppliedKey = ref('')
 
 const form = reactive({
   name: '',
@@ -275,12 +343,38 @@ const activeMessages = computed(() =>
   stage.value === 'build' ? buildMessages.value : previewMessages.value,
 )
 
+const stagePlaceholder = computed(() =>
+  stage.value === 'build'
+    ? t('agents.studioBuildPh')
+    : t('agents.studioPreviewPh'),
+)
+
+const stageSubmitLabel = computed(() =>
+  stage.value === 'build'
+    ? t('agents.studioBuildStart')
+    : t('agents.studioPreviewStart'),
+)
+
+function lastBuildAssistant(): ChatMessage | null {
+  for (let i = buildMessages.value.length - 1; i >= 0; i--) {
+    const msg = buildMessages.value[i]
+    if (msg?.role === 'assistant' && msg.content.trim()) return msg
+  }
+  return null
+}
+
 function canApplyBuild(message: { id?: string; role?: string }) {
-  if (stage.value !== 'build' || form.prompt_id || message?.role !== 'assistant') return false
-  const last = buildMessages.value[buildMessages.value.length - 1]
-  if (!last || last.role !== 'assistant') return false
-  const lastId = `msg-${buildMessages.value.length - 1}-assistant`
-  return message.id === lastId && !!last.content && !chatBusy.value
+  if (stage.value !== 'build' || message?.role !== 'assistant') return false
+  const last = lastBuildAssistant()
+  if (!last) return false
+  const lastIdx = buildMessages.value.lastIndexOf(last)
+  const lastId = `msg-${lastIdx}-assistant`
+  if (message.id !== lastId || chatBusy.value) return false
+  return buildAppliedKey.value !== last.content
+}
+
+function displayBuildText(text: string) {
+  return stage.value === 'build' ? stripAgentBuildFence(text) : text
 }
 
 function stopActiveStream() {
@@ -365,7 +459,84 @@ function validate() {
   return !errors.name && !errors.model
 }
 
+function toolCatalog() {
+  return mcpServers.value.map(s => ({ id: s.id, name: s.name }))
+}
+
+function unsupportedBuildReply(kinds: UnsupportedBuildKind[]): string {
+  const lines = kinds.map((k) => {
+    if (k === 'vm') return t('agents.studioUnsupportedVm')
+    if (k === 'voice') return t('agents.studioUnsupportedVoice')
+    if (k === 'publish') return t('agents.studioUnsupportedPublish')
+    return t('agents.studioUnsupportedToolInstall')
+  })
+  return [t('agents.studioUnsupportedLead'), ...lines.map(l => `- ${l}`), t('agents.studioUnsupportedTail')].join('\n')
+}
+
+function warnUnresolvedTools(unresolved: string[]) {
+  if (!unresolved.length) return
+  toast.add({
+    title: t('agents.studioToolsMissing', { names: unresolved.join('、') }),
+    color: 'warning',
+  })
+}
+
+function applyBuildFromContent(content: string, opts?: { silent?: boolean }): boolean {
+  const { config } = extractAgentBuildConfig(content)
+  if (!config) {
+    if (!opts?.silent) toast.add({ title: t('agents.studioApplyEmpty'), color: 'warning' })
+    return false
+  }
+
+  const catalog = toolCatalog()
+  const unresolved = listUnresolvedBuildTools(config.tools, catalog)
+  let changed = false
+  if (config.name && !form.name.trim()) {
+    form.name = config.name
+    changed = true
+  }
+  if (config.description) {
+    form.description = config.description
+    changed = true
+  }
+  if (config.system_prompt && !form.prompt_id) {
+    form.system_prompt = config.system_prompt
+    changed = true
+  }
+  if (config.tools?.length) {
+    const ids = resolveBuildToolIds(config.tools, catalog)
+    if (ids.length) {
+      form.tools = [...new Set([...form.tools, ...ids])]
+      changed = true
+    }
+  }
+
+  if (!changed) {
+    if (!opts?.silent) {
+      if (unresolved.length) warnUnresolvedTools(unresolved)
+      else toast.add({ title: t('agents.studioApplyEmpty'), color: 'warning' })
+    }
+    return false
+  }
+
+  buildAppliedKey.value = content
+  markDirty()
+  if (!opts?.silent) {
+    toast.add({ title: t('agents.studioApplyConfigOk'), color: 'success' })
+    warnUnresolvedTools(unresolved)
+  }
+  return true
+}
+
+/** Before save: solidify latest build reply into the left form if not applied yet. */
+function solidifyPendingBuild() {
+  const last = lastBuildAssistant()
+  if (!last || buildAppliedKey.value === last.content) return
+  applyBuildFromContent(last.content, { silent: true })
+}
+
 async function handleSave() {
+  solidifyPendingBuild()
   if (!validate()) return
   saving.value = true
   try {
@@ -420,11 +591,30 @@ async function handleSave() {
   }
 }
 
-function applyBuildToPrompt(content: string) {
-  if (!content.trim()) return
-  form.system_prompt = content
-  markDirty()
-  toast.add({ title: t('agents.studioApplyPrompt'), color: 'success' })
+function buildAssistantSystemPrompt() {
+  const toolLines = mcpServers.value.length
+    ? mcpServers.value.map(s => `- id: ${s.id} | name: ${s.name}`).join('\n')
+    : '- （当前无可用工具）'
+  return [
+    '你是智能体「构建」助手。通过对话帮用户定目标、选工具、带跑示例，并输出可固化到 Agent 的配置。',
+    '规则：',
+    '1. 先用简短中文说明你做了什么、如何试用（可给 1～2 轮示例对话）。',
+    '2. 文末必须附带一个 ```agent-config 代码块，JSON 字段：',
+    '   - system_prompt（必填，完整系统提示词）',
+    '   - tools（可选，工具 id 或 name 数组，只能从下方清单选）',
+    '   - name / description（可选，名称与简介）',
+    '3. 严禁编造清单外的工具名；用户要的工具不在清单时，必须明确说「当前不支持，请先到 MCP 页接入」，tools 只填清单内项或留空。',
+    '4. 当前构建不支持：虚拟机、语音播放/输入、发布渠道、在对话里安装新 MCP。被问及时直接说明不支持并给出替代（用已有工具 / 去对应页面配置）。',
+    '5. 需要鉴权的工具，提醒用户去 MCP/模型页配置密钥，不要假装已经装好。',
+    '6. 不要省略 agent-config 代码块（即使部分能力不支持，仍可输出能落地的 system_prompt）。',
+    '',
+    `当前名称：${form.name || '（未填）'}`,
+    `当前简介：${form.description || '（未填）'}`,
+    `当前模型：${form.model || '（未选）'}`,
+    `已选工具：${form.tools.length ? form.tools.join(', ') : '（无）'}`,
+    '可用工具清单：',
+    toolLines,
+  ].join('\n')
 }
 
 async function sendComposer() {
@@ -452,6 +642,9 @@ async function sendPreview(text: string) {
   })
   if (agentChatError.value) {
     toast.add({ title: agentChatError.value, color: 'error' })
+    if (agentChatError.value === t('play.authExpired')) {
+      useAuth().redirectToLogin()
+    }
   }
 }
 
@@ -459,16 +652,19 @@ async function sendBuild(text: string) {
   buildMessages.value.push({ role: 'user', content: text })
   buildMessages.value.push({ role: 'assistant', content: '' })
   const idx = buildMessages.value.length - 1
-  const builderSystem = [
-    '你是智能体配置助手。根据用户目标，输出可直接用作 Agent 系统提示词的中文文案。',
-    '只输出提示词正文，不要解释。可包含角色、边界、工具使用约定。',
-    form.name ? `智能体名称：${form.name}` : '',
-    form.description ? `简介：${form.description}` : '',
-  ].filter(Boolean).join('\n')
+  buildAppliedKey.value = ''
+
+  // Hard gate: clearly unsupported asks get a fixed reply (no model call).
+  const unsupported = detectUnsupportedBuildIntents(text)
+  if (unsupported.length) {
+    buildMessages.value[idx] = { role: 'assistant', content: unsupportedBuildReply(unsupported) }
+    toast.add({ title: t('agents.studioUnsupportedToast'), color: 'warning' })
+    return
+  }
 
   await streamModelChat(
     [
-      { role: 'system', content: builderSystem },
+      { role: 'system', content: buildAssistantSystemPrompt() },
       ...buildMessages.value.slice(0, -1),
     ],
     (content) => {
@@ -478,6 +674,22 @@ async function sendBuild(text: string) {
   )
   if (buildChatError.value) {
     toast.add({ title: buildChatError.value, color: 'error' })
+    if (buildChatError.value === t('play.authExpired')) {
+      useAuth().redirectToLogin()
+    }
+    return
+  }
+
+  const last = buildMessages.value[idx]?.content || ''
+  const { config } = extractAgentBuildConfig(last)
+  const unresolved = listUnresolvedBuildTools(config?.tools, toolCatalog())
+  if (unresolved.length) {
+    warnUnresolvedTools(unresolved)
+    const note = `\n\n${t('agents.studioToolsMissingNote', { names: unresolved.join('、') })}`
+    buildMessages.value[idx] = {
+      role: 'assistant',
+      content: `${last}${note}`,
+    }
   }
 }
 
@@ -694,40 +906,63 @@ onMounted(async () => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--cf-line);
-  border-radius: 14px;
-  background: var(--cf-bg-elevated, #fff);
+  border: 1px solid color-mix(in oklab, var(--cf-line) 80%, transparent);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--cf-bg, #f8fafc) 88%, #fff);
   overflow: hidden;
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--cf-ink) 4%, transparent);
 }
 
 .stage-tabs {
   display: flex;
   gap: 4px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--cf-line);
+  padding: 12px 16px 8px;
+  background: transparent;
+}
+
+.stage-tab-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .stage-tab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--cf-ink-soft);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   cursor: pointer;
 }
 
 .stage-tab--on {
-  background: color-mix(in oklab, var(--cf-accent) 14%, transparent);
-  color: var(--cf-ink);
+  background: transparent;
+  color: color-mix(in oklab, var(--cf-accent) 85%, var(--cf-ink));
   font-weight: 600;
 }
 
-.stage-tab__help {
-  opacity: 0.55;
+.stage-tab__help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cf-ink-soft);
+  opacity: 0.5;
+  cursor: help;
+}
+
+.stage-tab__help-btn:hover {
+  opacity: 0.9;
+  background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
 }
 
 .stage-chat {
@@ -736,7 +971,98 @@ onMounted(async () => {
 }
 
 .stage-chat :deep(.cf-chat-panel__body) {
-  padding: 16px;
+  padding: 8px 24px 16px;
+}
+
+.stage-chat :deep(.cf-chat-panel__messages) {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.stage-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 48px 16px 32px;
+  flex: 1;
+}
+
+.stage-hero__mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--cf-accent) 14%, #fff);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--cf-accent) 18%, transparent);
+  margin-bottom: 6px;
+}
+
+.stage-hero__logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.stage-hero__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cf-ink);
+  letter-spacing: -0.02em;
+}
+
+.stage-hero__sub {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--cf-ink-soft);
+}
+
+.stage-hero__warn {
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 360px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #b45309;
+  text-align: left;
+}
+
+.stage-chat :deep(.stage-composer-wrap) {
+  border-top: 0;
+  padding: 0 20px 16px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  gap: 0;
+}
+
+.stage-chat :deep(.stage-prompt) {
+  --tw-ring-shadow: 0 0 #0000;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 8px 28px color-mix(in oklab, var(--cf-ink) 8%, transparent);
+}
+
+.stage-composer-foot {
+  padding: 10px 16px;
+  border-radius: 0 0 18px 18px;
+  background: color-mix(in oklab, var(--cf-accent) 12%, #eff6ff);
+  color: color-mix(in oklab, var(--cf-accent) 55%, #1e3a5f);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .stage-msg-body {

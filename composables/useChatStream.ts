@@ -3,7 +3,7 @@
  * Agent-bound streaming stays in useAgentChat.
  */
 
-import { resolveApiBase } from '~/utils/apiBase'
+import { chatAuthHeaders, readChatApiBase } from '~/utils/chatApi'
 import { mapChatHttpError } from '~/utils/chatHttpError'
 import {
   fetchSse,
@@ -20,13 +20,10 @@ export interface ChatStreamExtras {
 }
 
 export const useChatStream = () => {
-  const config = useRuntimeConfig()
   const { t } = useLocale()
   const streaming = ref(false)
   const error = ref<string | null>(null)
   let abortController: AbortController | null = null
-
-  const getBaseUrl = () => resolveApiBase(String(config.public.apiBase ?? ''))
 
   const stopStream = () => {
     abortController?.abort()
@@ -47,15 +44,16 @@ export const useChatStream = () => {
     abortController = controller
 
     try {
-      const token = useAuth().getToken()
+      if (!useAuth().getToken()) {
+        error.value = t('play.authExpired')
+        onChunk(fullContent, true)
+        return
+      }
       await fetchSse(
-        `${getBaseUrl()}/api/v1/chat/stream`,
+        `${readChatApiBase()}/api/v1/chat/stream`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: token ? `Bearer ${token}` : '',
-          },
+          headers: chatAuthHeaders(),
           body: JSON.stringify({
             messages,
             stream: true,

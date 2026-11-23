@@ -1173,7 +1173,9 @@ const sendMessage = async () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${useCookie('token').value}`,
+          ...(useAuth().getToken()
+            ? { Authorization: `Bearer ${useAuth().getToken()}` }
+            : {}),
         },
         body: JSON.stringify(body),
         signal: controller.signal,

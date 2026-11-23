@@ -2,7 +2,7 @@
  * Agent chat API composable with SSE streaming support
  */
 
-import { resolveApiBase } from '~/utils/apiBase'
+import { chatAuthHeaders, readChatApiBase } from '~/utils/chatApi'
 import { mapChatHttpError } from '~/utils/chatHttpError'
 import {
   fetchSse,
@@ -40,13 +40,10 @@ export interface AgentChatResponse {
 
 export const useAgentChat = () => {
   const api = useApi()
-  const config = useRuntimeConfig()
   const { t } = useLocale()
   const streaming = ref(false)
   const error = ref<string | null>(null)
   let abortController: AbortController | null = null
-
-  const getBaseUrl = () => resolveApiBase(String(config.public.apiBase ?? ''))
 
   const stopStream = () => {
     abortController?.abort()
@@ -91,15 +88,16 @@ export const useAgentChat = () => {
     abortController = controller
 
     try {
-      const token = useAuth().getToken()
+      if (!useAuth().getToken()) {
+        error.value = t('play.authExpired')
+        onChunk(fullContent, true)
+        return
+      }
       await fetchSse(
-        `${getBaseUrl()}/api/v1/agents/${agentId}/chat`,
+        `${readChatApiBase()}/api/v1/agents/${agentId}/chat`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: token ? `Bearer ${token}` : '',
-          },
+          headers: chatAuthHeaders(),
           body: JSON.stringify({ messages, stream: true, ...extras }),
           signal: controller.signal,
           connectRetries: 1,

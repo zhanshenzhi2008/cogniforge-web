@@ -14,6 +14,7 @@ export const APP_PRIMARY_NAV: AppNavItem[] = [
   { key: 'dashboard', to: '/', roles: ['admin', 'user'] },
   { key: 'playground', to: '/playground', roles: ['admin', 'user'] },
   { key: 'agents', to: '/agents', roles: ['admin', 'user'] },
+  { key: 'teams', to: '/teams', roles: ['admin', 'user'] },
   { key: 'workflows', to: '/workflows', roles: ['admin', 'user'] },
   { key: 'knowledge', to: '/knowledge', roles: ['admin', 'user'] },
   {
