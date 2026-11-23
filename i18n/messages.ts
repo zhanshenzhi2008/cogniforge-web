@@ -473,7 +473,7 @@ export const M = {
   'agents.studioUnsupportedToolInstall': {
     'zh-CN': '在对话里安装新工具：不支持。请先到「MCP」页接入，再回构建里勾选',
     'en-US': 'Installing new tools in chat is unsupported. Add them on the MCP page, then select them here',
-  }
+  },
   'agents.studioChatPh': { 'zh-CN': '发消息给 {name}', 'en-US': 'Message {name}' },
   'agents.studioPromptPh': {
     'zh-CN': '写清角色、边界和回答风格。可从技能模板开始，再微调。',
