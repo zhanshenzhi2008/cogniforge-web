@@ -290,6 +290,7 @@ export const M = {
   'play.sendFail': { 'zh-CN': '发送失败', 'en-US': 'Send failed' },
   'play.sendFailHttp': { 'zh-CN': '发送失败：HTTP {status}{detail}', 'en-US': 'Send failed: HTTP {status}{detail}' },
   'play.sendFailBody': { 'zh-CN': '发送失败：响应体不可用', 'en-US': 'Send failed: response body unavailable' },
+  'play.authExpired': { 'zh-CN': '登录已失效，请重新登录后再试', 'en-US': 'Session expired. Please sign in again.' },
   'play.streamNetwork': { 'zh-CN': '连不上服务器，请检查网络后重试。', 'en-US': 'Could not reach the server. Check your network and try again.' },
   'play.streamInterrupted': { 'zh-CN': '回答传到一半断线了，已保留已收到的内容。可再发一次继续。', 'en-US': 'The reply was interrupted. Kept what arrived — send again to continue.' },
   'quota.bar': { 'zh-CN': '今日 {used}/{limit} 条 · Token {pct}%', 'en-US': 'Today {used}/{limit} · Token {pct}%' },
@@ -370,8 +371,8 @@ export const M = {
   'agents.studioBuild': { 'zh-CN': '构建', 'en-US': 'Build' },
   'agents.studioPreview': { 'zh-CN': '预览', 'en-US': 'Preview' },
   'agents.studioBuildTip': {
-    'zh-CN': '描述你的目标，指示 Agent 安装并认证工具，或带它完成一个完整示例。保存后，你的指令将被固化到 Agent 中。',
-    'en-US': 'Describe your goals, instruct the Agent to install and authenticate tools, or take it through a full example. After saving, your instructions will be solidified into the Agent.',
+    'zh-CN': '用对话说明目标、勾选要用的工具，并可带跑示例。点「应用到配置」或「保存」后，提示词与工具会写入左侧并固化到 Agent。清单外工具需先在 MCP 页接入。',
+    'en-US': 'Describe goals, pick tools, and walk through an example. Apply or Save writes prompt and tools into the form and Agent. Tools not listed must be added on the MCP page first.',
   },
   'agents.studioPreviewTip': {
     'zh-CN': '像用户一样测试它。你的交互不会影响 Agent 后续的行为。',
@@ -379,8 +380,8 @@ export const M = {
   },
   'agents.studioLearnMore': { 'zh-CN': '了解更多', 'en-US': 'Learn more' },
   'agents.studioBuildEmpty': {
-    'zh-CN': '在左侧完善模型、提示词和工具；也可在这里用对话辅助生成提示词。',
-    'en-US': 'Set model, prompt and tools on the left; or chat here to draft the prompt.',
+    'zh-CN': '在左侧完善模型、提示词和工具；也可在这里用对话构建并应用到配置。',
+    'en-US': 'Set model, prompt and tools on the left; or build here and apply to the form.',
   },
   'agents.studioPreviewEmpty': {
     'zh-CN': '保存智能体后即可在这里像用户一样试聊。',
@@ -391,6 +392,42 @@ export const M = {
     'en-US': 'Save the agent before preview chat.',
   },
   'agents.studioApplyPrompt': { 'zh-CN': '应用到提示词', 'en-US': 'Apply to prompt' },
+  'agents.studioApplyConfig': { 'zh-CN': '应用到配置', 'en-US': 'Apply to config' },
+  'agents.studioApplyConfigOk': { 'zh-CN': '已写入左侧配置，保存后固化到 Agent', 'en-US': 'Applied to the form; save to solidify on the Agent' },
+  'agents.studioApplyEmpty': { 'zh-CN': '没有可应用的配置（需含提示词或工具）', 'en-US': 'Nothing to apply (need prompt or tools)' },
+  'agents.studioToolsMissing': {
+    'zh-CN': '这些工具不在清单里，未写入：{names}。请先到 MCP 页接入',
+    'en-US': 'Not in catalog, skipped: {names}. Add them on the MCP page first',
+  },
+  'agents.studioToolsMissingNote': {
+    'zh-CN': '说明：以下工具当前不可用，不会写入配置：{names}。请先到「MCP」页接入后再构建。',
+    'en-US': 'Note: these tools are unavailable and were not written: {names}. Add them on the MCP page, then rebuild.',
+  },
+  'agents.studioUnsupportedToast': { 'zh-CN': '当前构建不支持该能力', 'en-US': 'Build cannot do that yet' },
+  'agents.studioUnsupportedLead': {
+    'zh-CN': '当前「构建」做不到你要的这部分，不会假装已经装好：',
+    'en-US': 'Build cannot fulfill this part and will not pretend it is done:',
+  },
+  'agents.studioUnsupportedTail': {
+    'zh-CN': '你可以改用清单里已有的工具继续构建，或先去对应页面完成接入后再来。',
+    'en-US': 'Continue with listed tools, or set things up on the related page first.',
+  },
+  'agents.studioUnsupportedVm': {
+    'zh-CN': '虚拟机 / 沙箱运行时：尚未提供，请先用普通对话或已有 MCP 工具代替',
+    'en-US': 'VM / sandbox runtime is not available; use chat or existing MCP tools instead',
+  },
+  'agents.studioUnsupportedVoice': {
+    'zh-CN': '语音播放 / 语音输入：尚未接入，请先用文字对话',
+    'en-US': 'Voice play / voice input is not available; use text chat for now',
+  },
+  'agents.studioUnsupportedPublish': {
+    'zh-CN': '发布渠道（嵌入 / IM 等）：请之后在「发布」能力就绪后再配',
+    'en-US': 'Publish channels (embed / IM) are not ready yet',
+  },
+  'agents.studioUnsupportedToolInstall': {
+    'zh-CN': '在对话里安装新工具：不支持。请先到「MCP」页接入，再回构建里勾选',
+    'en-US': 'Installing new tools in chat is unsupported. Add them on the MCP page, then select them here',
+  }
   'agents.studioChatPh': { 'zh-CN': '发消息给 {name}', 'en-US': 'Message {name}' },
   'agents.studioPromptPh': {
     'zh-CN': '写清角色、边界和回答风格。可从技能模板开始，再微调。',

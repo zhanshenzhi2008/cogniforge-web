@@ -85,7 +85,15 @@ export const useAuth = () => {
 
   const getToken = () => {
     if (process.client) {
-      return localStorage.getItem(TOKEN_KEY)
+      const fromStore = localStorage.getItem(TOKEN_KEY)
+      if (fromStore) return fromStore
+      // Fallback: cookie may still have the session when localStorage was cleared
+      const fromCookie = useCookie(TOKEN_KEY).value
+      if (typeof fromCookie === 'string' && fromCookie) {
+        localStorage.setItem(TOKEN_KEY, fromCookie)
+        return fromCookie
+      }
+      return null
     }
     return useCookie(TOKEN_KEY).value as string | null
   }
