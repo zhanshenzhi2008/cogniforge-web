@@ -4,6 +4,9 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-23 | v1.79 | 小队页：列表/新建/预览对话（对接 /teams） | orjrs |
+| 2026-11-23 | v1.78 | 跨仓：Go 已落 /teams CRUD；前端小队页待跟 | orjrs |
+| 2026-11-23 | v1.77 | 跨仓：多 Agent 框架设计草案（Go 仓需求文档，前端后跟） | orjrs |
 | 2026-11-23 | v1.76 | 构建/预览区改为对话空态风格（标题+说明+开始构建） | orjrs |
 | 2026-11-23 | v1.75 | 修工作室聊天 401：统一鉴权头与 API 基址，登录失效提示 | orjrs |
 | 2026-11-23 | v1.74 | 构建：做不到的能力固定拒答；清单外工具明确提示 | orjrs |
@@ -79,6 +82,21 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 小队页对接 /teams（2026-11-23）
+
+- **落地**：顶栏「小队」；`pages/teams` 列表/新建/删除/预览对话；`useTeams`；展示 `active_agent_id`
+- **含代码**：`composables/useTeams.ts`、`pages/teams/index.vue`、`constants/nav.ts`、i18n
+
+## [变更] 跨仓：Go 小队 API 已起步（2026-11-23）
+
+- **Go 已有**：`/api/v1/teams` CRUD + `POST /teams/:id/chat`（delegate/handoff）
+- **本仓**：~~小队页待跟~~ → v1.79 已起步
+
+## [变更] 跨仓多 Agent 设计草案（2026-11-23）
+
+- **原因**：多 Agent 产品口径需先统一，前端后跟 Team/预览
+- **范围**：本仓仅记同步；正文在 Go 仓 `docs/01-requirements/11-multi-agent-framework-design.md`
 
 ## [变更] 构建/预览空态对话风格（2026-11-23）
 
