@@ -383,13 +383,39 @@ export const M = {
     'zh-CN': '在左侧完善模型、提示词和工具；也可在这里用对话构建并应用到配置。',
     'en-US': 'Set model, prompt and tools on the left; or build here and apply to the form.',
   },
+  'agents.studioBuildHeroTitle': { 'zh-CN': '通过对话构建 Agent', 'en-US': 'Build the Agent by chatting' },
+  'agents.studioBuildHeroSub': {
+    'zh-CN': '描述你的需求；对话过程中可写入左侧提示词与工具，保存后固化到 Agent。',
+    'en-US': 'Describe what you need; chat can fill the left-side prompt and tools, then save to solidify.',
+  },
+  'agents.studioBuildWarnUnsaved': {
+    'zh-CN': '此 Agent 尚未保存，构建回复来自通用模型；「应用到配置」或保存后才会固化。',
+    'en-US': 'Agent not saved yet — build replies come from the model; Apply or Save to solidify.',
+  },
+  'agents.studioBuildPh': { 'zh-CN': '描述你的 Agent 应该做什么', 'en-US': 'Describe what your Agent should do' },
+  'agents.studioBuildStart': { 'zh-CN': '开始构建', 'en-US': 'Start building' },
+  'agents.studioBuildFoot': {
+    'zh-CN': '工具只能选用已接入的 MCP；清单外能力请先到 MCP 页接入。',
+    'en-US': 'Only connected MCP tools can be selected; add others on the MCP page first.',
+  },
   'agents.studioPreviewEmpty': {
     'zh-CN': '保存智能体后即可在这里像用户一样试聊。',
     'en-US': 'Save the agent first, then test chat here like a user.',
   },
+  'agents.studioPreviewHeroTitle': { 'zh-CN': '像用户一样试聊', 'en-US': 'Try it like a user' },
+  'agents.studioPreviewHeroSub': {
+    'zh-CN': '用已保存的 Agent 试对话；这里的聊天不会改左侧配置。',
+    'en-US': 'Chat with the saved Agent; preview does not change the left-side config.',
+  },
   'agents.studioPreviewNeedSave': {
     'zh-CN': '请先保存智能体，再使用预览对话。',
     'en-US': 'Save the agent before preview chat.',
+  },
+  'agents.studioPreviewPh': { 'zh-CN': '发一条消息试试', 'en-US': 'Send a message to try' },
+  'agents.studioPreviewStart': { 'zh-CN': '发送预览', 'en-US': 'Send preview' },
+  'agents.studioPreviewFoot': {
+    'zh-CN': '预览走已保存的 Agent；未保存时请先点保存。',
+    'en-US': 'Preview uses the saved Agent; save first if you have not.',
   },
   'agents.studioApplyPrompt': { 'zh-CN': '应用到提示词', 'en-US': 'Apply to prompt' },
   'agents.studioApplyConfig': { 'zh-CN': '应用到配置', 'en-US': 'Apply to config' },

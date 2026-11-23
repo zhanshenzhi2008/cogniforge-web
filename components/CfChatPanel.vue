@@ -39,7 +39,7 @@
       </UChatMessages>
     </div>
 
-    <div class="cf-chat-panel__composer-wrap">
+    <div class="cf-chat-panel__composer-wrap" :class="composerWrapClass">
       <slot name="before-composer" />
       <UChatPrompt
         :model-value="modelValue"
@@ -50,6 +50,7 @@
         :rows="rows"
         :maxrows="maxrows"
         class="cf-chat-panel__prompt composer-prompt"
+        :class="promptClass"
         @update:model-value="onInput"
         @submit="onSubmit"
       >
@@ -59,7 +60,17 @@
               <slot name="composer-actions" />
               <span v-if="hint" class="cf-chat-panel__hint">{{ hint }}</span>
             </div>
+            <CfButton
+              v-if="submitLabel && (submitStatus || status) !== 'streaming'"
+              tone="primary"
+              class="cf-chat-panel__submit-label"
+              :disabled="submitDisabled"
+              @click="onSubmit"
+            >
+              {{ submitLabel }}
+            </CfButton>
             <UChatPromptSubmit
+              v-else
               class="cf-btn cf-btn--primary"
               :status="submitStatus || status"
               color="primary"
@@ -70,6 +81,7 @@
           </div>
         </template>
       </UChatPrompt>
+      <slot name="after-composer" />
     </div>
   </div>
 </template>
@@ -99,6 +111,9 @@ const props = withDefaults(
     rows?: number
     maxrows?: number
     spacingOffset?: number
+    submitLabel?: string
+    composerWrapClass?: string
+    promptClass?: string
   }>(),
   {
     modelValue: '',

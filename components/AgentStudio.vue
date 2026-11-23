@@ -172,7 +172,7 @@
               :aria-selected="stage === 'preview'"
               @click="stage = 'preview'"
             >
-              <UIcon name="i-lucide-play" class="size-3.5" />
+              <UIcon name="i-lucide-message-circle" class="size-3.5" />
               {{ t('agents.studioPreview') }}
             </button>
             <UTooltip :content="stageTipContent" :ui="stageTipUi">
@@ -199,12 +199,42 @@
           class="stage-chat"
           :messages="activeMessages"
           :status="chatStatus"
-          :placeholder="t('agents.studioChatPh', { name: form.name || t('agents.title') })"
-          :submit-disabled="chatBusy || !composer.trim()"
+          :placeholder="stagePlaceholder"
+          :submit-label="stageSubmitLabel"
+          :submit-disabled="chatBusy || !composer.trim() || (stage === 'preview' && !agentId)"
           :markdown="true"
+          composer-wrap-class="stage-composer-wrap"
+          prompt-class="stage-prompt"
           @submit="sendComposer"
           @stop="stopActiveStream"
         >
+          <template #empty>
+            <div class="stage-hero">
+              <div class="stage-hero__mark" aria-hidden="true">
+                <img src="/favicon.svg" alt="" class="stage-hero__logo">
+              </div>
+              <h2 class="stage-hero__title">
+                {{ stage === 'build' ? t('agents.studioBuildHeroTitle') : t('agents.studioPreviewHeroTitle') }}
+              </h2>
+              <p class="stage-hero__sub">
+                {{ stage === 'build' ? t('agents.studioBuildHeroSub') : t('agents.studioPreviewHeroSub') }}
+              </p>
+              <p
+                v-if="stage === 'build' && !agentId"
+                class="stage-hero__warn"
+              >
+                <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+                <span>{{ t('agents.studioBuildWarnUnsaved') }}</span>
+              </p>
+              <p
+                v-else-if="stage === 'preview' && !agentId"
+                class="stage-hero__warn"
+              >
+                <UIcon name="i-lucide-triangle-alert" class="size-3.5 shrink-0" />
+                <span>{{ t('agents.studioPreviewNeedSave') }}</span>
+              </p>
+            </div>
+          </template>
           <template #content="{ message, text }">
             <div class="stage-msg-body">
               <div
@@ -221,6 +251,11 @@
               >
                 {{ t('agents.studioApplyConfig') }}
               </CfButton>
+            </div>
+          </template>
+          <template #after-composer>
+            <div class="stage-composer-foot">
+              {{ stage === 'build' ? t('agents.studioBuildFoot') : t('agents.studioPreviewFoot') }}
             </div>
           </template>
         </CfChatPanel>
@@ -306,6 +341,18 @@ const chatBusy = computed(() => buildStreaming.value || agentStreaming.value)
 const chatStatus = computed<CfChatStatus>(() => (chatBusy.value ? 'streaming' : 'ready'))
 const activeMessages = computed(() =>
   stage.value === 'build' ? buildMessages.value : previewMessages.value,
+)
+
+const stagePlaceholder = computed(() =>
+  stage.value === 'build'
+    ? t('agents.studioBuildPh')
+    : t('agents.studioPreviewPh'),
+)
+
+const stageSubmitLabel = computed(() =>
+  stage.value === 'build'
+    ? t('agents.studioBuildStart')
+    : t('agents.studioPreviewStart'),
 )
 
 function lastBuildAssistant(): ChatMessage | null {
@@ -859,17 +906,18 @@ onMounted(async () => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--cf-line);
-  border-radius: 14px;
-  background: var(--cf-bg-elevated, #fff);
+  border: 1px solid color-mix(in oklab, var(--cf-line) 80%, transparent);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--cf-bg, #f8fafc) 88%, #fff);
   overflow: hidden;
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--cf-ink) 4%, transparent);
 }
 
 .stage-tabs {
   display: flex;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--cf-line);
+  gap: 4px;
+  padding: 12px 16px 8px;
+  background: transparent;
 }
 
 .stage-tab-group {
@@ -882,18 +930,18 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--cf-ink-soft);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   cursor: pointer;
 }
 
 .stage-tab--on {
-  background: color-mix(in oklab, var(--cf-accent) 14%, transparent);
-  color: var(--cf-ink);
+  background: transparent;
+  color: color-mix(in oklab, var(--cf-accent) 85%, var(--cf-ink));
   font-weight: 600;
 }
 
@@ -908,7 +956,7 @@ onMounted(async () => {
   border-radius: 999px;
   background: transparent;
   color: var(--cf-ink-soft);
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: help;
 }
 
@@ -923,7 +971,98 @@ onMounted(async () => {
 }
 
 .stage-chat :deep(.cf-chat-panel__body) {
-  padding: 16px;
+  padding: 8px 24px 16px;
+}
+
+.stage-chat :deep(.cf-chat-panel__messages) {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.stage-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 48px 16px 32px;
+  flex: 1;
+}
+
+.stage-hero__mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--cf-accent) 14%, #fff);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--cf-accent) 18%, transparent);
+  margin-bottom: 6px;
+}
+
+.stage-hero__logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.stage-hero__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cf-ink);
+  letter-spacing: -0.02em;
+}
+
+.stage-hero__sub {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--cf-ink-soft);
+}
+
+.stage-hero__warn {
+  margin: 8px 0 0;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 360px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #b45309;
+  text-align: left;
+}
+
+.stage-chat :deep(.stage-composer-wrap) {
+  border-top: 0;
+  padding: 0 20px 16px;
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  gap: 0;
+}
+
+.stage-chat :deep(.stage-prompt) {
+  --tw-ring-shadow: 0 0 #0000;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 8px 28px color-mix(in oklab, var(--cf-ink) 8%, transparent);
+}
+
+.stage-composer-foot {
+  padding: 10px 16px;
+  border-radius: 0 0 18px 18px;
+  background: color-mix(in oklab, var(--cf-accent) 12%, #eff6ff);
+  color: color-mix(in oklab, var(--cf-accent) 55%, #1e3a5f);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .stage-msg-body {
