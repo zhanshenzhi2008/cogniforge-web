@@ -453,9 +453,14 @@
               class="debug-status-dot"
               :class="currentExecution.status"
             />
-            <span>{{ currentExecution.status }}</span>
-            <span v-if="currentExecution.id" class="debug-log-time">{{ currentExecution.id }}</span>
+            <span>{{ execStatusLabel(currentExecution.status) }}</span>
+            <span v-if="currentExecution.id" class="debug-log-time" :title="currentExecution.id">
+              {{ shortExecId(currentExecution.id) }}
+            </span>
           </div>
+          <p v-if="currentExecution.current_node" class="debug-meta">
+            {{ t('editor.debugAtNode', { name: nodeDisplayName(currentExecution.current_node) }) }}
+          </p>
           <p
             v-if="currentExecution.status === 'waiting'"
             class="debug-wait-msg"
@@ -466,6 +471,14 @@
             }) }}
           </p>
           <p v-else-if="currentExecution.error" class="debug-error">{{ currentExecution.error }}</p>
+          <div v-if="execNodeRunSummary" class="debug-meta">{{ execNodeRunSummary }}</div>
+          <div v-if="currentExecution.output" class="debug-output">
+            <div class="debug-section-title">{{ t('editor.debugOutput') }}</div>
+            <pre>{{ truncateText(String(currentExecution.output), 800) }}</pre>
+          </div>
+          <div v-if="execInputPreview" class="debug-meta">
+            {{ t('editor.debugInputPreview', { text: execInputPreview }) }}
+          </div>
 
           <!-- waiting 审批：放在侧栏状态旁，避免被侧栏挡住顶栏按钮 -->
           <div
@@ -529,16 +542,24 @@
         </div>
         <div class="debug-section">
           <div class="debug-section-title">{{ t('editor.debugHistory') }}</div>
+          <p class="debug-hint debug-hint--compact">{{ t('editor.debugHistoryHint') }}</p>
           <div v-if="executionLogs.length === 0" class="debug-empty">{{ t('editor.debugHistoryEmpty') }}</div>
-          <div
+          <button
             v-for="item in executionLogs.slice(0, 12)"
             :key="item.id"
+            type="button"
             class="debug-log-item"
-            :class="item.status"
+            :class="[item.status, { 'is-selected': currentExecution?.id === item.id }]"
+            @click="selectHistoryExecution(item.id)"
           >
-            <div class="debug-log-message">{{ item.status }} · {{ item.id }}</div>
-            <div class="debug-log-time">{{ item.created_at || item.started_at || '' }}</div>
-          </div>
+            <div class="debug-log-row">
+              <span class="debug-status-dot" :class="item.status" />
+              <span class="debug-log-status">{{ execStatusLabel(item.status) }}</span>
+              <span class="debug-log-time">{{ formatExecTime(item) }}</span>
+            </div>
+            <div class="debug-log-message">{{ historySummary(item) }}</div>
+            <div class="debug-log-id" :title="item.id">{{ shortExecId(item.id) }}</div>
+          </button>
         </div>
       </div>
     </aside>
@@ -549,6 +570,7 @@
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
+import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
@@ -640,30 +662,12 @@ const resuming = ref(false)
 const approving = ref(false)
 const rejecting = ref(false)
 
-const nodeTypes = ['start', 'end', 'llm', 'agent', 'team', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
+const nodeTypes = WORKFLOW_PALETTE_TYPES
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
 
-const getNodeIcon = (type: string) => {
-  const icons: Record<string, string> = {
-    start: 'i-lucide-play',
-    end: 'i-lucide-square',
-    llm: 'i-lucide-message-square',
-    agent: 'i-lucide-bot',
-    team: 'i-lucide-users',
-    condition: 'i-lucide-git-branch',
-    loop: 'i-lucide-refresh-cw',
-    http: 'i-lucide-download',
-    code: 'i-lucide-upload',
-    delay: 'i-lucide-timer',
-    wait: 'i-lucide-pause-circle',
-    search: 'i-lucide-search',
-    input: 'i-lucide-download',
-    output: 'i-lucide-upload',
-  }
-  return icons[type] || 'i-lucide-message-square'
-}
+const getNodeIcon = (type: string) => getWorkflowNodeMeta(type).icon
 
 const getNodeLabel = (type: string) => {
   return t(`editor.node.${type}` as any)
@@ -1047,6 +1051,8 @@ const startExecutionPoll = (executionId: string) => {
     if (st === 'completed' || st === 'succeeded' || st === 'failed' || st === 'cancelled') {
       stopPolling()
       isPolling.value = false
+      isDebugging.value = false
+      loadExecutionHistory()
       if (st === 'completed' || st === 'succeeded') {
         toast.add({ title: t('editor.debugDone'), color: 'success' })
       } else if (st === 'failed') {
@@ -1240,6 +1246,116 @@ const loadExecutionHistory = async () => {
   const res = await listExecutions(workflowId.value)
   if (res.data) {
     executionLogs.value = res.data
+  }
+}
+
+const EXEC_STATUS_KEYS: Record<string, string> = {
+  pending: 'editor.execStatus.pending',
+  running: 'editor.execStatus.running',
+  debugging: 'editor.execStatus.debugging',
+  waiting: 'editor.execStatus.waiting',
+  completed: 'editor.execStatus.succeeded',
+  succeeded: 'editor.execStatus.succeeded',
+  failed: 'editor.execStatus.failed',
+  cancelled: 'editor.execStatus.cancelled',
+}
+
+function execStatusLabel(status?: string) {
+  if (!status) return ''
+  const key = EXEC_STATUS_KEYS[status]
+  return key ? t(key) : status
+}
+
+function shortExecId(id?: string) {
+  if (!id) return ''
+  return id.length > 8 ? id.slice(0, 8) : id
+}
+
+function truncateText(text: string, max = 80) {
+  const s = (text || '').replace(/\s+/g, ' ').trim()
+  if (!s) return ''
+  return s.length > max ? `${s.slice(0, max)}…` : s
+}
+
+function nodeDisplayName(nodeId?: string) {
+  if (!nodeId) return ''
+  const n = nodes.value.find((x: any) => x.id === nodeId)
+  return (n?.data?.label || n?.label || n?.name || nodeId) as string
+}
+
+function formatExecTime(item: { created_at?: string; started_at?: string | null; completed_at?: string | null }) {
+  const raw = item.completed_at || item.started_at || item.created_at
+  if (!raw) return ''
+  try {
+    return new Date(raw).toLocaleString()
+  } catch {
+    return String(raw)
+  }
+}
+
+function inputPreviewFrom(item: { input?: Record<string, any> | string | null }) {
+  const input = item.input
+  if (!input) return ''
+  if (typeof input === 'string') return truncateText(input, 72)
+  const preferred = input.query ?? input.input ?? input.message ?? input.prompt ?? input.text
+  if (preferred != null && preferred !== '') return truncateText(String(preferred), 72)
+  try {
+    return truncateText(JSON.stringify(input), 72)
+  } catch {
+    return ''
+  }
+}
+
+function historySummary(item: {
+  status?: string
+  error?: string
+  output?: string
+  current_node?: string
+  input?: Record<string, any> | string | null
+}) {
+  if (item.error) return truncateText(item.error, 90)
+  if (item.current_node) {
+    return t('editor.debugAtNode', { name: nodeDisplayName(item.current_node) })
+  }
+  if (item.output) return truncateText(String(item.output), 90)
+  const preview = inputPreviewFrom(item)
+  if (preview) return t('editor.debugInputPreview', { text: preview })
+  return t('editor.debugHistoryNoDetail')
+}
+
+const execInputPreview = computed(() => inputPreviewFrom(currentExecution.value || {}))
+
+const execNodeRunSummary = computed(() => {
+  const runs = currentExecution.value?.node_runs as { status?: string }[] | undefined
+  if (!runs?.length) return ''
+  let ok = 0
+  let fail = 0
+  let running = 0
+  for (const r of runs) {
+    if (r.status === 'succeeded' || r.status === 'completed') ok += 1
+    else if (r.status === 'failed') fail += 1
+    else if (r.status === 'running' || r.status === 'pending') running += 1
+  }
+  return t('editor.debugNodeRuns', { total: runs.length, ok, fail, running })
+})
+
+/** 点历史记录：拉详情、高亮画布；若仍在跑则继续轮询 */
+const selectHistoryExecution = async (executionId: string) => {
+  if (!workflowId.value || !executionId) return
+  const res = await getExecution(workflowId.value, executionId)
+  if (res.error || !res.data) {
+    toast.add({ title: res.error || t('editor.debugLoadFail'), color: 'error' })
+    return
+  }
+  currentExecution.value = res.data
+  applyNodeRunHighlight(res.data)
+  const st = res.data.status
+  if (['running', 'pending', 'debugging'].includes(st)) {
+    isDebugging.value = true
+    startExecutionPoll(executionId)
+  } else {
+    stopPolling()
+    isDebugging.value = false
   }
 }
 
@@ -1724,29 +1840,96 @@ onMounted(() => {
   50% { opacity: 0.5; }
 }
 
+.debug-hint--compact {
+  margin: 0 0 8px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.debug-meta {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cf-ink-muted, #64748b);
+  word-break: break-word;
+}
+
+.debug-output {
+  margin-top: 8px;
+}
+.debug-output pre {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  max-height: 160px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--cf-bg, #f8fafc);
+  border: 1px solid var(--cf-line, #e2e8f0);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .debug-log-item {
+  display: block;
+  width: 100%;
+  text-align: left;
   padding: 8px 12px;
   margin-bottom: 8px;
   background: var(--cf-bg, #f8fafc);
   border-radius: 6px;
   font-size: 12px;
+  border: 1px solid transparent;
   border-left: 3px solid var(--cf-line, #e2e8f0);
+  cursor: pointer;
+}
+.debug-log-item:hover {
+  border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 35%, transparent);
+}
+.debug-log-item.is-selected {
+  border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 55%, transparent);
+  background: color-mix(in oklab, var(--cf-accent, #3b82f6) 8%, #fff);
 }
 
+.debug-log-item.pending,
+.debug-log-item.waiting { border-left-color: #f59e0b; }
+.debug-log-item.running,
+.debug-log-item.debugging,
 .debug-log-item.info { border-left-color: #3b82f6; }
 .debug-log-item.warn { border-left-color: #f59e0b; }
+.debug-log-item.failed,
+.debug-log-item.cancelled,
 .debug-log-item.error { border-left-color: #ef4444; }
+.debug-log-item.completed,
+.debug-log-item.succeeded,
 .debug-log-item.success { border-left-color: #10b981; }
 
-.debug-log-time {
-  color: #94a3b8;
-  font-size: 10px;
+.debug-log-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 4px;
 }
-
+.debug-log-status {
+  font-weight: 600;
+  color: var(--cf-ink, #334155);
+}
+.debug-log-time {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 10px;
+}
 .debug-log-message {
   color: var(--cf-ink, #334155);
-  word-break: break-all;
+  word-break: break-word;
+  line-height: 1.4;
+}
+.debug-log-id {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @media (max-width: 900px) {

@@ -14,70 +14,72 @@
     <Background pattern-color="#aaa" :gap="16" />
     <Controls />
     <MiniMap />
+
+    <template #node-start="{ data }">
+      <WorkflowFlowNode kind="start" :label="data.label" />
+    </template>
+    <template #node-end="{ data }">
+      <WorkflowFlowNode kind="end" :label="data.label" />
+    </template>
     <template #node-llm="{ data }">
-      <div class="flow-node flow-node-llm">
-        <Handle id="t" type="target" :position="Position.Left" />
-        <UIcon name="i-lucide-message-square" class="size-4" />
-        <span>{{ data.label }}</span>
-        <Handle id="s" type="source" :position="Position.Right" />
-      </div>
+      <WorkflowFlowNode kind="llm" :label="data.label" />
+    </template>
+    <template #node-agent="{ data }">
+      <WorkflowFlowNode kind="agent" :label="data.label" />
+    </template>
+    <template #node-team="{ data }">
+      <WorkflowFlowNode kind="team" :label="data.label" />
     </template>
     <template #node-condition="{ data }">
-      <div class="flow-node flow-node-condition">
-        <Handle id="t" type="target" :position="Position.Left" />
-        <UIcon name="i-lucide-git-branch" class="size-4" />
-        <span>{{ data.label }}</span>
-        <Handle id="s-top" type="source" :position="Position.Top" />
-        <Handle id="s-bottom" type="source" :position="Position.Bottom" />
-      </div>
+      <WorkflowFlowNode kind="condition" :label="data.label" />
     </template>
-    <template #node-search="{ data }">
-      <div class="flow-node flow-node-search">
-        <Handle id="t" type="target" :position="Position.Left" />
-        <UIcon name="i-lucide-search" class="size-4" />
-        <span>{{ data.label }}</span>
-        <Handle id="s" type="source" :position="Position.Right" />
-      </div>
+    <template #node-loop="{ data }">
+      <WorkflowFlowNode kind="loop" :label="data.label" />
     </template>
-    <template #node-input="{ data }">
-      <div class="flow-node flow-node-input">
-        <UIcon name="i-lucide-download" class="size-4" />
-        <span>{{ data.label }}</span>
-        <Handle id="s" type="source" :position="Position.Right" />
-      </div>
+    <template #node-http="{ data }">
+      <WorkflowFlowNode kind="http" :label="data.label" />
     </template>
-    <template #node-output="{ data }">
-      <div class="flow-node flow-node-output">
-        <Handle id="t" type="target" :position="Position.Left" />
-        <UIcon name="i-lucide-upload" class="size-4" />
-        <span>{{ data.label }}</span>
-      </div>
+    <template #node-code="{ data }">
+      <WorkflowFlowNode kind="code" :label="data.label" />
+    </template>
+    <template #node-delay="{ data }">
+      <WorkflowFlowNode kind="delay" :label="data.label" />
     </template>
     <template #node-wait="{ data }">
-      <div class="flow-node flow-node-wait">
-        <Handle id="t" type="target" :position="Position.Left" />
-        <UIcon name="i-lucide-pause-circle" class="size-4" />
-        <span>{{ data.label }}</span>
-        <Handle id="s" type="source" :position="Position.Right" />
-      </div>
+      <WorkflowFlowNode kind="wait" :label="data.label" />
+    </template>
+    <template #node-search="{ data }">
+      <WorkflowFlowNode kind="search" :label="data.label" />
+    </template>
+    <template #node-input="{ data }">
+      <WorkflowFlowNode kind="input" :label="data.label" />
+    </template>
+    <template #node-output="{ data }">
+      <WorkflowFlowNode kind="output" :label="data.label" />
     </template>
   </VueFlow>
 </template>
 
 <script setup lang="ts">
-import { VueFlow, Handle, Position, MarkerType, useVueFlow } from '@vue-flow/core'
+import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
+import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
 
 defineProps<{
   nodes: any[]
   edges: any[]
 }>()
 
-/** 工作流边默认带终点箭头，标明执行方向 */
+/**
+ * 箭头端点约定（配合左→右排版）：
+ * - 起点：上游节点右侧 source Handle 中心
+ * - 终点：下游节点左侧 target Handle 中心，带闭合箭头朝向目标
+ * 条件节点：真/假从上下两个 source 出去，减少线交叉
+ */
 const defaultEdgeOptions = {
   animated: true,
   markerEnd: {
@@ -124,41 +126,5 @@ const handleEdgesChange = (changes: any[]) => emit('edges-change', changes)
 .vue-flow :deep(.vue-flow__handle:hover) {
   background: #7c3aed;
   transform: scale(1.2);
-}
-
-.flow-node {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--cf-surface, #fff);
-  border: 1px solid var(--cf-line, #e5e7eb);
-  font-size: 13px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
-}
-
-.flow-node-llm {
-  border-color: #6366f1;
-}
-
-.flow-node-condition {
-  border-color: #f59e0b;
-}
-
-.flow-node-search {
-  border-color: #0ea5e9;
-}
-
-.flow-node-input {
-  border-color: #22c55e;
-}
-
-.flow-node-output {
-  border-color: #a855f7;
-}
-
-.flow-node-wait {
-  border-color: #ea580c;
 }
 </style>
