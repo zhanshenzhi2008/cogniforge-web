@@ -52,7 +52,7 @@
         <CfButton
           tone="secondary"
           icon="i-lucide-bug"
-          @click="showDebugPanel = !showDebugPanel"
+          @click="toggleDebugPanel"
         >
           {{ t('editor.debug') }}
         </CfButton>
@@ -347,6 +347,76 @@
         </div>
       </template>
     </USlideover>
+
+    <!-- 工作流调试侧栏：填输入 JSON → 试跑 → 看节点高亮与历史 -->
+    <aside v-if="showDebugPanel" class="debug-panel" aria-label="debug">
+      <div class="debug-header">
+        <h4>{{ t('editor.debugPanelTitle') }}</h4>
+        <CfButton
+          tone="secondary"
+          size="sm"
+          icon="i-lucide-x"
+          @click="showDebugPanel = false"
+        >
+          {{ t('common.close') }}
+        </CfButton>
+      </div>
+      <div class="debug-body">
+        <p class="debug-hint">{{ t('editor.debugPanelHint') }}</p>
+        <div class="debug-section">
+          <div class="debug-section-title">{{ t('editor.debugInput') }}</div>
+          <UTextarea
+            v-model="debugInput"
+            class="w-full font-mono text-xs"
+            :rows="8"
+            :placeholder='`{\n  "query": "你好"\n}`'
+          />
+        </div>
+        <div class="debug-actions">
+          <CfButton
+            tone="primary"
+            icon="i-lucide-bug"
+            :loading="isDebugging"
+            :disabled="isSmokeTest"
+            @click="startDebug"
+          >
+            {{ t('editor.debugStart') }}
+          </CfButton>
+          <CfButton
+            tone="secondary"
+            icon="i-lucide-refresh-cw"
+            @click="loadExecutionHistory"
+          >
+            {{ t('editor.debugRefreshLogs') }}
+          </CfButton>
+        </div>
+        <div v-if="currentExecution" class="debug-section">
+          <div class="debug-section-title">{{ t('editor.runStatus') }}</div>
+          <div class="debug-status">
+            <span
+              class="debug-status-dot"
+              :class="currentExecution.status"
+            />
+            <span>{{ currentExecution.status }}</span>
+            <span v-if="currentExecution.id" class="debug-log-time">{{ currentExecution.id }}</span>
+          </div>
+          <p v-if="currentExecution.error" class="debug-error">{{ currentExecution.error }}</p>
+        </div>
+        <div class="debug-section">
+          <div class="debug-section-title">{{ t('editor.debugHistory') }}</div>
+          <div v-if="executionLogs.length === 0" class="debug-empty">{{ t('editor.debugHistoryEmpty') }}</div>
+          <div
+            v-for="item in executionLogs.slice(0, 12)"
+            :key="item.id"
+            class="debug-log-item"
+            :class="item.status"
+          >
+            <div class="debug-log-message">{{ item.status }} · {{ item.id }}</div>
+            <div class="debug-log-time">{{ item.created_at || item.started_at || '' }}</div>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
 </template>
 
@@ -924,6 +994,13 @@ const handleBack = () => {
   navigateTo('/workflows')
 }
 
+function toggleDebugPanel() {
+  showDebugPanel.value = !showDebugPanel.value
+  if (showDebugPanel.value) {
+    loadExecutionHistory()
+  }
+}
+
 const startDebug = async () => {
   if (!workflowId.value || isSmokeTest.value) return
   if (!currentWorkflow.value) {
@@ -1300,15 +1377,37 @@ onMounted(() => {
 .debug-panel {
   position: fixed;
   right: 0;
-  top: 56px;
+  top: var(--ui-header-height, 56px);
   bottom: 0;
-  width: 400px;
+  width: min(400px, 92vw);
   background: var(--cf-bg-elevated, #fff);
   border-left: 1px solid var(--cf-line, #e2e8f0);
   display: flex;
   flex-direction: column;
   z-index: 100;
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+}
+.debug-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+.debug-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.debug-empty {
+  font-size: 12px;
+  opacity: 0.55;
+}
+.debug-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #ef4444;
+  word-break: break-word;
 }
 
 .debug-header {
