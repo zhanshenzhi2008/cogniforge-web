@@ -52,9 +52,16 @@
         <CfButton
           tone="secondary"
           icon="i-lucide-bug"
+          class="debug-trigger"
+          :class="{ 'is-active-run': hasActiveExecution && !showDebugPanel }"
           @click="toggleDebugPanel"
         >
           {{ t('editor.debug') }}
+          <span
+            v-if="hasActiveExecution && !showDebugPanel"
+            class="debug-trigger__badge"
+            :data-status="currentExecution?.status"
+          />
         </CfButton>
         <CfButton
           tone="primary"
@@ -347,6 +354,55 @@
         </div>
       </template>
     </USlideover>
+
+    <!-- 侧栏关闭但执行未结束：右下角悬浮提醒，可重新打开 / 审批 / 取消 -->
+    <div
+      v-if="showDebugDock"
+      class="debug-dock"
+      :data-status="currentExecution?.status"
+      role="status"
+    >
+      <div class="debug-dock__main">
+        <span class="debug-status-dot" :class="currentExecution?.status" />
+        <div class="debug-dock__text">
+          <strong>{{ t('editor.debugDockTitle') }}</strong>
+          <span>{{ debugDockSubtitle }}</span>
+        </div>
+      </div>
+      <div class="debug-dock__actions">
+        <CfButton tone="primary" size="sm" icon="i-lucide-panel-right" @click="openDebugPanel">
+          {{ t('editor.debugDockOpen') }}
+        </CfButton>
+        <CfButton
+          v-if="currentExecution?.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
+          tone="primary"
+          size="sm"
+          icon="i-lucide-check"
+          :loading="approving"
+          @click="handleApprove"
+        >
+          {{ t('editor.approve') }}
+        </CfButton>
+        <CfButton
+          v-if="currentExecution?.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
+          tone="danger"
+          size="sm"
+          icon="i-lucide-x"
+          :loading="rejecting"
+          @click="handleReject"
+        >
+          {{ t('editor.reject') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
+          size="sm"
+          icon="i-lucide-square"
+          @click="cancelDebug"
+        >
+          {{ t('editor.cancelRun') }}
+        </CfButton>
+      </div>
+    </div>
 
     <!-- 工作流调试侧栏：填输入 JSON → 试跑 → 看节点高亮与历史 -->
     <aside v-if="showDebugPanel" class="debug-panel" aria-label="debug">
@@ -1063,11 +1119,37 @@ const handleBack = () => {
   navigateTo('/workflows')
 }
 
+const ACTIVE_EXEC_STATUSES = ['running', 'waiting', 'debugging', 'pending'] as const
+
+const hasActiveExecution = computed(() => {
+  const st = currentExecution.value?.status
+  return !!st && (ACTIVE_EXEC_STATUSES as readonly string[]).includes(st)
+})
+
+/** 侧栏关着、但调试/执行还没结束 → 右下角悬浮条 */
+const showDebugDock = computed(() => !showDebugPanel.value && hasActiveExecution.value)
+
+const debugDockSubtitle = computed(() => {
+  const ex = currentExecution.value
+  if (!ex) return ''
+  if (ex.status === 'waiting') {
+    return t('editor.debugDockWaiting', {
+      msg: ex.error || ex.wait_reason || 'approval',
+    })
+  }
+  return t('editor.debugDockRunning', { status: ex.status })
+})
+
 function toggleDebugPanel() {
   showDebugPanel.value = !showDebugPanel.value
   if (showDebugPanel.value) {
     loadExecutionHistory()
   }
+}
+
+function openDebugPanel() {
+  showDebugPanel.value = true
+  loadExecutionHistory()
 }
 
 const startDebug = async () => {
@@ -1445,6 +1527,77 @@ onMounted(() => {
 .drawer-footer-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.debug-trigger {
+  position: relative;
+}
+.debug-trigger.is-active-run {
+  box-shadow: 0 0 0 1px color-mix(in oklab, #ea580c 55%, transparent);
+}
+.debug-trigger__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 0 2px var(--cf-bg-elevated, #fff);
+}
+.debug-trigger__badge[data-status='waiting'] {
+  background: #ea580c;
+  animation: pulse 1s infinite;
+}
+.debug-trigger__badge[data-status='running'],
+.debug-trigger__badge[data-status='debugging'],
+.debug-trigger__badge[data-status='pending'] {
+  animation: pulse 1s infinite;
+}
+
+.debug-dock {
+  position: fixed;
+  right: 16px;
+  bottom: 20px;
+  z-index: 130;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--cf-bg-elevated, #fff);
+  border: 1px solid var(--cf-line, #e2e8f0);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.debug-dock[data-status='waiting'] {
+  border-color: color-mix(in oklab, #ea580c 45%, transparent);
+  background: color-mix(in oklab, #fff7ed 92%, #fff);
+}
+.debug-dock__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.debug-dock__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.debug-dock__text strong {
+  font-size: 13px;
+}
+.debug-dock__text span {
+  opacity: 0.8;
+  word-break: break-word;
+}
+.debug-dock__actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
