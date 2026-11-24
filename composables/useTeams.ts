@@ -166,5 +166,21 @@ export const useTeams = () => {
     }
   }
 
-  return { list, get, create, update, remove, chat, run }
+  const expandPipeline = async (
+    id: string,
+  ): Promise<{ data?: { team?: AgentTeam, workflow?: { id: string, name?: string } }, error?: string }> => {
+    try {
+      const res = await api.post<{ team?: AgentTeam, workflow?: { id: string, name?: string } }>(
+        `/api/v1/teams/${id}/expand-pipeline`,
+        {},
+      )
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    }
+    catch (err: any) {
+      return { error: err.message || '生成流水线失败' }
+    }
+  }
+
+  return { list, get, create, update, remove, chat, run, expandPipeline }
 }

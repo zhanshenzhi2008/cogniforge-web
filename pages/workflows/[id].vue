@@ -232,6 +232,26 @@
             />
           </div>
 
+          <div v-if="selectedNode.type === 'agent'" class="field">
+            <label class="field__label">{{ t('editor.agentPick') }}</label>
+            <USelect
+              v-model="nodeConfig.agentId"
+              class="w-full"
+              :items="agentOptions"
+              :placeholder="t('editor.agentPickPh')"
+              value-key="value"
+            />
+          </div>
+          <div v-if="selectedNode.type === 'agent'" class="field">
+            <label class="field__label">{{ t('editor.userPrompt') }}</label>
+            <UTextarea
+              v-model="nodeConfig.prompt"
+              class="w-full"
+              :rows="4"
+              :placeholder="t('editor.agentPromptPh')"
+            />
+          </div>
+
           <div v-if="selectedNode.type === 'team'" class="field">
             <label class="field__label">{{ t('editor.teamPick') }}</label>
             <USelect
@@ -323,9 +343,24 @@
 
 <script setup lang="ts">
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
+import { MarkerType } from '@vue-flow/core'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
+
+function withEdgeArrow(edge: { id: string, source: string, target: string, [k: string]: any }) {
+  return {
+    ...edge,
+    animated: true,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: '#4f46e5',
+    },
+    style: { stroke: '#4f46e5', strokeWidth: 2, ...(edge.style || {}) },
+  }
+}
 
 /** Same as the list page smoke button: skip the API, only verify the dynamic route + Vue Flow. */
 const CANVAS_SMOKE_ID = '__canvas_smoke__'
@@ -340,6 +375,7 @@ const { t } = useLocale()
 const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, approveExecution, rejectExecution, debug } = useWorkflows()
 const { list: listModels } = useModels()
 const { list: listTeams } = useTeams()
+const { list: listAgents } = useAgents()
 
 const canvasRef = ref<HTMLElement>()
 
@@ -373,6 +409,7 @@ const nodeConfig = reactive({
   systemPrompt: '',
   prompt: '',
   teamId: '',
+  agentId: '',
   description: '',
   query: '',
   variable: '',
@@ -382,6 +419,7 @@ const nodeConfig = reactive({
 })
 
 const teamOptions = ref<{ label: string, value: string }[]>([])
+const agentOptions = ref<{ label: string, value: string }[]>([])
 
 const currentWorkflow = ref<any>(null)
 
@@ -499,15 +537,19 @@ const loadWorkflow = async () => {
                   prompt: n.data?.prompt || n.config?.task || n.config?.prompt || '',
                 }
               : {}),
+            ...(n.type === 'agent'
+              ? {
+                  agentId: n.data?.agentId || n.config?.agent_id || '',
+                  prompt: n.data?.prompt || n.config?.prompt || '',
+                }
+              : {}),
           },
         })) || []
 
-        edges.value = def.edges?.map((e: any) => ({
+        edges.value = def.edges?.map((e: any) => withEdgeArrow({
           id: e.id,
           source: e.source,
           target: e.target,
-          animated: true,
-          style: { stroke: '#4f46e5' },
         })) || []
       } catch {
         nodes.value = []
@@ -588,12 +630,11 @@ const handleEdgesChange = (changes: any[]) => {
 }
 
 const handleConnect = (params: any) => {
-  edges.value.push({
+  edges.value.push(withEdgeArrow({
     id: `e${params.source}-${params.target}`,
     source: params.source,
     target: params.target,
-    animated: true,
-  })
+  }))
 }
 
 const addNode = (type: string) => {
@@ -615,6 +656,7 @@ const handleNodeClick = (event: any) => {
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
   nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
+  nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
   nodeConfig.variable = event.node.data?.variable || ''
@@ -641,6 +683,7 @@ const saveNodeConfig = () => {
       systemPrompt: nodeConfig.systemPrompt,
       prompt: nodeConfig.prompt,
       teamId: nodeConfig.teamId,
+      agentId: nodeConfig.agentId,
       description: nodeConfig.description,
       query: nodeConfig.query,
       variable: nodeConfig.variable,
@@ -682,6 +725,7 @@ const handleSave = async () => {
           systemPrompt: n.data?.systemPrompt,
           prompt: n.data?.prompt,
           teamId: n.data?.teamId,
+          agentId: n.data?.agentId,
           description: n.data?.description,
           query: n.data?.query,
           variable: n.data?.variable,
@@ -701,7 +745,12 @@ const handleSave = async () => {
                 task: n.data?.prompt || '',
                 prompt: n.data?.prompt || '',
               }
-            : undefined,
+            : n.type === 'agent'
+              ? {
+                  agent_id: n.data?.agentId || '',
+                  prompt: n.data?.prompt || '',
+                }
+              : undefined,
       })),
       edges: edges.value.map(e => ({
         id: e.id,
@@ -954,6 +1003,11 @@ onMounted(() => {
     teamOptions.value = (res.data || [])
       .filter(t => t.id)
       .map(t => ({ label: t.name || t.id, value: t.id }))
+  })
+  listAgents().then((res) => {
+    agentOptions.value = (res.data || [])
+      .filter(a => a.id)
+      .map(a => ({ label: a.name || a.id, value: a.id }))
   })
   nextTick(() => {
     const palette = document.querySelector('.node-palette')

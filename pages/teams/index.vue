@@ -34,6 +34,14 @@
           <UButton size="sm" variant="soft" @click="openPreview(team)">
             {{ t('teams.preview') }}
           </UButton>
+          <UButton
+            size="sm"
+            variant="outline"
+            :loading="expandingId === team.id"
+            @click="expandPipeline(team)"
+          >
+            {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
+          </UButton>
           <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
             {{ t('common.delete') }}
           </UButton>
@@ -145,9 +153,11 @@ definePageMeta({ layout: 'default' })
 
 const toast = useToast()
 const { t } = useLocale()
-const { list, create, remove, chat } = useTeams()
+const router = useRouter()
+const { list, create, remove, chat, expandPipeline: apiExpandPipeline } = useTeams()
 const { list: listAgents } = useAgents()
 const { list: listConversations, get: getConversation } = useConversations()
+const expandingId = ref('')
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
 
@@ -326,6 +336,30 @@ async function sendPreview() {
   }
   finally {
     previewBusy.value = false
+  }
+}
+
+async function expandPipeline(team: AgentTeam) {
+  if (expandingId.value) return
+  // 已绑定且用户点「打开」：直接进画布；若要重生成仍走 API（同按钮 regenerates then open）
+  expandingId.value = team.id
+  try {
+    const res = await apiExpandPipeline(team.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    const wfId = res.data?.workflow?.id || res.data?.team?.workflow_id
+    if (!wfId) {
+      toast.add({ title: t('teams.genPipelineFail'), color: 'error' })
+      return
+    }
+    toast.add({ title: t('teams.genPipelineOk'), color: 'success' })
+    await fetchAll()
+    await router.push(`/workflows/${wfId}`)
+  }
+  finally {
+    expandingId.value = ''
   }
 }
 
