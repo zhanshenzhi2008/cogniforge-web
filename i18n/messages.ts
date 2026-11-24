@@ -901,6 +901,38 @@ export const M = {
   'editor.pickKnowledge': { 'zh-CN': '请选择知识库', 'en-US': 'Select a knowledge base' },
   'editor.knowledgeBase': { 'zh-CN': '知识库', 'en-US': 'Knowledge base' },
   'editor.searchTopK': { 'zh-CN': '返回条数 Top-K', 'en-US': 'Top-K' },
+  'editor.searchMinScore': { 'zh-CN': '最低相似度', 'en-US': 'Min score' },
+  'editor.searchMode': { 'zh-CN': '检索方式', 'en-US': 'Search mode' },
+  'editor.searchModeInherit': { 'zh-CN': '跟知识库默认', 'en-US': 'Use knowledge base default' },
+  'editor.searchRerank': { 'zh-CN': 'Rerank', 'en-US': 'Rerank' },
+  'editor.searchRerankModel': { 'zh-CN': 'Rerank 模型', 'en-US': 'Rerank model' },
+  'editor.searchRerankInherit': { 'zh-CN': '跟知识库默认', 'en-US': 'Use knowledge base default' },
+  'editor.searchRerankOn': { 'zh-CN': '本次开启', 'en-US': 'Enable for this run' },
+  'editor.searchRerankOff': { 'zh-CN': '本次关闭', 'en-US': 'Disable for this run' },
+  'editor.searchHybridWeight': { 'zh-CN': '混合：语义权重', 'en-US': 'Hybrid: semantic weight' },
+  'editor.searchHybridWeightHint': {
+    'zh-CN': '0～1；留空跟库默认。语义权重 + 关键字权重 = 1',
+    'en-US': '0–1; empty uses KB default. Semantic + keyword = 1',
+  },
+  'editor.searchHybridWeightValue': {
+    'zh-CN': '语义 {semantic}% / 关键字 {keyword}%',
+    'en-US': 'semantic {semantic}% / keyword {keyword}%',
+  },
+  'editor.searchKbDefaults': { 'zh-CN': '知识库默认检索', 'en-US': 'Knowledge base defaults' },
+  'editor.searchKbDefaultsHint': {
+    'zh-CN': '只读：来自该知识库「设置」。要改库默认请去知识库页；下面可做本次覆盖',
+    'en-US': 'Read-only from KB settings. Override below for this node only.',
+  },
+  'editor.searchOverrideTitle': { 'zh-CN': '本次覆盖（可选）', 'en-US': 'Overrides for this node (optional)' },
+  'editor.searchOverrideHint': {
+    'zh-CN': '不填 /「跟知识库默认」= 用上面库配置；填了只影响这一次节点',
+    'en-US': 'Leave empty / inherit to use KB defaults; filled values apply only to this node',
+  },
+  'editor.searchInheritPh': { 'zh-CN': '留空 = 跟库默认', 'en-US': 'Empty = KB default' },
+  'editor.searchTopKHint': {
+    'zh-CN': '填 0 或留空表示跟库默认',
+    'en-US': '0 or empty = use KB default',
+  },
   'editor.searchQueryHint': {
     'zh-CN': '可用 {{query}} 引用试跑输入；留空则自动用流程输入里的 query',
     'en-US': 'Use {{query}} for run input; empty falls back to input.query',
