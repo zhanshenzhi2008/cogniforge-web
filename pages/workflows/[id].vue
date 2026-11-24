@@ -426,8 +426,10 @@
             {{ t('editor.debugRefreshLogs') }}
           </CfButton>
         </div>
+        <!-- 主区：只聚焦「这一次」试跑；审批/步骤都属于它 -->
         <div v-if="currentExecution" class="debug-section">
-          <div class="debug-section-title">{{ t('editor.runStatus') }}</div>
+          <div class="debug-section-title">{{ t('editor.debugThisRun') }}</div>
+          <p class="debug-hint debug-hint--compact">{{ t('editor.debugThisRunHint') }}</p>
           <div class="debug-status" :data-status="currentExecution.status">
             <span
               class="debug-status-dot"
@@ -437,6 +439,9 @@
             <span v-if="currentExecution.id" class="debug-log-time" :title="currentExecution.id">
               {{ shortExecId(currentExecution.id) }}
             </span>
+          </div>
+          <div v-if="execInputPreview" class="debug-meta">
+            {{ t('editor.debugInputPreview', { text: execInputPreview }) }}
           </div>
           <p v-if="currentExecution.current_node" class="debug-meta">
             {{ t('editor.debugAtNode', { name: nodeDisplayName(currentExecution.current_node) }) }}
@@ -451,16 +456,7 @@
             }) }}
           </p>
           <p v-else-if="currentExecution.error" class="debug-error">{{ currentExecution.error }}</p>
-          <div v-if="execNodeRunSummary" class="debug-meta">{{ execNodeRunSummary }}</div>
-          <div v-if="currentExecution.output" class="debug-output">
-            <div class="debug-section-title">{{ t('editor.debugOutput') }}</div>
-            <pre>{{ truncateText(String(currentExecution.output), 800) }}</pre>
-          </div>
-          <div v-if="execInputPreview" class="debug-meta">
-            {{ t('editor.debugInputPreview', { text: execInputPreview }) }}
-          </div>
 
-          <!-- waiting 审批：放在侧栏状态旁，避免被侧栏挡住顶栏按钮 -->
           <div
             v-if="currentExecution.status === 'waiting'"
             class="debug-wait-actions"
@@ -519,27 +515,68 @@
               {{ t('editor.cancelRun') }}
             </CfButton>
           </div>
-        </div>
-        <div class="debug-section">
-          <div class="debug-section-title">{{ t('editor.debugHistory') }}</div>
-          <p class="debug-hint debug-hint--compact">{{ t('editor.debugHistoryHint') }}</p>
-          <div v-if="executionLogs.length === 0" class="debug-empty">{{ t('editor.debugHistoryEmpty') }}</div>
-          <button
-            v-for="item in executionLogs.slice(0, 12)"
-            :key="item.id"
-            type="button"
-            class="debug-log-item"
-            :class="[item.status, { 'is-selected': currentExecution?.id === item.id }]"
-            @click="selectHistoryExecution(item.id)"
-          >
-            <div class="debug-log-row">
-              <span class="debug-status-dot" :class="item.status" />
-              <span class="debug-log-status">{{ execStatusLabel(item.status) }}</span>
-              <span class="debug-log-time">{{ formatExecTime(item) }}</span>
+
+          <div class="debug-timeline">
+            <div class="debug-section-title">{{ t('editor.debugTimeline') }}</div>
+            <p class="debug-hint debug-hint--compact">{{ t('editor.debugTimelineHint') }}</p>
+            <div v-if="execTimeline.length === 0" class="debug-empty">{{ t('editor.debugTimelineEmpty') }}</div>
+            <div
+              v-for="(step, idx) in execTimeline"
+              :key="step.key"
+              class="debug-timeline__item"
+              :data-status="step.status"
+            >
+              <span class="debug-timeline__idx">{{ idx + 1 }}</span>
+              <span class="debug-status-dot" :class="step.status" />
+              <div class="debug-timeline__body">
+                <div class="debug-timeline__title">
+                  <UIcon :name="getNodeIcon(step.nodeType)" class="size-3.5" />
+                  <span>{{ step.label }}</span>
+                  <span class="debug-timeline__status">{{ execStatusLabel(step.status) }}</span>
+                </div>
+                <div v-if="step.note" class="debug-timeline__note">{{ step.note }}</div>
+              </div>
             </div>
-            <div class="debug-log-message">{{ historySummary(item) }}</div>
-            <div class="debug-log-id" :title="item.id">{{ shortExecId(item.id) }}</div>
+          </div>
+
+          <div v-if="currentExecution.output" class="debug-output">
+            <div class="debug-section-title">{{ t('editor.debugOutput') }}</div>
+            <pre>{{ truncateText(String(currentExecution.output), 800) }}</pre>
+          </div>
+        </div>
+
+        <!-- 更早试跑：默认折叠，避免和「这一次」抢视线 -->
+        <div class="debug-section">
+          <button
+            type="button"
+            class="debug-history-toggle"
+            @click="showOlderRuns = !showOlderRuns"
+          >
+            <span>{{ t('editor.debugOlderRuns', { n: olderHistoryItems.length }) }}</span>
+            <UIcon :name="showOlderRuns ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="size-4" />
           </button>
+          <p class="debug-hint debug-hint--compact">{{ t('editor.debugHistoryHint') }}</p>
+          <template v-if="showOlderRuns">
+            <div v-if="olderHistoryItems.length === 0" class="debug-empty">{{ t('editor.debugHistoryEmpty') }}</div>
+            <button
+              v-for="row in olderHistoryItems"
+              :key="row.item.id"
+              type="button"
+              class="debug-log-item"
+              :class="[row.item.status, { 'is-selected': currentExecution?.id === row.item.id }]"
+              @click="selectHistoryExecution(row.item.id)"
+            >
+              <div class="debug-log-row">
+                <span class="debug-log-index">#{{ row.index }}</span>
+                <span class="debug-status-dot" :class="row.item.status" />
+                <span class="debug-log-status">{{ execStatusLabel(row.item.status) }}</span>
+                <span class="debug-log-time">{{ formatExecTime(row.item) }}</span>
+              </div>
+              <div class="debug-log-message">{{ row.primary }}</div>
+              <div v-if="row.secondary" class="debug-log-secondary">{{ row.secondary }}</div>
+              <div class="debug-log-id" :title="row.item.id">{{ shortExecId(row.item.id) }}</div>
+            </button>
+          </template>
         </div>
       </div>
     </aside>
@@ -640,6 +677,8 @@ const showDebugPanel = ref(false)
 const debugInput = ref('{}')
 const currentExecution = ref<any>(null)
 const executionLogs = ref<any[]>([])
+/** 更早试跑默认折叠，主区只看这一次 */
+const showOlderRuns = ref(false)
 const isDebugging = ref(false)
 const debugPollInterval = ref<number | null>(null)
 const isPolling = ref(false)
@@ -1299,37 +1338,123 @@ function inputPreviewFrom(item: { input?: Record<string, any> | string | null })
   }
 }
 
-function historySummary(item: {
+/** 列表主文案：优先「这次试跑输入了什么」，方便区分多次点击 */
+function historyPrimary(item: {
   status?: string
   error?: string
   output?: string
   current_node?: string
   input?: Record<string, any> | string | null
 }) {
-  if (item.error) return truncateText(item.error, 90)
+  const preview = inputPreviewFrom(item)
+  if (preview) return t('editor.debugInputPreview', { text: preview })
+  if (item.output) return truncateText(String(item.output), 90)
   if (item.current_node) {
     return t('editor.debugAtNode', { name: nodeDisplayName(item.current_node) })
   }
-  if (item.output) return truncateText(String(item.output), 90)
-  const preview = inputPreviewFrom(item)
-  if (preview) return t('editor.debugInputPreview', { text: preview })
   return t('editor.debugHistoryNoDetail')
 }
 
+function historySecondary(item: {
+  status?: string
+  error?: string
+  current_node?: string
+  started_at?: string | null
+  created_at?: string
+}) {
+  const parts: string[] = []
+  if (item.status === 'cancelled') {
+    parts.push(t('editor.debugHistoryCancelled'))
+  } else if (item.error && item.status === 'failed') {
+    parts.push(truncateText(item.error, 72))
+  } else if (item.current_node) {
+    parts.push(t('editor.debugAtNode', { name: nodeDisplayName(item.current_node) }))
+  }
+  // 很久还显示「运行中」：多半是上次没取消干净，提示一下
+  if (['running', 'debugging', 'pending'].includes(item.status || '')) {
+    const raw = item.started_at || item.created_at
+    if (raw) {
+      const ageMs = Date.now() - new Date(raw).getTime()
+      if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
+        parts.push(t('editor.debugHistoryStale'))
+      }
+    }
+  }
+  return parts.filter(Boolean).join(' · ')
+}
+
+/** 列表用：#1 = 最新一次 */
+const historyItems = computed(() => {
+  const list = (executionLogs.value || []).slice(0, 12)
+  return list.map((item, i) => ({
+    item,
+    index: i + 1,
+    primary: historyPrimary(item),
+    secondary: historySecondary(item),
+  }))
+})
+
+/** 更早试跑：排除当前正在看的那一次 */
+const olderHistoryItems = computed(() => {
+  const curId = currentExecution.value?.id
+  return historyItems.value.filter(row => row.item.id !== curId)
+})
+
 const execInputPreview = computed(() => inputPreviewFrom(currentExecution.value || {}))
 
-const execNodeRunSummary = computed(() => {
-  const runs = currentExecution.value?.node_runs as { status?: string }[] | undefined
-  if (!runs?.length) return ''
-  let ok = 0
-  let fail = 0
-  let running = 0
-  for (const r of runs) {
-    if (r.status === 'succeeded' || r.status === 'completed') ok += 1
-    else if (r.status === 'failed') fail += 1
-    else if (r.status === 'running' || r.status === 'pending') running += 1
+/** 这一次试跑的步骤时间线（审批挂在 wait 步骤说明里） */
+const execTimeline = computed(() => {
+  const ex = currentExecution.value
+  if (!ex) return [] as {
+    key: string
+    nodeType: string
+    label: string
+    status: string
+    note: string
+  }[]
+  const runs = (ex.node_runs || []) as {
+    id?: string
+    node_id: string
+    node_type?: string
+    status?: string
+    error?: string
+    attempt?: number
+    duration_ms?: number
+  }[]
+  if (!runs.length) {
+    if (ex.current_node) {
+      return [{
+        key: `cur-${ex.current_node}`,
+        nodeType: 'default',
+        label: nodeDisplayName(ex.current_node),
+        status: ex.status === 'waiting' ? 'waiting' : (ex.status || 'running'),
+        note: ex.status === 'waiting' ? t('editor.debugTimelineWaiting') : '',
+      }]
+    }
+    return []
   }
-  return t('editor.debugNodeRuns', { total: runs.length, ok, fail, running })
+  return runs.map((r, i) => {
+    const nodeType = r.node_type || 'default'
+    const label = nodeDisplayName(r.node_id) || r.node_id
+    let note = ''
+    if (r.error) note = truncateText(r.error, 80)
+    else if (nodeType === 'wait' || r.status === 'waiting') {
+      if (ex.status === 'waiting' && ex.current_node === r.node_id) {
+        note = t('editor.debugTimelineWaiting')
+      } else if (r.status === 'succeeded' || r.status === 'completed') {
+        note = t('editor.debugTimelineApproved')
+      }
+    } else if (r.duration_ms != null && r.duration_ms > 0) {
+      note = t('editor.debugTimelineMs', { ms: r.duration_ms })
+    }
+    return {
+      key: r.id || `${r.node_id}-${r.attempt || i}`,
+      nodeType,
+      label,
+      status: r.status || 'pending',
+      note,
+    }
+  })
 })
 
 /** 点历史记录：拉详情、高亮画布；若仍在跑则继续轮询 */
@@ -1871,6 +1996,83 @@ onMounted(() => {
   gap: 6px;
   margin-bottom: 4px;
 }
+.debug-history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  border-radius: 8px;
+  background: var(--cf-bg, #f8fafc);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cf-ink, #334155);
+  cursor: pointer;
+}
+.debug-history-toggle:hover {
+  border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 40%, transparent);
+}
+
+.debug-timeline {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--cf-line, #e2e8f0);
+}
+.debug-timeline__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--cf-line, #e2e8f0) 70%, transparent);
+}
+.debug-timeline__item:last-child {
+  border-bottom: 0;
+}
+.debug-timeline__idx {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  line-height: 16px;
+}
+.debug-timeline__body {
+  min-width: 0;
+  flex: 1;
+}
+.debug-timeline__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cf-ink, #334155);
+}
+.debug-timeline__status {
+  margin-left: auto;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--cf-ink-soft, #64748b);
+}
+.debug-timeline__note {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--cf-ink-soft, #64748b);
+  word-break: break-word;
+}
+.debug-timeline__item[data-status='waiting'] .debug-timeline__note {
+  color: #c2410c;
+}
+
+.debug-log-index {
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--cf-ink-soft, #64748b);
+}
 .debug-log-status {
   font-weight: 600;
   color: var(--cf-ink, #334155);
@@ -1882,6 +2084,13 @@ onMounted(() => {
 }
 .debug-log-message {
   color: var(--cf-ink, #334155);
+  word-break: break-word;
+  line-height: 1.4;
+}
+.debug-log-secondary {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--cf-ink-soft, #64748b);
   word-break: break-word;
   line-height: 1.4;
 }
