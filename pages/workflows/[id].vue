@@ -43,6 +43,14 @@
         </CfButton>
         <CfButton
           tone="secondary"
+          icon="i-lucide-layout-grid"
+          :disabled="nodes.length === 0"
+          @click="tidyLayout"
+        >
+          {{ t('editor.tidyLayout') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
           icon="i-lucide-bug"
           @click="showDebugPanel = !showDebugPanel"
         >
@@ -135,6 +143,7 @@
       <div ref="canvasRef" class="canvas-container">
         <ClientOnly>
           <WorkflowCanvas
+            ref="flowCanvasRef"
             :nodes="nodes"
             :edges="edges"
             @node-click="handleNodeClick"
@@ -344,6 +353,7 @@
 <script setup lang="ts">
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
+import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
@@ -378,6 +388,7 @@ const { list: listTeams } = useTeams()
 const { list: listAgents } = useAgents()
 
 const canvasRef = ref<HTMLElement>()
+const flowCanvasRef = ref<{ fitCanvas?: () => void } | null>(null)
 
 const workflowId = computed(() => {
   const raw = route.params.id
@@ -635,6 +646,16 @@ const handleConnect = (params: any) => {
     source: params.source,
     target: params.target,
   }))
+}
+
+/** 整理布局：按连线自动排成从左到右的整齐流水线 */
+function tidyLayout() {
+  if (!nodes.value.length) return
+  nodes.value = layoutWorkflowNodes(nodes.value, edges.value)
+  toast.add({ title: t('editor.tidyLayoutOk'), color: 'success' })
+  nextTick(() => {
+    flowCanvasRef.value?.fitCanvas?.()
+  })
 }
 
 const addNode = (type: string) => {

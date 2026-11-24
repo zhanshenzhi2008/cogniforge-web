@@ -790,6 +790,8 @@ export const M = {
   'editor.backList': { 'zh-CN': '返回列表', 'en-US': 'Back to list' },
   'editor.routeTest': { 'zh-CN': '路由测试', 'en-US': 'Route test' },
   'editor.debug': { 'zh-CN': '调试', 'en-US': 'Debug' },
+  'editor.tidyLayout': { 'zh-CN': '整理布局', 'en-US': 'Tidy layout' },
+  'editor.tidyLayoutOk': { 'zh-CN': '已按连线重新排版', 'en-US': 'Canvas rearranged' },
   'editor.run': { 'zh-CN': '执行', 'en-US': 'Run' },
   'editor.nodes': { 'zh-CN': '节点', 'en-US': 'Nodes' },
   'editor.loading': { 'zh-CN': '加载画布中...', 'en-US': 'Loading canvas…' },
