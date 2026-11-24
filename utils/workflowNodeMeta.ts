@@ -31,7 +31,7 @@ export interface WorkflowNodeMeta {
 
 export const WORKFLOW_NODE_META: Record<WorkflowNodeKind, WorkflowNodeMeta> = {
   start: { icon: 'i-lucide-play', tone: 'start', handles: 'start' },
-  end: { icon: 'i-lucide-flag', tone: 'end', handles: 'end' },
+  end: { icon: 'i-lucide-circle-check', tone: 'end', handles: 'end' },
   llm: { icon: 'i-lucide-message-square', tone: 'llm', handles: 'io' },
   agent: { icon: 'i-lucide-bot', tone: 'agent', handles: 'io' },
   team: { icon: 'i-lucide-users', tone: 'team', handles: 'io' },
