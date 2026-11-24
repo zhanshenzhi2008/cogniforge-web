@@ -339,25 +339,110 @@
             />
           </div>
 
-          <div v-if="selectedNode.type === 'search'" class="field">
-            <label class="field__label">{{ t('editor.knowledgeBase') }}</label>
-            <USelect
-              v-model="nodeConfig.knowledgeBaseId"
-              class="w-full"
-              :items="kbOptions"
-              :placeholder="t('editor.pickKnowledge')"
-              value-key="value"
-            />
-          </div>
-          <div v-if="selectedNode.type === 'search'" class="field">
-            <label class="field__label">{{ t('editor.query') }}</label>
-            <UInput v-model="nodeConfig.query" class="w-full" :placeholder="t('editor.queryPh')" />
-            <p class="field__hint">{{ t('editor.searchQueryHint') }}</p>
-          </div>
-          <div v-if="selectedNode.type === 'search'" class="field">
-            <label class="field__label">{{ t('editor.searchTopK') }}</label>
-            <UInput v-model.number="nodeConfig.topK" type="number" class="w-full" :min="1" :max="20" />
-          </div>
+          <template v-if="selectedNode.type === 'search'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.knowledgeBase') }}</label>
+              <USelect
+                v-model="nodeConfig.knowledgeBaseId"
+                class="w-full"
+                :items="kbOptions"
+                :placeholder="t('editor.pickKnowledge')"
+                value-key="value"
+              />
+            </div>
+
+            <div v-if="selectedKBDefaults" class="kb-defaults">
+              <div class="kb-defaults__title">{{ t('editor.searchKbDefaults') }}</div>
+              <p class="field__hint">{{ t('editor.searchKbDefaultsHint') }}</p>
+              <dl class="kb-defaults__grid">
+                <div><dt>{{ t('editor.searchMode') }}</dt><dd>{{ selectedKBDefaults.modeLabel }}</dd></div>
+                <div><dt>{{ t('editor.searchTopK') }}</dt><dd>{{ selectedKBDefaults.topK }}</dd></div>
+                <div><dt>{{ t('editor.searchMinScore') }}</dt><dd>{{ selectedKBDefaults.minScore }}</dd></div>
+                <div><dt>{{ t('editor.searchRerank') }}</dt><dd>{{ selectedKBDefaults.rerankLabel }}</dd></div>
+                <div v-if="selectedKBDefaults.mode === 'hybrid'" class="kb-defaults__span">
+                  <dt>{{ t('editor.searchHybridWeight') }}</dt>
+                  <dd>{{ selectedKBDefaults.hybridLabel }}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div class="field">
+              <label class="field__label">{{ t('editor.searchOverrideTitle') }}</label>
+              <p class="field__hint">{{ t('editor.searchOverrideHint') }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.searchMode') }}</label>
+              <USelect
+                v-model="nodeConfig.searchMode"
+                class="w-full"
+                :items="searchModeOptions"
+                value-key="value"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.searchTopK') }}</label>
+              <UInput
+                v-model.number="nodeConfig.topK"
+                type="number"
+                class="w-full"
+                :min="0"
+                :max="20"
+                :placeholder="t('editor.searchInheritPh')"
+              />
+              <p class="field__hint">{{ t('editor.searchTopKHint') }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.searchMinScore') }}</label>
+              <UInput
+                v-model.number="nodeConfig.minScore"
+                type="number"
+                class="w-full"
+                :min="0"
+                :max="1"
+                :step="0.05"
+                :placeholder="t('editor.searchInheritPh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.searchRerank') }}</label>
+              <USelect
+                v-model="nodeConfig.rerankMode"
+                class="w-full"
+                :items="rerankModeOptions"
+                value-key="value"
+              />
+            </div>
+            <div v-if="nodeConfig.rerankMode === 'on'" class="field">
+              <label class="field__label">{{ t('editor.searchRerankModel') }}</label>
+              <USelect
+                v-model="nodeConfig.rerankProviderId"
+                class="w-full"
+                :items="rerankProviderOptions"
+                value-key="value"
+                :placeholder="rerankSelectPlaceholder"
+                :disabled="!rerankProviderOptions.length"
+              />
+            </div>
+            <div v-if="effectiveSearchMode === 'hybrid'" class="field">
+              <label class="field__label">{{ t('editor.searchHybridWeight') }}</label>
+              <UInput
+                v-model.number="nodeConfig.hybridSemanticWeight"
+                type="number"
+                class="w-full"
+                :min="0"
+                :max="1"
+                :step="0.05"
+                :placeholder="t('editor.searchInheritPh')"
+              />
+              <p class="field__hint">{{ t('editor.searchHybridWeightHint') }}</p>
+            </div>
+
+            <div class="field">
+              <label class="field__label">{{ t('editor.query') }}</label>
+              <UInput v-model="nodeConfig.query" class="w-full" :placeholder="t('editor.queryPh')" />
+              <p class="field__hint">{{ t('editor.searchQueryHint') }}</p>
+            </div>
+          </template>
 
           <div v-if="selectedNode.type === 'input' || selectedNode.type === 'output'" class="field">
             <label class="field__label">{{ t('editor.variable') }}</label>
@@ -591,7 +676,8 @@ import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNod
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
-import { useKnowledgeBases } from '@/composables/useKnowledgeBases'
+import { useKnowledgeBases, type KnowledgeBase } from '@/composables/useKnowledgeBases'
+import { useProviders, hasCap, rerankModelLabel } from '@/composables/useProviders'
 
 function withEdgeArrow(edge: { id: string, source: string, target: string, [k: string]: any }) {
   return {
@@ -622,6 +708,7 @@ const { list: listModels } = useModels()
 const { list: listTeams } = useTeams()
 const { list: listAgents } = useAgents()
 const { listKBs } = useKnowledgeBases()
+const { list: listProviders } = useProviders()
 
 const canvasRef = ref<HTMLElement>()
 const flowCanvasRef = ref<{ fitCanvas?: () => void } | null>(null)
@@ -660,7 +747,12 @@ const nodeConfig = reactive({
   knowledgeBaseId: '',
   description: '',
   query: '',
-  topK: 5,
+  topK: 0,
+  minScore: 0,
+  searchMode: '',
+  rerankMode: 'inherit' as 'inherit' | 'on' | 'off',
+  rerankProviderId: '',
+  hybridSemanticWeight: null as number | null,
   variable: '',
   waitReason: 'approval',
   waitMessage: '',
@@ -669,7 +761,96 @@ const nodeConfig = reactive({
 
 const teamOptions = ref<{ label: string, value: string }[]>([])
 const agentOptions = ref<{ label: string, value: string }[]>([])
-const kbOptions = ref<{ label: string, value: string }[]>([])
+const kbList = ref<KnowledgeBase[]>([])
+const kbOptions = computed(() =>
+  kbList.value.filter(k => k.id).map(k => ({ label: k.name || k.id, value: k.id })),
+)
+const providers = ref<any[]>([])
+const rerankProviderOptions = computed(() =>
+  providers.value
+    .filter((p: any) => p.enabled !== false && hasCap(p, 'rerank'))
+    .map((p: any) => ({ label: rerankModelLabel(p), value: p.id })),
+)
+const rerankSelectPlaceholder = computed(() =>
+  rerankProviderOptions.value.length ? t('kb.rerankModelPh') : t('kb.rerankModelEmpty'),
+)
+const searchModeOptions = computed(() => [
+  { label: t('editor.searchModeInherit'), value: '' },
+  { label: t('kb.searchModeSemantic'), value: 'semantic' },
+  { label: t('kb.searchModeKeyword'), value: 'keyword' },
+  { label: t('kb.searchModeHybrid'), value: 'hybrid' },
+])
+const rerankModeOptions = computed(() => [
+  { label: t('editor.searchRerankInherit'), value: 'inherit' },
+  { label: t('editor.searchRerankOn'), value: 'on' },
+  { label: t('editor.searchRerankOff'), value: 'off' },
+])
+
+function kbModeParams(kb: KnowledgeBase, mode: string) {
+  const m = (mode || kb.search_mode || 'semantic').toLowerCase()
+  if (m === 'keyword') {
+    return {
+      mode: 'keyword',
+      topK: kb.rag_top_k_keyword ?? kb.rag_top_k ?? 5,
+      minScore: kb.rag_min_score_keyword ?? kb.rag_min_score ?? 0.3,
+      rerank: !!kb.rerank_keyword,
+      rerankProviderId: kb.rerank_provider_keyword || '',
+    }
+  }
+  if (m === 'hybrid') {
+    return {
+      mode: 'hybrid',
+      topK: kb.rag_top_k_hybrid ?? kb.rag_top_k ?? 5,
+      minScore: kb.rag_min_score_hybrid ?? kb.rag_min_score ?? 0.3,
+      rerank: !!kb.rerank_hybrid,
+      rerankProviderId: kb.rerank_provider_hybrid || '',
+    }
+  }
+  return {
+    mode: 'semantic',
+    topK: kb.rag_top_k_semantic ?? kb.rag_top_k ?? 5,
+    minScore: kb.rag_min_score_semantic ?? kb.rag_min_score ?? 0.3,
+    rerank: !!kb.rerank_semantic,
+    rerankProviderId: kb.rerank_provider_semantic || '',
+  }
+}
+
+function searchModeLabel(mode: string) {
+  if (mode === 'keyword') return t('kb.searchModeKeyword')
+  if (mode === 'hybrid') return t('kb.searchModeHybrid')
+  return t('kb.searchModeSemantic')
+}
+
+const selectedKB = computed(() =>
+  kbList.value.find(k => k.id === nodeConfig.knowledgeBaseId) || null,
+)
+
+const effectiveSearchMode = computed(() => {
+  if (nodeConfig.searchMode) return nodeConfig.searchMode
+  return (selectedKB.value?.search_mode || 'semantic').toLowerCase()
+})
+
+const selectedKBDefaults = computed(() => {
+  const kb = selectedKB.value
+  if (!kb) return null
+  const p = kbModeParams(kb, kb.search_mode || 'semantic')
+  const prov = providers.value.find((x: any) => x.id === p.rerankProviderId)
+  const rerankLabel = !p.rerank
+    ? t('editor.searchRerankOff')
+    : (prov ? rerankModelLabel(prov) : (p.rerankProviderId || t('editor.searchRerankOn')))
+  const w = typeof kb.hybrid_semantic_weight === 'number' ? kb.hybrid_semantic_weight : 0.7
+  return {
+    mode: p.mode,
+    modeLabel: searchModeLabel(p.mode),
+    topK: p.topK,
+    minScore: p.minScore,
+    rerankLabel,
+    hybridLabel: t('editor.searchHybridWeightValue', {
+      semantic: Math.round(w * 100),
+      keyword: Math.round((1 - w) * 100),
+    }),
+  }
+})
 
 const currentWorkflow = ref<any>(null)
 
@@ -781,7 +962,12 @@ const loadWorkflow = async () => {
               ? {
                   knowledgeBaseId: n.data?.knowledgeBaseId || n.config?.knowledge_base_id || '',
                   query: n.data?.query || n.config?.query || '',
-                  topK: Number(n.data?.topK || n.config?.top_k || 5),
+                  topK: Number(n.data?.topK ?? n.config?.top_k ?? 0) || 0,
+                  minScore: Number(n.data?.minScore ?? n.config?.min_score ?? 0) || 0,
+                  searchMode: n.data?.searchMode || n.config?.search_mode || '',
+                  rerank: n.data?.rerank ?? n.config?.rerank,
+                  rerankProviderId: n.data?.rerankProviderId || n.config?.rerank_provider_id || '',
+                  hybridSemanticWeight: n.data?.hybridSemanticWeight ?? n.config?.hybrid_semantic_weight,
                 }
               : {}),
           },
@@ -911,7 +1097,15 @@ const handleNodeClick = (event: any) => {
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
-  nodeConfig.topK = Number(event.node.data?.topK || event.node.data?.top_k || 5)
+  nodeConfig.topK = Number(event.node.data?.topK || event.node.data?.top_k || 0) || 0
+  nodeConfig.minScore = Number(event.node.data?.minScore || event.node.data?.min_score || 0) || 0
+  nodeConfig.searchMode = event.node.data?.searchMode || event.node.data?.search_mode || ''
+  if (event.node.data?.rerank === true) nodeConfig.rerankMode = 'on'
+  else if (event.node.data?.rerank === false) nodeConfig.rerankMode = 'off'
+  else nodeConfig.rerankMode = 'inherit'
+  nodeConfig.rerankProviderId = event.node.data?.rerankProviderId || event.node.data?.rerank_provider_id || ''
+  const hy = event.node.data?.hybridSemanticWeight ?? event.node.data?.hybrid_semantic_weight
+  nodeConfig.hybridSemanticWeight = hy == null || hy === '' ? null : Number(hy)
   nodeConfig.variable = event.node.data?.variable || ''
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
@@ -940,7 +1134,14 @@ const saveNodeConfig = () => {
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
       description: nodeConfig.description,
       query: nodeConfig.query,
-      topK: Number(nodeConfig.topK) || 5,
+      topK: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
+      minScore: Number(nodeConfig.minScore) > 0 ? Number(nodeConfig.minScore) : 0,
+      searchMode: nodeConfig.searchMode || '',
+      rerank: nodeConfig.rerankMode === 'inherit' ? undefined : nodeConfig.rerankMode === 'on',
+      rerankProviderId: nodeConfig.rerankMode === 'on' ? nodeConfig.rerankProviderId : '',
+      hybridSemanticWeight: nodeConfig.hybridSemanticWeight == null || nodeConfig.hybridSemanticWeight === ('' as any)
+        ? undefined
+        : Number(nodeConfig.hybridSemanticWeight),
       variable: nodeConfig.variable,
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
@@ -985,6 +1186,11 @@ const handleSave = async () => {
           description: n.data?.description,
           query: n.data?.query,
           topK: n.data?.topK,
+          minScore: n.data?.minScore,
+          searchMode: n.data?.searchMode,
+          rerank: n.data?.rerank,
+          rerankProviderId: n.data?.rerankProviderId,
+          hybridSemanticWeight: n.data?.hybridSemanticWeight,
           variable: n.data?.variable,
           waitReason: n.data?.waitReason,
           waitMessage: n.data?.waitMessage,
@@ -1011,7 +1217,14 @@ const handleSave = async () => {
                 ? {
                     knowledge_base_id: n.data?.knowledgeBaseId || '',
                     query: n.data?.query || '',
-                    top_k: Number(n.data?.topK) || 5,
+                    ...(Number(n.data?.topK) > 0 ? { top_k: Number(n.data.topK) } : {}),
+                    ...(Number(n.data?.minScore) > 0 ? { min_score: Number(n.data.minScore) } : {}),
+                    ...(n.data?.searchMode ? { search_mode: n.data.searchMode } : {}),
+                    ...(n.data?.rerank === true || n.data?.rerank === false ? { rerank: n.data.rerank } : {}),
+                    ...(n.data?.rerankProviderId ? { rerank_provider_id: n.data.rerankProviderId } : {}),
+                    ...(n.data?.hybridSemanticWeight != null && n.data?.hybridSemanticWeight !== ''
+                      ? { hybrid_semantic_weight: Number(n.data.hybridSemanticWeight) }
+                      : {}),
                   }
                 : undefined,
       })),
@@ -1494,9 +1707,10 @@ onMounted(() => {
       .map(a => ({ label: a.name || a.id, value: a.id }))
   })
   listKBs().then((res) => {
-    kbOptions.value = (res.data || [])
-      .filter(k => k.id)
-      .map(k => ({ label: k.name || k.id, value: k.id }))
+    kbList.value = (res.data || []).filter(k => k.id)
+  })
+  listProviders().then((res) => {
+    providers.value = res.data || []
   })
   nextTick(() => {
     const palette = document.querySelector('.node-palette')
@@ -1753,6 +1967,43 @@ onMounted(() => {
   line-height: 1.4;
   color: var(--cf-ink-soft, #64748b);
   opacity: 0.85;
+}
+
+.kb-defaults {
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  background: var(--cf-bg, #f8fafc);
+}
+.kb-defaults__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cf-ink, #334155);
+  margin-bottom: 4px;
+}
+.kb-defaults__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 8px 0 0;
+}
+.kb-defaults__grid > div {
+  min-width: 0;
+}
+.kb-defaults__span {
+  grid-column: 1 / -1;
+}
+.kb-defaults__grid dt {
+  font-size: 10px;
+  color: var(--cf-ink-soft, #64748b);
+  margin: 0 0 2px;
+}
+.kb-defaults__grid dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--cf-ink, #334155);
+  word-break: break-word;
 }
 
 .modal-actions__right {
