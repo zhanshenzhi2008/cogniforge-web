@@ -392,7 +392,7 @@
         </div>
         <div v-if="currentExecution" class="debug-section">
           <div class="debug-section-title">{{ t('editor.runStatus') }}</div>
-          <div class="debug-status">
+          <div class="debug-status" :data-status="currentExecution.status">
             <span
               class="debug-status-dot"
               :class="currentExecution.status"
@@ -400,7 +400,76 @@
             <span>{{ currentExecution.status }}</span>
             <span v-if="currentExecution.id" class="debug-log-time">{{ currentExecution.id }}</span>
           </div>
-          <p v-if="currentExecution.error" class="debug-error">{{ currentExecution.error }}</p>
+          <p
+            v-if="currentExecution.status === 'waiting'"
+            class="debug-wait-msg"
+          >
+            {{ t('editor.waitingBanner', {
+              reason: currentExecution.wait_reason || 'approval',
+              msg: currentExecution.error || '',
+            }) }}
+          </p>
+          <p v-else-if="currentExecution.error" class="debug-error">{{ currentExecution.error }}</p>
+
+          <!-- waiting 审批：放在侧栏状态旁，避免被侧栏挡住顶栏按钮 -->
+          <div
+            v-if="currentExecution.status === 'waiting'"
+            class="debug-wait-actions"
+          >
+            <p class="debug-wait-actions__label">{{ t('editor.debugWaitActions') }}</p>
+            <div class="debug-actions">
+              <CfButton
+                v-if="(currentExecution.wait_reason || 'approval') === 'approval'"
+                tone="primary"
+                size="sm"
+                icon="i-lucide-check"
+                :loading="approving"
+                @click="handleApprove"
+              >
+                {{ t('editor.approve') }}
+              </CfButton>
+              <CfButton
+                v-if="(currentExecution.wait_reason || 'approval') === 'approval'"
+                tone="danger"
+                size="sm"
+                icon="i-lucide-x"
+                :loading="rejecting"
+                @click="handleReject"
+              >
+                {{ t('editor.reject') }}
+              </CfButton>
+              <CfButton
+                tone="secondary"
+                size="sm"
+                icon="i-lucide-play"
+                :loading="resuming"
+                @click="handleResume"
+              >
+                {{ t('editor.resume') }}
+              </CfButton>
+              <CfButton
+                tone="secondary"
+                size="sm"
+                icon="i-lucide-square"
+                @click="cancelDebug"
+              >
+                {{ t('editor.cancelRun') }}
+              </CfButton>
+            </div>
+          </div>
+          <div
+            v-else-if="['running', 'debugging', 'pending'].includes(currentExecution.status)"
+            class="debug-actions"
+          >
+            <CfButton
+              tone="secondary"
+              size="sm"
+              icon="i-lucide-square"
+              @click="cancelDebug"
+            >
+              {{ t('editor.cancelRun') }}
+            </CfButton>
+          </div>
         </div>
         <div class="debug-section">
           <div class="debug-section-title">{{ t('editor.debugHistory') }}</div>
@@ -1033,6 +1102,7 @@ const startDebug = async () => {
     currentExecution.value = { id: res.executionId, status: 'debugging' }
 
     startExecutionPoll(res.executionId!)
+    loadExecutionHistory()
   } catch {
     toast.add({ title: t('editor.debugStartFail'), color: 'error' })
     isDebugging.value = false
@@ -1170,6 +1240,10 @@ onMounted(() => {
   border-bottom: 1px solid var(--cf-line, #e2e8f0);
   background: color-mix(in oklab, var(--cf-accent-soft, #f8fafc) 80%, transparent);
   font-size: 13px;
+  /* 高于调试侧栏，避免右侧「审批」按钮被挡住 */
+  position: sticky;
+  top: 0;
+  z-index: 120;
 }
 .exec-bar[data-status='waiting'] {
   background: color-mix(in oklab, #ffedd5 70%, transparent);
@@ -1449,7 +1523,32 @@ onMounted(() => {
   padding: 12px;
   background: var(--cf-bg, #f8fafc);
   border-radius: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+}
+.debug-status[data-status='waiting'] {
+  background: color-mix(in oklab, #ffedd5 80%, transparent);
+}
+.debug-wait-msg {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9a3412;
+}
+.debug-wait-actions {
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 1px solid color-mix(in oklab, #ea580c 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, #fff7ed 90%, transparent);
+}
+.debug-wait-actions__label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a3412;
+}
+.debug-wait-actions .debug-actions {
+  margin-bottom: 0;
 }
 
 .debug-status-dot {
@@ -1460,8 +1559,12 @@ onMounted(() => {
 
 .debug-status-dot.pending { background: #f59e0b; }
 .debug-status-dot.running { background: #3b82f6; animation: pulse 1s infinite; }
-.debug-status-dot.completed { background: #10b981; }
-.debug-status-dot.failed { background: #ef4444; }
+.debug-status-dot.debugging { background: #3b82f6; animation: pulse 1s infinite; }
+.debug-status-dot.waiting { background: #ea580c; }
+.debug-status-dot.completed,
+.debug-status-dot.succeeded { background: #10b981; }
+.debug-status-dot.failed,
+.debug-status-dot.cancelled { background: #ef4444; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }

@@ -797,6 +797,7 @@ export const M = {
   'editor.debugRefreshLogs': { 'zh-CN': '刷新历史', 'en-US': 'Refresh history' },
   'editor.debugHistory': { 'zh-CN': '最近执行', 'en-US': 'Recent runs' },
   'editor.debugHistoryEmpty': { 'zh-CN': '暂无执行记录', 'en-US': 'No runs yet' },
+  'editor.debugWaitActions': { 'zh-CN': '需要你处理：审批后才会继续跑', 'en-US': 'Action needed: approve to continue' },
   'editor.tidyLayout': { 'zh-CN': '整理布局', 'en-US': 'Tidy layout' },
   'editor.tidyLayoutOk': { 'zh-CN': '已按连线重新排版', 'en-US': 'Canvas rearranged' },
   'editor.run': { 'zh-CN': '执行', 'en-US': 'Run' },
