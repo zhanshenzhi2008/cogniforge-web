@@ -148,5 +148,23 @@ export const useTeams = () => {
     }
   }
 
-  return { list, get, create, update, remove, chat }
+  const run = async (
+    id: string,
+    body: {
+      task: string
+      goal?: string
+      run_state?: TeamRunState | null
+    },
+  ): Promise<{ data?: TeamChatResult, error?: string }> => {
+    try {
+      const res = await api.post<TeamChatResult>(`/api/v1/teams/${id}/run`, body)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    }
+    catch (err: any) {
+      return { error: err.message || '小队任务执行失败' }
+    }
+  }
+
+  return { list, get, create, update, remove, chat, run }
 }

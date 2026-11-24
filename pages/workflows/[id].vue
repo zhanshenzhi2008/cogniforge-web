@@ -232,6 +232,26 @@
             />
           </div>
 
+          <div v-if="selectedNode.type === 'team'" class="field">
+            <label class="field__label">{{ t('editor.teamPick') }}</label>
+            <USelect
+              v-model="nodeConfig.teamId"
+              class="w-full"
+              :items="teamOptions"
+              :placeholder="t('editor.teamPickPh')"
+              value-key="value"
+            />
+          </div>
+          <div v-if="selectedNode.type === 'team'" class="field">
+            <label class="field__label">{{ t('editor.teamTask') }}</label>
+            <UTextarea
+              v-model="nodeConfig.prompt"
+              class="w-full"
+              :rows="4"
+              :placeholder="t('editor.teamTaskPh')"
+            />
+          </div>
+
           <div v-if="selectedNode.type === 'condition'" class="field">
             <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
@@ -319,6 +339,7 @@ const toast = useToast()
 const { t } = useLocale()
 const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, approveExecution, rejectExecution, debug } = useWorkflows()
 const { list: listModels } = useModels()
+const { list: listTeams } = useTeams()
 
 const canvasRef = ref<HTMLElement>()
 
@@ -351,6 +372,7 @@ const nodeConfig = reactive({
   model: '',
   systemPrompt: '',
   prompt: '',
+  teamId: '',
   description: '',
   query: '',
   variable: '',
@@ -358,6 +380,8 @@ const nodeConfig = reactive({
   waitMessage: '',
   timeoutSec: 0,
 })
+
+const teamOptions = ref<{ label: string, value: string }[]>([])
 
 const currentWorkflow = ref<any>(null)
 
@@ -372,7 +396,7 @@ const resuming = ref(false)
 const approving = ref(false)
 const rejecting = ref(false)
 
-const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
+const nodeTypes = ['start', 'end', 'llm', 'agent', 'team', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
@@ -382,7 +406,8 @@ const getNodeIcon = (type: string) => {
     start: 'i-lucide-play',
     end: 'i-lucide-square',
     llm: 'i-lucide-message-square',
-    agent: 'i-lucide-message-square',
+    agent: 'i-lucide-bot',
+    team: 'i-lucide-users',
     condition: 'i-lucide-git-branch',
     loop: 'i-lucide-refresh-cw',
     http: 'i-lucide-download',
@@ -468,6 +493,12 @@ const loadWorkflow = async () => {
           data: {
             label: n.data?.label || getNodeLabel(n.type),
             ...n.data,
+            ...(n.type === 'team'
+              ? {
+                  teamId: n.data?.teamId || n.config?.team_id || '',
+                  prompt: n.data?.prompt || n.config?.task || n.config?.prompt || '',
+                }
+              : {}),
           },
         })) || []
 
@@ -582,7 +613,8 @@ const handleNodeClick = (event: any) => {
   nodeConfig.name = event.node.data?.label || ''
   nodeConfig.model = event.node.data?.model || firstConfiguredModel()
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
-  nodeConfig.prompt = event.node.data?.prompt || ''
+  nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
+  nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
   nodeConfig.variable = event.node.data?.variable || ''
@@ -608,6 +640,7 @@ const saveNodeConfig = () => {
       model: nodeConfig.model,
       systemPrompt: nodeConfig.systemPrompt,
       prompt: nodeConfig.prompt,
+      teamId: nodeConfig.teamId,
       description: nodeConfig.description,
       query: nodeConfig.query,
       variable: nodeConfig.variable,
@@ -648,6 +681,7 @@ const handleSave = async () => {
           model: n.data?.model,
           systemPrompt: n.data?.systemPrompt,
           prompt: n.data?.prompt,
+          teamId: n.data?.teamId,
           description: n.data?.description,
           query: n.data?.query,
           variable: n.data?.variable,
@@ -661,7 +695,13 @@ const handleSave = async () => {
               message: n.data?.waitMessage || '',
               timeout_sec: Number(n.data?.timeoutSec || 0) || undefined,
             }
-          : undefined,
+          : n.type === 'team'
+            ? {
+                team_id: n.data?.teamId || '',
+                task: n.data?.prompt || '',
+                prompt: n.data?.prompt || '',
+              }
+            : undefined,
       })),
       edges: edges.value.map(e => ({
         id: e.id,
@@ -909,6 +949,11 @@ onMounted(() => {
     modelOptions.value = (res.data || [])
       .filter(m => m.id)
       .map(m => ({ label: m.name || m.id, value: m.id }))
+  })
+  listTeams().then((res) => {
+    teamOptions.value = (res.data || [])
+      .filter(t => t.id)
+      .map(t => ({ label: t.name || t.id, value: t.id }))
   })
   nextTick(() => {
     const palette = document.querySelector('.node-palette')
