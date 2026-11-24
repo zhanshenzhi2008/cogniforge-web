@@ -75,10 +75,16 @@
       </div>
     </div>
 
-    <div v-if="currentExecution" class="exec-bar" :data-status="currentExecution.status">
+    <!-- 侧栏打开时状态在侧栏里；关掉后只留这一条，避免和右下角悬浮重复 -->
+    <div
+      v-if="showExecBar"
+      class="exec-bar"
+      :data-status="currentExecution.status"
+      role="status"
+    >
       <span class="exec-bar__label">{{ t('editor.runStatus') }}</span>
       <UBadge size="sm" variant="subtle" :color="execStatusColor(currentExecution.status)">
-        {{ currentExecution.status }}
+        {{ execStatusLabel(currentExecution.status) }}
       </UBadge>
       <span v-if="currentExecution.status === 'waiting'" class="exec-bar__msg">
         {{ t('editor.waitingBanner', {
@@ -91,6 +97,14 @@
       </span>
       <span v-else-if="isPolling" class="exec-bar__msg">{{ t('editor.polling') }}</span>
       <div class="exec-bar__actions">
+        <CfButton
+          tone="secondary"
+          size="sm"
+          icon="i-lucide-panel-right"
+          @click="openDebugPanel"
+        >
+          {{ t('editor.debugDockOpen') }}
+        </CfButton>
         <CfButton
           v-if="currentExecution.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
           tone="primary"
@@ -326,8 +340,23 @@
           </div>
 
           <div v-if="selectedNode.type === 'search'" class="field">
+            <label class="field__label">{{ t('editor.knowledgeBase') }}</label>
+            <USelect
+              v-model="nodeConfig.knowledgeBaseId"
+              class="w-full"
+              :items="kbOptions"
+              :placeholder="t('editor.pickKnowledge')"
+              value-key="value"
+            />
+          </div>
+          <div v-if="selectedNode.type === 'search'" class="field">
             <label class="field__label">{{ t('editor.query') }}</label>
             <UInput v-model="nodeConfig.query" class="w-full" :placeholder="t('editor.queryPh')" />
+            <p class="field__hint">{{ t('editor.searchQueryHint') }}</p>
+          </div>
+          <div v-if="selectedNode.type === 'search'" class="field">
+            <label class="field__label">{{ t('editor.searchTopK') }}</label>
+            <UInput v-model.number="nodeConfig.topK" type="number" class="w-full" :min="1" :max="20" />
           </div>
 
           <div v-if="selectedNode.type === 'input' || selectedNode.type === 'output'" class="field">
@@ -354,55 +383,6 @@
         </div>
       </template>
     </USlideover>
-
-    <!-- 侧栏关闭但执行未结束：右下角悬浮提醒，可重新打开 / 审批 / 取消 -->
-    <div
-      v-if="showDebugDock"
-      class="debug-dock"
-      :data-status="currentExecution?.status"
-      role="status"
-    >
-      <div class="debug-dock__main">
-        <span class="debug-status-dot" :class="currentExecution?.status" />
-        <div class="debug-dock__text">
-          <strong>{{ t('editor.debugDockTitle') }}</strong>
-          <span>{{ debugDockSubtitle }}</span>
-        </div>
-      </div>
-      <div class="debug-dock__actions">
-        <CfButton tone="primary" size="sm" icon="i-lucide-panel-right" @click="openDebugPanel">
-          {{ t('editor.debugDockOpen') }}
-        </CfButton>
-        <CfButton
-          v-if="currentExecution?.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
-          tone="primary"
-          size="sm"
-          icon="i-lucide-check"
-          :loading="approving"
-          @click="handleApprove"
-        >
-          {{ t('editor.approve') }}
-        </CfButton>
-        <CfButton
-          v-if="currentExecution?.status === 'waiting' && (currentExecution.wait_reason || 'approval') === 'approval'"
-          tone="danger"
-          size="sm"
-          icon="i-lucide-x"
-          :loading="rejecting"
-          @click="handleReject"
-        >
-          {{ t('editor.reject') }}
-        </CfButton>
-        <CfButton
-          tone="secondary"
-          size="sm"
-          icon="i-lucide-square"
-          @click="cancelDebug"
-        >
-          {{ t('editor.cancelRun') }}
-        </CfButton>
-      </div>
-    </div>
 
     <!-- 工作流调试侧栏：填输入 JSON → 试跑 → 看节点高亮与历史 -->
     <aside v-if="showDebugPanel" class="debug-panel" aria-label="debug">
@@ -574,6 +554,7 @@ import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNod
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
+import { useKnowledgeBases } from '@/composables/useKnowledgeBases'
 
 function withEdgeArrow(edge: { id: string, source: string, target: string, [k: string]: any }) {
   return {
@@ -603,6 +584,7 @@ const { get, update, execute, listExecutions, getExecution, cancelExecution, res
 const { list: listModels } = useModels()
 const { list: listTeams } = useTeams()
 const { list: listAgents } = useAgents()
+const { listKBs } = useKnowledgeBases()
 
 const canvasRef = ref<HTMLElement>()
 const flowCanvasRef = ref<{ fitCanvas?: () => void } | null>(null)
@@ -638,8 +620,10 @@ const nodeConfig = reactive({
   prompt: '',
   teamId: '',
   agentId: '',
+  knowledgeBaseId: '',
   description: '',
   query: '',
+  topK: 5,
   variable: '',
   waitReason: 'approval',
   waitMessage: '',
@@ -648,6 +632,7 @@ const nodeConfig = reactive({
 
 const teamOptions = ref<{ label: string, value: string }[]>([])
 const agentOptions = ref<{ label: string, value: string }[]>([])
+const kbOptions = ref<{ label: string, value: string }[]>([])
 
 const currentWorkflow = ref<any>(null)
 
@@ -751,6 +736,13 @@ const loadWorkflow = async () => {
               ? {
                   agentId: n.data?.agentId || n.config?.agent_id || '',
                   prompt: n.data?.prompt || n.config?.prompt || '',
+                }
+              : {}),
+            ...(n.type === 'search'
+              ? {
+                  knowledgeBaseId: n.data?.knowledgeBaseId || n.config?.knowledge_base_id || '',
+                  query: n.data?.query || n.config?.query || '',
+                  topK: Number(n.data?.topK || n.config?.top_k || 5),
                 }
               : {}),
           },
@@ -877,8 +869,10 @@ const handleNodeClick = (event: any) => {
   nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
+  nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
+  nodeConfig.topK = Number(event.node.data?.topK || event.node.data?.top_k || 5)
   nodeConfig.variable = event.node.data?.variable || ''
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
@@ -904,8 +898,10 @@ const saveNodeConfig = () => {
       prompt: nodeConfig.prompt,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
+      knowledgeBaseId: nodeConfig.knowledgeBaseId,
       description: nodeConfig.description,
       query: nodeConfig.query,
+      topK: Number(nodeConfig.topK) || 5,
       variable: nodeConfig.variable,
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
@@ -946,8 +942,10 @@ const handleSave = async () => {
           prompt: n.data?.prompt,
           teamId: n.data?.teamId,
           agentId: n.data?.agentId,
+          knowledgeBaseId: n.data?.knowledgeBaseId,
           description: n.data?.description,
           query: n.data?.query,
+          topK: n.data?.topK,
           variable: n.data?.variable,
           waitReason: n.data?.waitReason,
           waitMessage: n.data?.waitMessage,
@@ -970,7 +968,13 @@ const handleSave = async () => {
                   agent_id: n.data?.agentId || '',
                   prompt: n.data?.prompt || '',
                 }
-              : undefined,
+              : n.type === 'search'
+                ? {
+                    knowledge_base_id: n.data?.knowledgeBaseId || '',
+                    query: n.data?.query || '',
+                    top_k: Number(n.data?.topK) || 5,
+                  }
+                : undefined,
       })),
       edges: edges.value.map(e => ({
         id: e.id,
@@ -1132,19 +1136,8 @@ const hasActiveExecution = computed(() => {
   return !!st && (ACTIVE_EXEC_STATUSES as readonly string[]).includes(st)
 })
 
-/** 侧栏关着、但调试/执行还没结束 → 右下角悬浮条 */
-const showDebugDock = computed(() => !showDebugPanel.value && hasActiveExecution.value)
-
-const debugDockSubtitle = computed(() => {
-  const ex = currentExecution.value
-  if (!ex) return ''
-  if (ex.status === 'waiting') {
-    return t('editor.debugDockWaiting', {
-      msg: ex.error || ex.wait_reason || 'approval',
-    })
-  }
-  return t('editor.debugDockRunning', { status: ex.status })
-})
+/** 有执行且侧栏关着：只走顶栏一条，不另开右下角悬浮 */
+const showExecBar = computed(() => !!currentExecution.value && !showDebugPanel.value)
 
 function toggleDebugPanel() {
   showDebugPanel.value = !showDebugPanel.value
@@ -1374,6 +1367,11 @@ onMounted(() => {
     agentOptions.value = (res.data || [])
       .filter(a => a.id)
       .map(a => ({ label: a.name || a.id, value: a.id }))
+  })
+  listKBs().then((res) => {
+    kbOptions.value = (res.data || [])
+      .filter(k => k.id)
+      .map(k => ({ label: k.name || k.id, value: k.id }))
   })
   nextTick(() => {
     const palette = document.querySelector('.node-palette')
@@ -1624,6 +1622,13 @@ onMounted(() => {
   font-weight: 500;
   color: var(--cf-ink-soft, #64748b);
 }
+.field__hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--cf-ink-soft, #64748b);
+  opacity: 0.85;
+}
 
 .modal-actions__right {
   display: flex;
@@ -1670,51 +1675,6 @@ onMounted(() => {
 .debug-trigger__badge[data-status='debugging'],
 .debug-trigger__badge[data-status='pending'] {
   animation: pulse 1s infinite;
-}
-
-.debug-dock {
-  position: fixed;
-  right: 16px;
-  bottom: 20px;
-  z-index: 130;
-  max-width: min(420px, calc(100vw - 32px));
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--cf-bg-elevated, #fff);
-  border: 1px solid var(--cf-line, #e2e8f0);
-  box-shadow: 0 8px 28px rgb(15 23 42 / 0.14);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.debug-dock[data-status='waiting'] {
-  border-color: color-mix(in oklab, #ea580c 45%, transparent);
-  background: color-mix(in oklab, #fff7ed 92%, #fff);
-}
-.debug-dock__main {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-.debug-dock__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  font-size: 12px;
-  line-height: 1.45;
-}
-.debug-dock__text strong {
-  font-size: 13px;
-}
-.debug-dock__text span {
-  opacity: 0.8;
-  word-break: break-word;
-}
-.debug-dock__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .debug-panel {

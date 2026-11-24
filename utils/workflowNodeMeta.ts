@@ -41,7 +41,7 @@ export const WORKFLOW_NODE_META: Record<WorkflowNodeKind, WorkflowNodeMeta> = {
   code: { icon: 'i-lucide-code-2', tone: 'code', handles: 'io' },
   delay: { icon: 'i-lucide-timer', tone: 'delay', handles: 'io' },
   wait: { icon: 'i-lucide-pause-circle', tone: 'wait', handles: 'io' },
-  search: { icon: 'i-lucide-search', tone: 'search', handles: 'io' },
+  search: { icon: 'i-lucide-book-search', tone: 'search', handles: 'io' },
   input: { icon: 'i-lucide-download', tone: 'input', handles: 'start' },
   output: { icon: 'i-lucide-upload', tone: 'output', handles: 'end' },
 }
@@ -52,6 +52,7 @@ export const WORKFLOW_PALETTE_TYPES: WorkflowNodeKind[] = [
   'llm',
   'agent',
   'team',
+  'search',
   'condition',
   'loop',
   'http',
