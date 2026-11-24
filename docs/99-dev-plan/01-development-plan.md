@@ -4,6 +4,11 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-24 | v1.84 | 工作流「整理布局」一键排版 | orjrs |
+| 2026-11-24 | v1.83 | 工作流连线加终点箭头 | orjrs |
+| 2026-11-24 | v1.82 | 小队页一键生成/打开流水线；画布 agent 可绑智能体 | orjrs |
+| 2026-11-23 | v1.81 | 工作流画布 team 节点：绑定小队与任务 | orjrs |
+| 2026-11-23 | v1.80 | 小队预览：conversation_id 续聊、拉历史、工人失败提示 | orjrs |
 | 2026-11-23 | v1.79 | 小队页：列表/新建/预览对话（对接 /teams） | orjrs |
 | 2026-11-23 | v1.78 | 跨仓：Go 已落 /teams CRUD；前端小队页待跟 | orjrs |
 | 2026-11-23 | v1.77 | 跨仓：多 Agent 框架设计草案（Go 仓需求文档，前端后跟） | orjrs |
@@ -82,6 +87,34 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 工作流整理布局（2026-11-24）
+
+- **落地**：顶栏「整理布局」；按连线左→右分层排版 + fitView
+- **含代码**：`utils/workflowLayout.ts`、`pages/workflows/[id].vue`、`WorkflowCanvas.vue`
+
+## [变更] 工作流连线箭头（2026-11-24）
+
+- **落地**：边默认实心箭头 `ArrowClosed`，标明执行方向
+- **含代码**：`WorkflowCanvas.vue`、`pages/workflows/[id].vue`
+
+## [变更] 小队一键流水线（2026-11-24）
+
+- **落地**：小队卡「生成/打开流水线」→ `expand-pipeline` → 跳转画布；Agent 节点可选手动绑定
+- **含代码**：`pages/teams/index.vue`、`workflows/[id].vue`、`useTeams.expandPipeline`、i18n
+- **跨仓**：对齐 Go API v1.71
+
+## [变更] 画布小队节点（2026-11-23）
+
+- **落地**：节点面板加 `team`；选小队 + 任务说明；`useTeams.run` 可供脚本调用
+- **含代码**：`pages/workflows/[id].vue`、`useTeams`、i18n
+- **跨仓**：对齐 Go API v1.70 / 引擎 `TeamNodeExecutor`
+
+## [变更] 小队预览续聊与失败展示（2026-11-23）
+
+- **落地**：打开预览按 `team_id` 拉最近会话；chat 带 `conversation_id`；展示工人失败提示与「新对话」
+- **含代码**：`pages/teams/index.vue`、`useTeams`、`useConversations`（`?team_id=`）、i18n
+- **跨仓**：对齐 Go §12 跟拍（API v1.69）
 
 ## [变更] 小队页对接 /teams（2026-11-23）
 

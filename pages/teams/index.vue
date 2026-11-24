@@ -34,6 +34,14 @@
           <UButton size="sm" variant="soft" @click="openPreview(team)">
             {{ t('teams.preview') }}
           </UButton>
+          <UButton
+            size="sm"
+            variant="outline"
+            :loading="expandingId === team.id"
+            @click="expandPipeline(team)"
+          >
+            {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
+          </UButton>
           <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
             {{ t('common.delete') }}
           </UButton>
@@ -76,15 +84,35 @@
     <UModal v-model:open="showPreview">
       <template #content>
         <div class="p-4 space-y-3 min-w-[360px] max-w-lg">
-          <h2 class="text-base font-semibold">{{ t('teams.preview') }} · {{ previewing?.name }}</h2>
+          <div class="flex items-start justify-between gap-2">
+            <h2 class="text-base font-semibold">{{ t('teams.preview') }} · {{ previewing?.name }}</h2>
+            <UButton size="xs" variant="ghost" :disabled="previewBusy" @click="startFreshPreview">
+              {{ t('teams.newChat') }}
+            </UButton>
+          </div>
           <p v-if="lastRunState?.active_agent_id" class="text-xs opacity-80">
             {{ t('teams.activeAgent', { id: lastRunState.active_agent_id }) }}
           </p>
+          <p v-if="lastFailHint" class="text-xs text-amber-600 dark:text-amber-400">
+            {{ lastFailHint }}
+          </p>
           <div class="preview-log">
-            <div v-for="(m, i) in previewMsgs" :key="i" class="preview-log__row" :class="`is-${m.role}`">
-              <span class="preview-log__role">{{ m.role }}</span>
+            <div
+              v-for="(m, i) in previewMsgs"
+              :key="i"
+              class="preview-log__row"
+              :class="[`is-${m.role}`, { 'is-fail': m.failed }]"
+            >
+              <span class="preview-log__role">
+                {{ m.role }}
+                <template v-if="m.agentId"> · {{ m.agentId }}</template>
+              </span>
               <span>{{ m.content }}</span>
             </div>
+            <p v-if="previewMsgs.length === 0 && !previewLoadingHist" class="text-xs opacity-50">
+              {{ t('teams.previewEmpty') }}
+            </p>
+            <p v-if="previewLoadingHist" class="text-xs opacity-50">{{ t('common.loading') }}</p>
           </div>
           <div class="flex gap-2">
             <UInput
@@ -125,8 +153,13 @@ definePageMeta({ layout: 'default' })
 
 const toast = useToast()
 const { t } = useLocale()
-const { list, create, remove, chat } = useTeams()
+const router = useRouter()
+const { list, create, remove, chat, expandPipeline: apiExpandPipeline } = useTeams()
 const { list: listAgents } = useAgents()
+const { list: listConversations, get: getConversation } = useConversations()
+const expandingId = ref('')
+
+type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
 
 const loading = ref(false)
 const creating = ref(false)
@@ -137,11 +170,28 @@ const showPreview = ref(false)
 const previewing = ref<AgentTeam | null>(null)
 const previewInput = ref('')
 const previewBusy = ref(false)
-const previewMsgs = ref<Array<{ role: string, content: string }>>([])
+const previewLoadingHist = ref(false)
+const previewMsgs = ref<PreviewMsg[]>([])
+const previewConversationId = ref('')
 const lastRunState = ref<TeamRunState | null>(null)
+const lastFailHint = ref('')
 const deleteVisible = ref(false)
 const deletingLoading = ref(false)
 const deleting = ref<AgentTeam | null>(null)
+
+function failHintFromRunState(rs: TeamRunState | null | undefined): string {
+  if (!rs) return ''
+  const hist = rs.delegate_history || []
+  for (let i = hist.length - 1; i >= 0; i--) {
+    const s = hist[i]?.result_summary || ''
+    if (s.includes('工人执行失败')) return s
+  }
+  const pad = rs.scratchpad || {}
+  for (const [k, v] of Object.entries(pad)) {
+    if (k.startsWith('last_delegate_error_') && typeof v === 'string' && v) return v
+  }
+  return ''
+}
 
 const form = reactive({
   name: '',
@@ -210,12 +260,42 @@ async function submitCreate() {
   }
 }
 
-function openPreview(team: AgentTeam) {
-  previewing.value = team
+function resetPreviewLocal() {
   previewMsgs.value = []
   lastRunState.value = null
+  lastFailHint.value = ''
+  previewConversationId.value = ''
   previewInput.value = ''
+}
+
+function startFreshPreview() {
+  resetPreviewLocal()
+}
+
+async function openPreview(team: AgentTeam) {
+  previewing.value = team
+  resetPreviewLocal()
   showPreview.value = true
+  previewLoadingHist.value = true
+  try {
+    const listed = await listConversations({ team_id: team.id })
+    const latest = listed.data?.[0]
+    if (!latest?.id) return
+    const detail = await getConversation(latest.id)
+    if (detail.error || !detail.data) return
+    previewConversationId.value = detail.data.id
+    previewMsgs.value = (detail.data.messages || [])
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => ({
+        role: m.role,
+        content: m.content || '',
+        agentId: m.active_agent_id || undefined,
+        failed: (m.content || '').includes('工人执行失败'),
+      }))
+  }
+  finally {
+    previewLoadingHist.value = false
+  }
 }
 
 async function sendPreview() {
@@ -229,18 +309,57 @@ async function sendPreview() {
       messages: previewMsgs.value.map(m => ({ role: m.role, content: m.content })),
       stream: false,
       run_state: lastRunState.value || undefined,
+      conversation_id: previewConversationId.value || undefined,
     })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      previewMsgs.value.pop()
+      return
+    }
+    lastRunState.value = res.data?.run_state || null
+    lastFailHint.value = failHintFromRunState(lastRunState.value)
+    if (res.data?.conversation_id) {
+      previewConversationId.value = res.data.conversation_id
+    }
+    const content = res.data?.response?.choices?.[0]?.message?.content
+    const reply = typeof content === 'string' ? content : JSON.stringify(content ?? '')
+    const active = lastRunState.value?.active_agent_id
+    previewMsgs.value.push({
+      role: 'assistant',
+      content: reply || '—',
+      agentId: active,
+      failed: !!lastFailHint.value && (reply || '').includes('工人执行失败'),
+    })
+    if (lastFailHint.value) {
+      toast.add({ title: t('teams.workerFailToast'), description: lastFailHint.value, color: 'warning' })
+    }
+  }
+  finally {
+    previewBusy.value = false
+  }
+}
+
+async function expandPipeline(team: AgentTeam) {
+  if (expandingId.value) return
+  // 已绑定且用户点「打开」：直接进画布；若要重生成仍走 API（同按钮 regenerates then open）
+  expandingId.value = team.id
+  try {
+    const res = await apiExpandPipeline(team.id)
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       return
     }
-    lastRunState.value = res.data?.run_state || null
-    const content = res.data?.response?.choices?.[0]?.message?.content
-    const reply = typeof content === 'string' ? content : JSON.stringify(content ?? '')
-    previewMsgs.value.push({ role: 'assistant', content: reply || '—' })
+    const wfId = res.data?.workflow?.id || res.data?.team?.workflow_id
+    if (!wfId) {
+      toast.add({ title: t('teams.genPipelineFail'), color: 'error' })
+      return
+    }
+    toast.add({ title: t('teams.genPipelineOk'), color: 'success' })
+    await fetchAll()
+    await router.push(`/workflows/${wfId}`)
   }
   finally {
-    previewBusy.value = false
+    expandingId.value = ''
   }
 }
 
@@ -324,5 +443,8 @@ onMounted(() => {
   font-size: 11px;
   opacity: 0.55;
   text-transform: uppercase;
+}
+.preview-log__row.is-fail span:last-child {
+  color: color-mix(in oklab, var(--ui-warning) 80%, var(--ui-text));
 }
 </style>

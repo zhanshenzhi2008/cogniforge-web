@@ -18,6 +18,7 @@ export interface ConversationMessage {
   content: string
   images?: string[]
   attachments?: ConversationAttachment[]
+  active_agent_id?: string
   time?: string
 }
 
@@ -34,6 +35,7 @@ export interface ConversationSummary {
   id: string
   title: string
   agent_id: string
+  team_id?: string
   model: string
   pinned: boolean
   queue_len?: number
@@ -59,9 +61,10 @@ export interface UpsertConversationInput {
 export const useConversations = () => {
   const api = useApi()
 
-  const list = async (): Promise<{ data?: ConversationSummary[]; error?: string }> => {
+  const list = async (opts?: { team_id?: string }): Promise<{ data?: ConversationSummary[]; error?: string }> => {
     try {
-      const res = await api.get<ConversationSummary[]>('/api/v1/conversations')
+      const q = opts?.team_id ? `?team_id=${encodeURIComponent(opts.team_id)}` : ''
+      const res = await api.get<ConversationSummary[]>(`/api/v1/conversations${q}`)
       if (res.error) return { error: res.error }
       return { data: res.data || [] }
     } catch (err: any) {

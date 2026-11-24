@@ -1,8 +1,10 @@
 <template>
   <VueFlow
+    id="workflow-editor"
     :nodes="nodes"
     :edges="edges"
     :default-viewport="{ x: 50, y: 50, zoom: 1 }"
+    :default-edge-options="defaultEdgeOptions"
     @node-click="handleNodeClick"
     @pane-click="handlePaneClick"
     @connect="handleConnect"
@@ -63,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { VueFlow, Handle, Position } from '@vue-flow/core'
+import { VueFlow, Handle, Position, MarkerType, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
@@ -74,6 +76,26 @@ defineProps<{
   nodes: any[]
   edges: any[]
 }>()
+
+/** 工作流边默认带终点箭头，标明执行方向 */
+const defaultEdgeOptions = {
+  animated: true,
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 18,
+    height: 18,
+    color: '#4f46e5',
+  },
+  style: { stroke: '#4f46e5', strokeWidth: 2 },
+}
+
+const { fitView } = useVueFlow({ id: 'workflow-editor' })
+
+function fitCanvas() {
+  fitView({ padding: 0.2, duration: 280 })
+}
+
+defineExpose({ fitCanvas })
 
 const emit = defineEmits<{
   (e: 'node-click', event: any): void

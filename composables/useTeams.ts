@@ -43,13 +43,21 @@ export interface UpdateTeamInput {
   status?: string
 }
 
+export interface TeamDelegateRecord {
+  worker_agent_id: string
+  task?: string
+  result_summary?: string
+  at?: string
+}
+
 export interface TeamRunState {
   team_id: string
   active_agent_id: string
   goal?: string
   step_count?: number
   handoff_history?: unknown[]
-  delegate_history?: unknown[]
+  delegate_history?: TeamDelegateRecord[]
+  scratchpad?: Record<string, unknown>
 }
 
 export interface TeamChatResult {
@@ -59,6 +67,7 @@ export interface TeamChatResult {
     choices?: Array<{ message?: { role?: string, content?: unknown } }>
   }
   run_state?: TeamRunState
+  conversation_id?: string
 }
 
 export const useTeams = () => {
@@ -126,6 +135,7 @@ export const useTeams = () => {
       stream?: boolean
       goal?: string
       run_state?: TeamRunState | null
+      conversation_id?: string
     },
   ): Promise<{ data?: TeamChatResult, error?: string }> => {
     try {
@@ -138,5 +148,39 @@ export const useTeams = () => {
     }
   }
 
-  return { list, get, create, update, remove, chat }
+  const run = async (
+    id: string,
+    body: {
+      task: string
+      goal?: string
+      run_state?: TeamRunState | null
+    },
+  ): Promise<{ data?: TeamChatResult, error?: string }> => {
+    try {
+      const res = await api.post<TeamChatResult>(`/api/v1/teams/${id}/run`, body)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    }
+    catch (err: any) {
+      return { error: err.message || '小队任务执行失败' }
+    }
+  }
+
+  const expandPipeline = async (
+    id: string,
+  ): Promise<{ data?: { team?: AgentTeam, workflow?: { id: string, name?: string } }, error?: string }> => {
+    try {
+      const res = await api.post<{ team?: AgentTeam, workflow?: { id: string, name?: string } }>(
+        `/api/v1/teams/${id}/expand-pipeline`,
+        {},
+      )
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    }
+    catch (err: any) {
+      return { error: err.message || '生成流水线失败' }
+    }
+  }
+
+  return { list, get, create, update, remove, chat, run, expandPipeline }
 }

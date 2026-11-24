@@ -43,6 +43,14 @@
         </CfButton>
         <CfButton
           tone="secondary"
+          icon="i-lucide-layout-grid"
+          :disabled="nodes.length === 0"
+          @click="tidyLayout"
+        >
+          {{ t('editor.tidyLayout') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
           icon="i-lucide-bug"
           @click="showDebugPanel = !showDebugPanel"
         >
@@ -135,6 +143,7 @@
       <div ref="canvasRef" class="canvas-container">
         <ClientOnly>
           <WorkflowCanvas
+            ref="flowCanvasRef"
             :nodes="nodes"
             :edges="edges"
             @node-click="handleNodeClick"
@@ -232,6 +241,46 @@
             />
           </div>
 
+          <div v-if="selectedNode.type === 'agent'" class="field">
+            <label class="field__label">{{ t('editor.agentPick') }}</label>
+            <USelect
+              v-model="nodeConfig.agentId"
+              class="w-full"
+              :items="agentOptions"
+              :placeholder="t('editor.agentPickPh')"
+              value-key="value"
+            />
+          </div>
+          <div v-if="selectedNode.type === 'agent'" class="field">
+            <label class="field__label">{{ t('editor.userPrompt') }}</label>
+            <UTextarea
+              v-model="nodeConfig.prompt"
+              class="w-full"
+              :rows="4"
+              :placeholder="t('editor.agentPromptPh')"
+            />
+          </div>
+
+          <div v-if="selectedNode.type === 'team'" class="field">
+            <label class="field__label">{{ t('editor.teamPick') }}</label>
+            <USelect
+              v-model="nodeConfig.teamId"
+              class="w-full"
+              :items="teamOptions"
+              :placeholder="t('editor.teamPickPh')"
+              value-key="value"
+            />
+          </div>
+          <div v-if="selectedNode.type === 'team'" class="field">
+            <label class="field__label">{{ t('editor.teamTask') }}</label>
+            <UTextarea
+              v-model="nodeConfig.prompt"
+              class="w-full"
+              :rows="4"
+              :placeholder="t('editor.teamTaskPh')"
+            />
+          </div>
+
           <div v-if="selectedNode.type === 'condition'" class="field">
             <label class="field__label">{{ t('common.description') }}</label>
             <UTextarea
@@ -303,9 +352,25 @@
 
 <script setup lang="ts">
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
+import { MarkerType } from '@vue-flow/core'
+import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
+
+function withEdgeArrow(edge: { id: string, source: string, target: string, [k: string]: any }) {
+  return {
+    ...edge,
+    animated: true,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: '#4f46e5',
+    },
+    style: { stroke: '#4f46e5', strokeWidth: 2, ...(edge.style || {}) },
+  }
+}
 
 /** Same as the list page smoke button: skip the API, only verify the dynamic route + Vue Flow. */
 const CANVAS_SMOKE_ID = '__canvas_smoke__'
@@ -319,8 +384,11 @@ const toast = useToast()
 const { t } = useLocale()
 const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, approveExecution, rejectExecution, debug } = useWorkflows()
 const { list: listModels } = useModels()
+const { list: listTeams } = useTeams()
+const { list: listAgents } = useAgents()
 
 const canvasRef = ref<HTMLElement>()
+const flowCanvasRef = ref<{ fitCanvas?: () => void } | null>(null)
 
 const workflowId = computed(() => {
   const raw = route.params.id
@@ -351,6 +419,8 @@ const nodeConfig = reactive({
   model: '',
   systemPrompt: '',
   prompt: '',
+  teamId: '',
+  agentId: '',
   description: '',
   query: '',
   variable: '',
@@ -358,6 +428,9 @@ const nodeConfig = reactive({
   waitMessage: '',
   timeoutSec: 0,
 })
+
+const teamOptions = ref<{ label: string, value: string }[]>([])
+const agentOptions = ref<{ label: string, value: string }[]>([])
 
 const currentWorkflow = ref<any>(null)
 
@@ -372,7 +445,7 @@ const resuming = ref(false)
 const approving = ref(false)
 const rejecting = ref(false)
 
-const nodeTypes = ['start', 'end', 'llm', 'agent', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
+const nodeTypes = ['start', 'end', 'llm', 'agent', 'team', 'condition', 'loop', 'http', 'code', 'delay', 'wait']
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
@@ -382,7 +455,8 @@ const getNodeIcon = (type: string) => {
     start: 'i-lucide-play',
     end: 'i-lucide-square',
     llm: 'i-lucide-message-square',
-    agent: 'i-lucide-message-square',
+    agent: 'i-lucide-bot',
+    team: 'i-lucide-users',
     condition: 'i-lucide-git-branch',
     loop: 'i-lucide-refresh-cw',
     http: 'i-lucide-download',
@@ -468,15 +542,25 @@ const loadWorkflow = async () => {
           data: {
             label: n.data?.label || getNodeLabel(n.type),
             ...n.data,
+            ...(n.type === 'team'
+              ? {
+                  teamId: n.data?.teamId || n.config?.team_id || '',
+                  prompt: n.data?.prompt || n.config?.task || n.config?.prompt || '',
+                }
+              : {}),
+            ...(n.type === 'agent'
+              ? {
+                  agentId: n.data?.agentId || n.config?.agent_id || '',
+                  prompt: n.data?.prompt || n.config?.prompt || '',
+                }
+              : {}),
           },
         })) || []
 
-        edges.value = def.edges?.map((e: any) => ({
+        edges.value = def.edges?.map((e: any) => withEdgeArrow({
           id: e.id,
           source: e.source,
           target: e.target,
-          animated: true,
-          style: { stroke: '#4f46e5' },
         })) || []
       } catch {
         nodes.value = []
@@ -557,11 +641,20 @@ const handleEdgesChange = (changes: any[]) => {
 }
 
 const handleConnect = (params: any) => {
-  edges.value.push({
+  edges.value.push(withEdgeArrow({
     id: `e${params.source}-${params.target}`,
     source: params.source,
     target: params.target,
-    animated: true,
+  }))
+}
+
+/** 整理布局：按连线自动排成从左到右的整齐流水线 */
+function tidyLayout() {
+  if (!nodes.value.length) return
+  nodes.value = layoutWorkflowNodes(nodes.value, edges.value)
+  toast.add({ title: t('editor.tidyLayoutOk'), color: 'success' })
+  nextTick(() => {
+    flowCanvasRef.value?.fitCanvas?.()
   })
 }
 
@@ -582,7 +675,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.name = event.node.data?.label || ''
   nodeConfig.model = event.node.data?.model || firstConfiguredModel()
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
-  nodeConfig.prompt = event.node.data?.prompt || ''
+  nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
+  nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
+  nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
   nodeConfig.variable = event.node.data?.variable || ''
@@ -608,6 +703,8 @@ const saveNodeConfig = () => {
       model: nodeConfig.model,
       systemPrompt: nodeConfig.systemPrompt,
       prompt: nodeConfig.prompt,
+      teamId: nodeConfig.teamId,
+      agentId: nodeConfig.agentId,
       description: nodeConfig.description,
       query: nodeConfig.query,
       variable: nodeConfig.variable,
@@ -648,6 +745,8 @@ const handleSave = async () => {
           model: n.data?.model,
           systemPrompt: n.data?.systemPrompt,
           prompt: n.data?.prompt,
+          teamId: n.data?.teamId,
+          agentId: n.data?.agentId,
           description: n.data?.description,
           query: n.data?.query,
           variable: n.data?.variable,
@@ -661,7 +760,18 @@ const handleSave = async () => {
               message: n.data?.waitMessage || '',
               timeout_sec: Number(n.data?.timeoutSec || 0) || undefined,
             }
-          : undefined,
+          : n.type === 'team'
+            ? {
+                team_id: n.data?.teamId || '',
+                task: n.data?.prompt || '',
+                prompt: n.data?.prompt || '',
+              }
+            : n.type === 'agent'
+              ? {
+                  agent_id: n.data?.agentId || '',
+                  prompt: n.data?.prompt || '',
+                }
+              : undefined,
       })),
       edges: edges.value.map(e => ({
         id: e.id,
@@ -909,6 +1019,16 @@ onMounted(() => {
     modelOptions.value = (res.data || [])
       .filter(m => m.id)
       .map(m => ({ label: m.name || m.id, value: m.id }))
+  })
+  listTeams().then((res) => {
+    teamOptions.value = (res.data || [])
+      .filter(t => t.id)
+      .map(t => ({ label: t.name || t.id, value: t.id }))
+  })
+  listAgents().then((res) => {
+    agentOptions.value = (res.data || [])
+      .filter(a => a.id)
+      .map(a => ({ label: a.name || a.id, value: a.id }))
   })
   nextTick(() => {
     const palette = document.querySelector('.node-palette')
