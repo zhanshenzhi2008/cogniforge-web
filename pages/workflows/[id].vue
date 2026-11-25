@@ -952,14 +952,6 @@ function initDebugFormFromStartVars() {
   syncDebugInputFromForm()
 }
 
-watch(startVariables, () => {
-  if (showDebugPanel.value) initDebugFormFromStartVars()
-}, { deep: true })
-
-watch(showDebugPanel, (open) => {
-  if (open) initDebugFormFromStartVars()
-})
-
 const teamOptions = ref<{ label: string, value: string }[]>([])
 const agentOptions = ref<{ label: string, value: string }[]>([])
 const kbList = ref<KnowledgeBase[]>([])
@@ -1057,6 +1049,16 @@ const currentWorkflow = ref<any>(null)
 
 const showDebugPanel = ref(false)
 const debugInput = ref('{}')
+
+// 必须在 showDebugPanel / debugInput 声明之后再 watch，否则 TDZ 导致整页白屏
+watch(startVariables, () => {
+  if (showDebugPanel.value) initDebugFormFromStartVars()
+}, { deep: true })
+
+watch(showDebugPanel, (open) => {
+  if (open) initDebugFormFromStartVars()
+})
+
 const currentExecution = ref<any>(null)
 const executionLogs = ref<any[]>([])
 /** 更早试跑默认折叠，主区只看这一次 */
