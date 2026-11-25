@@ -231,6 +231,60 @@
             <UInput v-model="nodeConfig.name" class="w-full" :placeholder="t('editor.nodeNamePh')" />
           </div>
 
+          <template v-if="selectedNode.type === 'start'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.startVars') }}</label>
+              <p class="field__hint">{{ t('editor.startVarsHint') }}</p>
+            </div>
+            <div
+              v-for="(row, idx) in nodeConfig.variables"
+              :key="idx"
+              class="start-var-row"
+            >
+              <UInput
+                v-model="row.name"
+                class="w-full"
+                :placeholder="t('editor.startVarNamePh')"
+              />
+              <USelect
+                v-model="row.type"
+                class="w-full"
+                :items="startVarTypeOptions"
+                value-key="value"
+              />
+              <UInput
+                v-model="row.default"
+                class="w-full"
+                :placeholder="t('editor.startVarDefaultPh')"
+              />
+              <label class="start-var-req">
+                <input v-model="row.required" type="checkbox">
+                {{ t('editor.startVarRequired') }}
+              </label>
+              <UInput
+                v-model="row.description"
+                class="w-full start-var-desc"
+                :placeholder="t('editor.startVarDescPh')"
+              />
+              <CfButton
+                tone="danger"
+                size="sm"
+                icon="i-lucide-trash-2"
+                @click="nodeConfig.variables.splice(idx, 1)"
+              >
+                {{ t('common.delete') }}
+              </CfButton>
+            </div>
+            <CfButton
+              tone="secondary"
+              size="sm"
+              icon="i-lucide-plus"
+              @click="addStartVariable"
+            >
+              {{ t('editor.startVarAdd') }}
+            </CfButton>
+          </template>
+
           <div v-if="selectedNode.type === 'llm'" class="field">
             <label class="field__label">{{ t('common.model') }}</label>
             <USelect
@@ -486,12 +540,46 @@
         <p class="debug-hint">{{ t('editor.debugPanelHint') }}</p>
         <div class="debug-section">
           <div class="debug-section-title">{{ t('editor.debugInput') }}</div>
-          <UTextarea
-            v-model="debugInput"
-            class="w-full font-mono text-xs"
-            :rows="8"
-            :placeholder='`{\n  "query": "你好"\n}`'
-          />
+          <p v-if="startVariables.length" class="debug-hint debug-hint--compact">{{ t('editor.debugInputFromStart') }}</p>
+          <div v-if="startVariables.length" class="debug-var-form">
+            <div
+              v-for="v in startVariables"
+              :key="v.name"
+              class="field"
+            >
+              <label class="field__label">
+                {{ v.name }}
+                <span v-if="v.required" class="debug-var-req">*</span>
+                <span v-if="v.description" class="debug-var-desc"> · {{ v.description }}</span>
+              </label>
+              <UInput
+                v-if="v.type !== 'boolean'"
+                v-model="debugForm[v.name]"
+                class="w-full"
+                :type="v.type === 'number' ? 'number' : 'text'"
+                :placeholder="v.default != null && v.default !== '' ? String(v.default) : v.name"
+                @update:model-value="syncDebugInputFromForm"
+              />
+              <label v-else class="start-var-req">
+                <input
+                  v-model="debugForm[v.name]"
+                  type="checkbox"
+                  @change="syncDebugInputFromForm"
+                >
+                {{ t('editor.startVarBool') }}
+              </label>
+            </div>
+          </div>
+          <details class="debug-json-details" :open="!startVariables.length">
+            <summary>{{ t('editor.debugInputJson') }}</summary>
+            <UTextarea
+              v-model="debugInput"
+              class="w-full font-mono text-xs"
+              :rows="6"
+              :placeholder='`{\n  "query": "你好"\n}`'
+              @update:model-value="syncDebugFormFromInput"
+            />
+          </details>
         </div>
         <div class="debug-actions">
           <CfButton
@@ -757,6 +845,119 @@ const nodeConfig = reactive({
   waitReason: 'approval',
   waitMessage: '',
   timeoutSec: 0,
+  variables: [] as {
+    name: string
+    type: string
+    required: boolean
+    default: string
+    description: string
+  }[],
+})
+
+const startVarTypeOptions = computed(() => [
+  { label: t('editor.startVarTypeString'), value: 'string' },
+  { label: t('editor.startVarTypeNumber'), value: 'number' },
+  { label: t('editor.startVarTypeBoolean'), value: 'boolean' },
+])
+
+function addStartVariable() {
+  nodeConfig.variables.push({
+    name: '',
+    type: 'string',
+    required: false,
+    default: '',
+    description: '',
+  })
+}
+
+function normalizeStartVars(raw: any): {
+  name: string
+  type: string
+  required: boolean
+  default: string
+  description: string
+}[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((v: any) => ({
+      name: String(v?.name || '').trim(),
+      type: (v?.type || 'string') as string,
+      required: !!v?.required,
+      default: v?.default == null ? '' : String(v.default),
+      description: String(v?.description || ''),
+    }))
+    .filter(v => v.name)
+}
+
+/** 画布开始节点上的入参定义 */
+const startVariables = computed(() => {
+  const start = nodes.value.find(n => n.type === 'start')
+  return normalizeStartVars(start?.data?.variables || start?.config?.variables)
+})
+
+const debugForm = reactive<Record<string, any>>({})
+
+function syncDebugInputFromForm() {
+  const obj: Record<string, any> = {}
+  for (const v of startVariables.value) {
+    let val = debugForm[v.name]
+    if (v.type === 'boolean') {
+      obj[v.name] = !!val
+      continue
+    }
+    if (val === undefined || val === null || val === '') {
+      if (v.default !== '') val = v.default
+      else continue
+    }
+    if (v.type === 'number') {
+      const n = Number(val)
+      obj[v.name] = Number.isFinite(n) ? n : val
+    } else {
+      obj[v.name] = val
+    }
+  }
+  // 保留 JSON 里多出来的键
+  try {
+    const extra = JSON.parse(debugInput.value || '{}')
+    if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+      for (const [k, v] of Object.entries(extra)) {
+        if (!(k in obj)) obj[k] = v
+      }
+    }
+  } catch { /* ignore */ }
+  debugInput.value = JSON.stringify(obj, null, 2)
+}
+
+function syncDebugFormFromInput() {
+  try {
+    const obj = JSON.parse(debugInput.value || '{}')
+    if (!obj || typeof obj !== 'object') return
+    for (const v of startVariables.value) {
+      if (v.name in obj) {
+        debugForm[v.name] = obj[v.name]
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+function initDebugFormFromStartVars() {
+  for (const key of Object.keys(debugForm)) delete debugForm[key]
+  for (const v of startVariables.value) {
+    if (v.type === 'boolean') {
+      debugForm[v.name] = v.default === 'true' || v.default === '1'
+    } else {
+      debugForm[v.name] = v.default
+    }
+  }
+  syncDebugInputFromForm()
+}
+
+watch(startVariables, () => {
+  if (showDebugPanel.value) initDebugFormFromStartVars()
+}, { deep: true })
+
+watch(showDebugPanel, (open) => {
+  if (open) initDebugFormFromStartVars()
 })
 
 const teamOptions = ref<{ label: string, value: string }[]>([])
@@ -970,6 +1171,11 @@ const loadWorkflow = async () => {
                   hybridSemanticWeight: n.data?.hybridSemanticWeight ?? n.config?.hybrid_semantic_weight,
                 }
               : {}),
+            ...(n.type === 'start'
+              ? {
+                  variables: normalizeStartVars(n.data?.variables || n.config?.variables),
+                }
+              : {}),
           },
         })) || []
 
@@ -1110,6 +1316,12 @@ const handleNodeClick = (event: any) => {
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
   nodeConfig.timeoutSec = Number(event.node.data?.timeoutSec || event.node.data?.timeout_sec || 0)
+  nodeConfig.variables = normalizeStartVars(
+    event.node.data?.variables || event.node.config?.variables,
+  ).map(v => ({ ...v }))
+  if (event.node.type === 'start' && !nodeConfig.variables.length) {
+    nodeConfig.variables = []
+  }
   configDrawer.value = true
 }
 
@@ -1146,6 +1358,23 @@ const saveNodeConfig = () => {
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
       timeoutSec: nodeConfig.timeoutSec || 0,
+      ...(selectedNode.value.type === 'start'
+        ? {
+            variables: nodeConfig.variables
+              .map(v => ({
+                name: String(v.name || '').trim(),
+                type: v.type || 'string',
+                required: !!v.required,
+                default: v.default === '' ? undefined : (
+                  v.type === 'number' ? Number(v.default) : (
+                    v.type === 'boolean' ? (v.default === 'true' || v.default === '1') : v.default
+                  )
+                ),
+                description: v.description || undefined,
+              }))
+              .filter(v => v.name),
+          }
+        : {}),
     }
   }
 
@@ -1195,8 +1424,13 @@ const handleSave = async () => {
           waitReason: n.data?.waitReason,
           waitMessage: n.data?.waitMessage,
           timeoutSec: n.data?.timeoutSec || 0,
+          variables: n.data?.variables,
         },
-        config: n.type === 'wait'
+        config: n.type === 'start'
+          ? {
+              variables: normalizeStartVars(n.data?.variables),
+            }
+          : n.type === 'wait'
           ? {
               reason: n.data?.waitReason || 'approval',
               message: n.data?.waitMessage || '',
@@ -1415,13 +1649,28 @@ const startDebug = async () => {
   currentExecution.value = null
 
   try {
-    let input = {}
+    syncDebugInputFromForm()
+    let input: Record<string, any> = {}
     try {
       input = JSON.parse(debugInput.value || '{}')
     } catch {
       toast.add({ title: t('editor.badJson'), color: 'error' })
       isDebugging.value = false
       return
+    }
+    for (const v of startVariables.value) {
+      const cur = input[v.name]
+      const empty = cur === undefined || cur === null || cur === ''
+      if (empty && v.default !== '') {
+        input[v.name] = v.type === 'number' ? Number(v.default) : (
+          v.type === 'boolean' ? (v.default === 'true' || v.default === '1') : v.default
+        )
+      }
+      if (v.required && (input[v.name] === undefined || input[v.name] === null || input[v.name] === '')) {
+        toast.add({ title: t('editor.startVarMissing', { name: v.name }), color: 'warning' })
+        isDebugging.value = false
+        return
+      }
     }
 
     const res = await debug(workflowId.value, input)
@@ -1967,6 +2216,51 @@ onMounted(() => {
   line-height: 1.4;
   color: var(--cf-ink-soft, #64748b);
   opacity: 0.85;
+}
+
+.start-var-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  border-radius: 8px;
+  background: var(--cf-bg, #f8fafc);
+}
+.start-var-desc {
+  grid-column: 1 / -1;
+}
+.start-var-req {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--cf-ink-soft, #64748b);
+}
+
+.debug-var-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.debug-var-req {
+  color: #dc2626;
+  margin-left: 2px;
+}
+.debug-var-desc {
+  font-weight: 400;
+  opacity: 0.75;
+}
+.debug-json-details {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.debug-json-details summary {
+  cursor: pointer;
+  color: var(--cf-ink-soft, #64748b);
+  margin-bottom: 6px;
 }
 
 .kb-defaults {
