@@ -665,6 +665,16 @@
             {{ t('editor.deleteNode') }}
           </CfButton>
           <div class="drawer-footer-right">
+            <CfButton
+              v-if="selectedNode && selectedNode.type !== 'start'"
+              tone="secondary"
+              icon="i-lucide-play"
+              :loading="isDebugging"
+              :disabled="isSmokeTest"
+              @click="debugFromSelectedNode"
+            >
+              {{ t('editor.debugFromNode') }}
+            </CfButton>
             <CfButton tone="secondary" icon="i-lucide-x" @click="configDrawer = false">{{ t('common.cancel') }}</CfButton>
             <CfButton tone="primary" icon="i-lucide-check" @click="saveNodeConfig">{{ t('common.save') }}</CfButton>
           </div>
@@ -1937,7 +1947,32 @@ function openDebugPanel() {
   loadExecutionHistory()
 }
 
-const startDebug = async () => {
+const prepareDebugInput = (): Record<string, any> | null => {
+  syncDebugInputFromForm()
+  let input: Record<string, any> = {}
+  try {
+    input = JSON.parse(debugInput.value || '{}')
+  } catch {
+    toast.add({ title: t('editor.badJson'), color: 'error' })
+    return null
+  }
+  for (const v of startVariables.value) {
+    const cur = input[v.name]
+    const empty = cur === undefined || cur === null || cur === ''
+    if (empty && v.default !== '') {
+      input[v.name] = v.type === 'number' ? Number(v.default) : (
+        v.type === 'boolean' ? (v.default === 'true' || v.default === '1') : v.default
+      )
+    }
+    if (v.required && (input[v.name] === undefined || input[v.name] === null || input[v.name] === '')) {
+      toast.add({ title: t('editor.startVarMissing', { name: v.name }), color: 'warning' })
+      return null
+    }
+  }
+  return input
+}
+
+const startDebug = async (startFromNode?: string) => {
   if (!workflowId.value || isSmokeTest.value) return
   if (!currentWorkflow.value) {
     toast.add({ title: t('editor.saveFirst'), color: 'warning' })
@@ -1947,40 +1982,28 @@ const startDebug = async () => {
   isDebugging.value = true
   executionLogs.value = []
   currentExecution.value = null
+  showDebugPanel.value = true
 
   try {
-    syncDebugInputFromForm()
-    let input: Record<string, any> = {}
-    try {
-      input = JSON.parse(debugInput.value || '{}')
-    } catch {
-      toast.add({ title: t('editor.badJson'), color: 'error' })
+    const input = prepareDebugInput()
+    if (!input) {
       isDebugging.value = false
       return
     }
-    for (const v of startVariables.value) {
-      const cur = input[v.name]
-      const empty = cur === undefined || cur === null || cur === ''
-      if (empty && v.default !== '') {
-        input[v.name] = v.type === 'number' ? Number(v.default) : (
-          v.type === 'boolean' ? (v.default === 'true' || v.default === '1') : v.default
-        )
-      }
-      if (v.required && (input[v.name] === undefined || input[v.name] === null || input[v.name] === '')) {
-        toast.add({ title: t('editor.startVarMissing', { name: v.name }), color: 'warning' })
-        isDebugging.value = false
-        return
-      }
-    }
 
-    const res = await debug(workflowId.value, input)
+    const res = await debug(workflowId.value, input, undefined, startFromNode)
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       isDebugging.value = false
       return
     }
 
-    toast.add({ title: t('editor.debugStarted', { id: res.executionId }), color: 'success' })
+    toast.add({
+      title: startFromNode
+        ? t('editor.debugFromNodeStarted', { node: nodeDisplayName(startFromNode) || startFromNode })
+        : t('editor.debugStarted', { id: res.executionId }),
+      color: 'success',
+    })
     currentExecution.value = { id: res.executionId, status: 'debugging' }
 
     startExecutionPoll(res.executionId!)
@@ -1989,6 +2012,13 @@ const startDebug = async () => {
     toast.add({ title: t('editor.debugStartFail'), color: 'error' })
     isDebugging.value = false
   }
+}
+
+const debugFromSelectedNode = async () => {
+  if (!selectedNode.value?.id) return
+  saveNodeConfig()
+  configDrawer.value = false
+  await startDebug(selectedNode.value.id)
 }
 
 const stopPolling = () => {
@@ -2056,6 +2086,7 @@ const EXEC_STATUS_KEYS: Record<string, string> = {
   succeeded: 'editor.execStatus.succeeded',
   approved: 'editor.execStatus.approved',
   rejected: 'editor.execStatus.rejected',
+  skipped: 'editor.execStatus.skipped',
   failed: 'editor.execStatus.failed',
   cancelled: 'editor.execStatus.cancelled',
 }
@@ -2240,6 +2271,8 @@ const execTimeline = computed(() => {
       } else if (r.status === 'succeeded' || r.status === 'completed') {
         note = t('editor.debugTimelineApproved')
       }
+    } else if (r.status === 'skipped') {
+      note = t('editor.debugTimelineSkipped')
     } else if (r.duration_ms != null && r.duration_ms > 0) {
       note = t('editor.debugTimelineMs', { ms: r.duration_ms })
     }
@@ -2819,6 +2852,7 @@ onMounted(() => {
 .debug-status-dot.completed,
 .debug-status-dot.succeeded,
 .debug-status-dot.approved { background: #10b981; }
+.debug-status-dot.skipped { background: #94a3b8; }
 .debug-status-dot.failed,
 .debug-status-dot.rejected,
 .debug-status-dot.cancelled { background: #ef4444; }

@@ -230,9 +230,16 @@ export const useWorkflows = () => {
     }
   }
 
-  const debug = async (id: string, input?: Record<string, any>, breakpoints?: string[]): Promise<{ executionId?: string; error?: string }> => {
+  const debug = async (
+    id: string,
+    input?: Record<string, any>,
+    breakpoints?: string[],
+    startFromNode?: string,
+  ): Promise<{ executionId?: string; error?: string }> => {
     try {
-      const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/debug`, { input, node_breakpoints: breakpoints })
+      const body: Record<string, any> = { input, node_breakpoints: breakpoints }
+      if (startFromNode) body.start_from_node = startFromNode
+      const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/debug`, body)
       if (res.error) return { error: res.error }
       return { executionId: res.data?.execution_id }
     } catch (err: any) {
