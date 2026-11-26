@@ -138,6 +138,16 @@ export const useWorkflows = () => {
     }
   }
 
+  const clone = async (id: string): Promise<{ data?: Workflow; error?: string }> => {
+    try {
+      const res = await api.post<Workflow>(`/api/v1/workflows/${id}/clone`, {})
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '复制工作流失败' }
+    }
+  }
+
   const execute = async (id: string, input?: Record<string, any>): Promise<{ executionId?: string; status?: string; error?: string }> => {
     try {
       const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/execute`, { input })
@@ -253,6 +263,7 @@ export const useWorkflows = () => {
     create,
     update,
     remove,
+    clone,
     execute,
     getExecution,
     listExecutions,

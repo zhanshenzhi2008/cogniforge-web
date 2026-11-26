@@ -779,6 +779,8 @@ export const M = {
   'flows.version': { 'zh-CN': '版本', 'en-US': 'Version' },
   'flows.canvas': { 'zh-CN': '画布', 'en-US': 'Canvas' },
   'flows.run': { 'zh-CN': '执行', 'en-US': 'Run' },
+  'flows.clone': { 'zh-CN': '复制', 'en-US': 'Duplicate' },
+  'flows.cloneOk': { 'zh-CN': '已复制为「{name}」', 'en-US': 'Duplicated as “{name}”' },
   'flows.createTitle': { 'zh-CN': '创建工作流', 'en-US': 'Create flow' },
   'flows.namePh': { 'zh-CN': '请输入工作流名称', 'en-US': 'Flow name' },
   'flows.deleteText': { 'zh-CN': '确定要删除工作流「{name}」吗？此操作不可恢复。', 'en-US': 'Delete flow “{name}”? This cannot be undone.' },

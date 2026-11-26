@@ -80,6 +80,13 @@
                     @click="handleExecute(workflow)"
                   />
                   <CfButton
+                    tone="icon"
+                    icon="i-lucide-copy"
+                    :tip="t('flows.clone')"
+                    :loading="cloningId === workflow.id"
+                    @click="handleClone(workflow)"
+                  />
+                  <CfButton
                     tone="icon-danger"
                     icon="i-lucide-trash-2"
                     :tip="t('common.delete')"
@@ -175,7 +182,8 @@ const CANVAS_SMOKE_ID = '__canvas_smoke__'
 
 const toast = useToast()
 const { t, d } = useLocale()
-const { list, create, remove, execute } = useWorkflows()
+const { list, create, remove, clone, execute } = useWorkflows()
+const cloningId = ref('')
 
 const openSmokeTest = () => {
   navigateTo(`/workflows/${CANVAS_SMOKE_ID}`)
@@ -260,6 +268,21 @@ const handleExecute = async (workflow: Workflow) => {
     return
   }
   toast.add({ title: t('flows.started', { id: res.executionId }), color: 'success' })
+}
+
+const handleClone = async (workflow: Workflow) => {
+  cloningId.value = workflow.id
+  try {
+    const res = await clone(workflow.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: t('flows.cloneOk', { name: res.data?.name || '' }), color: 'success' })
+    await fetchWorkflows()
+  } finally {
+    cloningId.value = ''
+  }
 }
 
 const askDelete = (workflow: Workflow) => {
