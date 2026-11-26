@@ -241,6 +241,13 @@
               :key="idx"
               class="start-var-row"
             >
+              <CfButton
+                class="start-var-row__remove"
+                tone="icon-danger"
+                icon="i-lucide-trash-2"
+                :tip="t('common.delete')"
+                @click="nodeConfig.variables.splice(idx, 1)"
+              />
               <UInput
                 v-model="row.name"
                 class="w-full"
@@ -252,11 +259,14 @@
                 :items="startVarTypeOptions"
                 value-key="value"
               />
-              <UInput
-                v-model="row.default"
-                class="w-full"
-                :placeholder="t('editor.startVarDefaultPh')"
-              />
+              <div class="start-var-default">
+                <label class="field__label">{{ t('editor.startVarDefault') }}</label>
+                <UInput
+                  v-model="row.default"
+                  class="w-full"
+                  :placeholder="t('editor.startVarDefaultPh')"
+                />
+              </div>
               <label class="start-var-req">
                 <input v-model="row.required" type="checkbox">
                 {{ t('editor.startVarRequired') }}
@@ -266,14 +276,6 @@
                 class="w-full start-var-desc"
                 :placeholder="t('editor.startVarDescPh')"
               />
-              <CfButton
-                tone="danger"
-                size="sm"
-                icon="i-lucide-trash-2"
-                @click="nodeConfig.variables.splice(idx, 1)"
-              >
-                {{ t('common.delete') }}
-              </CfButton>
             </div>
             <CfButton
               tone="secondary"
@@ -2221,22 +2223,36 @@ onMounted(() => {
 }
 
 .start-var-row {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-bottom: 10px;
-  padding: 10px;
+  padding: 28px 10px 10px;
   border: 1px solid var(--cf-line, #e2e8f0);
   border-radius: 8px;
   background: var(--cf-bg, #f8fafc);
+}
+.start-var-row__remove {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+}
+.start-var-default {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 .start-var-desc {
   grid-column: 1 / -1;
 }
 .start-var-req {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 6px;
+  padding-bottom: 8px;
   font-size: 12px;
   color: var(--cf-ink-soft, #64748b);
 }

@@ -22,6 +22,8 @@ export const CF_ICONS = {
 
   /** 工作流 */
   workflow: 'i-lucide-git-branch',
+  /** 工作流结束节点 */
+  workflowEnd: 'i-cf-end',
 
   /** 对话 / Playground */
   chat: 'i-lucide-messages-square',
