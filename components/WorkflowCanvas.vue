@@ -5,6 +5,16 @@
     :edges="edges"
     :default-viewport="{ x: 50, y: 50, zoom: 1 }"
     :default-edge-options="defaultEdgeOptions"
+    :connection-mode="ConnectionMode.Loose"
+    :connection-radius="36"
+    :connection-line-options="connectionLineOptions"
+    :nodes-connectable="true"
+    :nodes-draggable="true"
+    :elements-selectable="true"
+    :edges-updatable="true"
+    :connect-on-click="true"
+    :is-valid-connection="isValidConnection"
+    :default-marker-color="'#4f46e5'"
     @node-click="handleNodeClick"
     @pane-click="handlePaneClick"
     @connect="handleConnect"
@@ -61,7 +71,14 @@
 </template>
 
 <script setup lang="ts">
-import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
+import {
+  VueFlow,
+  MarkerType,
+  ConnectionMode,
+  ConnectionLineType,
+  useVueFlow,
+  type Connection,
+} from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
@@ -75,10 +92,10 @@ defineProps<{
 }>()
 
 /**
- * 箭头端点约定（配合左→右排版）：
- * - 起点：上游节点右侧 source Handle 中心
- * - 终点：下游节点左侧 target Handle 中心，带闭合箭头朝向目标
- * 条件节点：真/假从上下两个 source 出去，减少线交叉
+ * 箭头端点约定（ProcessOn 风格线头拖拽）：
+ * - 从节点右侧/上下 source 线头拖出，跟鼠标移动
+ * - 落到目标左侧 target 线头（Loose 模式也可落到节点附近）
+ * 条件节点：真/假从上下两个 source 出去
  */
 const defaultEdgeOptions = {
   animated: true,
@@ -89,6 +106,22 @@ const defaultEdgeOptions = {
     color: '#4f46e5',
   },
   style: { stroke: '#4f46e5', strokeWidth: 2 },
+}
+
+const connectionLineOptions = {
+  type: ConnectionLineType.Bezier,
+  style: {
+    stroke: '#4f46e5',
+    strokeWidth: 2,
+    strokeDasharray: '6 4',
+  },
+  markerEnd: MarkerType.ArrowClosed,
+}
+
+function isValidConnection(connection: Connection) {
+  if (!connection.source || !connection.target) return false
+  if (connection.source === connection.target) return false
+  return true
 }
 
 const { fitView } = useVueFlow({ id: 'workflow-editor' })
@@ -102,29 +135,26 @@ defineExpose({ fitCanvas })
 const emit = defineEmits<{
   (e: 'node-click', event: any): void
   (e: 'pane-click'): void
-  (e: 'connect', params: any): void
+  (e: 'connect', params: Connection): void
   (e: 'nodes-change', changes: any[]): void
   (e: 'edges-change', changes: any[]): void
 }>()
 
 const handleNodeClick = (event: any) => emit('node-click', event)
 const handlePaneClick = () => emit('pane-click')
-const handleConnect = (params: any) => emit('connect', params)
+const handleConnect = (params: Connection) => emit('connect', params)
 const handleNodesChange = (changes: any[]) => emit('nodes-change', changes)
 const handleEdgesChange = (changes: any[]) => emit('edges-change', changes)
 </script>
 
 <style scoped>
-.vue-flow :deep(.vue-flow__handle) {
-  width: 10px;
-  height: 10px;
-  background: #4f46e5;
-  border: 2px solid #fff;
-  border-radius: 50%;
+/* 拖线时全局线头更醒目 */
+.vue-flow :deep(.vue-flow__connection-path) {
+  stroke: #4f46e5;
+  stroke-width: 2;
 }
 
-.vue-flow :deep(.vue-flow__handle:hover) {
-  background: #7c3aed;
-  transform: scale(1.2);
+.vue-flow :deep(.vue-flow__handle) {
+  z-index: 2;
 }
 </style>

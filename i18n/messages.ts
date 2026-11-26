@@ -897,6 +897,12 @@ export const M = {
   'editor.startVarTypeNumber': { 'zh-CN': '数字', 'en-US': 'Number' },
   'editor.startVarTypeBoolean': { 'zh-CN': '开关', 'en-US': 'Boolean' },
   'editor.startVarMissing': { 'zh-CN': '请填写必填入参：{name}', 'en-US': 'Required input missing: {name}' },
+  'editor.branchTrue': { 'zh-CN': '真', 'en-US': 'True' },
+  'editor.branchFalse': { 'zh-CN': '假', 'en-US': 'False' },
+  'editor.connectHint': {
+    'zh-CN': '从节点边缘圆点拖出连线，指向目标节点',
+    'en-US': 'Drag from a node port to another node to connect',
+  },
   'editor.debugInputFromStart': {
     'zh-CN': '按开始节点的变量填写；也可展开下方 JSON',
     'en-US': 'Fill from start-node variables; JSON still available below.',

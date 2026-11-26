@@ -150,6 +150,7 @@
     <div class="editor-container">
       <div class="node-palette">
         <div class="palette-title">{{ t('editor.nodes') }}</div>
+        <p class="palette-hint">{{ t('editor.connectHint') }}</p>
         <div
           v-for="type in nodeTypes"
           :key="type"
@@ -1263,14 +1264,31 @@ const handleNodesChange = (changes: any[]) => {
 }
 
 const handleEdgesChange = (changes: any[]) => {
-  // handle edge changes
+  for (const change of changes) {
+    if (change.type === 'remove') {
+      edges.value = edges.value.filter(e => e.id !== change.id)
+    }
+  }
 }
 
+/** ProcessOn 风格：从线头拖到目标节点完成连线 */
 const handleConnect = (params: any) => {
+  if (!params?.source || !params?.target || params.source === params.target) return
+  const sourceHandle = params.sourceHandle || undefined
+  const targetHandle = params.targetHandle || undefined
+  const dup = edges.value.some(e =>
+    e.source === params.source
+    && e.target === params.target
+    && (e.sourceHandle || undefined) === sourceHandle
+    && (e.targetHandle || undefined) === targetHandle,
+  )
+  if (dup) return
   edges.value.push(withEdgeArrow({
-    id: `e${params.source}-${params.target}`,
+    id: `e${params.source}-${params.target}-${sourceHandle || 's'}-${targetHandle || 't'}-${Date.now()}`,
     source: params.source,
     target: params.target,
+    sourceHandle,
+    targetHandle,
   }))
 }
 
@@ -2076,8 +2094,16 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
   color: var(--cf-ink-soft, #64748b);
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   text-transform: uppercase;
+}
+
+.palette-hint {
+  margin: 0 0 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--cf-ink-soft, #64748b);
+  opacity: 0.9;
 }
 
 .palette-item {
