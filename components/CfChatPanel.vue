@@ -94,6 +94,7 @@ import {
   type CfChatMessageInput,
   type CfChatStatus,
 } from '~/utils/chatUi'
+import { CF_ICONS } from '~/constants/icons'
 
 const props = withDefaults(
   defineProps<{
@@ -134,8 +135,8 @@ const emit = defineEmits<{
 
 const { t } = useLocale()
 
-const userBubble = { side: 'right' as const, variant: 'soft' as const, icon: 'i-lucide-user' }
-const assistantBubble = { side: 'left' as const, variant: 'naked' as const, icon: 'i-lucide-sparkles' }
+const userBubble = { side: 'right' as const, variant: 'soft' as const, icon: CF_ICONS.user }
+const assistantBubble = { side: 'left' as const, variant: 'naked' as const, icon: CF_ICONS.ai }
 
 const uiMessages = computed(() => toUiChatMessages(props.messages))
 

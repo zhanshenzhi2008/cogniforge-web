@@ -20,6 +20,20 @@ export default defineNuxtConfig({
     fonts: false,
   },
 
+  // SPA 下自定义 SVG 必须打进 client bundle，否则线上拿不到
+  icon: {
+    customCollections: [
+      {
+        prefix: 'cf',
+        dir: './assets/icons',
+      },
+    ],
+    clientBundle: {
+      includeCustomCollections: true,
+      scan: true,
+    },
+  },
+
   vite: {
     server: {
       strictPort: true,

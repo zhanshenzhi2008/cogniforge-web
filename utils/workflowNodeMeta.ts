@@ -1,7 +1,9 @@
 /**
  * 工作流节点元信息：图标 / 配色 / 连接点形态。
- * 左侧面板与画布共用，避免两边不一致。
+ * 左侧面板与画布共用；域图标统一取自 constants/icons。
  */
+
+import { CF_ICONS } from '~/constants/icons'
 
 export type WorkflowNodeKind =
   | 'start'
@@ -32,16 +34,16 @@ export interface WorkflowNodeMeta {
 export const WORKFLOW_NODE_META: Record<WorkflowNodeKind, WorkflowNodeMeta> = {
   start: { icon: 'i-lucide-play', tone: 'start', handles: 'start' },
   end: { icon: 'i-lucide-circle-check', tone: 'end', handles: 'end' },
-  llm: { icon: 'i-lucide-message-square', tone: 'llm', handles: 'io' },
-  agent: { icon: 'i-lucide-bot', tone: 'agent', handles: 'io' },
-  team: { icon: 'i-lucide-users', tone: 'team', handles: 'io' },
-  condition: { icon: 'i-lucide-git-branch', tone: 'condition', handles: 'branch' },
+  llm: { icon: CF_ICONS.llm, tone: 'llm', handles: 'io' },
+  agent: { icon: CF_ICONS.agent, tone: 'agent', handles: 'io' },
+  team: { icon: CF_ICONS.team, tone: 'team', handles: 'io' },
+  condition: { icon: CF_ICONS.workflow, tone: 'condition', handles: 'branch' },
   loop: { icon: 'i-lucide-repeat', tone: 'loop', handles: 'io' },
   http: { icon: 'i-lucide-globe', tone: 'http', handles: 'io' },
   code: { icon: 'i-lucide-code-2', tone: 'code', handles: 'io' },
   delay: { icon: 'i-lucide-timer', tone: 'delay', handles: 'io' },
   wait: { icon: 'i-lucide-pause-circle', tone: 'wait', handles: 'io' },
-  search: { icon: 'i-lucide-book-search', tone: 'search', handles: 'io' },
+  search: { icon: CF_ICONS.knowledge, tone: 'search', handles: 'io' },
   input: { icon: 'i-lucide-download', tone: 'input', handles: 'start' },
   output: { icon: 'i-lucide-upload', tone: 'output', handles: 'end' },
 }
@@ -63,7 +65,7 @@ export const WORKFLOW_PALETTE_TYPES: WorkflowNodeKind[] = [
 
 export function getWorkflowNodeMeta(type: string): WorkflowNodeMeta {
   return WORKFLOW_NODE_META[type as WorkflowNodeKind] || {
-    icon: 'i-lucide-box',
+    icon: CF_ICONS.fallback,
     tone: 'default',
     handles: 'io',
   }

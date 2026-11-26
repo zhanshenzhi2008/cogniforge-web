@@ -12,7 +12,7 @@
 
     <section class="config-block">
       <div class="card-header">
-        <UIcon name="i-lucide-bot" class="size-4" />
+        <UIcon :name="CF_ICONS.agent" class="size-4" />
         <span>{{ t('agents.title') }}</span>
       </div>
       <USelect
@@ -174,6 +174,7 @@
 import type { Agent } from '@/composables/useAgents'
 import type { PromptVarDef } from '@/composables/usePrompts'
 import PromptVarForm from '@/components/PromptVarForm.vue'
+import { CF_ICONS } from '~/constants/icons'
 
 const props = defineProps<{
   showBrand?: boolean

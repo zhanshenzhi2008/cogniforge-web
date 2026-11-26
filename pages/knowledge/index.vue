@@ -27,7 +27,7 @@
     </div>
 
     <div v-else-if="knowledgeBases.length === 0" class="cf-state">
-      <UIcon name="i-lucide-book-open" class="size-8 opacity-50" />
+      <UIcon :name="CF_ICONS.knowledge" class="size-8 opacity-50" />
       <p>{{ t('kb.empty') }}</p>
     </div>
 
@@ -46,7 +46,7 @@
           >
             <div class="kb-header">
               <div class="kb-name">
-                <UIcon name="i-lucide-book-open" class="size-5 shrink-0" />
+                <UIcon :name="CF_ICONS.knowledge" class="size-5 shrink-0" />
                 <span>{{ kb.name }}</span>
                 <UBadge
                   size="sm"
@@ -107,7 +107,7 @@
         <div v-if="dialogMode === 'view' && viewingKB" class="detail-sheet">
           <div class="detail-hero">
             <span class="detail-hero-icon">
-              <UIcon name="i-lucide-book-open" class="size-6" />
+              <UIcon :name="CF_ICONS.knowledge" class="size-6" />
             </span>
             <div class="detail-hero-text">
               <div class="detail-hero-name">{{ viewingKB.name }}</div>
@@ -286,6 +286,7 @@ import type {
   CreateKBInput,
   UpdateKBInput,
 } from '@/composables/useKnowledgeBases'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
   layout: 'default',
