@@ -87,7 +87,7 @@
 
         <section class="cfg-row">
           <div class="cfg-row__main">
-            <UIcon name="i-lucide-sparkles" class="size-4" />
+            <UIcon :name="CF_ICONS.ai" class="size-4" />
             <span>{{ t('agents.sourceSkill') }}</span>
           </div>
           <USelect
@@ -279,6 +279,7 @@ import {
 } from '~/utils/agentBuildConfig'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
+import { CF_ICONS } from '~/constants/icons'
 
 const props = defineProps<{
   mode: 'create' | 'edit'

@@ -90,6 +90,7 @@
 
 <script setup lang="ts">
 import type { QuotaSnapshot } from '~/composables/useQuota'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
   layout: 'default',
@@ -140,7 +141,7 @@ const statCards = computed(() => [
     value: loading.value ? '—' : String(counts.agents),
     caption: counts.agents > 0 ? t('dash.stat.total', { n: counts.agents }) : t('dash.stat.firstAgent'),
     accent: counts.agents > 0,
-    icon: 'i-lucide-bot',
+    icon: CF_ICONS.agent,
     to: '/agents',
   },
   {
@@ -149,7 +150,7 @@ const statCards = computed(() => [
     value: loading.value ? '—' : String(counts.flows),
     caption: counts.flows > 0 ? t('dash.stat.total', { n: counts.flows }) : t('dash.stat.firstFlow'),
     accent: counts.flows > 0,
-    icon: 'i-lucide-git-branch',
+    icon: CF_ICONS.workflow,
     to: '/workflows',
   },
   {
@@ -158,7 +159,7 @@ const statCards = computed(() => [
     value: loading.value ? '—' : String(counts.knowledge),
     caption: counts.knowledge > 0 ? t('dash.stat.kbOn') : t('dash.stat.kbOff'),
     accent: counts.knowledge > 0,
-    icon: 'i-lucide-book-open',
+    icon: CF_ICONS.knowledge,
     to: '/knowledge',
   },
   {
@@ -167,7 +168,7 @@ const statCards = computed(() => [
     value: loading.value ? '—' : String(counts.keys),
     caption: counts.keys > 0 ? t('dash.stat.total', { n: counts.keys }) : t('dash.stat.firstKey'),
     accent: counts.keys > 0,
-    icon: 'i-lucide-key-round',
+    icon: CF_ICONS.key,
     to: '/keys',
   },
 ])
@@ -177,25 +178,25 @@ const quickActions = computed(() => [
     title: t('dash.q.play.title'),
     desc: t('dash.q.play.desc'),
     to: '/playground',
-    icon: 'i-lucide-zap',
+    icon: CF_ICONS.chatQuick,
   },
   {
     title: t('dash.q.flow.title'),
     desc: t('dash.q.flow.desc'),
     to: '/workflows',
-    icon: 'i-lucide-git-branch',
+    icon: CF_ICONS.workflow,
   },
   {
     title: t('dash.q.kb.title'),
     desc: t('dash.q.kb.desc'),
     to: '/knowledge',
-    icon: 'i-lucide-book-open',
+    icon: CF_ICONS.knowledge,
   },
   {
     title: t('dash.q.keys.title'),
     desc: t('dash.q.keys.desc'),
     to: '/keys',
-    icon: 'i-lucide-key-round',
+    icon: CF_ICONS.key,
   },
 ])
 

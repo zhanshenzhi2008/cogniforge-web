@@ -22,7 +22,7 @@
       </div>
 
       <div v-else-if="workflows.length === 0" class="cf-state">
-        <UIcon name="i-lucide-git-branch" class="size-8 opacity-50" />
+        <UIcon :name="CF_ICONS.workflow" class="size-8 opacity-50" />
         <p>{{ t('flows.empty') }}</p>
       </div>
 
@@ -164,6 +164,7 @@
 
 <script setup lang="ts">
 import type { Workflow } from '@/composables/useWorkflows'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
   layout: 'default',

@@ -5,7 +5,7 @@
       <span>{{ t('common.loading') }}</span>
     </div>
     <div v-else-if="!agent" class="cf-state">
-      <UIcon name="i-lucide-bot-off" class="size-8 opacity-50" />
+      <UIcon :name="CF_ICONS.agentMissing" class="size-8 opacity-50" />
       <p>{{ t('agents.empty') }}</p>
       <CfButton tone="secondary" icon="i-lucide-arrow-left" @click="navigateTo('/agents')">
         {{ t('common.back') }}
@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import type { Agent } from '@/composables/useAgents'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
   layout: 'default',

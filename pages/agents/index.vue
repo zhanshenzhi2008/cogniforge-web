@@ -27,7 +27,7 @@
 
     <div v-else-if="agents.length === 0" class="cf-panel">
       <div class="cf-state">
-        <UIcon name="i-lucide-bot" class="size-8 opacity-50" />
+        <UIcon :name="CF_ICONS.agent" class="size-8 opacity-50" />
         <p>{{ t('agents.empty') }}</p>
         <CfButton tone="primary" icon="i-lucide-plus" @click="goCreate">
           {{ t('agents.new') }}
@@ -46,7 +46,7 @@
         <div class="agent-card__head">
           <div class="agent-card__identity">
             <span class="agent-card__icon">
-              <UIcon name="i-lucide-bot" class="size-5" />
+              <UIcon :name="CF_ICONS.agent" class="size-5" />
             </span>
             <div class="agent-card__titles">
               <div class="agent-card__name-row">
@@ -182,6 +182,7 @@
 <script setup lang="ts">
 import type { Agent } from '@/composables/useAgents'
 import type { ViewMode } from '@/components/CfViewModeToggle.vue'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
   layout: 'default',

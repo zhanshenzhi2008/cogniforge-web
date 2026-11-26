@@ -18,7 +18,7 @@
     </div>
 
     <div v-else-if="!selectedKB" class="cf-state">
-      <UIcon name="i-lucide-book-x" class="size-8 opacity-50" />
+      <UIcon :name="CF_ICONS.knowledgeMissing" class="size-8 opacity-50" />
       <p>{{ t('kb.notFound') }}</p>
       <CfButton tone="secondary" icon="i-lucide-arrow-left" @click="goBack">
         {{ t('common.back') }}
@@ -1161,6 +1161,7 @@ import type {
   ChunkPreviewResponse,
 } from '@/composables/useKnowledgeBases'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
+import { CF_ICONS } from '~/constants/icons'
 import { useProviders, hasCap, rerankModelLabel, type AIProvider } from '@/composables/useProviders'
 
 definePageMeta({
@@ -1681,7 +1682,7 @@ function searchModeLabel(mode: string) {
 function searchModeIcon(mode: string) {
   if (mode === 'keyword') return 'i-lucide-layout-grid'
   if (mode === 'hybrid') return 'i-lucide-layers'
-  return 'i-lucide-sparkles'
+  return CF_ICONS.ai
 }
 
 function formatHybridWeight(v: number) {

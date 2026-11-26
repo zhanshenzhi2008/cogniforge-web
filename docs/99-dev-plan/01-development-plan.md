@@ -4,6 +4,9 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-26 | v1.102 | 域图标收口到 CF_ICONS 共用（知识库/智能体/LLM 等） | orjrs |
+| 2026-11-26 | v1.101 | 知识库图标改用自定义书本+检索 SVG（i-cf-knowledge） | orjrs |
+| 2026-11-26 | v1.100 | LLM 节点图标改为 sparkles，与对话/智能体区分 | orjrs |
 | 2026-11-25 | v1.99 | 代办补金融扩展：知识密级 + 角色/人员最高可访问密级 | orjrs |
 | 2026-11-25 | v1.98 | 知识状态约定：草稿 / 审核 / 发布 / 废止 | orjrs |
 | 2026-11-25 | v1.97 | 代办：知识文档生效/失效时间 + 检索按状态与有效期过滤 | orjrs |
@@ -102,6 +105,24 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 域图标 CF_ICONS 共用（2026-11-26）
+
+- **原因**：知识库/智能体/LLM 等图标各页硬编码易分叉
+- **落地**：`constants/icons.ts` 为唯一入口；工作流节点、控制台、知识库、智能体、聊天面板、Playground 统一引用
+- **含代码**：`constants/icons.ts`、`workflowNodeMeta.ts`、相关 pages/components
+
+## [变更] 知识库自定义图标（2026-11-26）
+
+- **原因**：对齐产品提供的「书本 + 检索」图形，替代通用 lucide book
+- **落地**：`assets/icons/knowledge.svg` → `i-cf-knowledge`；用于知识库列表/控制台入口/工作流检索节点；SPA 下 `includeCustomCollections`
+- **含代码**：`assets/icons/knowledge.svg`、`nuxt.config.ts`、`workflowNodeMeta.ts`、`pages/knowledge/index.vue`、`pages/index.vue`
+
+## [变更] LLM 节点图标改 sparkles（2026-11-26）
+
+- **原因**：原 `message-square` 像聊天，和智能体 `bot` 也不够区分
+- **落地**：LLM → `i-lucide-sparkles`（常见 AI 生成语义）
+- **含代码**：`utils/workflowNodeMeta.ts`
 
 ## [变更] 代办补金融扩展：知识密级与人侧 clearance（2026-11-25）
 

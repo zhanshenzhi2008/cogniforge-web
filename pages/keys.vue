@@ -22,7 +22,7 @@
       </div>
 
       <div v-else-if="keys.length === 0" class="cf-state">
-        <UIcon name="i-lucide-key-round" class="size-8 opacity-50" />
+        <UIcon :name="CF_ICONS.key" class="size-8 opacity-50" />
         <p>{{ t('keys.empty') }}</p>
       </div>
 
@@ -150,6 +150,8 @@
 </template>
 
 <script setup lang="ts">
+import { CF_ICONS } from '~/constants/icons'
+
 interface ApiKey {
   id: string
   name: string

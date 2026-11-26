@@ -72,7 +72,7 @@
           <template #empty>
             <div class="empty-state">
               <div class="empty-glow" />
-              <UIcon name="i-lucide-messages-square" class="size-14 empty-icon" />
+              <UIcon :name="CF_ICONS.chat" class="size-14 empty-icon" />
               <p class="empty-title font-display">{{ t('play.emptyTitle') }}</p>
               <p class="empty-sub">{{ t('play.emptySub') }}</p>
               <div class="suggestion-chips">
@@ -80,7 +80,7 @@
                   v-for="chip in suggestionChips"
                   :key="chip"
                   tone="secondary"
-                  icon="i-lucide-sparkles"
+                  :icon="CF_ICONS.ai"
                   @click="sendSuggestion(chip)"
                 >
                   {{ chip }}
@@ -288,6 +288,7 @@
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import { mapChatHttpError } from '~/utils/chatHttpError'
 import type { CfChatStatus } from '~/utils/chatUi'
+import { CF_ICONS } from '~/constants/icons'
 import {
   CHAT_IMAGE_ACCEPT,
   CHAT_IMAGE_MAX_COUNT,
