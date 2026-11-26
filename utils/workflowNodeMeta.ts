@@ -64,6 +64,9 @@ export const WORKFLOW_PALETTE_TYPES: WorkflowNodeKind[] = [
 ]
 
 export function getWorkflowNodeMeta(type: string): WorkflowNodeMeta {
+  if (type === 'human_action') {
+    return { icon: 'i-lucide-user-check', tone: 'wait', handles: 'io' }
+  }
   return WORKFLOW_NODE_META[type as WorkflowNodeKind] || {
     icon: CF_ICONS.fallback,
     tone: 'default',

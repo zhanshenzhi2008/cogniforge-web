@@ -2000,9 +2000,13 @@ const stopPolling = () => {
 }
 
 /** 按 node_runs / current_node 给画布节点上色（阶段十八 W1） */
-const applyNodeRunHighlight = (exec: { current_node?: string; node_runs?: { node_id: string; status: string }[] }) => {
+const applyNodeRunHighlight = (exec: {
+  current_node?: string
+  node_runs?: { node_id: string; status: string; node_type?: string }[]
+}) => {
   const byId = new Map<string, string>()
   for (const r of exec.node_runs || []) {
+    if (r.node_type === 'human_action') continue
     byId.set(r.node_id, r.status)
   }
   if (exec.current_node && !byId.has(exec.current_node)) {
@@ -2050,6 +2054,8 @@ const EXEC_STATUS_KEYS: Record<string, string> = {
   waiting: 'editor.execStatus.waiting',
   completed: 'editor.execStatus.succeeded',
   succeeded: 'editor.execStatus.succeeded',
+  approved: 'editor.execStatus.approved',
+  rejected: 'editor.execStatus.rejected',
   failed: 'editor.execStatus.failed',
   cancelled: 'editor.execStatus.cancelled',
 }
@@ -2182,6 +2188,16 @@ const execTimeline = computed(() => {
     error?: string
     attempt?: number
     duration_ms?: number
+    detail?: {
+      human_action?: boolean
+      action?: string
+      actor_user_id?: string
+      wait_node_id?: string
+      wait_reason?: string
+      at?: string
+      note?: string
+    }
+    created_at?: string
   }[]
   if (!runs.length) {
     if (ex.current_node) {
@@ -2197,6 +2213,24 @@ const execTimeline = computed(() => {
   }
   return runs.map((r, i) => {
     const nodeType = r.node_type || 'default'
+    if (nodeType === 'human_action' || r.detail?.human_action) {
+      const action = r.detail?.action || (r.status === 'rejected' ? 'reject' : 'approve')
+      const when = r.detail?.at || r.created_at || ''
+      const actor = r.detail?.actor_user_id
+        ? truncateText(String(r.detail.actor_user_id), 12)
+        : '—'
+      const waitLabel = nodeDisplayName(r.detail?.wait_node_id || r.node_id) || r.node_id
+      const noteExtra = r.detail?.note ? ` · ${truncateText(r.detail.note, 40)}` : ''
+      return {
+        key: r.id || `human-${r.node_id}-${r.attempt || i}`,
+        nodeType: 'human_action',
+        label: action === 'reject'
+          ? t('editor.debugTimelineRejectAction', { node: waitLabel })
+          : t('editor.debugTimelineApproveAction', { node: waitLabel }),
+        status: r.status || (action === 'reject' ? 'rejected' : 'approved'),
+        note: t('editor.debugTimelineAudit', { actor, when: when ? formatWaitUntil(when) : '—' }) + noteExtra,
+      }
+    }
     const label = nodeDisplayName(r.node_id) || r.node_id
     let note = ''
     if (r.error) note = truncateText(r.error, 80)
@@ -2783,8 +2817,10 @@ onMounted(() => {
 .debug-status-dot.debugging { background: #3b82f6; animation: pulse 1s infinite; }
 .debug-status-dot.waiting { background: #ea580c; }
 .debug-status-dot.completed,
-.debug-status-dot.succeeded { background: #10b981; }
+.debug-status-dot.succeeded,
+.debug-status-dot.approved { background: #10b981; }
 .debug-status-dot.failed,
+.debug-status-dot.rejected,
 .debug-status-dot.cancelled { background: #ef4444; }
 
 @keyframes pulse {
