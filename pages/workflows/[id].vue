@@ -359,15 +359,161 @@
             />
           </div>
 
-          <div v-if="selectedNode.type === 'condition'" class="field">
-            <label class="field__label">{{ t('common.description') }}</label>
-            <UTextarea
-              v-model="nodeConfig.description"
-              class="w-full"
-              :rows="3"
-              :placeholder="t('editor.conditionPh')"
-            />
-          </div>
+          <template v-if="selectedNode.type === 'condition'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.conditionField') }}</label>
+              <UInput
+                v-model="nodeConfig.conditionField"
+                class="w-full"
+                :placeholder="t('editor.conditionFieldPh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.conditionOperator') }}</label>
+              <USelect
+                v-model="nodeConfig.conditionOperator"
+                class="w-full"
+                :items="conditionOperatorOptions"
+                value-key="value"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.conditionValue') }}</label>
+              <UInput
+                v-model="nodeConfig.conditionValue"
+                class="w-full"
+                :placeholder="t('editor.conditionValuePh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('common.description') }}</label>
+              <UTextarea
+                v-model="nodeConfig.description"
+                class="w-full"
+                :rows="2"
+                :placeholder="t('editor.conditionPh')"
+              />
+            </div>
+          </template>
+
+          <template v-if="selectedNode.type === 'http'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.httpMethod') }}</label>
+              <USelect
+                v-model="nodeConfig.httpMethod"
+                class="w-full"
+                :items="httpMethodOptions"
+                value-key="value"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.httpUrl') }}</label>
+              <UInput
+                v-model="nodeConfig.httpUrl"
+                class="w-full"
+                :placeholder="t('editor.httpUrlPh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.httpBody') }}</label>
+              <UTextarea
+                v-model="nodeConfig.httpBody"
+                class="w-full"
+                :rows="4"
+                :placeholder="t('editor.httpBodyPh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.httpTimeout') }}</label>
+              <UInput
+                v-model.number="nodeConfig.httpTimeout"
+                type="number"
+                class="w-full"
+                :placeholder="t('editor.httpTimeoutPh')"
+              />
+            </div>
+          </template>
+
+          <template v-if="selectedNode.type === 'delay'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.delayDuration') }}</label>
+              <UInput
+                v-model.number="nodeConfig.delayDuration"
+                type="number"
+                class="w-full"
+                :placeholder="t('editor.delayDurationPh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.delayUnit') }}</label>
+              <USelect
+                v-model="nodeConfig.delayUnit"
+                class="w-full"
+                :items="delayUnitOptions"
+                value-key="value"
+              />
+            </div>
+          </template>
+
+          <template v-if="selectedNode.type === 'loop'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.loopType') }}</label>
+              <USelect
+                v-model="nodeConfig.loopType"
+                class="w-full"
+                :items="loopTypeOptions"
+                value-key="value"
+              />
+            </div>
+            <div v-if="nodeConfig.loopType === 'times'" class="field">
+              <label class="field__label">{{ t('editor.loopCount') }}</label>
+              <UInput
+                v-model.number="nodeConfig.loopCount"
+                type="number"
+                class="w-full"
+                :placeholder="t('editor.loopCountPh')"
+              />
+            </div>
+            <div v-if="nodeConfig.loopType === 'while'" class="field">
+              <label class="field__label">{{ t('editor.loopCondition') }}</label>
+              <UInput
+                v-model="nodeConfig.loopCondition"
+                class="w-full"
+                :placeholder="t('editor.loopConditionPh')"
+              />
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.loopMaxIter') }}</label>
+              <UInput
+                v-model.number="nodeConfig.loopMaxIter"
+                type="number"
+                class="w-full"
+                :placeholder="t('editor.loopMaxIterPh')"
+              />
+            </div>
+          </template>
+
+          <template v-if="selectedNode.type === 'code'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.codeLanguage') }}</label>
+              <USelect
+                v-model="nodeConfig.codeLanguage"
+                class="w-full"
+                :items="codeLanguageOptions"
+                value-key="value"
+              />
+              <p class="field__hint">{{ t('editor.codeLanguageHint') }}</p>
+            </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.codeSource') }}</label>
+              <UTextarea
+                v-model="nodeConfig.codeSource"
+                class="w-full"
+                :rows="6"
+                :placeholder="t('editor.codeSourcePh')"
+              />
+            </div>
+          </template>
 
           <div v-if="selectedNode.type === 'wait'" class="field">
             <label class="field__label">{{ t('editor.waitReason') }}</label>
@@ -848,6 +994,21 @@ const nodeConfig = reactive({
   waitReason: 'approval',
   waitMessage: '',
   timeoutSec: 0,
+  conditionField: '',
+  conditionOperator: '==',
+  conditionValue: '',
+  httpMethod: 'GET',
+  httpUrl: '',
+  httpBody: '',
+  httpTimeout: 30,
+  delayDuration: 1,
+  delayUnit: 'seconds',
+  loopType: 'times',
+  loopCount: 3,
+  loopMaxIter: 100,
+  loopCondition: '',
+  codeLanguage: 'expression',
+  codeSource: '',
   variables: [] as {
     name: string
     type: string
@@ -861,6 +1022,41 @@ const startVarTypeOptions = computed(() => [
   { label: t('editor.startVarTypeString'), value: 'string' },
   { label: t('editor.startVarTypeNumber'), value: 'number' },
   { label: t('editor.startVarTypeBoolean'), value: 'boolean' },
+])
+
+const conditionOperatorOptions = computed(() => [
+  { label: t('editor.condOpEq'), value: '==' },
+  { label: t('editor.condOpNe'), value: '!=' },
+  { label: t('editor.condOpGt'), value: '>' },
+  { label: t('editor.condOpGte'), value: '>=' },
+  { label: t('editor.condOpLt'), value: '<' },
+  { label: t('editor.condOpLte'), value: '<=' },
+  { label: t('editor.condOpContains'), value: 'contains' },
+  { label: t('editor.condOpEmpty'), value: 'is_empty' },
+])
+
+const httpMethodOptions = [
+  { label: 'GET', value: 'GET' },
+  { label: 'POST', value: 'POST' },
+  { label: 'PUT', value: 'PUT' },
+  { label: 'PATCH', value: 'PATCH' },
+  { label: 'DELETE', value: 'DELETE' },
+]
+
+const delayUnitOptions = computed(() => [
+  { label: t('editor.delayUnitSeconds'), value: 'seconds' },
+  { label: t('editor.delayUnitMinutes'), value: 'minutes' },
+  { label: t('editor.delayUnitHours'), value: 'hours' },
+])
+
+const loopTypeOptions = computed(() => [
+  { label: t('editor.loopTypeTimes'), value: 'times' },
+  { label: t('editor.loopTypeWhile'), value: 'while' },
+])
+
+const codeLanguageOptions = computed(() => [
+  { label: t('editor.codeLangExpression'), value: 'expression' },
+  { label: t('editor.codeLangJavascript'), value: 'javascript' },
 ])
 
 function addStartVariable() {
@@ -1338,6 +1534,30 @@ const handleNodeClick = (event: any) => {
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
   nodeConfig.timeoutSec = Number(event.node.data?.timeoutSec || event.node.data?.timeout_sec || 0)
+  const cond0 = Array.isArray(event.node.data?.conditions) ? event.node.data.conditions[0] : null
+  nodeConfig.conditionField = event.node.data?.conditionField || cond0?.field || ''
+  nodeConfig.conditionOperator = event.node.data?.conditionOperator || cond0?.operator || '=='
+  nodeConfig.conditionValue = String(
+    event.node.data?.conditionValue ?? cond0?.value ?? '',
+  )
+  nodeConfig.httpMethod = event.node.data?.method || event.node.data?.httpMethod || 'GET'
+  nodeConfig.httpUrl = event.node.data?.url || event.node.data?.httpUrl || ''
+  const bodyRaw = event.node.data?.body ?? event.node.data?.httpBody
+  nodeConfig.httpBody = typeof bodyRaw === 'string'
+    ? bodyRaw
+    : (bodyRaw != null ? JSON.stringify(bodyRaw, null, 2) : '')
+  nodeConfig.httpTimeout = Number(event.node.data?.timeout || event.node.data?.httpTimeout || 30) || 30
+  nodeConfig.delayDuration = Number(
+    event.node.data?.delayDuration ?? event.node.data?.duration ?? 1,
+  ) || 1
+  nodeConfig.delayUnit = event.node.data?.delayUnit || event.node.data?.unit || 'seconds'
+  nodeConfig.loopType = event.node.data?.loopType || event.node.data?.type || 'times'
+  if (nodeConfig.loopType === 'count') nodeConfig.loopType = 'times'
+  nodeConfig.loopCount = Number(event.node.data?.loopCount ?? event.node.data?.count ?? 3) || 3
+  nodeConfig.loopMaxIter = Number(event.node.data?.loopMaxIter ?? event.node.data?.max_iter ?? 100) || 100
+  nodeConfig.loopCondition = event.node.data?.loopCondition || event.node.data?.condition || ''
+  nodeConfig.codeLanguage = event.node.data?.codeLanguage || event.node.data?.language || 'expression'
+  nodeConfig.codeSource = event.node.data?.codeSource || event.node.data?.code || ''
   nodeConfig.variables = normalizeStartVars(
     event.node.data?.variables || event.node.config?.variables,
   ).map(v => ({ ...v }))
@@ -1380,6 +1600,64 @@ const saveNodeConfig = () => {
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
       timeoutSec: nodeConfig.timeoutSec || 0,
+      ...(selectedNode.value.type === 'condition'
+        ? {
+            conditionField: nodeConfig.conditionField,
+            conditionOperator: nodeConfig.conditionOperator || '==',
+            conditionValue: nodeConfig.conditionValue,
+            conditions: nodeConfig.conditionField
+              ? [{
+                  field: nodeConfig.conditionField,
+                  operator: nodeConfig.conditionOperator || '==',
+                  value: nodeConfig.conditionValue,
+                  branch: 'true',
+                }]
+              : [],
+          }
+        : {}),
+      ...(selectedNode.value.type === 'http'
+        ? (() => {
+            let body: any = nodeConfig.httpBody
+            const trimmed = String(nodeConfig.httpBody || '').trim()
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+              try { body = JSON.parse(trimmed) } catch { /* keep string */ }
+            }
+            return {
+              method: nodeConfig.httpMethod || 'GET',
+              url: nodeConfig.httpUrl,
+              body: trimmed ? body : undefined,
+              timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
+            }
+          })()
+        : {}),
+      ...(selectedNode.value.type === 'delay'
+        ? {
+            delayDuration: Number(nodeConfig.delayDuration) || 1,
+            delayUnit: nodeConfig.delayUnit || 'seconds',
+            duration: Number(nodeConfig.delayDuration) || 1,
+            unit: nodeConfig.delayUnit || 'seconds',
+          }
+        : {}),
+      ...(selectedNode.value.type === 'loop'
+        ? {
+            loopType: nodeConfig.loopType || 'times',
+            loopCount: Number(nodeConfig.loopCount) || 1,
+            loopMaxIter: Number(nodeConfig.loopMaxIter) || 100,
+            loopCondition: nodeConfig.loopCondition,
+            type: nodeConfig.loopType || 'times',
+            count: Number(nodeConfig.loopCount) || 1,
+            max_iter: Number(nodeConfig.loopMaxIter) || 100,
+            condition: nodeConfig.loopCondition,
+          }
+        : {}),
+      ...(selectedNode.value.type === 'code'
+        ? {
+            codeLanguage: nodeConfig.codeLanguage || 'expression',
+            codeSource: nodeConfig.codeSource,
+            language: nodeConfig.codeLanguage || 'expression',
+            code: nodeConfig.codeSource,
+          }
+        : {}),
       ...(selectedNode.value.type === 'start'
         ? {
             variables: nodeConfig.variables
