@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  findConditionsMissingBranches,
   findEndsWithOutgoing,
   findStartNodes,
   findStartsWithIncoming,
@@ -50,6 +51,30 @@ describe('workflowReachability', () => {
     ]
     expect(findStartsWithIncoming(nodes, edges).map(n => n.id)).toEqual(['s', 'i'])
     expect(findStartsWithIncoming(nodes, [{ source: 's', target: 'e' }])).toEqual([])
+  })
+
+  it('flags condition nodes missing true/false branch edges', () => {
+    const nodes = [
+      { id: 's', type: 'start' },
+      { id: 'c1', type: 'condition', data: { label: '判断' } },
+      { id: 'c2', type: 'condition', data: { label: '完整' } },
+      { id: 'a', type: 'llm' },
+      { id: 'b', type: 'llm' },
+      { id: 'e', type: 'end' },
+    ]
+    const edges = [
+      { source: 's', target: 'c1' },
+      { source: 'c1', target: 'a', sourceHandle: 's-top' },
+      { source: 's', target: 'c2' },
+      { source: 'c2', target: 'a', sourceHandle: 's-top' },
+      { source: 'c2', target: 'b', sourceHandle: 's-bottom' },
+    ]
+    expect(findConditionsMissingBranches(nodes, edges)).toEqual([
+      { id: 'c1', label: '判断', missing: 'false' },
+    ])
+    expect(findConditionsMissingBranches(nodes, [
+      { source: 's', target: 'c1' },
+    ])[0]?.missing).toBe('both')
   })
 
   it('marks only start when no edges', () => {

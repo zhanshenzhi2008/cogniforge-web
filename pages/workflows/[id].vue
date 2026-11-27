@@ -73,6 +73,16 @@
         <UIcon name="i-lucide-log-in" class="size-3.5" />
         <span>{{ t('editor.startIncomingChip', { n: startIncomingCount }) }}</span>
       </button>
+      <button
+        v-if="conditionBranchCount > 0"
+        type="button"
+        class="unbound-chip unbound-chip--branch"
+        :title="t('editor.conditionBranchChipTip')"
+        @click="focusConditionMissingBranch"
+      >
+        <UIcon name="i-lucide-git-fork" class="size-3.5" />
+        <span>{{ t('editor.conditionBranchChip', { n: conditionBranchCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -1205,6 +1215,7 @@ import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
+  findConditionsMissingBranches,
   findEndsWithOutgoing,
   findStartNodes,
   findStartsWithIncoming,
@@ -2579,6 +2590,9 @@ const endOutgoingCount = computed(
 const startIncomingCount = computed(
   () => findStartsWithIncoming(nodes.value, edges.value).length,
 )
+const conditionBranchCount = computed(
+  () => findConditionsMissingBranches(nodes.value, edges.value).length,
+)
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
@@ -2635,6 +2649,19 @@ function focusEndWithOutgoing() {
 /** 顶栏芯片：打开仍有入边的开始/输入节点 */
 function focusStartWithIncoming() {
   const bad = findStartsWithIncoming(nodes.value, edges.value)
+  if (!bad.length) return
+  const first = bad[0]!
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
+/** 顶栏芯片：打开缺真/假出边的条件节点 */
+function focusConditionMissingBranch() {
+  const bad = findConditionsMissingBranches(nodes.value, edges.value)
   if (!bad.length) return
   const first = bad[0]!
   const node = nodes.value.find(n => n.id === first.id)
@@ -2720,6 +2747,22 @@ function ensureNoStartIncoming(): boolean {
   return false
 }
 
+/** 条件节点须同时连上真/假两条出边 */
+function ensureConditionBranches(): boolean {
+  const bad = findConditionsMissingBranches(nodes.value, edges.value)
+  if (!bad.length) return true
+  const first = bad[0]!
+  toast.add({
+    title: t('editor.conditionBranchNode', { name: first.label }),
+    description: bad.length > 1
+      ? t('editor.conditionBranchMore', { n: bad.length - 1 })
+      : undefined,
+    color: 'warning',
+  })
+  focusConditionMissingBranch()
+  return false
+}
+
 /** 所有非 start 节点须从 start 可达 */
 function ensureReachableFromStart(): boolean {
   const orphan = findUnreachableNodes(nodes.value, edges.value)
@@ -2746,6 +2789,7 @@ const handleSave = async () => {
   if (!ensureSingleStartNode()) return
   if (!ensureNoEndOutgoing()) return
   if (!ensureNoStartIncoming()) return
+  if (!ensureConditionBranches()) return
   if (!ensureReachableFromStart()) return
   saving.value = true
   try {
@@ -2866,6 +2910,7 @@ const handleExecute = async () => {
   if (!ensureSingleStartNode()) return
   if (!ensureNoEndOutgoing()) return
   if (!ensureNoStartIncoming()) return
+  if (!ensureConditionBranches()) return
   if (!ensureReachableFromStart()) return
 
   executing.value = true
@@ -3036,6 +3081,7 @@ const startDebug = async (startFromNode?: string) => {
   if (!ensureSingleStartNode()) return
   if (!ensureNoEndOutgoing()) return
   if (!ensureNoStartIncoming()) return
+  if (!ensureConditionBranches()) return
   if (!ensureReachableFromStart()) return
 
   isDebugging.value = true
@@ -3514,6 +3560,16 @@ onMounted(() => {
 
 .unbound-chip--start-in:hover {
   background: #dcfce7;
+}
+
+.unbound-chip--branch {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.unbound-chip--branch:hover {
+  background: #fef3c7;
 }
 
 .exec-bar {

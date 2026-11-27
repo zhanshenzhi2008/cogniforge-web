@@ -1323,6 +1323,19 @@ export const M = {
     'zh-CN': '点击打开仍有入边的开始/输入节点',
     'en-US': 'Click to open a start/input node with incoming edges',
   },
+  'editor.conditionBranchNode': {
+    'zh-CN': '「{name}」条件分支不完整：请连上真/假两条出边',
+    'en-US': '“{name}” needs both true and false outgoing edges',
+  },
+  'editor.conditionBranchMore': {
+    'zh-CN': '另有 {n} 个条件节点分支也不全',
+    'en-US': '{n} more condition node(s) also incomplete',
+  },
+  'editor.conditionBranchChip': { 'zh-CN': '{n} 个分支不全', 'en-US': '{n} incomplete branches' },
+  'editor.conditionBranchChipTip': {
+    'zh-CN': '点击打开缺真/假出边的条件节点',
+    'en-US': 'Click to open a condition missing a true/false edge',
+  },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',

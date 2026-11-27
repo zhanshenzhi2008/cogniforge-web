@@ -59,6 +59,33 @@ export function findStartsWithIncoming(
   return out
 }
 
+/** 条件节点须同时有真(s-top)与假(s-bottom)出边 */
+export function findConditionsMissingBranches(
+  nodes: { id: string, type?: string, data?: { label?: string } }[],
+  edges: { source: string, target: string, sourceHandle?: string | null }[],
+): { id: string, label: string, missing: 'true' | 'false' | 'both' }[] {
+  const out: { id: string, label: string, missing: 'true' | 'false' | 'both' }[] = []
+  for (const n of nodes) {
+    if (String(n.type || '') !== 'condition') continue
+    let hasTrue = false
+    let hasFalse = false
+    for (const e of edges) {
+      if (e.source !== n.id) continue
+      const h = String(e.sourceHandle || '').trim()
+      if (h === 's-top' || h === 'true') hasTrue = true
+      else if (h === 's-bottom' || h === 'false') hasFalse = true
+    }
+    if (hasTrue && hasFalse) continue
+    const missing = !hasTrue && !hasFalse ? 'both' : (!hasTrue ? 'true' : 'false')
+    out.push({
+      id: n.id,
+      label: String(n.data?.label || 'condition'),
+      missing,
+    })
+  }
+  return out
+}
+
 /** 从 start 出发，沿边走到的节点 id 集合（含 start；多 start 时只用第一个） */
 export function reachableFromStart(
   nodes: { id: string, type?: string }[],
