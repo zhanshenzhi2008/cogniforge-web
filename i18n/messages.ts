@@ -1304,6 +1304,7 @@ export const M = {
   'kb.notFound': { 'zh-CN': '找不到这个知识库，可能已被删除。', 'en-US': 'This knowledge base was not found. It may have been deleted.' },
   'kb.empty': { 'zh-CN': '暂无知识库，点击上方按钮创建', 'en-US': 'No knowledge bases yet. Create one above.' },
   'kb.docs': { 'zh-CN': '{n} 文档', 'en-US': '{n} docs' },
+  'kb.docsShort': { 'zh-CN': '文档数', 'en-US': 'Docs' },
   'kb.docsDrawer': { 'zh-CN': '{n} 个文档', 'en-US': '{n} documents' },
   'kb.vector': { 'zh-CN': '向量数据库', 'en-US': 'Vector store' },
   'kb.embedding': { 'zh-CN': 'Embedding 模型', 'en-US': 'Embedding model' },

@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('kb.title') }}</h1>
         <p class="cf-page-sub">{{ t('kb.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
-        {{ t('kb.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-kb-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('kb.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -33,7 +36,7 @@
       :message="t('kb.listNoMatch')"
     />
 
-    <div v-else class="kb-grid">
+    <div v-else-if="viewMode === 'card'" class="kb-grid">
       <CfResourceCard
         v-for="kb in filteredKnowledgeBases"
         :key="kb.id"
@@ -86,6 +89,71 @@
           <span class="kb-meta-item">{{ d(kb.created_at) }}</span>
         </template>
       </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('kb.docsShort') }}</th>
+              <th>{{ t('kb.vector') }}</th>
+              <th>{{ t('common.createdAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="kb in filteredKnowledgeBases"
+              :key="kb.id"
+              class="list-row"
+              :title="t('kb.openDocsHint')"
+              @dblclick="openKnowledge(kb)"
+            >
+              <td>
+                <div class="kb-name-cell">
+                  <span class="name">{{ kb.name }}</span>
+                  <UBadge
+                    size="sm"
+                    variant="subtle"
+                    :color="kb.status === 'active' ? 'success' : 'neutral'"
+                  >
+                    {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+                  </UBadge>
+                </div>
+              </td>
+              <td class="cf-muted">{{ kb.description || '—' }}</td>
+              <td class="cf-muted">{{ kb.doc_count }}</td>
+              <td class="cf-muted">{{ kb.vector_db || 'chroma' }}</td>
+              <td class="cf-muted">{{ d(kb.created_at) }}</td>
+              <td @dblclick.stop>
+                <div class="action-btns">
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-file-text"
+                    :tip="t('kb.docsManage')"
+                    @click="openKnowledge(kb)"
+                  />
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(kb)"
+                  />
+                  <CfButton
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="askDelete(kb)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Create / View / Edit KB -->
@@ -260,6 +328,7 @@ import type {
   CreateKBInput,
   UpdateKBInput,
 } from '@/composables/useKnowledgeBases'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
@@ -279,6 +348,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const knowledgeBases = ref<KnowledgeBase[]>([])
 const listQuery = ref('')
+const viewMode = ref<ViewMode>('card')
 const filteredKnowledgeBases = computed(() => {
   const q = listQuery.value.trim().toLowerCase()
   if (!q) return knowledgeBases.value
@@ -479,6 +549,12 @@ onMounted(() => {
   min-height: 160px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -489,6 +565,21 @@ onMounted(() => {
 
 .kb-list-search {
   width: min(100%, 280px);
+}
+
+.list-row {
+  cursor: pointer;
+}
+
+.kb-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kb-name-cell .name {
+  font-weight: 600;
 }
 
 .list-count {
