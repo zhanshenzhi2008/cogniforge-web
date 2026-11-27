@@ -53,6 +53,16 @@
         <UIcon name="i-lucide-git-branch-plus" class="size-3.5" />
         <span>{{ t('editor.multiStartChip', { n: startNodeCount }) }}</span>
       </button>
+      <button
+        v-if="endOutgoingCount > 0"
+        type="button"
+        class="unbound-chip unbound-chip--end-out"
+        :title="t('editor.endOutgoingChipTip')"
+        @click="focusEndWithOutgoing"
+      >
+        <UIcon name="i-lucide-log-out" class="size-3.5" />
+        <span>{{ t('editor.endOutgoingChip', { n: endOutgoingCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -1184,7 +1194,12 @@ import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
-import { findStartNodes, findUnreachableNodes } from '@/utils/workflowReachability'
+import {
+  findEndsWithOutgoing,
+  findStartNodes,
+  findUnreachableNodes,
+} from '@/utils/workflowReachability'
+import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
@@ -1966,6 +1981,16 @@ const handleEdgesChange = (changes: any[]) => {
 /** ProcessOn 风格：从线头拖到目标节点完成连线 */
 const handleConnect = (params: any) => {
   if (!params?.source || !params?.target || params.source === params.target) return
+  const sourceNode = nodes.value.find(n => n.id === params.source)
+  const targetNode = nodes.value.find(n => n.id === params.target)
+  if (sourceNode && getWorkflowNodeMeta(String(sourceNode.type || '')).handles === 'end') {
+    toast.add({ title: t('editor.endCannotConnect'), color: 'warning' })
+    return
+  }
+  if (targetNode && getWorkflowNodeMeta(String(targetNode.type || '')).handles === 'start') {
+    toast.add({ title: t('editor.startCannotReceive'), color: 'warning' })
+    return
+  }
   const sourceHandle = params.sourceHandle || undefined
   const targetHandle = params.targetHandle || undefined
   const dup = edges.value.some(e =>
@@ -2537,6 +2562,9 @@ const unreachableCount = computed(
 )
 const startNodeCount = computed(() => findStartNodes(nodes.value).length)
 const extraStartCount = computed(() => Math.max(0, startNodeCount.value - 1))
+const endOutgoingCount = computed(
+  () => findEndsWithOutgoing(nodes.value, edges.value).length,
+)
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
@@ -2570,6 +2598,19 @@ function focusExtraStartNode() {
   if (starts.length < 2) return
   const extra = starts[1]!
   const node = nodes.value.find(n => n.id === extra.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
+/** 顶栏芯片：打开仍有出边的结束/输出节点 */
+function focusEndWithOutgoing() {
+  const bad = findEndsWithOutgoing(nodes.value, edges.value)
+  if (!bad.length) return
+  const first = bad[0]!
+  const node = nodes.value.find(n => n.id === first.id)
   if (node) {
     selectedNode.value = node
     configDrawer.value = true
@@ -2620,6 +2661,22 @@ function ensureSingleStartNode(): boolean {
   return false
 }
 
+/** 结束/输出节点不得再有出边（旧图/导入可能残留） */
+function ensureNoEndOutgoing(): boolean {
+  const bad = findEndsWithOutgoing(nodes.value, edges.value)
+  if (!bad.length) return true
+  const first = bad[0]!
+  toast.add({
+    title: t('editor.endOutgoingNode', { name: first.label }),
+    description: bad.length > 1
+      ? t('editor.endOutgoingMore', { n: bad.length - 1 })
+      : undefined,
+    color: 'warning',
+  })
+  focusEndWithOutgoing()
+  return false
+}
+
 /** 所有非 start 节点须从 start 可达 */
 function ensureReachableFromStart(): boolean {
   const orphan = findUnreachableNodes(nodes.value, edges.value)
@@ -2644,6 +2701,7 @@ const handleSave = async () => {
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
   if (!ensureSingleStartNode()) return
+  if (!ensureNoEndOutgoing()) return
   if (!ensureReachableFromStart()) return
   saving.value = true
   try {
@@ -2762,6 +2820,7 @@ const handleExecute = async () => {
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
   if (!ensureSingleStartNode()) return
+  if (!ensureNoEndOutgoing()) return
   if (!ensureReachableFromStart()) return
 
   executing.value = true
@@ -2930,6 +2989,7 @@ const startDebug = async (startFromNode?: string) => {
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
   if (!ensureSingleStartNode()) return
+  if (!ensureNoEndOutgoing()) return
   if (!ensureReachableFromStart()) return
 
   isDebugging.value = true
@@ -3388,6 +3448,16 @@ onMounted(() => {
 
 .unbound-chip--multi-start:hover {
   background: #fee2e2;
+}
+
+.unbound-chip--end-out {
+  border-color: #c2410c;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.unbound-chip--end-out:hover {
+  background: #ffedd5;
 }
 
 .exec-bar {

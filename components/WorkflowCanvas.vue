@@ -175,6 +175,7 @@ import '@vue-flow/core/dist/theme-default.css'
 import { computed } from 'vue'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
+import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { reachableFromStart } from '@/utils/workflowReachability'
 
 const props = defineProps<{
@@ -229,6 +230,14 @@ const connectionLineOptions = {
 function isValidConnection(connection: Connection) {
   if (!connection.source || !connection.target) return false
   if (connection.source === connection.target) return false
+  const sourceNode = (props.nodes || []).find(n => n.id === connection.source)
+  const targetNode = (props.nodes || []).find(n => n.id === connection.target)
+  if (sourceNode && getWorkflowNodeMeta(String(sourceNode.type || '')).handles === 'end') {
+    return false
+  }
+  if (targetNode && getWorkflowNodeMeta(String(targetNode.type || '')).handles === 'start') {
+    return false
+  }
   return true
 }
 

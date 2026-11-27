@@ -1289,6 +1289,27 @@ export const M = {
     'zh-CN': '点击打开多余的开始节点',
     'en-US': 'Click to open an extra Start node',
   },
+  'editor.endOutgoingNode': {
+    'zh-CN': '「{name}」是结束类节点，不能再连出边',
+    'en-US': '“{name}” is an end-style node — no outgoing edges',
+  },
+  'editor.endOutgoingMore': {
+    'zh-CN': '另有 {n} 个结束类节点也有出边',
+    'en-US': '{n} more end-style node(s) also have outgoing edges',
+  },
+  'editor.endOutgoingChip': { 'zh-CN': '{n} 个结束有出边', 'en-US': '{n} end outs' },
+  'editor.endOutgoingChipTip': {
+    'zh-CN': '点击打开仍有出边的结束/输出节点',
+    'en-US': 'Click to open an end/output node with outgoing edges',
+  },
+  'editor.endCannotConnect': {
+    'zh-CN': '结束/输出节点不能再连出',
+    'en-US': 'End/output nodes cannot connect out',
+  },
+  'editor.startCannotReceive': {
+    'zh-CN': '开始/输入节点不能接入边',
+    'en-US': 'Start/input nodes cannot receive edges',
+  },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',
