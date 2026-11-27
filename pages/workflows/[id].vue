@@ -23,76 +23,45 @@
       <UBadge v-else-if="isSmokeTest" size="sm" variant="subtle" color="warning">
         {{ t('editor.routeTest') }}
       </UBadge>
-      <button
-        v-if="unboundBindCount > 0"
-        type="button"
-        class="unbound-chip"
-        :title="t('editor.unboundChipTip')"
-        @click="focusFirstUnboundNode"
-      >
-        <UIcon name="i-lucide-triangle-alert" class="size-3.5" />
-        <span>{{ t('editor.unboundChip', { n: unboundBindCount }) }}</span>
-      </button>
-      <button
-        v-if="unreachableCount > 0"
-        type="button"
-        class="unbound-chip unbound-chip--orphan"
-        :title="t('editor.unreachableChipTip')"
-        @click="focusFirstUnreachableNode"
-      >
-        <UIcon name="i-lucide-unlink" class="size-3.5" />
-        <span>{{ t('editor.unreachableChip', { n: unreachableCount }) }}</span>
-      </button>
-      <button
-        v-if="extraStartCount > 0"
-        type="button"
-        class="unbound-chip unbound-chip--multi-start"
-        :title="t('editor.multiStartChipTip')"
-        @click="focusExtraStartNode"
-      >
-        <UIcon name="i-lucide-git-branch-plus" class="size-3.5" />
-        <span>{{ t('editor.multiStartChip', { n: startNodeCount }) }}</span>
-      </button>
-      <button
-        v-if="endOutgoingCount > 0"
-        type="button"
-        class="unbound-chip unbound-chip--end-out"
-        :title="t('editor.endOutgoingChipTip')"
-        @click="focusEndWithOutgoing"
-      >
-        <UIcon name="i-lucide-log-out" class="size-3.5" />
-        <span>{{ t('editor.endOutgoingChip', { n: endOutgoingCount }) }}</span>
-      </button>
-      <button
-        v-if="startIncomingCount > 0"
-        type="button"
-        class="unbound-chip unbound-chip--start-in"
-        :title="t('editor.startIncomingChipTip')"
-        @click="focusStartWithIncoming"
-      >
-        <UIcon name="i-lucide-log-in" class="size-3.5" />
-        <span>{{ t('editor.startIncomingChip', { n: startIncomingCount }) }}</span>
-      </button>
-      <button
-        v-if="conditionBranchCount > 0"
-        type="button"
-        class="unbound-chip unbound-chip--branch"
-        :title="t('editor.conditionBranchChipTip')"
-        @click="focusConditionMissingBranch"
-      >
-        <UIcon name="i-lucide-git-fork" class="size-3.5" />
-        <span>{{ t('editor.conditionBranchChip', { n: conditionBranchCount }) }}</span>
-      </button>
-      <button
-        v-if="deadEndCount > 0"
-        type="button"
-        class="unbound-chip unbound-chip--dead-end"
-        :title="t('editor.deadEndChipTip')"
-        @click="focusDeadEndNode"
-      >
-        <UIcon name="i-lucide-circle-off" class="size-3.5" />
-        <span>{{ t('editor.deadEndChip', { n: deadEndCount }) }}</span>
-      </button>
+      <template v-if="!collapseIssueChips">
+        <button
+          v-for="issue in graphIssues"
+          :key="issue.key"
+          type="button"
+          class="unbound-chip"
+          :class="issue.chipClass"
+          :title="issue.tip"
+          @click="issue.focus()"
+        >
+          <UIcon :name="issue.icon" class="size-3.5" />
+          <span>{{ issue.label }}</span>
+        </button>
+      </template>
+      <div v-else class="issue-summary">
+        <button
+          type="button"
+          class="unbound-chip unbound-chip--summary"
+          :title="t('editor.issueSummaryTip')"
+          :aria-expanded="issueMenuOpen"
+          @click="issueMenuOpen = !issueMenuOpen"
+        >
+          <UIcon name="i-lucide-list-checks" class="size-3.5" />
+          <span>{{ t('editor.issueSummaryChip', { kinds: graphIssues.length, n: issueTotalCount }) }}</span>
+        </button>
+        <div v-if="issueMenuOpen" class="issue-summary__menu" role="menu">
+          <button
+            v-for="issue in graphIssues"
+            :key="issue.key"
+            type="button"
+            class="issue-summary__item"
+            role="menuitem"
+            @click="onIssueMenuPick(issue)"
+          >
+            <UIcon :name="issue.icon" class="size-3.5" />
+            <span>{{ issue.label }}</span>
+          </button>
+        </div>
+      </div>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -2608,6 +2577,114 @@ const deadEndCount = computed(
   () => findDeadEndNodes(nodes.value, edges.value).length,
 )
 
+type GraphIssueChip = {
+  key: string
+  icon: string
+  chipClass: string
+  label: string
+  tip: string
+  count: number
+  focus: () => void
+}
+
+const graphIssues = computed((): GraphIssueChip[] => {
+  const items: GraphIssueChip[] = []
+  if (unboundBindCount.value > 0) {
+    items.push({
+      key: 'unbound',
+      icon: 'i-lucide-triangle-alert',
+      chipClass: '',
+      label: t('editor.unboundChip', { n: unboundBindCount.value }),
+      tip: t('editor.unboundChipTip'),
+      count: unboundBindCount.value,
+      focus: focusFirstUnboundNode,
+    })
+  }
+  if (unreachableCount.value > 0) {
+    items.push({
+      key: 'orphan',
+      icon: 'i-lucide-unlink',
+      chipClass: 'unbound-chip--orphan',
+      label: t('editor.unreachableChip', { n: unreachableCount.value }),
+      tip: t('editor.unreachableChipTip'),
+      count: unreachableCount.value,
+      focus: focusFirstUnreachableNode,
+    })
+  }
+  if (extraStartCount.value > 0) {
+    items.push({
+      key: 'multi-start',
+      icon: 'i-lucide-git-branch-plus',
+      chipClass: 'unbound-chip--multi-start',
+      label: t('editor.multiStartChip', { n: startNodeCount.value }),
+      tip: t('editor.multiStartChipTip'),
+      count: extraStartCount.value,
+      focus: focusExtraStartNode,
+    })
+  }
+  if (endOutgoingCount.value > 0) {
+    items.push({
+      key: 'end-out',
+      icon: 'i-lucide-log-out',
+      chipClass: 'unbound-chip--end-out',
+      label: t('editor.endOutgoingChip', { n: endOutgoingCount.value }),
+      tip: t('editor.endOutgoingChipTip'),
+      count: endOutgoingCount.value,
+      focus: focusEndWithOutgoing,
+    })
+  }
+  if (startIncomingCount.value > 0) {
+    items.push({
+      key: 'start-in',
+      icon: 'i-lucide-log-in',
+      chipClass: 'unbound-chip--start-in',
+      label: t('editor.startIncomingChip', { n: startIncomingCount.value }),
+      tip: t('editor.startIncomingChipTip'),
+      count: startIncomingCount.value,
+      focus: focusStartWithIncoming,
+    })
+  }
+  if (conditionBranchCount.value > 0) {
+    items.push({
+      key: 'branch',
+      icon: 'i-lucide-git-fork',
+      chipClass: 'unbound-chip--branch',
+      label: t('editor.conditionBranchChip', { n: conditionBranchCount.value }),
+      tip: t('editor.conditionBranchChipTip'),
+      count: conditionBranchCount.value,
+      focus: focusConditionMissingBranch,
+    })
+  }
+  if (deadEndCount.value > 0) {
+    items.push({
+      key: 'dead-end',
+      icon: 'i-lucide-circle-off',
+      chipClass: 'unbound-chip--dead-end',
+      label: t('editor.deadEndChip', { n: deadEndCount.value }),
+      tip: t('editor.deadEndChipTip'),
+      count: deadEndCount.value,
+      focus: focusDeadEndNode,
+    })
+  }
+  return items
+})
+
+const issueTotalCount = computed(() =>
+  graphIssues.value.reduce((sum, item) => sum + item.count, 0),
+)
+/** 三种及以上问题收成摘要，避免顶栏挤爆 */
+const collapseIssueChips = computed(() => graphIssues.value.length >= 3)
+const issueMenuOpen = ref(false)
+
+function onIssueMenuPick(issue: GraphIssueChip) {
+  issueMenuOpen.value = false
+  issue.focus()
+}
+
+watch(collapseIssueChips, (collapsed) => {
+  if (!collapsed) issueMenuOpen.value = false
+})
+
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
   const unbound = findUnboundBindNodes()
@@ -3626,6 +3703,55 @@ onMounted(() => {
 
 .unbound-chip--dead-end:hover {
   background: #ede9fe;
+}
+
+.unbound-chip--summary {
+  border-color: #475569;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.unbound-chip--summary:hover {
+  background: #f1f5f9;
+}
+
+.issue-summary {
+  position: relative;
+  display: inline-flex;
+}
+
+.issue-summary__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  border-radius: 8px;
+  background: var(--cf-surface, #fff);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 0.12);
+}
+
+.issue-summary__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cf-ink, #0f172a);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+
+.issue-summary__item:hover {
+  background: #f1f5f9;
 }
 
 .exec-bar {

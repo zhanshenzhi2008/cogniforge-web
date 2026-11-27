@@ -1349,6 +1349,14 @@ export const M = {
     'zh-CN': '点击打开没有出边的非结束节点',
     'en-US': 'Click to open a non-end node with no outgoing edge',
   },
+  'editor.issueSummaryChip': {
+    'zh-CN': '{kinds} 类问题 · {n}',
+    'en-US': '{kinds} issue types · {n}',
+  },
+  'editor.issueSummaryTip': {
+    'zh-CN': '点击展开，跳到对应问题节点',
+    'en-US': 'Expand to jump to the related node',
+  },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',
