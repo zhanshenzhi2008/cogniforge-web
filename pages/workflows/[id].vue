@@ -717,6 +717,13 @@
                 :placeholder="t('editor.httpTimeoutPh')"
               />
             </div>
+            <div class="field field--row">
+              <div>
+                <label class="field__label">{{ t('editor.httpFailOnError') }}</label>
+                <p class="field__hint">{{ t('editor.httpFailOnErrorHint') }}</p>
+              </div>
+              <USwitch v-model="nodeConfig.httpFailOnError" size="sm" />
+            </div>
           </template>
 
           <template v-if="selectedNode.type === 'delay'">
@@ -1712,6 +1719,7 @@ const nodeConfig = reactive({
   httpBody: '',
   httpHeaders: '',
   httpTimeout: 30,
+  httpFailOnError: false,
   subflowInput: '',
   delayDuration: 1,
   delayUnit: 'seconds',
@@ -2229,6 +2237,25 @@ const loadWorkflow = async () => {
                   hybridSemanticWeight: n.data?.hybridSemanticWeight ?? n.config?.hybrid_semantic_weight,
                 }
               : {}),
+            ...(n.type === 'http'
+              ? {
+                  method: n.data?.method || n.data?.httpMethod || n.config?.method || 'GET',
+                  httpMethod: n.data?.httpMethod || n.data?.method || n.config?.method || 'GET',
+                  url: n.data?.url || n.data?.httpUrl || n.config?.url || '',
+                  httpUrl: n.data?.httpUrl || n.data?.url || n.config?.url || '',
+                  timeout: Number(n.data?.timeout ?? n.data?.httpTimeout ?? n.config?.timeout ?? 30) || 30,
+                  httpTimeout: Number(n.data?.httpTimeout ?? n.data?.timeout ?? n.config?.timeout ?? 30) || 30,
+                  httpFailOnError: !!(
+                    n.data?.httpFailOnError ?? n.data?.failOnError ?? n.data?.fail_on_error ?? n.config?.fail_on_error
+                  ),
+                  failOnError: !!(
+                    n.data?.failOnError ?? n.data?.httpFailOnError ?? n.data?.fail_on_error ?? n.config?.fail_on_error
+                  ),
+                  fail_on_error: !!(
+                    n.data?.fail_on_error ?? n.data?.failOnError ?? n.data?.httpFailOnError ?? n.config?.fail_on_error
+                  ),
+                }
+              : {}),
             ...(n.type === 'code'
               ? {
                   codeLanguage: n.data?.codeLanguage || n.data?.language || n.config?.language || 'expression',
@@ -2466,7 +2493,11 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const headerN = headers ? Object.keys(headers).length : 0
     let base = `${method} ${short}`
     if (headerN > 0) base = `${base} · ${t('editor.httpHeadersShort', { n: headerN })}`
-    return timeout > 0 && timeout !== 30 ? `${base} · ${timeout}s` : base
+    if (timeout > 0 && timeout !== 30) base = `${base} · ${timeout}s`
+    if (d.failOnError || d.fail_on_error || d.httpFailOnError) {
+      base = `${base} · ${t('editor.httpFailOnErrorShort')}`
+    }
+    return base
   }
   if (kind === 'code') {
     const lang = String(d.codeLanguage || d.language || 'expression').trim() || 'expression'
@@ -2722,6 +2753,11 @@ const handleNodeClick = (event: any) => {
     event.node.data?.headers ?? event.node.data?.httpHeaders,
   )
   nodeConfig.httpTimeout = Number(event.node.data?.timeout || event.node.data?.httpTimeout || 30) || 30
+  nodeConfig.httpFailOnError = !!(
+    event.node.data?.httpFailOnError
+    ?? event.node.data?.failOnError
+    ?? event.node.data?.fail_on_error
+  )
   nodeConfig.delayDuration = Number(
     event.node.data?.delayDuration ?? event.node.data?.duration ?? 1,
   ) || 1
@@ -2782,6 +2818,9 @@ const saveNodeConfig = () => {
       timeout_sec: nodeConfig.timeoutSec || 0,
       httpTimeout: nodeConfig.httpTimeout,
       timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
+      httpFailOnError: !!nodeConfig.httpFailOnError,
+      failOnError: !!nodeConfig.httpFailOnError,
+      fail_on_error: !!nodeConfig.httpFailOnError,
       method: nodeConfig.httpMethod,
       httpMethod: nodeConfig.httpMethod,
       url: nodeConfig.httpUrl,
@@ -2910,6 +2949,9 @@ const saveNodeConfig = () => {
               headers: headers || undefined,
               httpHeaders: headers || undefined,
               timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
+              httpFailOnError: !!nodeConfig.httpFailOnError,
+              failOnError: !!nodeConfig.httpFailOnError,
+              fail_on_error: !!nodeConfig.httpFailOnError,
             }
           })()
         : {}),

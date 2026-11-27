@@ -1236,6 +1236,12 @@ export const M = {
   },
   'editor.httpTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
   'editor.httpTimeoutPh': { 'zh-CN': '默认 30', 'en-US': 'Default 30' },
+  'editor.httpFailOnError': { 'zh-CN': '非 2xx 视为失败', 'en-US': 'Fail on non-2xx' },
+  'editor.httpFailOnErrorShort': { 'zh-CN': '严校验', 'en-US': 'strict' },
+  'editor.httpFailOnErrorHint': {
+    'zh-CN': '开启后状态码 ≥400 会让本节点失败并中断（默认只记入输出，不中断）',
+    'en-US': 'When on, status ≥400 fails this node; off (default) only records status in output',
+  },
   'editor.delayDuration': { 'zh-CN': '等待时长', 'en-US': 'Duration' },
   'editor.delayDurationPh': { 'zh-CN': '数字', 'en-US': 'Number' },
   'editor.delayUnit': { 'zh-CN': '时间单位', 'en-US': 'Unit' },

@@ -180,7 +180,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
   {
     kind: 'http',
     inPalette: true,
-    caption: 'METHOD url；有头时带 · n头；非默认超时带 · Ns',
+    caption: 'METHOD url；头/超时/严校验后缀',
     fields: [
       NAME_FIELD,
       { key: 'httpMethod', labelZh: '方法' },
@@ -188,6 +188,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'httpBody', labelZh: '请求体', note: '支持 {{变量}}' },
       { key: 'httpHeaders', labelZh: '请求头', note: 'JSON；值支持 {{变量}}' },
       { key: 'httpTimeout', labelZh: '超时秒', note: '默认 30，会作用于本次请求' },
+      {
+        key: 'httpFailOnError',
+        labelZh: '非 2xx 失败',
+        note: 'data.failOnError / fail_on_error；≥400 时节点失败',
+      },
     ],
   },
   {
