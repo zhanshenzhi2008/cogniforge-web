@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.143 | CfResourceCard：智能体/知识库卡片共用壳 | orjrs |
 | 2026-11-27 | v1.142 | 猜你想问：空态推荐 + 一键填入预设 | orjrs |
 | 2026-11-27 | v1.141 | 工作室发布渠道：网页/API/嵌入 | orjrs |
 | 2026-11-27 | v1.140 | 工作室配置版本历史侧栏与回滚 | orjrs |
@@ -146,6 +147,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] CfResourceCard 共用卡片壳（2026-11-27）
+
+- **原因**：跨模块去重 backlog；agents/knowledge 卡片结构重复
+- **落地**：`CfResourceCard`；智能体列表与知识库列表改用；models/mcp 仍按需
+- **主仓**：前端设计 v1.112
 
 ## [变更] 猜你想问（2026-11-27）
 
@@ -637,7 +644,7 @@
   - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
   - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
-  - [ ] 可选 `CfResourceCard` 壳：agents/models/mcp/knowledge 卡片骨架
+  - [x] 可选 `CfResourceCard` 壳：agents/knowledge 已接；models/mcp 可按需跟
   - [ ] MCP/知识库等列表复用 `CfViewModeToggle`（若需要卡片+表格）
 - **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`
 - **主仓**：前端设计同步

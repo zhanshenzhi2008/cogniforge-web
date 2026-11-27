@@ -34,63 +34,58 @@
     />
 
     <div v-else class="kb-grid">
-          <div
-            v-for="kb in filteredKnowledgeBases"
-            :key="kb.id"
-            class="kb-card cf-surface"
-            :title="t('kb.openDocsHint')"
-            @click="openKnowledge(kb)"
+      <CfResourceCard
+        v-for="kb in filteredKnowledgeBases"
+        :key="kb.id"
+        :icon="CF_ICONS.knowledge"
+        :title="kb.name"
+        :description="kb.description || t('common.noDesc')"
+        :tip="t('kb.openDocsHint')"
+        @click="openKnowledge(kb)"
+      >
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="kb.status === 'active' ? 'success' : 'neutral'"
           >
-            <div class="kb-header">
-              <div class="kb-name">
-                <UIcon :name="CF_ICONS.knowledge" class="size-5 shrink-0" />
-                <span>{{ kb.name }}</span>
-                <UBadge
-                  size="sm"
-                  variant="subtle"
-                  :color="kb.status === 'active' ? 'success' : 'neutral'"
-                >
-                  {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
-                </UBadge>
-              </div>
-              <div class="action-btns" @click.stop>
-                <CfButton
-                  tone="icon-accent"
-                  icon="i-lucide-file-text"
-                  :tip="t('kb.docsManage')"
-                  @click="openKnowledge(kb)"
-                />
-                <CfButton
-                  tone="icon-accent"
-                  icon="i-lucide-pencil"
-                  :tip="t('common.edit')"
-                  @click="handleEdit(kb)"
-                />
-                <CfButton
-                  tone="icon-danger"
-                  icon="i-lucide-trash-2"
-                  :tip="t('common.delete')"
-                  @click="askDelete(kb)"
-                />
-              </div>
-            </div>
-
-            <p class="kb-description">{{ kb.description || t('common.noDesc') }}</p>
-
-            <div class="kb-meta">
-              <div class="meta-left">
-                <span class="meta-item">
-                  <UIcon name="i-lucide-file-text" class="size-3.5" />
-                  {{ t('kb.docs', { n: kb.doc_count }) }}
-                </span>
-                <span class="meta-item">
-                  <UIcon name="i-lucide-server" class="size-3.5" />
-                  {{ kb.vector_db || 'chroma' }}
-                </span>
-              </div>
-              <span class="meta-item">{{ d(kb.created_at) }}</span>
-            </div>
+            {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-file-text"
+            :tip="t('kb.docsManage')"
+            @click="openKnowledge(kb)"
+          />
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(kb)"
+          />
+          <CfButton
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(kb)"
+          />
+        </template>
+        <template #meta>
+          <div class="kb-meta-left">
+            <span class="kb-meta-item">
+              <UIcon name="i-lucide-file-text" class="size-3.5" />
+              {{ t('kb.docs', { n: kb.doc_count }) }}
+            </span>
+            <span class="kb-meta-item">
+              <UIcon name="i-lucide-server" class="size-3.5" />
+              {{ kb.vector_db || 'chroma' }}
+            </span>
           </div>
+          <span class="kb-meta-item">{{ d(kb.created_at) }}</span>
+        </template>
+      </CfResourceCard>
     </div>
 
     <!-- Create / View / Edit KB -->
@@ -513,93 +508,31 @@ onMounted(() => {
 }
 
 
-.kb-card {
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
-  border: 1.5px solid var(--cf-line);
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.kb-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  border-color: color-mix(in srgb, var(--cf-accent) 35%, var(--cf-line));
-}
-
-.kb-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  gap: 8px;
-}
-
-.kb-header .action-btns {
-  flex-shrink: 0;
+.kb-grid :deep(.cf-resource-card__actions) {
   opacity: 1;
   transition: opacity 0.15s ease;
 }
 
-/* 鼠标设备：悬停/焦点才显示操作图标，减少视觉噪音 */
 @media (hover: hover) and (pointer: fine) {
-  .kb-header .action-btns {
+  .kb-grid :deep(.cf-resource-card__actions) {
     opacity: 0;
     pointer-events: none;
   }
 
-  .kb-card:hover .kb-header .action-btns,
-  .kb-card:focus-within .kb-header .action-btns {
+  .kb-grid :deep(.cf-resource-card:hover .cf-resource-card__actions),
+  .kb-grid :deep(.cf-resource-card:focus-within .cf-resource-card__actions) {
     opacity: 1;
     pointer-events: auto;
   }
 }
 
-.kb-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--cf-ink);
-  min-width: 0;
-  flex: 1;
-}
-
-.kb-name > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kb-description {
-  color: var(--cf-ink-soft);
-  font-size: 0.875rem;
-  margin: 0 0 12px;
-  min-height: 40px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.kb-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  color: var(--cf-ink-soft);
-  gap: 8px;
-}
-
-.meta-left {
+.kb-meta-left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.meta-item {
+.kb-meta-item {
   display: flex;
   align-items: center;
   gap: 4px;
