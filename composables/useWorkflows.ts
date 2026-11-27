@@ -105,6 +105,12 @@ export interface WorkflowEdge {
   id: string
   source: string
   target: string
+  /** 条件真/假等出口：Vue Flow camelCase */
+  sourceHandle?: string
+  targetHandle?: string
+  /** Go 引擎字段（与 camel 双写持久化） */
+  source_handle?: string
+  target_handle?: string
   type?: string
   animated?: boolean
 }

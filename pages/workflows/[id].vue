@@ -1209,6 +1209,7 @@
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
+import { fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
@@ -1983,13 +1984,7 @@ const loadWorkflow = async () => {
           },
         })) || []
 
-        edges.value = def.edges?.map((e: any) => withEdgeArrow({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle || e.source_handle || undefined,
-          targetHandle: e.targetHandle || e.target_handle || undefined,
-        })) || []
+        edges.value = def.edges?.map((e: any) => withEdgeArrow(fromDefinitionEdge(e))) || []
       } catch {
         nodes.value = []
         edges.value = []
@@ -3136,11 +3131,7 @@ const handleSave = async () => {
                     }
                   : undefined,
       })),
-      edges: edges.value.map(e => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-      })),
+      edges: edges.value.map(e => toDefinitionEdge(e)),
     }
 
     const res = await update(workflowId.value, {
