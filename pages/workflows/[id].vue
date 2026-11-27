@@ -1189,6 +1189,16 @@
           <p class="debug-hint debug-hint--compact">{{ t('editor.debugHistoryHint') }}</p>
           <template v-if="showOlderRuns">
             <div v-if="olderHistoryItems.length === 0" class="debug-empty">{{ t('editor.debugHistoryEmpty') }}</div>
+            <button
+              v-if="staleActiveExecIds.length >= 2"
+              type="button"
+              class="debug-log-cancel-all"
+              :disabled="cancellingAllStuck"
+              @click="cancelAllStuckExecutions"
+            >
+              <UIcon name="i-lucide-square" class="size-3.5" />
+              <span>{{ t('editor.cancelAllStuckRuns', { n: staleActiveExecIds.length }) }}</span>
+            </button>
             <div
               v-for="row in olderHistoryItems"
               :key="row.item.id"
@@ -1272,7 +1282,11 @@ import {
   formatNodeRunOutputPreview,
   isUntakenConditionSkip,
 } from '@/utils/workflowDebugStep'
-import { isActiveExecutionStatus, isStaleActiveExecution } from '@/utils/workflowExecStatus'
+import {
+  isActiveExecutionStatus,
+  isStaleActiveExecution,
+  listStaleActiveExecutionIds,
+} from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
@@ -3593,6 +3607,8 @@ const cancelDebug = async () => {
   await loadExecutionHistory()
 }
 
+const cancellingAllStuck = ref(false)
+
 /** 更早试跑里取消卡住的运行中/等待中执行 */
 const cancelHistoryExecution = async (executionId: string) => {
   if (!executionId || !workflowId.value || isSmokeTest.value) return
@@ -3616,6 +3632,44 @@ const cancelHistoryExecution = async (executionId: string) => {
     await loadExecutionHistory()
   } finally {
     cancellingExecId.value = null
+  }
+}
+
+/** 一键取消全部可能卡住的活跃执行 */
+const cancelAllStuckExecutions = async () => {
+  const ids = staleActiveExecIds.value
+  if (!ids.length || !workflowId.value || isSmokeTest.value) return
+  cancellingAllStuck.value = true
+  let ok = 0
+  let fail = 0
+  try {
+    for (const id of ids) {
+      const res = await cancelExecution(workflowId.value, id)
+      if (res.error) {
+        fail++
+        continue
+      }
+      ok++
+      executionLogs.value = (executionLogs.value || []).map((item: any) =>
+        item.id === id ? { ...item, status: 'cancelled' } : item,
+      )
+      if (currentExecution.value?.id === id) {
+        stopPolling()
+        isDebugging.value = false
+        currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
+        clearCanvasRunHighlight()
+      }
+    }
+    if (ok && !fail) {
+      toast.add({ title: t('editor.cancelAllStuckOk', { n: ok }), color: 'success' })
+    } else if (ok && fail) {
+      toast.add({ title: t('editor.cancelAllStuckPartial', { ok, fail }), color: 'warning' })
+    } else {
+      toast.add({ title: t('editor.cancelAllStuckFail'), color: 'error' })
+    }
+    await loadExecutionHistory()
+  } finally {
+    cancellingAllStuck.value = false
   }
 }
 
@@ -3743,6 +3797,10 @@ const olderHistoryItems = computed(() => {
   const curId = currentExecution.value?.id
   return historyItems.value.filter(row => row.item.id !== curId)
 })
+
+const staleActiveExecIds = computed(() =>
+  listStaleActiveExecutionIds(executionLogs.value || []),
+)
 
 const execInputPreview = computed(() => inputPreviewFrom(currentExecution.value || {}))
 
@@ -4748,6 +4806,28 @@ onMounted(() => {
   color: #b45309;
 }
 .debug-log-cancel:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.debug-log-cancel-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in oklab, #f59e0b 55%, var(--cf-line, #e2e8f0));
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 11px;
+  cursor: pointer;
+}
+.debug-log-cancel-all:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #dc2626;
+  background: #fef2f2;
+}
+.debug-log-cancel-all:disabled {
   opacity: 0.55;
   cursor: wait;
 }

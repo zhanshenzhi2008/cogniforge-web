@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { isActiveExecutionStatus, isStaleActiveExecution } from './workflowExecStatus'
+import {
+  isActiveExecutionStatus,
+  isStaleActiveExecution,
+  listStaleActiveExecutionIds,
+} from './workflowExecStatus'
 
 describe('workflowExecStatus', () => {
   it('detects active statuses', () => {
@@ -23,5 +27,15 @@ describe('workflowExecStatus', () => {
       status: 'completed',
       started_at: '2026-11-27T10:00:00Z',
     }, now)).toBe(false)
+  })
+
+  it('lists stale active execution ids in order', () => {
+    const now = Date.parse('2026-11-27T12:00:00Z')
+    expect(listStaleActiveExecutionIds([
+      { id: 'a', status: 'running', started_at: '2026-11-27T11:00:00Z' },
+      { id: 'b', status: 'running', started_at: '2026-11-27T11:55:00Z' },
+      { id: 'a', status: 'running', started_at: '2026-11-27T11:00:00Z' },
+      { id: 'c', status: 'completed', started_at: '2026-11-27T10:00:00Z' },
+    ], now)).toEqual(['a'])
   })
 })

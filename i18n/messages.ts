@@ -1099,6 +1099,13 @@ export const M = {
   'editor.debugHistoryCancelled': { 'zh-CN': '用户取消', 'en-US': 'Cancelled by user' },
   'editor.debugHistoryStale': { 'zh-CN': '可能已卡住，可取消', 'en-US': 'May be stuck — you can cancel' },
   'editor.cancelStuckRun': { 'zh-CN': '取消卡住', 'en-US': 'Cancel stuck' },
+  'editor.cancelAllStuckRuns': { 'zh-CN': '取消全部卡住（{n}）', 'en-US': 'Cancel all stuck ({n})' },
+  'editor.cancelAllStuckOk': { 'zh-CN': '已取消 {n} 条卡住的试跑', 'en-US': 'Cancelled {n} stuck run(s)' },
+  'editor.cancelAllStuckPartial': {
+    'zh-CN': '取消了 {ok} 条，失败 {fail} 条',
+    'en-US': 'Cancelled {ok}, failed {fail}',
+  },
+  'editor.cancelAllStuckFail': { 'zh-CN': '取消卡住的试跑失败', 'en-US': 'Failed to cancel stuck runs' },
   'editor.debugAtNode': { 'zh-CN': '停在节点：{name}', 'en-US': 'At node: {name}' },
   'editor.debugInputPreview': { 'zh-CN': '输入：{text}', 'en-US': 'Input: {text}' },
   'editor.debugOutput': { 'zh-CN': '输出', 'en-US': 'Output' },
