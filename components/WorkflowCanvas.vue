@@ -72,6 +72,7 @@
         kind="loop"
         :label="data.label"
         :hint="bindNodeHint('loop', data)"
+        :unbound="isWorkflowBindUnbound('loop', data)"
       />
     </template>
     <template #node-http="{ data }">

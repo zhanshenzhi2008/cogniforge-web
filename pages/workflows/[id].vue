@@ -672,6 +672,33 @@
                 :placeholder="t('editor.loopConditionPh')"
               />
             </div>
+            <template v-if="nodeConfig.loopType === 'for_each'">
+              <div class="field">
+                <label class="field__label">{{ t('editor.loopArrayVar') }}</label>
+                <UInput
+                  v-model="nodeConfig.loopArrayVar"
+                  class="w-full"
+                  :placeholder="t('editor.loopArrayVarPh')"
+                />
+                <p class="field__hint">{{ t('editor.loopArrayVarHint') }}</p>
+              </div>
+              <div class="field">
+                <label class="field__label">{{ t('editor.loopItemVar') }}</label>
+                <UInput
+                  v-model="nodeConfig.loopItemVar"
+                  class="w-full"
+                  :placeholder="t('editor.loopItemVarPh')"
+                />
+              </div>
+              <div class="field">
+                <label class="field__label">{{ t('editor.loopKeyVar') }}</label>
+                <UInput
+                  v-model="nodeConfig.loopKeyVar"
+                  class="w-full"
+                  :placeholder="t('editor.loopKeyVarPh')"
+                />
+              </div>
+            </template>
             <div class="field">
               <label class="field__label">{{ t('editor.loopMaxIter') }}</label>
               <UInput
@@ -1366,6 +1393,9 @@ const nodeConfig = reactive({
   loopCount: 3,
   loopMaxIter: 100,
   loopCondition: '',
+  loopArrayVar: '',
+  loopItemVar: 'item',
+  loopKeyVar: '',
   codeLanguage: 'expression',
   codeSource: '',
   subflowWorkflowId: '',
@@ -1412,6 +1442,7 @@ const delayUnitOptions = computed(() => [
 const loopTypeOptions = computed(() => [
   { label: t('editor.loopTypeTimes'), value: 'times' },
   { label: t('editor.loopTypeWhile'), value: 'while' },
+  { label: t('editor.loopTypeForEach'), value: 'for_each' },
 ])
 
 const codeLanguageOptions = computed(() => [
@@ -1985,6 +2016,12 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
       }
       return `${t('editor.loopTypeWhile')} ≤${max}`
     }
+    if (loopType === 'for_each') {
+      const arr = String(d.loopArrayVar || d.array_var || '').trim()
+      if (!arr) return ''
+      const item = String(d.loopItemVar || d.item_var || 'item').trim() || 'item'
+      return `${t('editor.loopTypeForEach')}: ${arr} → ${item}`
+    }
     const n = Number(d.loopCount ?? d.count ?? 0)
     if (!(n > 0)) return t('editor.loopTypeTimes')
     return `${t('editor.loopTypeTimes')} ×${n}`
@@ -2139,6 +2176,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.loopCount = Number(event.node.data?.loopCount ?? event.node.data?.count ?? 3) || 3
   nodeConfig.loopMaxIter = Number(event.node.data?.loopMaxIter ?? event.node.data?.max_iter ?? 100) || 100
   nodeConfig.loopCondition = event.node.data?.loopCondition || event.node.data?.condition || ''
+  nodeConfig.loopArrayVar = event.node.data?.loopArrayVar || event.node.data?.array_var || ''
+  nodeConfig.loopItemVar = event.node.data?.loopItemVar || event.node.data?.item_var || 'item'
+  nodeConfig.loopKeyVar = event.node.data?.loopKeyVar || event.node.data?.key_var || ''
   nodeConfig.codeLanguage = event.node.data?.codeLanguage || event.node.data?.language || 'expression'
   nodeConfig.codeSource = event.node.data?.codeSource || event.node.data?.code || ''
   nodeConfig.subflowWorkflowId =
@@ -2198,6 +2238,12 @@ const saveNodeConfig = () => {
       max_iter: nodeConfig.loopMaxIter,
       loopCondition: nodeConfig.loopCondition,
       condition: nodeConfig.loopCondition,
+      loopArrayVar: nodeConfig.loopArrayVar,
+      array_var: nodeConfig.loopArrayVar,
+      loopItemVar: nodeConfig.loopItemVar,
+      item_var: nodeConfig.loopItemVar,
+      loopKeyVar: nodeConfig.loopKeyVar,
+      key_var: nodeConfig.loopKeyVar,
       variables: nodeConfig.variables,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
@@ -2276,10 +2322,16 @@ const saveNodeConfig = () => {
             loopCount: Number(nodeConfig.loopCount) || 1,
             loopMaxIter: Number(nodeConfig.loopMaxIter) || 100,
             loopCondition: nodeConfig.loopCondition,
+            loopArrayVar: nodeConfig.loopArrayVar,
+            loopItemVar: nodeConfig.loopItemVar || 'item',
+            loopKeyVar: nodeConfig.loopKeyVar,
             type: nodeConfig.loopType || 'times',
             count: Number(nodeConfig.loopCount) || 1,
             max_iter: Number(nodeConfig.loopMaxIter) || 100,
             condition: nodeConfig.loopCondition,
+            array_var: nodeConfig.loopArrayVar,
+            item_var: nodeConfig.loopItemVar || 'item',
+            key_var: nodeConfig.loopKeyVar,
           }
         : {}),
       ...(selectedNode.value.type === 'code'

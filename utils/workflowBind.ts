@@ -21,5 +21,11 @@ export function isWorkflowBindUnbound(kind: string, data?: Record<string, unknow
   if (kind === 'subflow') {
     return !String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
   }
+  if (kind === 'loop') {
+    let loopType = String(d.loopType || d.type || 'times').trim() || 'times'
+    if (loopType === 'count') loopType = 'times'
+    if (loopType !== 'for_each') return false
+    return !String(d.loopArrayVar || d.array_var || '').trim()
+  }
   return false
 }

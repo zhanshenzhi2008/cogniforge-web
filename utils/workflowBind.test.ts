@@ -38,5 +38,9 @@ describe('isWorkflowBindUnbound', () => {
   it('ignores unknown kinds', () => {
     expect(isWorkflowBindUnbound('delay', {})).toBe(false)
     expect(isWorkflowBindUnbound('start', {})).toBe(false)
+    expect(isWorkflowBindUnbound('loop', { loopType: 'times' })).toBe(false)
+    expect(isWorkflowBindUnbound('loop', { loopType: 'for_each' })).toBe(true)
+    expect(isWorkflowBindUnbound('loop', { loopType: 'for_each', loopArrayVar: 'items' })).toBe(false)
+    expect(isWorkflowBindUnbound('loop', { type: 'for_each', array_var: 'rows' })).toBe(false)
   })
 })
