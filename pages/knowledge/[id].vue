@@ -186,6 +186,15 @@
                   <UBadge size="sm" variant="subtle" :color="docStatusColor(previewDoc.status)">
                     {{ docStatusLabel(previewDoc.status) }}
                   </UBadge>
+                  <USelect
+                    v-model="previewLifecycle"
+                    class="w-36"
+                    size="sm"
+                    :items="lifecycleOptions"
+                    value-key="value"
+                    :disabled="lifecycleSaving"
+                    @update:model-value="savePreviewLifecycle"
+                  />
                   <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
                   <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
                   <span v-if="previewDirty" class="preview-dirty">{{ t('kb.unsaved') }}</span>
@@ -1177,6 +1186,7 @@ const {
   listDocs,
   getDoc,
   updateDocContent,
+  updateDocLifecycle,
   uploadDoc,
   previewChunks,
   createTextDoc,
@@ -1231,6 +1241,37 @@ const drawerActiveTab = ref('docs')
 const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const previewDoc = ref<DocumentPreview | null>(null)
+const previewLifecycle = ref('published')
+const lifecycleSaving = ref(false)
+const lifecycleOptions = computed(() => [
+  { label: t('kb.lifecycle.draft'), value: 'draft' },
+  { label: t('kb.lifecycle.review'), value: 'review' },
+  { label: t('kb.lifecycle.published'), value: 'published' },
+  { label: t('kb.lifecycle.abolished'), value: 'abolished' },
+])
+
+async function savePreviewLifecycle(status: string) {
+  if (!selectedKB.value || !previewDoc.value || !status) return
+  if ((previewDoc.value.lifecycle_status || 'published') === status) return
+  lifecycleSaving.value = true
+  try {
+    const res = await updateDocLifecycle(selectedKB.value.id, previewDoc.value.id, {
+      lifecycle_status: status,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.lifecycleFail'), color: 'error' })
+      previewLifecycle.value = previewDoc.value.lifecycle_status || 'published'
+      return
+    }
+    previewDoc.value = { ...previewDoc.value, ...res.data }
+    previewLifecycle.value = res.data.lifecycle_status || 'published'
+    const idx = documents.value.findIndex(d => d.id === res.data!.id)
+    if (idx >= 0) documents.value[idx] = { ...documents.value[idx], ...res.data }
+    toast.add({ title: t('kb.lifecycleSaved'), color: 'success' })
+  } finally {
+    lifecycleSaving.value = false
+  }
+}
 const previewLoading = ref(false)
 const previewMode = ref<'preview' | 'edit'>('preview')
 const previewEditContent = ref('')
@@ -1306,6 +1347,7 @@ async function openDocPreview(doc: Document) {
   }
   previewDoc.value = res.data
   previewEditContent.value = res.data.content || ''
+  previewLifecycle.value = res.data.lifecycle_status || 'published'
 }
 
 function closeDocPreview() {
