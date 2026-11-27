@@ -797,7 +797,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
 .list-toolbar { margin-bottom: 10px; }
 .list-count { font-size: 13px; color: var(--cf-ink-soft); }
 .row-click { cursor: pointer; }
