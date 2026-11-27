@@ -292,6 +292,14 @@
       :loading="deletingConv"
       @confirm="confirmDeleteConversation"
     />
+    <CfConfirmModal
+      v-model:open="insertConfirmOpen"
+      :message="t('play.insertConfirm', { n: insertRemoveCount })"
+      :confirm-text="t('common.confirm')"
+      confirm-icon="i-lucide-corner-down-left"
+      :loading="insertConfirming"
+      @confirm="doInsertAndSend"
+    />
   </div>
 </template>
 
@@ -1085,6 +1093,11 @@ async function onComposerSubmit() {
   await sendMessage()
 }
 
+const insertConfirmOpen = ref(false)
+const insertRemoveCount = ref(0)
+const insertConfirming = ref(false)
+let pendingInsertIdx: number | null = null
+
 async function confirmAndInsert() {
   const afterId = insertAfterId.value
   if (!afterId) return
@@ -1095,9 +1108,31 @@ async function confirmAndInsert() {
   }
   const removeCount = messages.value.length - idx - 1
   if (removeCount > 0) {
-    const ok = window.confirm(t('play.insertConfirm', { n: removeCount }))
-    if (!ok) return
+    pendingInsertIdx = idx
+    insertRemoveCount.value = removeCount
+    insertConfirmOpen.value = true
+    return
   }
+  await applyInsertAndSend(idx)
+}
+
+async function doInsertAndSend() {
+  const idx = pendingInsertIdx
+  pendingInsertIdx = null
+  if (idx == null) {
+    insertConfirmOpen.value = false
+    return
+  }
+  insertConfirming.value = true
+  try {
+    await applyInsertAndSend(idx)
+    insertConfirmOpen.value = false
+  } finally {
+    insertConfirming.value = false
+  }
+}
+
+async function applyInsertAndSend(idx: number) {
   messages.value = messages.value.slice(0, idx + 1)
   messageQueue.value = []
   queueEditingId.value = ''

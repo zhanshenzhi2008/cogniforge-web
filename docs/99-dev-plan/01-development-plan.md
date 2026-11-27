@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.191 | Playground 插入发送改用 CfConfirmModal | orjrs |
 | 2026-11-27 | v1.190 | 知识库弃编辑改用 CfConfirmModal | orjrs |
 | 2026-11-27 | v1.189 | 工作室版本回滚改用 CfConfirmModal | orjrs |
 | 2026-11-27 | v1.188 | Playground 删对话改用 CfConfirmModal | orjrs |
@@ -272,6 +273,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] Playground 插入发送改用 CfConfirmModal（2026-11-27）
+
+- **原因**：中间插入会删后续消息时仍用浏览器 confirm
+- **落地**：`pages/playground.vue` 改用 CfConfirmModal
+- **主仓**：前端设计 v1.158
 
 ## [变更] 知识库弃编辑改用 CfConfirmModal（2026-11-27）
 
