@@ -161,6 +161,25 @@
           </div>
         </section>
 
+        <section class="cfg-row cfg-row--stack">
+          <div class="cfg-row__main">
+            <UIcon :name="CF_ICONS.knowledge" class="size-4" />
+            <span>{{ t('agents.boundKnowledge') }}</span>
+          </div>
+          <div class="tools">
+            <p v-if="!kbOptions.length" class="cfg-hint">{{ t('agents.boundKnowledgeEmpty') }}</p>
+            <UCheckbox
+              v-for="kb in kbOptions"
+              :key="kb.value"
+              :model-value="form.rag_kb_ids.includes(kb.value)"
+              :label="kb.label"
+              :ui="toolCheckboxUi"
+              @update:model-value="(checked: boolean) => toggleKnowledge(kb.value, checked)"
+            />
+          </div>
+          <p class="cfg-hint">{{ t('agents.boundKnowledgeHint') }}</p>
+        </section>
+
         <section class="cfg-row">
           <div class="cfg-row__main">
             <UIcon name="i-lucide-power" class="size-4" />
@@ -330,8 +349,10 @@
 <script setup lang="ts">
 import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
 import type { ChatMessage } from '@/composables/useAgentChat'
+import type { KnowledgeBase } from '@/composables/useKnowledgeBases'
 import type { McpServer } from '@/composables/useMcpServers'
 import type { Skill } from '@/composables/useSkills'
+import { CF_ICONS } from '~/constants/icons'
 import {
   detectUnsupportedBuildIntents,
   extractAgentBuildConfig,
@@ -342,7 +363,6 @@ import {
 } from '~/utils/agentBuildConfig'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
-import { CF_ICONS } from '~/constants/icons'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -363,6 +383,7 @@ const { list: listMcpServers } = useMcpServers()
 const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 const { list: listPrompts } = usePrompts()
+const { listKBs } = useKnowledgeBases()
 
 const saving = ref(false)
 const dirty = ref(false)
@@ -380,6 +401,7 @@ const toolCheckboxUi = {
   base: 'rounded-sm ring-1 ring-inset ring-[color-mix(in_oklab,var(--cf-ink)_45%,transparent)] bg-[var(--cf-bg-elevated,#fff)]',
 }
 const mcpServers = ref<McpServer[]>([])
+const knowledgeBases = ref<KnowledgeBase[]>([])
 const skills = ref<Skill[]>([])
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const promptOptions = ref<{ label: string; value: string }[]>([{ label: '—', value: '' }])
@@ -396,6 +418,7 @@ const form = reactive({
   prompt_id: '',
   opening_message: '',
   suggested_prompts: [] as string[],
+  rag_kb_ids: [] as string[],
   tools: [] as string[],
   skill_id: '',
 })
@@ -475,6 +498,12 @@ const toolOptions = computed(() =>
   })),
 )
 
+const kbOptions = computed(() =>
+  knowledgeBases.value
+    .filter(kb => kb.status === 'active')
+    .map(kb => ({ label: kb.name, value: kb.id })),
+)
+
 const skillOptions = computed(() => [
   { label: t('agents.clearSkill'), value: '' },
   ...skills.value.map((s) => ({ label: `${s.icon || ''} ${s.name}`.trim(), value: s.id })),
@@ -500,6 +529,7 @@ function fillFromAgent(agent: Agent) {
   form.prompt_id = agent.prompt_id || ''
   form.opening_message = agent.opening_message || ''
   form.suggested_prompts = [...(agent.suggested_prompts || [])]
+  form.rag_kb_ids = [...(agent.rag_kb_ids || [])]
   form.tools = [...(agent.tools || [])]
   form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
@@ -537,6 +567,20 @@ function toggleTool(value: string, checked: boolean | string) {
     if (!form.tools.includes(value)) form.tools.push(value)
   } else {
     form.tools = form.tools.filter((t) => t !== value)
+  }
+}
+
+function toggleKnowledge(value: string, checked: boolean | string) {
+  markDirty()
+  const on = Boolean(checked)
+  if (on) {
+    if (form.rag_kb_ids.length >= 8) {
+      toast.add({ title: t('agents.boundKnowledgeMax'), color: 'warning' })
+      return
+    }
+    if (!form.rag_kb_ids.includes(value)) form.rag_kb_ids.push(value)
+  } else {
+    form.rag_kb_ids = form.rag_kb_ids.filter((id) => id !== value)
   }
 }
 
@@ -637,6 +681,7 @@ async function handleSave() {
         prompt_id: form.prompt_id || '',
         opening_message: form.opening_message,
         suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
+        rag_kb_ids: [...form.rag_kb_ids],
         tools: form.tools,
         skill_id: form.skill_id || '',
         status: statusEnabled.value ? 'active' : 'disabled',
@@ -662,6 +707,7 @@ async function handleSave() {
       prompt_id: form.prompt_id || undefined,
       opening_message: form.opening_message || undefined,
       suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
+      rag_kb_ids: [...form.rag_kb_ids],
       tools: form.tools,
       skill_id: form.skill_id || undefined,
     }
@@ -794,11 +840,12 @@ watch(
 )
 
 onMounted(async () => {
-  const [modelsRes, mcpRes, skillsRes, promptsRes] = await Promise.all([
+  const [modelsRes, mcpRes, skillsRes, promptsRes, kbRes] = await Promise.all([
     listModels(),
     listMcpServers(),
     listSkills(),
     listPrompts(),
+    listKBs(),
   ])
   modelOptions.value = (modelsRes.data || [])
     .filter((m) => m.id)
@@ -806,6 +853,7 @@ onMounted(async () => {
   if (!form.model && firstConfiguredModel()) form.model = firstConfiguredModel()
   if (mcpRes.data) mcpServers.value = mcpRes.data
   if (skillsRes.data) skills.value = skillsRes.data
+  if (kbRes.data) knowledgeBases.value = kbRes.data
   const items = (promptsRes.data || []).map((p) => ({ label: p.name, value: p.id }))
   promptOptions.value = [{ label: t('agents.boundPromptNone'), value: '' }, ...items]
   if (props.initial) fillFromAgent(props.initial)

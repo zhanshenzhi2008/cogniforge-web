@@ -14,6 +14,7 @@ export interface Agent {
   prompt_id?: string // 绑定提示词资产（优先于内联 system_prompt）
   opening_message?: string
   suggested_prompts?: string[]
+  rag_kb_ids?: string[]
   tools: string[] // MCP Server ID 列表
   skill_id?: string // 阶段十五：从 SKILL 创建
   memory_type: string
@@ -34,6 +35,7 @@ export interface CreateAgentInput {
   prompt_id?: string
   opening_message?: string
   suggested_prompts?: string[]
+  rag_kb_ids?: string[]
   tools?: string[]
   skill_id?: string
   mcp_servers?: string[]
@@ -47,6 +49,7 @@ export interface UpdateAgentInput {
   prompt_id?: string | null
   opening_message?: string
   suggested_prompts?: string[]
+  rag_kb_ids?: string[]
   tools?: string[]
   skill_id?: string
   mcp_servers?: string[]

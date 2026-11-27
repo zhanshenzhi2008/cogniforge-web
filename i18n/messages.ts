@@ -408,6 +408,19 @@ export const M = {
     'zh-CN': '最多 6 条；预览与对话页空态可一点发送。',
     'en-US': 'Up to 6 chips; one tap sends on preview and Playground.',
   },
+  'agents.boundKnowledge': { 'zh-CN': '绑定知识库', 'en-US': 'Knowledge bases' },
+  'agents.boundKnowledgeHint': {
+    'zh-CN': '对话与预览会自动检索勾选的知识库（最多 8 个）。',
+    'en-US': 'Chat and preview auto-search checked bases (up to 8).',
+  },
+  'agents.boundKnowledgeEmpty': {
+    'zh-CN': '还没有知识库，先去「知识库」页创建。',
+    'en-US': 'No knowledge bases yet — create one under Knowledge.',
+  },
+  'agents.boundKnowledgeMax': {
+    'zh-CN': '最多绑定 8 个知识库',
+    'en-US': 'At most 8 knowledge bases',
+  },
   'agents.systemPh': { 'zh-CN': '定义 Agent 的角色和行为...', 'en-US': 'Define the agent’s role and behavior…' },
   'agents.tools': { 'zh-CN': '工具', 'en-US': 'Tools' },
   'agents.pickModel': { 'zh-CN': '请选择模型', 'en-US': 'Select a model' },
