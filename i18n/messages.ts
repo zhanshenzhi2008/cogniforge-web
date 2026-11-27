@@ -1226,7 +1226,11 @@ export const M = {
   'editor.loopCount': { 'zh-CN': '循环次数', 'en-US': 'Count' },
   'editor.loopCountPh': { 'zh-CN': '如 3', 'en-US': 'e.g. 3' },
   'editor.loopCondition': { 'zh-CN': '循环条件', 'en-US': 'Condition' },
-  'editor.loopConditionPh': { 'zh-CN': '表达式，为真时继续', 'en-US': 'Expression; continue while true' },
+  'editor.loopConditionPh': { 'zh-CN': '如 loop.index < {{limit}}', 'en-US': 'e.g. loop.index < {{limit}}' },
+  'editor.loopConditionHint': {
+    'zh-CN': '为真时继续循环；比较值可用 {{变量}}（与条件节点相同）',
+    'en-US': 'Continue while true; comparison values support {{vars}} (same as condition node)',
+  },
   'editor.loopArrayVar': { 'zh-CN': '数组变量', 'en-US': 'Array variable' },
   'editor.loopArrayVarPh': { 'zh-CN': '如 items', 'en-US': 'e.g. items' },
   'editor.loopArrayVarHint': {

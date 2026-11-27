@@ -736,6 +736,7 @@
                 class="w-full"
                 :placeholder="t('editor.loopConditionPh')"
               />
+              <p class="field__hint">{{ t('editor.loopConditionHint') }}</p>
             </div>
             <template v-if="nodeConfig.loopType === 'for_each'">
               <div class="field">
