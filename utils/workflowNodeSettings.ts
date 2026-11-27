@@ -88,8 +88,8 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'model', labelZh: '模型', required: true },
-      { key: 'systemPrompt', labelZh: '系统提示' },
-      { key: 'prompt', labelZh: '用户提示' },
+      { key: 'systemPrompt', labelZh: '系统提示', note: '支持 {{变量}}' },
+      { key: 'prompt', labelZh: '用户提示', note: '支持 {{变量}}；空则用流程输入' },
       { key: 'llmStream', labelZh: '流式收集', note: 'data.stream / llmStream' },
     ],
   },
@@ -100,7 +100,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'agentId', labelZh: '智能体', required: true },
-      { key: 'prompt', labelZh: '用户提示' },
+      { key: 'prompt', labelZh: '用户提示', note: '支持 {{变量}}；空则用执行输入' },
     ],
   },
   {
@@ -110,7 +110,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'teamId', labelZh: '小队', required: true },
-      { key: 'prompt', labelZh: '任务说明' },
+      { key: 'prompt', labelZh: '任务说明', note: '支持 {{变量}}' },
     ],
   },
   {

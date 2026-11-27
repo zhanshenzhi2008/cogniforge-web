@@ -496,8 +496,9 @@
               v-model="nodeConfig.systemPrompt"
               class="w-full"
               :rows="5"
-              :placeholder="t('agents.systemPh')"
+              :placeholder="t('editor.llmSystemPh')"
             />
+            <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field">
@@ -508,6 +509,7 @@
               :rows="4"
               :placeholder="t('editor.userPromptPh')"
             />
+            <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field field--row">
@@ -541,6 +543,7 @@
               :rows="4"
               :placeholder="t('editor.agentPromptPh')"
             />
+            <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'team'" class="field">
@@ -567,6 +570,7 @@
               :rows="4"
               :placeholder="t('editor.teamTaskPh')"
             />
+            <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
           </div>
 
           <template v-if="selectedNode.type === 'subflow'">

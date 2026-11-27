@@ -1158,7 +1158,18 @@ export const M = {
   'editor.modelPickEmptyHint': { 'zh-CN': '请先在「模型」页配置厂商与模型，再回来选择。', 'en-US': 'Configure providers and models under Models first, then pick one here.' },
   'editor.modelGoCreate': { 'zh-CN': '去模型页 →', 'en-US': 'Go to models →' },
   'editor.userPrompt': { 'zh-CN': '用户提示', 'en-US': 'User prompt' },
-  'editor.userPromptPh': { 'zh-CN': '可选；不填则自动用流程输入和上游输出', 'en-US': 'Optional; defaults to flow input and upstream outputs' },
+  'editor.userPromptPh': {
+    'zh-CN': '可选；如 请总结 {{topic}}；不填则用流程输入和上游输出',
+    'en-US': 'Optional; e.g. Summarize {{topic}}; empty = flow input / upstream',
+  },
+  'editor.llmSystemPh': {
+    'zh-CN': '如 你是 {{role}} 助手…',
+    'en-US': 'e.g. You are a {{role}} assistant…',
+  },
+  'editor.llmPromptHint': {
+    'zh-CN': '文案可用 {{变量}}（入参或上游写入的变量）',
+    'en-US': 'Text supports {{vars}} from inputs or upstream variables',
+  },
   'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
   'editor.llmStreamShort': { 'zh-CN': '流式', 'en-US': 'stream' },
   'editor.llmStreamHint': {
@@ -1513,13 +1524,19 @@ export const M = {
   'editor.teamGoCreate': { 'zh-CN': '去创建 →', 'en-US': 'Create team →' },
   'editor.teamPickHint': { 'zh-CN': '运行时由主管分派或交接；等同竞品的多智能体 / Crew 节点', 'en-US': 'Runs as supervisor/handoff; like multi-agent / Crew nodes elsewhere' },
   'editor.teamTask': { 'zh-CN': '团队任务', 'en-US': 'Team task' },
-  'editor.teamTaskPh': { 'zh-CN': '交给这支团队完成的任务…', 'en-US': 'Task for the multi-agent team…' },
+  'editor.teamTaskPh': {
+    'zh-CN': '如 处理工单 {{ticket_id}}…',
+    'en-US': 'e.g. Handle ticket {{ticket_id}}…',
+  },
   'editor.agentPick': { 'zh-CN': '绑定智能体', 'en-US': 'Agent' },
   'editor.agentPickPh': { 'zh-CN': '选择智能体', 'en-US': 'Select an agent' },
   'editor.agentPickEmpty': { 'zh-CN': '暂无智能体', 'en-US': 'No agents yet' },
   'editor.agentPickEmptyHint': { 'zh-CN': '请先在工作室创建智能体，再回来选择。', 'en-US': 'Create an agent in the studio first, then pick it here.' },
   'editor.agentGoCreate': { 'zh-CN': '去创建 →', 'en-US': 'Create agent →' },
-  'editor.agentPromptPh': { 'zh-CN': '留空则用执行输入或上一步结果', 'en-US': 'Empty = run input or previous step' },
+  'editor.agentPromptPh': {
+    'zh-CN': '留空则用执行输入；可写 回答 {{question}}',
+    'en-US': 'Empty = run input; e.g. Answer {{question}}',
+  },
   'editor.node.condition': { 'zh-CN': '条件分支', 'en-US': 'Condition' },
   'editor.node.loop': { 'zh-CN': '循环节点', 'en-US': 'Loop' },
   'editor.node.http': { 'zh-CN': 'HTTP 请求', 'en-US': 'HTTP' },
