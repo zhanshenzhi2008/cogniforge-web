@@ -589,6 +589,16 @@
               </p>
               <p v-else class="field__hint">{{ t('editor.subflowHint') }}</p>
             </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.subflowInput') }}</label>
+              <UTextarea
+                v-model="nodeConfig.subflowInput"
+                class="w-full font-mono text-xs"
+                :rows="4"
+                :placeholder="t('editor.subflowInputPh')"
+              />
+              <p class="field__hint">{{ t('editor.subflowInputHint') }}</p>
+            </div>
           </template>
 
           <template v-if="selectedNode.type === 'condition'">
@@ -1356,6 +1366,7 @@ import {
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isSubflowSelfReference, isWorkflowBindUnbound } from '@/utils/workflowBind'
 import { formatHttpHeadersJson, parseHttpHeadersJson } from '@/utils/workflowHttpHeaders'
+import { formatJsonObject, parseJsonObject } from '@/utils/workflowJsonObject'
 import {
   findConditionsMissingBranches,
   findDeadEndNodes,
@@ -1658,6 +1669,7 @@ const nodeConfig = reactive({
   httpBody: '',
   httpHeaders: '',
   httpTimeout: 30,
+  subflowInput: '',
   delayDuration: 1,
   delayUnit: 'seconds',
   loopType: 'times',
@@ -2410,7 +2422,10 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
   if (kind === 'subflow') {
     if (isSubflowSelfReference(d, workflowId.value)) return t('editor.subflowSelfCaption')
     const id = String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
-    return workflowPickOptions.value.find(o => o.value === id)?.label || ''
+    const name = workflowPickOptions.value.find(o => o.value === id)?.label || ''
+    if (!name) return ''
+    const input = parseJsonObject(d.input ?? d.subflowInput)
+    return input ? `${name} · ${t('editor.subflowInputShort')}` : name
   }
   if (kind === 'delay') {
     const n = Number(d.delayDuration ?? d.duration ?? 0)
@@ -2627,6 +2642,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.codeSource = event.node.data?.codeSource || event.node.data?.code || ''
   nodeConfig.subflowWorkflowId =
     event.node.data?.subflowWorkflowId || event.node.data?.workflowId || event.node.data?.workflow_id || ''
+  nodeConfig.subflowInput = formatJsonObject(
+    event.node.data?.input ?? event.node.data?.subflowInput,
+  )
   nodeConfig.variables = normalizeStartVars(
     event.node.data?.variables || event.node.config?.variables,
   ).map(v => ({ ...v }))
@@ -2806,11 +2824,19 @@ const saveNodeConfig = () => {
           }
         : {}),
       ...(selectedNode.value.type === 'subflow'
-        ? {
-            subflowWorkflowId: nodeConfig.subflowWorkflowId,
-            workflowId: nodeConfig.subflowWorkflowId,
-            workflow_id: nodeConfig.subflowWorkflowId,
-          }
+        ? (() => {
+            const input = parseJsonObject(nodeConfig.subflowInput)
+            if (String(nodeConfig.subflowInput || '').trim() && !input) {
+              toast.add({ title: t('editor.subflowInputInvalid'), color: 'warning' })
+            }
+            return {
+              subflowWorkflowId: nodeConfig.subflowWorkflowId,
+              workflowId: nodeConfig.subflowWorkflowId,
+              workflow_id: nodeConfig.subflowWorkflowId,
+              input: input || undefined,
+              subflowInput: input || undefined,
+            }
+          })()
         : {}),
       ...(selectedNode.value.type === 'start'
         ? {

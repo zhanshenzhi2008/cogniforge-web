@@ -1527,6 +1527,20 @@ export const M = {
     'zh-CN': '同步跑完子流程再继续；暂不支持子流程内等待/审批；最多嵌套 3 层，且不能调用自己。',
     'en-US': 'Runs the nested workflow synchronously. Nested wait/approval not supported yet; max depth 3; cannot call itself.',
   },
+  'editor.subflowInput': { 'zh-CN': '传给子流程的入参（JSON，可选）', 'en-US': 'Input for nested workflow (JSON, optional)' },
+  'editor.subflowInputPh': {
+    'zh-CN': '{\n  "query": "{{query}}"\n}',
+    'en-US': '{\n  "query": "{{query}}"\n}',
+  },
+  'editor.subflowInputHint': {
+    'zh-CN': '留空则把当前变量与入参整包传下去；字符串值可用 {{变量}}',
+    'en-US': 'Leave empty to pass current vars/input; string values support {{vars}}',
+  },
+  'editor.subflowInputInvalid': {
+    'zh-CN': '子流程入参不是合法 JSON 对象，已忽略',
+    'en-US': 'Nested input must be a JSON object — ignored',
+  },
+  'editor.subflowInputShort': { 'zh-CN': '自定义入参', 'en-US': 'custom input' },
   'editor.subflowSelfHint': {
     'zh-CN': '不能嵌套当前这份工作流，请另选其它流程。',
     'en-US': 'Cannot nest this same workflow — pick a different one.',

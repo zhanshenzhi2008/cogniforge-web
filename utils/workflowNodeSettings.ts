@@ -132,7 +132,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
   {
     kind: 'subflow',
     inPalette: true,
-    caption: '嵌套工作流名；禁止指向自身',
+    caption: '嵌套工作流名；有自定义入参时带后缀；禁止指向自身',
     fields: [
       NAME_FIELD,
       {
@@ -140,6 +140,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         labelZh: '调用工作流',
         required: true,
         note: '同步嵌套；最多 3 层；不可选当前工作流',
+      },
+      {
+        key: 'subflowInput',
+        labelZh: '入参映射',
+        note: '可选 JSON；字符串值支持 {{变量}}；空则透传当前上下文',
       },
     ],
   },
