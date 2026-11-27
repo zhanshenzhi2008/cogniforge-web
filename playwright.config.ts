@@ -19,8 +19,9 @@ export default defineConfig({
   },
   webServer: {
     command: `pnpm exec nuxi dev --port ${port} --host 127.0.0.1`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // 用真实页面探活；默认不复用端口，避免本机其它服务被当成 Nuxt 导致 /prompts 404
+    url: `${baseURL}/login`,
+    reuseExistingServer: process.env.PW_REUSE === '1',
     timeout: 180_000,
     env: {
       ...process.env,
