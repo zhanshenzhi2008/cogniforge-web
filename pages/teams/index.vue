@@ -37,8 +37,27 @@
       >
         <template #badges>
           <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+          <UBadge
+            v-if="isWorkerRetry(team)"
+            variant="subtle"
+            color="warning"
+            size="sm"
+            :title="t('teams.workerRetryHint')"
+          >
+            {{ t('teams.workerRetryBadge') }}
+          </UBadge>
         </template>
         <template #actions>
+          <UButton
+            size="sm"
+            :variant="isWorkerRetry(team) ? 'soft' : 'ghost'"
+            :color="isWorkerRetry(team) ? 'warning' : 'neutral'"
+            :loading="retryToggleId === team.id"
+            :title="t('teams.workerRetryHint')"
+            @click="toggleWorkerRetry(team)"
+          >
+            {{ isWorkerRetry(team) ? t('teams.workerRetryOn') : t('teams.workerRetryOff') }}
+          </UButton>
           <UButton size="sm" variant="soft" @click="openPreview(team)">
             {{ t('teams.preview') }}
           </UButton>
@@ -86,11 +105,31 @@
                 </div>
               </td>
               <td>
-                <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+                <div class="team-mode-cell">
+                  <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+                  <UBadge
+                    v-if="isWorkerRetry(team)"
+                    variant="subtle"
+                    color="warning"
+                    size="sm"
+                  >
+                    {{ t('teams.workerRetryBadge') }}
+                  </UBadge>
+                </div>
               </td>
               <td class="cf-muted">{{ team.description || '—' }}</td>
               <td>
                 <div class="team-list-actions">
+                  <UButton
+                    size="sm"
+                    :variant="isWorkerRetry(team) ? 'soft' : 'ghost'"
+                    :color="isWorkerRetry(team) ? 'warning' : 'neutral'"
+                    :loading="retryToggleId === team.id"
+                    :title="t('teams.workerRetryHint')"
+                    @click="toggleWorkerRetry(team)"
+                  >
+                    {{ isWorkerRetry(team) ? t('teams.workerRetryOn') : t('teams.workerRetryOff') }}
+                  </UButton>
                   <UButton size="sm" variant="soft" @click="openPreview(team)">
                     {{ t('teams.preview') }}
                   </UButton>
@@ -147,6 +186,11 @@
           <UFormField :label="t('common.description')">
             <UTextarea v-model="form.description" :rows="2" class="w-full" />
           </UFormField>
+          <UCheckbox
+            v-model="form.worker_retry_once"
+            :label="t('teams.workerRetry')"
+          />
+          <p class="text-xs opacity-65">{{ t('teams.workerRetryHint') }}</p>
           <div class="flex justify-end gap-2 pt-2">
             <UButton variant="ghost" @click="showCreate = false">{{ t('common.cancel') }}</UButton>
             <UButton color="primary" :loading="creating" @click="submitCreate">{{ t('common.create') }}</UButton>
@@ -223,11 +267,12 @@ definePageMeta({ layout: 'default' })
 const toast = useToast()
 const { t } = useLocale()
 const router = useRouter()
-const { list, create, remove, chat, expandPipeline: apiExpandPipeline } = useTeams()
+const { list, create, update, remove, chat, expandPipeline: apiExpandPipeline } = useTeams()
 const { list: listAgents } = useAgents()
 const { list: listConversations, get: getConversation } = useConversations()
 const expandingId = ref('')
 const expandingParallelId = ref('')
+const retryToggleId = ref('')
 const viewMode = ref<ViewMode>('card')
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
@@ -270,6 +315,7 @@ const form = reactive({
   mode: 'supervisor' as TeamMode,
   supervisor_agent_id: '',
   member_agent_ids: [] as string[],
+  worker_retry_once: false,
 })
 
 const modeItems = computed(() => [
@@ -293,6 +339,39 @@ function memberMeta(team: AgentTeam) {
   const base = t('teams.members', { n })
   if (team.supervisor_agent_id) return `${base} · ${t('teams.hasSupervisor')}`
   return base
+}
+
+function isWorkerRetry(team: AgentTeam) {
+  const v = team.config?.worker_retry_once
+  return v === true || v === 'true' || v === 1 || v === '1'
+}
+
+async function toggleWorkerRetry(team: AgentTeam) {
+  const next = !isWorkerRetry(team)
+  retryToggleId.value = team.id
+  try {
+    const res = await update(team.id, {
+      config: {
+        ...(team.config || {}),
+        worker_retry_once: next,
+      },
+    })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    if (res.data) {
+      const i = teams.value.findIndex(x => x.id === team.id)
+      if (i >= 0) teams.value[i] = res.data
+    }
+    toast.add({
+      title: next ? t('teams.workerRetryEnabled') : t('teams.workerRetryDisabled'),
+      color: 'success',
+    })
+  }
+  finally {
+    retryToggleId.value = ''
+  }
 }
 
 async function fetchAll() {
@@ -321,6 +400,7 @@ async function submitCreate() {
       mode: form.mode,
       supervisor_agent_id: form.supervisor_agent_id || undefined,
       member_agent_ids: form.member_agent_ids,
+      config: { worker_retry_once: form.worker_retry_once },
     })
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
@@ -331,6 +411,7 @@ async function submitCreate() {
     form.name = ''
     form.description = ''
     form.member_agent_ids = []
+    form.worker_retry_once = false
     await fetchAll()
   }
   finally {
@@ -507,6 +588,12 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.team-mode-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 .team-name-cell .name {
   font-weight: 600;
