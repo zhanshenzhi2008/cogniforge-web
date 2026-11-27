@@ -364,10 +364,12 @@ export const useWorkflows = () => {
     input?: Record<string, any>,
     breakpoints?: string[],
     startFromNode?: string,
+    seedExecutionId?: string,
   ): Promise<{ executionId?: string; error?: string }> => {
     try {
       const body: Record<string, any> = { input, node_breakpoints: breakpoints }
       if (startFromNode) body.start_from_node = startFromNode
+      if (seedExecutionId) body.seed_execution_id = seedExecutionId
       const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/debug`, body)
       if (res.error) return { error: res.error }
       return { executionId: res.data?.execution_id }

@@ -1001,6 +1001,11 @@
             />
           </details>
         </div>
+        <label class="debug-seed-opt">
+          <input v-model="seedUpstreamOnDebugFrom" type="checkbox">
+          <span>{{ t('editor.debugSeedUpstream') }}</span>
+        </label>
+        <p class="debug-hint debug-hint--compact">{{ t('editor.debugSeedUpstreamHint') }}</p>
         <div class="debug-actions">
           <CfButton
             tone="primary"
@@ -1827,6 +1832,8 @@ const selectedKBDefaults = computed(() => {
 const currentWorkflow = ref<any>(null)
 
 const showDebugPanel = ref(false)
+/** 从此调试时默认灌入最近一次试跑的上游输出 */
+const seedUpstreamOnDebugFrom = ref(true)
 const debugInput = ref('{}')
 
 // 必须在 showDebugPanel / debugInput 声明之后再 watch，否则 TDZ 导致整页白屏
@@ -3465,7 +3472,11 @@ const startDebug = async (startFromNode?: string) => {
       return
     }
 
-    const res = await debug(workflowId.value, input, undefined, startFromNode)
+    let seedExecutionId: string | undefined
+    if (startFromNode && seedUpstreamOnDebugFrom.value) {
+      seedExecutionId = resolveSeedExecutionId()
+    }
+    const res = await debug(workflowId.value, input, undefined, startFromNode, seedExecutionId)
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       isDebugging.value = false
@@ -3474,7 +3485,9 @@ const startDebug = async (startFromNode?: string) => {
 
     toast.add({
       title: startFromNode
-        ? t('editor.debugFromNodeStarted', { node: nodeDisplayName(startFromNode) || startFromNode })
+        ? (seedExecutionId
+            ? t('editor.debugFromNodeSeeded', { node: nodeDisplayName(startFromNode) || startFromNode })
+            : t('editor.debugFromNodeStarted', { node: nodeDisplayName(startFromNode) || startFromNode }))
         : t('editor.debugStarted', { id: res.executionId }),
       color: 'success',
     })
@@ -3488,10 +3501,21 @@ const startDebug = async (startFromNode?: string) => {
   }
 }
 
+/** 选种子执行：当前详情带输出 → 否则历史列表最近一条 */
+function resolveSeedExecutionId(): string | undefined {
+  const cur = currentExecution.value
+  if (cur?.id && Array.isArray(cur.node_runs) && cur.node_runs.some((r: any) => r?.output && Object.keys(r.output || {}).length)) {
+    return cur.id
+  }
+  const hist = (executionLogs.value || []).find((item: any) => item?.id)
+  return hist?.id || cur?.id || undefined
+}
+
 const debugFromSelectedNode = async () => {
   if (!selectedNode.value?.id) return
   saveNodeConfig()
   configDrawer.value = false
+  showDebugPanel.value = true
   await startDebug(selectedNode.value.id)
 }
 
@@ -4622,6 +4646,18 @@ onMounted(() => {
   margin: 0 0 8px;
   font-size: 11px;
   opacity: 0.75;
+}
+.debug-seed-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0 2px;
+  font-size: 12px;
+  color: var(--cf-ink, #334155);
+  cursor: pointer;
+}
+.debug-seed-opt input {
+  margin-top: 2px;
 }
 
 .debug-meta {

@@ -1281,6 +1281,18 @@ export const M = {
   'editor.rollbackOk': { 'zh-CN': '已回滚到 v{version}', 'en-US': 'Restored v{version}' },
   'editor.debugFromNode': { 'zh-CN': '从此调试', 'en-US': 'Debug from here' },
   'editor.debugFromNodeStarted': { 'zh-CN': '已从「{node}」开始调试（前面节点已跳过）', 'en-US': 'Debugging from “{node}” (upstream skipped)' },
+  'editor.debugFromNodeSeeded': {
+    'zh-CN': '已从「{node}」开始调试，并尝试灌入上次上游输出',
+    'en-US': 'Debugging from “{node}”; seeding upstream outputs from last run when available',
+  },
+  'editor.debugSeedUpstream': {
+    'zh-CN': '从此调试时带上最近试跑的上游输出',
+    'en-US': 'When debug-from-node, seed upstream outputs from last run',
+  },
+  'editor.debugSeedUpstreamHint': {
+    'zh-CN': '只影响「从此调试」；整图试跑仍从开始节点跑。没有上次输出时等同跳过。',
+    'en-US': 'Only for debug-from-node. Full runs still start from the beginning. No prior outputs = skip only.',
+  },
   'editor.debugStarted': { 'zh-CN': '调试会话已启动：{id}', 'en-US': 'Debug session started: {id}' },
   'editor.debugDone': { 'zh-CN': '调试完成', 'en-US': 'Debug finished' },
   'editor.debugFail': { 'zh-CN': '调试失败：{error}', 'en-US': 'Debug failed: {error}' },
