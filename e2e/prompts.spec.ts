@@ -75,6 +75,82 @@ async function mockPromptAPI(page: Page) {
       return
     }
 
+    const verAction = path.match(/\/api\/v1\/prompts\/versions\/([^/]+)\/(archive|rollback|publish)$/)
+    if (verAction && method === 'POST') {
+      const vid = verAction[1]!
+      const action = verAction[2]!
+      for (const [pid, list] of versions) {
+        const src = list.find(v => v.id === vid)
+        if (!src) continue
+        const p = items.find(x => x.id === pid)
+        if (!p) continue
+
+        if (action === 'archive') {
+          if (p.current_version_id === vid) {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '不能归档当前版本', data: null }),
+            })
+            return
+          }
+          if (src.status !== 'published') {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '只能归档已发布版本', data: null }),
+            })
+            return
+          }
+          src.status = 'archived'
+          await json(src)
+          return
+        }
+
+        if (action === 'publish') {
+          if (src.status !== 'draft') {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '只能发布草稿', data: null }),
+            })
+            return
+          }
+          src.status = 'published'
+          p.current_version_id = src.id
+          p.updated_at = now()
+          await json({ prompt: p, current_version: src })
+          return
+        }
+
+        if (action === 'rollback') {
+          if (src.status === 'draft') {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '草稿不能回滚', data: null }),
+            })
+            return
+          }
+          const next: PromptVersion = {
+            id: `pv-${pid}-rb-${list.length + 1}`,
+            prompt_id: pid,
+            version: Math.max(...list.map(v => v.version), 0) + 1,
+            status: 'published',
+            content: src.content,
+            changelog: `回滚自 v${src.version}`,
+            created_at: now(),
+          }
+          list.unshift(next)
+          versions.set(pid, list)
+          p.current_version_id = next.id
+          p.updated_at = now()
+          await json({ prompt: p, current_version: next })
+          return
+        }
+      }
+    }
+
     const verOne = path.match(/\/api\/v1\/prompts\/versions\/([^/]+)$/)
     if (verOne && method === 'DELETE') {
       const vid = verOne[1]
@@ -198,5 +274,37 @@ test.describe('prompts e2e', () => {
     await verCards.nth(1).locator('button').last().click()
     await page.locator('[role="dialog"]').getByRole('button', { name: '删除' }).click()
     await expect(verCards).toHaveCount(1)
+  })
+
+  test('archive old version then rollback publish', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('归档回滚')
+    await page.getByPlaceholder('System prompt 正文').fill('正文-v1')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '归档回滚' })).toBeVisible()
+
+    await page.getByRole('button', { name: '发布新版本' }).click()
+    await page.getByPlaceholder('System prompt 正文').fill('正文-v2')
+    await page.getByPlaceholder('本版改了什么').fill('第二版')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByText('正文-v2')).toBeVisible()
+
+    const verCards = page.locator('.ver-card')
+    await expect(verCards).toHaveCount(2)
+    // v1 在下方；点「归档」
+    await verCards.nth(1).getByRole('button', { name: '归档' }).click()
+    await expect(verCards.nth(1).getByText('已归档')).toBeVisible()
+
+    await verCards.nth(1).getByRole('button', { name: '回滚发版' }).click()
+    await expect(page.getByText('已回滚发版为 v3')).toBeVisible()
+    await expect(verCards).toHaveCount(3)
+    await expect(verCards.first().getByText('v3', { exact: true })).toBeVisible()
+    await expect(verCards.first().getByText('当前')).toBeVisible()
+    await expect(page.getByText('回滚自 v1')).toBeVisible()
   })
 })
