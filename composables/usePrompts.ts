@@ -74,6 +74,13 @@ export function usePrompts() {
       `/api/v1/prompts/versions/${versionId}/publish`,
       {},
     )
+  const archiveVersion = (versionId: string) =>
+    post<PromptVersion>(`/api/v1/prompts/versions/${versionId}/archive`, {})
+  const rollbackVersion = (versionId: string) =>
+    post<{ prompt: Prompt; current_version: PromptVersion }>(
+      `/api/v1/prompts/versions/${versionId}/rollback`,
+      {},
+    )
   const setCurrentVersion = (promptId: string, versionId: string) =>
     put<Prompt>(`/api/v1/prompts/${promptId}/current-version`, { version_id: versionId })
   const render = (promptId: string, body: { version_id?: string; variables?: Record<string, string> }) =>
@@ -94,6 +101,8 @@ export function usePrompts() {
     createVersion,
     removeVersion,
     publishVersion,
+    archiveVersion,
+    rollbackVersion,
     setCurrentVersion,
     render,
     importFromAgent,

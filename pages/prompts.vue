@@ -233,9 +233,9 @@
             <UBadge
               size="sm"
               variant="subtle"
-              :color="v.status === 'published' ? 'success' : 'neutral'"
+              :color="versionStatusColor(v.status)"
             >
-              {{ v.status === 'published' ? t('prompts.published') : t('prompts.draft') }}
+              {{ versionStatusLabel(v.status) }}
             </UBadge>
             <UBadge
               v-if="v.id === active.current_version_id"
@@ -262,6 +262,24 @@
                 @click="doSetCurrent(v)"
               >
                 {{ t('prompts.setCurrent') }}
+              </CfButton>
+              <CfButton
+                v-if="v.status === 'published' && v.id !== active.current_version_id"
+                tone="secondary"
+                icon="i-lucide-archive"
+                :tip="t('prompts.archive')"
+                @click="doArchive(v)"
+              >
+                {{ t('prompts.archive') }}
+              </CfButton>
+              <CfButton
+                v-if="v.status === 'archived' || (v.status === 'published' && v.id !== active.current_version_id)"
+                tone="secondary"
+                icon="i-lucide-history"
+                :tip="t('prompts.rollbackTip')"
+                @click="doRollback(v)"
+              >
+                {{ t('prompts.rollback') }}
               </CfButton>
               <CfButton
                 tone="icon-danger"
@@ -516,7 +534,7 @@ const tryVersionOptions = computed(() =>
   versions.value.map(v => ({
     label: [
       `v${v.version}`,
-      v.status === 'published' ? t('prompts.published') : t('prompts.draft'),
+      versionStatusLabel(v.status),
       v.id === active.value?.current_version_id ? t('prompts.current') : '',
     ].filter(Boolean).join(' · '),
     value: v.id,
@@ -744,6 +762,18 @@ const doTry = async () => {
   }
 }
 
+function versionStatusLabel(status: string) {
+  if (status === 'published') return t('prompts.published')
+  if (status === 'archived') return t('prompts.archived')
+  return t('prompts.draft')
+}
+
+function versionStatusColor(status: string): 'success' | 'warning' | 'neutral' {
+  if (status === 'published') return 'success'
+  if (status === 'archived') return 'warning'
+  return 'neutral'
+}
+
 const doPublish = async (v: PromptVersion) => {
   if (!active.value) return
   const res = await api.publishVersion(v.id)
@@ -752,6 +782,35 @@ const doPublish = async (v: PromptVersion) => {
     return
   }
   if (res.data?.prompt) active.value = res.data.prompt
+  await load()
+  await openDetail(active.value)
+}
+
+const doArchive = async (v: PromptVersion) => {
+  if (!active.value) return
+  const res = await api.archiveVersion(v.id)
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  toast.add({ title: t('prompts.archiveOk', { n: v.version }), color: 'success' })
+  await load()
+  await openDetail(active.value)
+}
+
+const doRollback = async (v: PromptVersion) => {
+  if (!active.value) return
+  const res = await api.rollbackVersion(v.id)
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  if (res.data?.prompt) active.value = res.data.prompt
+  const n = res.data?.current_version?.version
+  toast.add({
+    title: n ? t('prompts.rollbackOk', { n }) : t('prompts.rollback'),
+    color: 'success',
+  })
   await load()
   await openDetail(active.value)
 }
