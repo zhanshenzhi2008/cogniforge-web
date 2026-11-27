@@ -1823,9 +1823,23 @@ const handleCancelEdit = () => {
   editPopoverShow.value = false
 }
 
+function isHttpUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 const handleSaveBasic = async () => {
   if (isSmokeTest.value) {
     toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
+    return
+  }
+  const hook = workflowBasicInfo.webhookUrl.trim()
+  if (hook && !isHttpUrl(hook)) {
+    toast.add({ title: t('editor.webhookUrlInvalid'), color: 'warning' })
     return
   }
   savingBasic.value = true
@@ -1833,7 +1847,7 @@ const handleSaveBasic = async () => {
     const res = await update(workflowId.value, {
       name: workflowBasicInfo.name,
       description: workflowBasicInfo.description,
-      webhook_url: workflowBasicInfo.webhookUrl.trim(),
+      webhook_url: hook,
     })
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
@@ -1956,7 +1970,9 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const url = String(d.url || d.httpUrl || '').trim()
     if (!url) return ''
     const short = url.length > 36 ? `${url.slice(0, 34)}…` : url
-    return `${method} ${short}`
+    const timeout = Number(d.timeout ?? d.httpTimeout ?? 0)
+    const base = `${method} ${short}`
+    return timeout > 0 && timeout !== 30 ? `${base} · ${timeout}s` : base
   }
   if (kind === 'code') {
     const lang = String(d.codeLanguage || d.language || 'expression').trim() || 'expression'
@@ -2225,6 +2241,8 @@ const saveNodeConfig = () => {
       search_mode: nodeConfig.searchMode || '',
       timeoutSec: nodeConfig.timeoutSec || 0,
       timeout_sec: nodeConfig.timeoutSec || 0,
+      httpTimeout: nodeConfig.httpTimeout,
+      timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
       method: nodeConfig.httpMethod,
       httpMethod: nodeConfig.httpMethod,
       url: nodeConfig.httpUrl,

@@ -1211,6 +1211,10 @@ export const M = {
     'zh-CN': '执行完成/失败/取消时 POST JSON（含 execution_id、status）',
     'en-US': 'POSTs JSON on completed/failed/cancelled (execution_id, status)',
   },
+  'editor.webhookUrlInvalid': {
+    'zh-CN': '回调地址须以 http:// 或 https:// 开头',
+    'en-US': 'Webhook must start with http:// or https://',
+  },
   'editor.schedules': { 'zh-CN': '定时', 'en-US': 'Schedule' },
   'editor.schedulesTitle': { 'zh-CN': '定时调度', 'en-US': 'Cron schedules' },
   'editor.schedulesHint': {
