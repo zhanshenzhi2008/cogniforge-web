@@ -1,11 +1,20 @@
 import { test, expect, type Page, type Route } from '@playwright/test'
 import { mockBackend, ok, seedLoggedIn } from './helpers'
 
+type PromptVarDef = {
+  name: string
+  default?: string
+  required?: boolean
+  description?: string
+}
+
 type Prompt = {
   id: string
   name: string
   description?: string
   current_version_id?: string
+  variables?: PromptVarDef[]
+  tags?: string[]
   created_at: string
   updated_at: string
 }
@@ -291,6 +300,64 @@ async function mockPromptAPI(page: Page) {
       }
     }
 
+    const renderPath = path.match(/\/api\/v1\/prompts\/([^/]+)\/render$/)
+    if (renderPath && method === 'POST') {
+      const pid = renderPath[1]!
+      const p = items.find(x => x.id === pid)
+      const body = req.postDataJSON() as {
+        version_id?: string
+        variables?: Record<string, string>
+      }
+      const list = versions.get(pid) || []
+      const ver = list.find(v => v.id === body.version_id) || list[0]
+      if (!p || !ver) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 404, message: 'not found', data: null }),
+        })
+        return
+      }
+      let content = ver.content
+      const vars = body.variables || {}
+      for (const [k, v] of Object.entries(vars)) {
+        content = content.split(`{{${k}}}`).join(v)
+      }
+      await json({
+        content,
+        var_names: Object.keys(vars),
+        version_id: ver.id,
+        version: ver.version,
+      })
+      return
+    }
+
+    if (method === 'PUT' && path.match(/\/api\/v1\/prompts\/[^/]+$/)) {
+      const id = path.split('/').pop()!
+      const p = items.find(x => x.id === id)
+      if (!p) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 404, message: 'not found', data: null }),
+        })
+        return
+      }
+      const body = req.postDataJSON() as {
+        name?: string
+        description?: string
+        variables?: PromptVarDef[]
+        tags?: string[]
+      }
+      if (body.name != null) p.name = body.name
+      if (body.description != null) p.description = body.description
+      if (body.variables) p.variables = body.variables
+      if (body.tags) p.tags = body.tags
+      p.updated_at = now()
+      await json(p)
+      return
+    }
+
     if (method === 'DELETE' && path.match(/\/api\/v1\/prompts\/[^/]+$/)) {
       const id = path.split('/').pop()!
       const idx = items.findIndex(p => p.id === id)
@@ -372,6 +439,42 @@ test.describe('prompts e2e', () => {
     await expect(verCards.first().getByText('已发布', { exact: true })).toBeVisible()
     await expect(verCards.first().getByText('当前', { exact: true })).toBeVisible()
     await expect(page.getByText('正文-草稿', { exact: true })).toBeVisible()
+  })
+
+  test('try run with required variables', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+    await page.route(/\/api\/v1\/chat\/stream$/, async (route) => {
+      const chunk = JSON.stringify({ choices: [{ delta: { content: '试跑回答：你好，小明' } }] })
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        headers: { 'Cache-Control': 'no-cache' },
+        body: `data: ${chunk}\n\ndata: [DONE]\n\n`,
+      })
+    })
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('变量试跑')
+    await page.getByPlaceholder('System prompt 正文').fill('你好，{{name}}')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '变量试跑' })).toBeVisible()
+
+    await page.getByRole('button', { name: '加变量' }).click()
+    await page.getByPlaceholder('变量名').fill('name')
+    await page.getByLabel('必填').check()
+    await page.getByRole('button', { name: '保存变量' }).click()
+    await expect(page.getByText('保存成功', { exact: true })).toBeVisible()
+
+    await page.getByPlaceholder('用户要说的话，例如：你好，介绍一下你自己').fill('介绍一下')
+    await page.getByRole('button', { name: '试跑', exact: true }).click()
+    await expect(page.getByText('缺少必填变量：name', { exact: true })).toBeVisible()
+
+    await page.locator('.pvf-input input').fill('小明')
+    await page.getByRole('button', { name: '试跑', exact: true }).click()
+    await expect(page.getByText('试跑回答：你好，小明', { exact: true })).toBeVisible()
   })
 
   test('show bound agents in prompt usages', async ({ page }) => {
