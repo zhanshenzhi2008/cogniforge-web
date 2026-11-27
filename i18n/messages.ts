@@ -1276,6 +1276,14 @@ export const M = {
   'editor.endCaption': { 'zh-CN': '流程结束', 'en-US': 'Finish' },
   'editor.needStartNode': { 'zh-CN': '请先添加开始节点', 'en-US': 'Add a Start node first' },
   'editor.needEndNode': { 'zh-CN': '请先添加结束节点', 'en-US': 'Add an End node first' },
+  'editor.unreachableNode': {
+    'zh-CN': '「{name}」从开始节点走不到，请连上边',
+    'en-US': '“{name}” is unreachable from Start — connect an edge',
+  },
+  'editor.unreachableMore': {
+    'zh-CN': '另有 {n} 个节点也不可达',
+    'en-US': '{n} more node(s) also unreachable',
+  },
   'editor.startVarsCaption': {
     'zh-CN': '{shown} 等 {n} 个',
     'en-US': '{shown} +{more}',

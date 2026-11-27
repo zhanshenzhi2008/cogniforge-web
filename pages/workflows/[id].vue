@@ -1164,6 +1164,7 @@ import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
+import { findUnreachableNodes } from '@/utils/workflowReachability'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
@@ -2552,6 +2553,27 @@ function ensureHasTerminalNodes(): boolean {
   return true
 }
 
+/** 所有非 start 节点须从 start 可达 */
+function ensureReachableFromStart(): boolean {
+  const orphan = findUnreachableNodes(nodes.value, edges.value)
+  if (!orphan.length) return true
+  const first = orphan[0]!
+  toast.add({
+    title: t('editor.unreachableNode', { name: first.label }),
+    description: orphan.length > 1
+      ? t('editor.unreachableMore', { n: orphan.length - 1 })
+      : undefined,
+    color: 'warning',
+  })
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+  return false
+}
+
 const handleSave = async () => {
   if (isSmokeTest.value) {
     toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
@@ -2559,6 +2581,7 @@ const handleSave = async () => {
   }
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
+  if (!ensureReachableFromStart()) return
   saving.value = true
   try {
     const definition: WorkflowDefinition = {
@@ -2675,6 +2698,7 @@ const handleExecute = async () => {
   }
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
+  if (!ensureReachableFromStart()) return
 
   executing.value = true
   try {
@@ -2841,6 +2865,7 @@ const startDebug = async (startFromNode?: string) => {
   }
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
+  if (!ensureReachableFromStart()) return
 
   isDebugging.value = true
   executionLogs.value = []
