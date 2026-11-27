@@ -1204,6 +1204,16 @@
       </template>
     </CfModal>
 
+    <CfConfirmModal
+      v-model:open="discardEditOpen"
+      :title="t('kb.unsaved')"
+      :message="t('kb.discardEditConfirm')"
+      :confirm-text="t('common.confirm')"
+      confirm-icon="i-lucide-rotate-ccw"
+      @confirm="confirmDiscardEdit"
+      @cancel="onDiscardEditCancel"
+    />
+
     </template>
   </div>
 </template>
@@ -1456,14 +1466,45 @@ function clearPreviewState() {
   previewExpireLocal.value = ''
 }
 
-watch(drawerActiveTab, (tab) => {
-  if (tab !== 'docs') {
-    if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) {
-      drawerActiveTab.value = 'docs'
-      return
-    }
-    clearPreviewState()
+const discardEditOpen = ref(false)
+let pendingDiscardAction: (() => void) | null = null
+let revertingDocsTab = false
+
+function askDiscardEdit(action: () => void) {
+  pendingDiscardAction = action
+  discardEditOpen.value = true
+}
+
+function confirmDiscardEdit() {
+  const action = pendingDiscardAction
+  pendingDiscardAction = null
+  discardEditOpen.value = false
+  if (previewDoc.value) {
+    previewEditContent.value = previewDoc.value.content || ''
   }
+  action?.()
+}
+
+function onDiscardEditCancel() {
+  pendingDiscardAction = null
+}
+
+watch(drawerActiveTab, (tab) => {
+  if (revertingDocsTab || tab === 'docs') return
+  if (previewDirty.value) {
+    const target = tab
+    revertingDocsTab = true
+    drawerActiveTab.value = 'docs'
+    nextTick(() => {
+      revertingDocsTab = false
+    })
+    askDiscardEdit(() => {
+      clearPreviewState()
+      drawerActiveTab.value = target
+    })
+    return
+  }
+  clearPreviewState()
 })
 
 function renderPreviewMarkdown(content: string) {
@@ -1487,7 +1528,17 @@ function resetPreviewEdit() {
 
 async function openDocPreview(doc: Document) {
   if (!selectedKB.value) return
-  if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) return
+  if (previewDirty.value) {
+    askDiscardEdit(() => {
+      void doOpenDocPreview(doc)
+    })
+    return
+  }
+  await doOpenDocPreview(doc)
+}
+
+async function doOpenDocPreview(doc: Document) {
+  if (!selectedKB.value) return
   previewLoading.value = true
   previewMode.value = 'preview'
   previewEditContent.value = ''
@@ -1511,7 +1562,10 @@ async function openDocPreview(doc: Document) {
 }
 
 function closeDocPreview() {
-  if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) return
+  if (previewDirty.value) {
+    askDiscardEdit(() => clearPreviewState())
+    return
+  }
   clearPreviewState()
 }
 
