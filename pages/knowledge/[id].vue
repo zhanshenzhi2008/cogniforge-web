@@ -1410,6 +1410,9 @@ function clearPreviewState() {
   previewEditContent.value = ''
   previewSaving.value = false
   previewMaximized.value = false
+  previewLifecycle.value = 'published'
+  previewEffectiveLocal.value = ''
+  previewExpireLocal.value = ''
 }
 
 watch(drawerActiveTab, (tab) => {
