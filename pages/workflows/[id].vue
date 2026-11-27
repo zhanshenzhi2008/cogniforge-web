@@ -2139,30 +2139,34 @@ function findUnboundBindNodes(): { id: string, label: string, kind: string }[] {
   return out
 }
 
+/** 未配置必填绑定时提示并打开首个节点；通过返回 true */
+function ensureBindConfigured(): boolean {
+  const unbound = findUnboundBindNodes()
+  if (!unbound.length) return true
+  const first = unbound[0]!
+  const kindLabel = t(`editor.bindKind.${first.kind}` as any)
+  toast.add({
+    title: t('editor.bindRequired', { name: first.label, kind: kindLabel }),
+    description: unbound.length > 1
+      ? t('editor.bindRequiredMore', { n: unbound.length - 1 })
+      : undefined,
+    color: 'warning',
+  })
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+  return false
+}
+
 const handleSave = async () => {
   if (isSmokeTest.value) {
     toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
     return
   }
-  const unbound = findUnboundBindNodes()
-  if (unbound.length) {
-    const first = unbound[0]!
-    const kindLabel = t(`editor.bindKind.${first.kind}` as any)
-    toast.add({
-      title: t('editor.bindRequired', { name: first.label, kind: kindLabel }),
-      description: unbound.length > 1
-        ? t('editor.bindRequiredMore', { n: unbound.length - 1 })
-        : undefined,
-      color: 'warning',
-    })
-    const node = nodes.value.find(n => n.id === first.id)
-    if (node) {
-      selectedNode.value = node
-      configDrawer.value = true
-      handleNodeClick({ node })
-    }
-    return
-  }
+  if (!ensureBindConfigured()) return
   saving.value = true
   try {
     const definition: WorkflowDefinition = {
@@ -2277,6 +2281,7 @@ const handleExecute = async () => {
     toast.add({ title: t('editor.archivedNoRun'), color: 'warning' })
     return
   }
+  if (!ensureBindConfigured()) return
 
   executing.value = true
   try {
@@ -2441,6 +2446,7 @@ const startDebug = async (startFromNode?: string) => {
     toast.add({ title: t('editor.saveFirst'), color: 'warning' })
     return
   }
+  if (!ensureBindConfigured()) return
 
   isDebugging.value = true
   executionLogs.value = []
