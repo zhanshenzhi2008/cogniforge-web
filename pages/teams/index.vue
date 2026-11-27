@@ -10,14 +10,17 @@
       </UButton>
     </div>
 
-    <div v-if="loading" class="cf-panel p-6 text-sm opacity-70">
-      {{ t('common.loading') }}
+    <div v-if="loading" class="cf-panel">
+      <CfLoadingState />
     </div>
-    <div v-else-if="teams.length === 0" class="cf-panel p-8 text-center">
-      <p class="mb-4">{{ t('teams.empty') }}</p>
-      <UButton color="primary" @click="showCreate = true">
-        {{ t('teams.new') }}
-      </UButton>
+    <div v-else-if="teams.length === 0" class="cf-panel">
+      <CfEmptyState :message="t('teams.empty')">
+        <template #action>
+          <UButton color="primary" @click="showCreate = true">
+            {{ t('teams.new') }}
+          </UButton>
+        </template>
+      </CfEmptyState>
     </div>
     <div v-else class="team-grid">
       <div v-for="team in teams" :key="team.id" class="cf-panel team-card">

@@ -31,13 +31,8 @@
         <span class="list-count">{{ t('prompts.count', { n: items.length }) }}</span>
       </div>
       <div class="cf-panel">
-        <div v-if="loading" class="cf-state">
-          <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        </div>
-        <div v-else-if="items.length === 0" class="cf-state">
-          <UIcon name="i-lucide-file-text" class="size-8 opacity-50" />
-          <p>{{ t('prompts.empty') }}</p>
-        </div>
+        <CfLoadingState v-if="loading" />
+        <CfEmptyState v-else-if="items.length === 0" icon="i-lucide-file-text" :message="t('prompts.empty')" />
         <table v-else class="cf-data-table">
           <thead>
             <tr>

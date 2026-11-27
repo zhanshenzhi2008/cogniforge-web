@@ -16,15 +16,8 @@
     </div>
 
     <div class="cf-panel">
-      <div v-if="loading" class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
-
-      <div v-else-if="pagedRoles.length === 0" class="cf-state">
-        <UIcon name="i-lucide-shield" class="size-8 opacity-50" />
-        <p>{{ t('roles.empty') }}</p>
-      </div>
+      <CfLoadingState v-if="loading" />
+      <CfEmptyState v-else-if="pagedRoles.length === 0" icon="i-lucide-shield" :message="t('roles.empty')" />
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">

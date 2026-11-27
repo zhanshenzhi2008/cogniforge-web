@@ -48,17 +48,11 @@
     </div>
 
     <div v-if="loading" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+      <CfLoadingState />
     </div>
 
     <div v-else-if="providers.length === 0" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-boxes" class="size-8 opacity-50" />
-        <p>{{ t('models.empty') }}</p>
-      </div>
+      <CfEmptyState icon="i-lucide-boxes" :message="t('models.empty')" />
     </div>
 
     <!-- Card view (default): compact 3–4+ columns -->

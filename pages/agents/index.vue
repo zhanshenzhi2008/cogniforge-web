@@ -19,20 +19,17 @@
     </div>
 
     <div v-if="loading" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+      <CfLoadingState />
     </div>
 
     <div v-else-if="agents.length === 0" class="cf-panel">
-      <div class="cf-state">
-        <UIcon :name="CF_ICONS.agent" class="size-8 opacity-50" />
-        <p>{{ t('agents.empty') }}</p>
-        <CfButton tone="primary" icon="i-lucide-plus" @click="goCreate">
-          {{ t('agents.new') }}
-        </CfButton>
-      </div>
+      <CfEmptyState :icon="CF_ICONS.agent" :message="t('agents.empty')">
+        <template #action>
+          <CfButton tone="primary" icon="i-lucide-plus" @click="goCreate">
+            {{ t('agents.new') }}
+          </CfButton>
+        </template>
+      </CfEmptyState>
     </div>
 
     <!-- Card view -->

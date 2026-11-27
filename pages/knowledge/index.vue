@@ -21,20 +21,17 @@
       <span class="list-hint">{{ t('kb.openDocsHint') }}</span>
     </div>
 
-    <div v-if="loading" class="cf-state">
-      <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-      <span>{{ t('common.loading') }}</span>
-    </div>
-
-    <div v-else-if="knowledgeBases.length === 0" class="cf-state">
-      <UIcon :name="CF_ICONS.knowledge" class="size-8 opacity-50" />
-      <p>{{ t('kb.empty') }}</p>
-    </div>
-
-    <div v-else-if="filteredKnowledgeBases.length === 0" class="cf-state">
-      <UIcon name="i-lucide-search-x" class="size-8 opacity-50" />
-      <p>{{ t('kb.listNoMatch') }}</p>
-    </div>
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState
+      v-else-if="knowledgeBases.length === 0"
+      :icon="CF_ICONS.knowledge"
+      :message="t('kb.empty')"
+    />
+    <CfEmptyState
+      v-else-if="filteredKnowledgeBases.length === 0"
+      icon="i-lucide-search-x"
+      :message="t('kb.listNoMatch')"
+    />
 
     <div v-else class="kb-grid">
           <div

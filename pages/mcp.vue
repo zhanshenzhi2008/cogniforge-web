@@ -33,17 +33,14 @@
     </div>
 
     <div v-if="loading" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+      <CfLoadingState />
     </div>
 
     <div v-else-if="filteredServers.length === 0" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-plug" class="size-8 opacity-50" />
-        <p>{{ servers.length === 0 ? t('mcp.empty') : t('mcp.filterEmpty') }}</p>
-      </div>
+      <CfEmptyState
+        icon="i-lucide-plug"
+        :message="servers.length === 0 ? t('mcp.empty') : t('mcp.filterEmpty')"
+      />
     </div>
 
     <div v-else class="mcp-grid">

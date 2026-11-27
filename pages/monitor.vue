@@ -67,15 +67,8 @@
         </div>
       </div>
 
-      <div v-if="loading" class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
-
-      <div v-else-if="logs.length === 0" class="cf-state">
-        <UIcon name="i-lucide-activity" class="size-8 opacity-50" />
-        <p>{{ t('monitor.empty') }}</p>
-      </div>
+      <CfLoadingState v-if="loading" />
+      <CfEmptyState v-else-if="logs.length === 0" icon="i-lucide-activity" :message="t('monitor.empty')" />
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">
@@ -170,15 +163,12 @@
         </CfButton>
       </div>
 
-      <div v-if="auditLoading" class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
-
-      <div v-else-if="securityAudits.length === 0" class="cf-state">
-        <UIcon name="i-lucide-shield" class="size-8 opacity-50" />
-        <p>{{ t('monitor.securityAuditsEmpty') }}</p>
-      </div>
+      <CfLoadingState v-if="auditLoading" />
+      <CfEmptyState
+        v-else-if="securityAudits.length === 0"
+        icon="i-lucide-shield"
+        :message="t('monitor.securityAuditsEmpty')"
+      />
 
       <div v-else class="cf-table-wrap">
         <table class="cf-data-table">

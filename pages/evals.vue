@@ -26,13 +26,12 @@
         <span class="list-count">{{ t('evals.count', { n: suites.length }) }}</span>
       </div>
       <div class="cf-panel">
-        <div v-if="loading" class="cf-state">
-          <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        </div>
-        <div v-else-if="suites.length === 0" class="cf-state">
-          <UIcon name="i-lucide-clipboard-check" class="size-8 opacity-50" />
-          <p>{{ t('evals.empty') }}</p>
-        </div>
+        <CfLoadingState v-if="loading" />
+        <CfEmptyState
+          v-else-if="suites.length === 0"
+          icon="i-lucide-clipboard-check"
+          :message="t('evals.empty')"
+        />
         <div v-else class="cf-table-wrap">
           <table class="cf-data-table">
             <thead>
