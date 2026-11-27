@@ -715,6 +715,8 @@ export const M = {
   'agents.composeInline': { 'zh-CN': '内联系统提示', 'en-US': 'Inline system prompt' },
 
   'mcp.title': { 'zh-CN': 'MCP Server', 'en-US': 'MCP Server' },
+  'mcp.typeCol': { 'zh-CN': '类型', 'en-US': 'Type' },
+  'mcp.endpoint': { 'zh-CN': '地址', 'en-US': 'Endpoint' },
   'mcp.sub': { 'zh-CN': '管理工具服务：开关、查看工具、连接远程 MCP（对标 Cursor / Claude 工具面板）。', 'en-US': 'Manage tool servers: toggle, inspect tools, connect remote MCP (Cursor/Claude-style).' },
   'mcp.new': { 'zh-CN': '添加 Server', 'en-US': 'Add Server' },
   'mcp.count': { 'zh-CN': '{n} 个 Server', 'en-US': '{n} servers' },

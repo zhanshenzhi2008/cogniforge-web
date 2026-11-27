@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('mcp.title') }}</h1>
         <p class="cf-page-sub">{{ t('mcp.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
-        {{ t('mcp.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-mcp-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('mcp.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -43,7 +46,7 @@
       />
     </div>
 
-    <div v-else class="mcp-grid">
+    <div v-else-if="viewMode === 'card'" class="mcp-grid">
       <article
         v-for="srv in filteredServers"
         :key="srv.id"
@@ -113,6 +116,84 @@
           </div>
         </div>
       </article>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('mcp.typeCol') }}</th>
+              <th>{{ t('mcp.tools') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('mcp.endpoint') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="srv in filteredServers"
+              :key="srv.id"
+              class="list-row"
+              :class="{ 'list-row--off': !srv.enabled }"
+              @dblclick="openDetail(srv)"
+            >
+              <td>
+                <span class="mcp-list-name">{{ srv.name }}</span>
+              </td>
+              <td>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
+                >
+                  {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
+                </UBadge>
+              </td>
+              <td class="cf-muted">{{ srv.tool_count ?? 0 }}</td>
+              <td @dblclick.stop>
+                <USwitch
+                  v-if="srv.type !== 'built-in'"
+                  :model-value="srv.enabled"
+                  :disabled="togglingId === srv.id"
+                  @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
+                />
+                <UBadge v-else size="sm" variant="subtle" color="success">
+                  {{ t('common.enabled') }}
+                </UBadge>
+              </td>
+              <td class="cf-muted mono url-snip" :title="srv.url || ''">
+                {{ srv.type === 'built-in' ? t('mcp.builtinShort') : (srv.url || '—') }}
+              </td>
+              <td @dblclick.stop>
+                <div class="action-btns">
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-eye"
+                    :tip="t('mcp.viewDetail')"
+                    @click="openDetail(srv)"
+                  />
+                  <CfButton
+                    v-if="srv.type !== 'built-in'"
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(srv)"
+                  />
+                  <CfButton
+                    v-if="srv.type !== 'built-in'"
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="askDelete(srv)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Detail: tools + config -->
@@ -263,6 +344,7 @@
 
 <script setup lang="ts">
 import type { McpServer, McpTool } from '@/composables/useMcpServers'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -277,6 +359,7 @@ const submitting = ref(false)
 const servers = ref<McpServer[]>([])
 const filter = ref<FilterId>('all')
 const query = ref('')
+const viewMode = ref<ViewMode>('card')
 const togglingId = ref('')
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
@@ -502,6 +585,12 @@ onMounted(() => { fetchServers() })
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -509,6 +598,18 @@ onMounted(() => { fetchServers() })
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.85rem;
+}
+
+.list-row {
+  cursor: pointer;
+}
+
+.list-row--off {
+  opacity: 0.72;
+}
+
+.mcp-list-name {
+  font-weight: 600;
 }
 
 .filter-row {

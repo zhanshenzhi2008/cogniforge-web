@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.147 | MCP 列表复用 CfViewModeToggle 卡片/表格 | orjrs |
 | 2026-11-27 | v1.146 | 对话输入支持浏览器语音听写（STT） | orjrs |
 | 2026-11-27 | v1.145 | 对话助手回复支持浏览器朗读（TTS） | orjrs |
 | 2026-11-27 | v1.144 | 知识库列表复用 CfViewModeToggle 卡片/表格 | orjrs |
@@ -150,6 +151,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] MCP 列表视图切换（2026-11-27）
+
+- **原因**：跨模块去重；对齐 agents/knowledge
+- **落地**：`CfViewModeToggle` + 表格视图；偏好 `cf-mcp-view`
+- **主仓**：前端设计 v1.116
 
 ## [变更] 浏览器语音听写（2026-11-27）
 
@@ -666,7 +673,7 @@
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
   - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
   - [x] 可选 `CfResourceCard` 壳：agents/knowledge 已接；models/mcp 可按需跟
-  - [x] 知识库列表复用 `CfViewModeToggle`；MCP 可按需跟
+  - [x] 知识库 / MCP 列表复用 `CfViewModeToggle`
 - **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`
 - **主仓**：前端设计同步
 
