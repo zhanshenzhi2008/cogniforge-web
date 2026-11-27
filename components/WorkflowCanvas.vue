@@ -70,7 +70,12 @@
       />
     </template>
     <template #node-code="{ data }">
-      <WorkflowFlowNode kind="code" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="code"
+        :label="data.label"
+        :hint="bindNodeHint('code', data)"
+        :unbound="isWorkflowBindUnbound('code', data)"
+      />
     </template>
     <template #node-delay="{ data }">
       <WorkflowFlowNode kind="delay" :label="data.label" :hint="data.streamProgress" />

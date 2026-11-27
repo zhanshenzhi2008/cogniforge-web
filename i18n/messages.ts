@@ -1305,6 +1305,7 @@ export const M = {
   'editor.bindRequiredMore': { 'zh-CN': '另有 {n} 个节点也未配置', 'en-US': '{n} more node(s) also need configuration' },
   'editor.bindKind.llm': { 'zh-CN': '模型', 'en-US': 'model' },
   'editor.bindKind.http': { 'zh-CN': '请求地址', 'en-US': 'request URL' },
+  'editor.bindKind.code': { 'zh-CN': '代码', 'en-US': 'code' },
   'editor.bindKind.team': { 'zh-CN': '团队', 'en-US': 'team' },
   'editor.bindKind.agent': { 'zh-CN': '智能体', 'en-US': 'agent' },
   'editor.bindKind.search': { 'zh-CN': '知识库', 'en-US': 'knowledge base' },

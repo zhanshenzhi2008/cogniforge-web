@@ -1893,6 +1893,14 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const short = url.length > 36 ? `${url.slice(0, 34)}…` : url
     return `${method} ${short}`
   }
+  if (kind === 'code') {
+    const lang = String(d.codeLanguage || d.language || 'expression').trim() || 'expression'
+    const src = String(d.codeSource || d.code || '').trim()
+    if (!src) return ''
+    const first = src.split('\n').find(l => l.trim()) || src
+    const short = first.length > 28 ? `${first.slice(0, 26)}…` : first
+    return `${lang}: ${short}`
+  }
   if (kind === 'team') {
     const id = String(d.teamId || '').trim()
     return teamOptions.value.find(o => o.value === id)?.label || ''
@@ -1916,7 +1924,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['llm', 'http', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'http', 'code', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2057,6 +2065,10 @@ const saveNodeConfig = () => {
       httpMethod: nodeConfig.httpMethod,
       url: nodeConfig.httpUrl,
       httpUrl: nodeConfig.httpUrl,
+      codeLanguage: nodeConfig.codeLanguage,
+      language: nodeConfig.codeLanguage,
+      codeSource: nodeConfig.codeSource,
+      code: nodeConfig.codeSource,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
