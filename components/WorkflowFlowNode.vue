@@ -4,7 +4,8 @@
     :class="[
       `flow-node-${meta.tone}`,
       { 'flow-node--unbound': unbound },
-      { 'flow-node--orphan': orphan && !unbound },
+      { 'flow-node--orphan': orphan && !unbound && !deadEnd },
+      { 'flow-node--dead-end': deadEnd && !unbound && !orphan },
     ]"
   >
     <!-- 左侧入口线头：结束/普通节点可接；开始节点无入口 -->
@@ -25,7 +26,8 @@
         class="flow-node__hint"
         :class="{
           'flow-node__hint--warn': unbound && !hint,
-          'flow-node__hint--orphan': orphan && !unbound && !hint,
+          'flow-node__hint--orphan': orphan && !unbound && !deadEnd && !hint,
+          'flow-node__hint--dead-end': deadEnd && !unbound && !orphan && !hint,
         }"
         :title="displayHint"
       >{{ displayHint }}</span>
@@ -43,6 +45,12 @@
       :title="orphanHint"
       aria-hidden="true"
     >?</span>
+    <span
+      v-else-if="deadEnd"
+      class="flow-node__badge flow-node__badge--dead-end"
+      :title="deadEndHint"
+      aria-hidden="true"
+    >×</span>
 
     <!-- 条件：上下两个出口（真/假），鼠标从线头拖出 -->
     <template v-if="meta.handles === 'branch'">
@@ -90,6 +98,8 @@ const props = defineProps<{
   unbound?: boolean
   /** 从开始节点不可达 */
   orphan?: boolean
+  /** 可达但无出边（死胡同） */
+  deadEnd?: boolean
 }>()
 
 const { t } = useLocale()
@@ -98,10 +108,12 @@ const trueLabel = computed(() => t('editor.branchTrue'))
 const falseLabel = computed(() => t('editor.branchFalse'))
 const unboundHint = computed(() => t('editor.nodeUnboundHint'))
 const orphanHint = computed(() => t('editor.nodeOrphanHint'))
+const deadEndHint = computed(() => t('editor.nodeDeadEndHint'))
 const displayHint = computed(() => {
   if (props.hint) return props.hint
   if (props.unbound) return unboundHint.value
   if (props.orphan) return orphanHint.value
+  if (props.deadEnd) return deadEndHint.value
   return ''
 })
 </script>
@@ -136,6 +148,13 @@ const displayHint = computed(() => {
   opacity: 0.92;
 }
 
+.flow-node--dead-end {
+  border-color: #7c3aed;
+  border-style: dashed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 2px rgb(124 58 237 / 0.22);
+}
+
 .flow-node__badge {
   position: absolute;
   top: -7px;
@@ -155,6 +174,10 @@ const displayHint = computed(() => {
 
 .flow-node__badge--orphan {
   background: #64748b;
+}
+
+.flow-node__badge--dead-end {
+  background: #7c3aed;
 }
 
 .flow-node__icon {
@@ -192,6 +215,10 @@ const displayHint = computed(() => {
 
 .flow-node__hint--orphan {
   color: #64748b;
+}
+
+.flow-node__hint--dead-end {
+  color: #6d28d9;
 }
 
 /* ProcessOn 风格线头：常显淡点，悬停放大可拖 */

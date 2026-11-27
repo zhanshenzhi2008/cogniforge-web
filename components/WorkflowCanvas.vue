@@ -25,11 +25,12 @@
     <Controls />
     <MiniMap />
 
-    <template #node-start="{ data }">
+    <template #node-start="{ data, id }">
       <WorkflowFlowNode
         kind="start"
         :label="data.label"
         :hint="bindNodeHint('start', data)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-end="{ data, id }">
@@ -47,6 +48,7 @@
         :hint="bindNodeHint('llm', data)"
         :unbound="isWorkflowBindUnbound('llm', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-agent="{ data, id }">
@@ -56,6 +58,7 @@
         :hint="bindNodeHint('agent', data)"
         :unbound="isWorkflowBindUnbound('agent', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-team="{ data, id }">
@@ -65,6 +68,7 @@
         :hint="bindNodeHint('team', data)"
         :unbound="isWorkflowBindUnbound('team', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-condition="{ data, id }">
@@ -83,6 +87,7 @@
         :hint="bindNodeHint('loop', data)"
         :unbound="isWorkflowBindUnbound('loop', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-http="{ data, id }">
@@ -92,6 +97,7 @@
         :hint="bindNodeHint('http', data)"
         :unbound="isWorkflowBindUnbound('http', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-code="{ data, id }">
@@ -101,6 +107,7 @@
         :hint="bindNodeHint('code', data)"
         :unbound="isWorkflowBindUnbound('code', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-delay="{ data, id }">
@@ -109,6 +116,7 @@
         :label="data.label"
         :hint="bindNodeHint('delay', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-wait="{ data, id }">
@@ -117,6 +125,7 @@
         :label="data.label"
         :hint="bindNodeHint('wait', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-search="{ data, id }">
@@ -126,6 +135,7 @@
         :hint="bindNodeHint('search', data)"
         :unbound="isWorkflowBindUnbound('search', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-subflow="{ data, id }">
@@ -135,6 +145,7 @@
         :hint="bindNodeHint('subflow', data)"
         :unbound="isWorkflowBindUnbound('subflow', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-input="{ data, id }">
@@ -144,6 +155,7 @@
         :hint="bindNodeHint('input', data)"
         :unbound="isWorkflowBindUnbound('input', data)"
         :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
       />
     </template>
     <template #node-output="{ data, id }">
@@ -176,7 +188,7 @@ import { computed } from 'vue'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
-import { reachableFromStart } from '@/utils/workflowReachability'
+import { findDeadEndNodes, reachableFromStart } from '@/utils/workflowReachability'
 
 const props = defineProps<{
   nodes: any[]
@@ -185,10 +197,17 @@ const props = defineProps<{
 
 const reachableIds = computed(() => reachableFromStart(props.nodes || [], props.edges || []))
 const hasStartNode = computed(() => (props.nodes || []).some(n => String(n?.type || '') === 'start'))
+const deadEndIds = computed(() => new Set(
+  findDeadEndNodes(props.nodes || [], props.edges || []).map(n => n.id),
+))
 
 function isOrphan(id: string) {
   if (!hasStartNode.value) return false
   return !reachableIds.value.has(id)
+}
+
+function isDeadEnd(id: string) {
+  return deadEndIds.value.has(id)
 }
 
 /** 流式进度优先；已绑定则显示资源名副文案 */
