@@ -1280,6 +1280,7 @@ import {
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatNodeRunOutputPreview,
+  isSeededDebugSkip,
   isUntakenConditionSkip,
 } from '@/utils/workflowDebugStep'
 import {
@@ -3906,9 +3907,13 @@ const execTimeline = computed(() => {
         note = t('editor.debugTimelineApproved')
       }
     } else if (r.status === 'skipped') {
-      note = isUntakenConditionSkip(r.output)
-        ? t('editor.debugTimelineSkippedBranch')
-        : t('editor.debugTimelineSkipped')
+      if (isUntakenConditionSkip(r.output)) {
+        note = t('editor.debugTimelineSkippedBranch')
+      } else if (isSeededDebugSkip(r.detail, r.output)) {
+        note = t('editor.debugTimelineSkippedSeeded')
+      } else {
+        note = t('editor.debugTimelineSkipped')
+      }
     } else if (r.duration_ms != null && r.duration_ms > 0) {
       note = t('editor.debugTimelineMs', { ms: r.duration_ms })
     }

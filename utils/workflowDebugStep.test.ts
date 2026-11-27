@@ -4,6 +4,7 @@ import {
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatNodeRunOutputPreview,
+  isSeededDebugSkip,
   isUntakenConditionSkip,
 } from './workflowDebugStep'
 
@@ -20,6 +21,13 @@ describe('workflowDebugStep', () => {
     expect(isUntakenConditionSkip({ reason: 'untaken_condition_branch' })).toBe(true)
     expect(isUntakenConditionSkip({ reason: 'other' })).toBe(false)
     expect(isUntakenConditionSkip(null)).toBe(false)
+  })
+
+  it('detects seeded debug-from-node skips', () => {
+    expect(isSeededDebugSkip({ seeded_from: 'exec-1' })).toBe(true)
+    expect(isSeededDebugSkip({ skip_reason: 'debug_from_node' }, { text: 'hi' })).toBe(true)
+    expect(isSeededDebugSkip({ skip_reason: 'debug_from_node' }, {})).toBe(false)
+    expect(isSeededDebugSkip({ skip_reason: 'debug_from_node' })).toBe(false)
   })
 
   it('finds latest non-human timeline key for a node', () => {

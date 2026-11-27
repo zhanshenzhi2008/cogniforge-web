@@ -31,6 +31,22 @@ export function isUntakenConditionSkip(output: unknown): boolean {
   return (output as Record<string, unknown>).reason === 'untaken_condition_branch'
 }
 
+/** 从此调试跳过且已灌入上游输出 */
+export function isSeededDebugSkip(detail: unknown, output?: unknown): boolean {
+  if (detail && typeof detail === 'object') {
+    const seeded = (detail as Record<string, unknown>).seeded_from
+    if (typeof seeded === 'string' && seeded.trim()) return true
+  }
+  // 有输出的 debug_from_node 跳过也视为已灌入
+  if (detail && typeof detail === 'object') {
+    const reason = (detail as Record<string, unknown>).skip_reason
+    if (reason === 'debug_from_node' && output && typeof output === 'object' && Object.keys(output as object).length > 0) {
+      return true
+    }
+  }
+  return false
+}
+
 /** 画布选中节点时，取时间线里该节点最近一步（跳过人工审批行） */
 export function findLatestTimelineKeyForNode(
   steps: { key: string, nodeId?: string, nodeType?: string }[],
