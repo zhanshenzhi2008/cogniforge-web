@@ -1112,6 +1112,13 @@ export const M = {
   'editor.cancelAllStuckFail': { 'zh-CN': '取消卡住的试跑失败', 'en-US': 'Failed to cancel stuck runs' },
   'editor.debugAtNode': { 'zh-CN': '停在节点：{name}', 'en-US': 'At node: {name}' },
   'editor.debugInputPreview': { 'zh-CN': '输入：{text}', 'en-US': 'Input: {text}' },
+  'editor.debugCopy': { 'zh-CN': '复制', 'en-US': 'Copy' },
+  'editor.debugCopyHint': { 'zh-CN': '复制完整输出到剪贴板', 'en-US': 'Copy full output to clipboard' },
+  'editor.debugCopyEmpty': { 'zh-CN': '没有可复制的内容', 'en-US': 'Nothing to copy' },
+  'editor.debugCopyFail': { 'zh-CN': '复制失败，请手动选择', 'en-US': 'Copy failed — select manually' },
+  'editor.debugRunDurationMs': { 'zh-CN': '总耗时：{ms} ms', 'en-US': 'Duration: {ms} ms' },
+  'editor.debugRunDurationSec': { 'zh-CN': '总耗时：{sec} s', 'en-US': 'Duration: {sec} s' },
+  'editor.debugRunDurationMin': { 'zh-CN': '总耗时：{m} 分 {s} 秒', 'en-US': 'Duration: {m}m {s}s' },
   'editor.debugReuseInput': { 'zh-CN': '填入上方再跑', 'en-US': 'Reuse in form' },
   'editor.debugReuseInputHint': {
     'zh-CN': '把这次输入填回上方，改完可再点开始调试',

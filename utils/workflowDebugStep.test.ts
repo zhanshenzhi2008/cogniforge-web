@@ -4,6 +4,7 @@ import {
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatExecutionInputJson,
+  formatExecutionOutputForCopy,
   formatNodeRunOutputPreview,
   isSeededDebugSkip,
   isUntakenConditionSkip,
@@ -16,6 +17,12 @@ describe('workflowDebugStep', () => {
     expect(formatExecutionInputJson({ query: 'hi' })).toBe('{\n  "query": "hi"\n}')
     expect(formatExecutionInputJson('{"a":1}')).toBe('{\n  "a": 1\n}')
     expect(formatExecutionInputJson('  ')).toBe(null)
+  })
+
+  it('formats output for clipboard copy', () => {
+    expect(formatExecutionOutputForCopy(null)).toBe('')
+    expect(formatExecutionOutputForCopy('plain')).toBe('plain')
+    expect(formatExecutionOutputForCopy({ a: 1 })).toBe('{\n  "a": 1\n}')
   })
 
   it('prefers text/content fields and truncates', () => {

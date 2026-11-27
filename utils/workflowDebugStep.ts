@@ -1,3 +1,14 @@
+/** 节点/整次输出压成可复制全文（尽量保留原始结构） */
+export function formatExecutionOutputForCopy(output: unknown): string {
+  if (output == null || output === '') return ''
+  if (typeof output === 'string') return output
+  try {
+    return JSON.stringify(output, null, 2)
+  } catch {
+    return String(output)
+  }
+}
+
 /** 把某次试跑的 input 压成可回填的 JSON 文本；无内容返回 null */
 export function formatExecutionInputJson(input: unknown): string | null {
   if (input == null) return null

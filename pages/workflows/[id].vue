@@ -1042,6 +1042,7 @@
               {{ shortExecId(currentExecution.id) }}
             </span>
           </div>
+          <p v-if="execRunDurationLabel" class="debug-meta">{{ execRunDurationLabel }}</p>
           <div v-if="execInputPreview || currentExecution.input" class="debug-meta debug-meta--input">
             <span v-if="execInputPreview">{{ t('editor.debugInputPreview', { text: execInputPreview }) }}</span>
             <button
@@ -1159,7 +1160,19 @@
               </div>
             </button>
             <div v-if="selectedTimelineStep" class="debug-step-summary">
-              <div class="debug-section-title">{{ t('editor.debugStepSummary') }}</div>
+              <div class="debug-step-summary__head">
+                <div class="debug-section-title">{{ t('editor.debugStepSummary') }}</div>
+                <button
+                  v-if="selectedTimelineStep.outputCopy || selectedTimelineStep.error"
+                  type="button"
+                  class="debug-copy-btn"
+                  :title="t('editor.debugCopyHint')"
+                  @click="copyDebugText(selectedTimelineStep.outputCopy || selectedTimelineStep.error || '')"
+                >
+                  <UIcon name="i-lucide-copy" class="size-3.5" />
+                  <span>{{ t('editor.debugCopy') }}</span>
+                </button>
+              </div>
               <dl class="debug-step-summary__meta">
                 <div>
                   <dt>{{ t('editor.debugStepStatus') }}</dt>
@@ -1185,7 +1198,18 @@
           </div>
 
           <div v-if="currentExecution.output" class="debug-output">
-            <div class="debug-section-title">{{ t('editor.debugOutput') }}</div>
+            <div class="debug-step-summary__head">
+              <div class="debug-section-title">{{ t('editor.debugOutput') }}</div>
+              <button
+                type="button"
+                class="debug-copy-btn"
+                :title="t('editor.debugCopyHint')"
+                @click="copyDebugText(formatExecutionOutputForCopy(currentExecution.output))"
+              >
+                <UIcon name="i-lucide-copy" class="size-3.5" />
+                <span>{{ t('editor.debugCopy') }}</span>
+              </button>
+            </div>
             <pre>{{ truncateText(String(currentExecution.output), 800) }}</pre>
           </div>
         </div>
@@ -1306,6 +1330,7 @@ import {
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatExecutionInputJson,
+  formatExecutionOutputForCopy,
   formatNodeRunOutputPreview,
   isSeededDebugSkip,
   isUntakenConditionSkip,
@@ -3849,6 +3874,25 @@ const staleActiveExecIds = computed(() =>
 
 const execInputPreview = computed(() => inputPreviewFrom(currentExecution.value || {}))
 
+/** 这一次试跑总耗时（有开始+结束时间才显示） */
+const execRunDurationLabel = computed(() => {
+  const ex = currentExecution.value as {
+    started_at?: string | null
+    completed_at?: string | null
+  } | null
+  if (!ex?.started_at || !ex?.completed_at) return ''
+  const start = Date.parse(ex.started_at)
+  const end = Date.parse(ex.completed_at)
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return ''
+  const ms = end - start
+  if (ms < 1000) return t('editor.debugRunDurationMs', { ms })
+  if (ms < 60_000) return t('editor.debugRunDurationSec', { sec: (ms / 1000).toFixed(1) })
+  const sec = Math.round(ms / 1000)
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return t('editor.debugRunDurationMin', { m, s })
+})
+
 /** 调试侧栏：当前 running 节点的流式进度文案 */
 const liveStreamProgress = computed(() => {
   const ex = currentExecution.value
@@ -3870,6 +3914,8 @@ type TimelineStep = {
   durationMs?: number | null
   error?: string
   outputPreview?: string
+  /** 剪贴板用全文（未截断） */
+  outputCopy?: string
 }
 
 const selectedTimelineKey = ref<string | null>(null)
@@ -3911,6 +3957,7 @@ const execTimeline = computed(() => {
         durationMs: null,
         error: '',
         outputPreview: '',
+        outputCopy: '',
       }]
     }
     return []
@@ -3937,6 +3984,7 @@ const execTimeline = computed(() => {
         durationMs: r.duration_ms ?? null,
         error: r.error ? truncateText(r.error, 240) : '',
         outputPreview: formatNodeRunOutputPreview(r.output),
+        outputCopy: formatExecutionOutputForCopy(r.output),
       }
     }
     const label = nodeDisplayName(r.node_id) || r.node_id
@@ -3971,6 +4019,7 @@ const execTimeline = computed(() => {
       durationMs: r.duration_ms ?? null,
       error: r.error ? truncateText(r.error, 240) : '',
       outputPreview: formatNodeRunOutputPreview(r.output),
+      outputCopy: formatExecutionOutputForCopy(r.output),
     }
   })
 })
@@ -3982,6 +4031,20 @@ const selectedTimelineStep = computed(() =>
 watch(() => currentExecution.value?.id, () => {
   selectedTimelineKey.value = null
 })
+
+async function copyDebugText(text: string) {
+  const value = String(text || '').trim()
+  if (!value) {
+    toast.add({ title: t('editor.debugCopyEmpty'), color: 'warning' })
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(value)
+    toast.add({ title: t('common.copied'), color: 'success' })
+  } catch {
+    toast.add({ title: t('editor.debugCopyFail'), color: 'error' })
+  }
+}
 
 function selectTimelineStep(step: TimelineStep) {
   selectedTimelineKey.value = selectedTimelineKey.value === step.key ? null : step.key
@@ -5019,6 +5082,36 @@ onMounted(() => {
   border-radius: 6px;
   border: 1px solid var(--cf-line, #e2e8f0);
   background: var(--cf-bg, #f8fafc);
+}
+.debug-step-summary__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.debug-step-summary__head .debug-section-title {
+  margin: 0;
+}
+.debug-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  background: #fff;
+  color: var(--cf-ink-soft, #64748b);
+  font-size: 11px;
+  cursor: pointer;
+}
+.debug-copy-btn:hover {
+  border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 55%, var(--cf-line, #e2e8f0));
+  color: var(--cf-accent, #2563eb);
+}
+.debug-output .debug-step-summary__head {
+  margin-bottom: 6px;
 }
 .debug-step-summary__meta {
   display: flex;
