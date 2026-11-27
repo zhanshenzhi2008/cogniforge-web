@@ -1157,24 +1157,46 @@
           <p class="debug-hint debug-hint--compact">{{ t('editor.debugHistoryHint') }}</p>
           <template v-if="showOlderRuns">
             <div v-if="olderHistoryItems.length === 0" class="debug-empty">{{ t('editor.debugHistoryEmpty') }}</div>
-            <button
+            <div
               v-for="row in olderHistoryItems"
               :key="row.item.id"
-              type="button"
               class="debug-log-item"
-              :class="[row.item.status, { 'is-selected': currentExecution?.id === row.item.id }]"
-              @click="selectHistoryExecution(row.item.id)"
+              :class="[
+                row.item.status,
+                {
+                  'is-selected': currentExecution?.id === row.item.id,
+                  'is-stale': row.stale,
+                },
+              ]"
             >
-              <div class="debug-log-row">
-                <span class="debug-log-index">#{{ row.index }}</span>
-                <span class="debug-status-dot" :class="row.item.status" />
-                <span class="debug-log-status">{{ execStatusLabel(row.item.status) }}</span>
-                <span class="debug-log-time">{{ formatExecTime(row.item) }}</span>
-              </div>
-              <div class="debug-log-message">{{ row.primary }}</div>
-              <div v-if="row.secondary" class="debug-log-secondary">{{ row.secondary }}</div>
-              <div class="debug-log-id" :title="row.item.id">{{ shortExecId(row.item.id) }}</div>
-            </button>
+              <button
+                type="button"
+                class="debug-log-item__main"
+                @click="selectHistoryExecution(row.item.id)"
+              >
+                <div class="debug-log-row">
+                  <span class="debug-log-index">#{{ row.index }}</span>
+                  <span class="debug-status-dot" :class="row.item.status" />
+                  <span class="debug-log-status">{{ execStatusLabel(row.item.status) }}</span>
+                  <span class="debug-log-time">{{ formatExecTime(row.item) }}</span>
+                </div>
+                <div class="debug-log-message">{{ row.primary }}</div>
+                <div v-if="row.secondary" class="debug-log-secondary">{{ row.secondary }}</div>
+                <div class="debug-log-id" :title="row.item.id">{{ shortExecId(row.item.id) }}</div>
+              </button>
+              <button
+                v-if="row.cancellable"
+                type="button"
+                class="debug-log-cancel"
+                :class="{ 'debug-log-cancel--stale': row.stale }"
+                :disabled="cancellingExecId === row.item.id"
+                :title="t('editor.cancelRun')"
+                @click.stop="cancelHistoryExecution(row.item.id)"
+              >
+                <UIcon name="i-lucide-square" class="size-3.5" />
+                <span>{{ row.stale ? t('editor.cancelStuckRun') : t('editor.cancelRun') }}</span>
+              </button>
+            </div>
           </template>
         </div>
       </div>
@@ -1211,6 +1233,7 @@ import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
+import { isActiveExecutionStatus, isStaleActiveExecution } from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
@@ -3472,6 +3495,8 @@ const applyNodeRunHighlight = (exec: {
   })
 }
 
+const cancellingExecId = ref<string | null>(null)
+
 const cancelDebug = async () => {
   if (!currentExecution.value?.id) return
   const res = await cancelExecution(workflowId.value, currentExecution.value.id)
@@ -3485,6 +3510,32 @@ const cancelDebug = async () => {
     currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
   }
   toast.add({ title: t('editor.runCancelled'), color: 'success' })
+  await loadExecutionHistory()
+}
+
+/** 更早试跑里取消卡住的运行中/等待中执行 */
+const cancelHistoryExecution = async (executionId: string) => {
+  if (!executionId || !workflowId.value || isSmokeTest.value) return
+  cancellingExecId.value = executionId
+  try {
+    const res = await cancelExecution(workflowId.value, executionId)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    executionLogs.value = (executionLogs.value || []).map((item: any) =>
+      item.id === executionId ? { ...item, status: 'cancelled' } : item,
+    )
+    if (currentExecution.value?.id === executionId) {
+      stopPolling()
+      isDebugging.value = false
+      currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
+    }
+    toast.add({ title: t('editor.runCancelled'), color: 'success' })
+    await loadExecutionHistory()
+  } finally {
+    cancellingExecId.value = null
+  }
 }
 
 const loadExecutionHistory = async () => {
@@ -3587,15 +3638,8 @@ function historySecondary(item: {
   } else if (item.current_node) {
     parts.push(t('editor.debugAtNode', { name: nodeDisplayName(item.current_node) }))
   }
-  // 很久还显示「运行中」：多半是上次没取消干净，提示一下
-  if (['running', 'debugging', 'pending'].includes(item.status || '')) {
-    const raw = item.started_at || item.created_at
-    if (raw) {
-      const ageMs = Date.now() - new Date(raw).getTime()
-      if (Number.isFinite(ageMs) && ageMs > 10 * 60 * 1000) {
-        parts.push(t('editor.debugHistoryStale'))
-      }
-    }
+  if (isStaleActiveExecution(item)) {
+    parts.push(t('editor.debugHistoryStale'))
   }
   return parts.filter(Boolean).join(' · ')
 }
@@ -3608,6 +3652,8 @@ const historyItems = computed(() => {
     index: i + 1,
     primary: historyPrimary(item),
     secondary: historySecondary(item),
+    cancellable: isActiveExecutionStatus(item.status),
+    stale: isStaleActiveExecution(item),
   }))
 })
 
@@ -4496,9 +4542,10 @@ onMounted(() => {
 }
 
 .debug-log-item {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
-  text-align: left;
   padding: 8px 12px;
   margin-bottom: 8px;
   background: var(--cf-bg, #f8fafc);
@@ -4506,7 +4553,18 @@ onMounted(() => {
   font-size: 12px;
   border: 1px solid transparent;
   border-left: 3px solid var(--cf-line, #e2e8f0);
+}
+.debug-log-item__main {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
   cursor: pointer;
+  color: inherit;
+  font: inherit;
 }
 .debug-log-item:hover {
   border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 35%, transparent);
@@ -4514,6 +4572,34 @@ onMounted(() => {
 .debug-log-item.is-selected {
   border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 55%, transparent);
   background: color-mix(in oklab, var(--cf-accent, #3b82f6) 8%, #fff);
+}
+.debug-log-item.is-stale {
+  border-color: color-mix(in oklab, #f59e0b 45%, transparent);
+}
+.debug-log-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  background: #fff;
+  color: var(--cf-ink-soft, #64748b);
+  font-size: 11px;
+  cursor: pointer;
+}
+.debug-log-cancel:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #dc2626;
+}
+.debug-log-cancel--stale {
+  border-color: color-mix(in oklab, #f59e0b 55%, var(--cf-line, #e2e8f0));
+  color: #b45309;
+}
+.debug-log-cancel:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .debug-log-item.pending,

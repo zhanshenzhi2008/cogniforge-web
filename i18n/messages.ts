@@ -1093,6 +1093,7 @@ export const M = {
   'editor.debugHistoryNoDetail': { 'zh-CN': '暂无摘要（点开看详情）', 'en-US': 'No summary yet — click for details' },
   'editor.debugHistoryCancelled': { 'zh-CN': '用户取消', 'en-US': 'Cancelled by user' },
   'editor.debugHistoryStale': { 'zh-CN': '可能已卡住，可取消', 'en-US': 'May be stuck — you can cancel' },
+  'editor.cancelStuckRun': { 'zh-CN': '取消卡住', 'en-US': 'Cancel stuck' },
   'editor.debugAtNode': { 'zh-CN': '停在节点：{name}', 'en-US': 'At node: {name}' },
   'editor.debugInputPreview': { 'zh-CN': '输入：{text}', 'en-US': 'Input: {text}' },
   'editor.debugOutput': { 'zh-CN': '输出', 'en-US': 'Output' },
