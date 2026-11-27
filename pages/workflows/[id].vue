@@ -441,9 +441,14 @@
               v-model="nodeConfig.model"
               class="w-full"
               :items="modelOptions"
-              :placeholder="t('editor.pickModel')"
+              :placeholder="modelOptions.length ? t('editor.pickModel') : t('editor.modelPickEmpty')"
               value-key="value"
+              :disabled="!modelOptions.length"
             />
+            <p v-if="!modelOptions.length" class="field__hint">
+              {{ t('editor.modelPickEmptyHint') }}
+              <NuxtLink to="/models" class="field__link" target="_blank">{{ t('editor.modelGoCreate') }}</NuxtLink>
+            </p>
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field">
@@ -1940,6 +1945,21 @@ function syncBindCaptions() {
   })
 }
 
+async function refreshModelOptions() {
+  const res = await listModels()
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  modelOptions.value = (res.data || [])
+    .filter(m => m.id)
+    .map(m => ({ label: m.name || m.id, value: m.id }))
+  if (!nodeConfig.model && modelOptions.value[0]) {
+    nodeConfig.model = modelOptions.value[0]!.value
+  }
+  syncBindCaptions()
+}
+
 async function refreshTeamOptions() {
   const res = await listTeams()
   if (res.error) {
@@ -1995,6 +2015,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.llmStream = !!(event.node.data?.llmStream ?? event.node.data?.stream)
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
+  if (event.node?.type === 'llm') {
+    void refreshModelOptions()
+  }
   if (event.node?.type === 'team') {
     void refreshTeamOptions()
   }
@@ -2908,12 +2931,7 @@ const selectHistoryExecution = async (executionId: string) => {
 }
 
 onMounted(() => {
-  listModels().then((res) => {
-    modelOptions.value = (res.data || [])
-      .filter(m => m.id)
-      .map(m => ({ label: m.name || m.id, value: m.id }))
-    syncBindCaptions()
-  })
+  void refreshModelOptions()
   void refreshTeamOptions()
   void refreshAgentOptions()
   void refreshWorkflowPickOptions()
