@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.167 | 用户管理列表 CfResourceCard + 视图切换 | orjrs |
 | 2026-11-27 | v1.166 | 评估列表 CfResourceCard + 视图切换 | orjrs |
 | 2026-11-27 | v1.165 | 画布已绑定节点显示资源名副文案 | orjrs |
 | 2026-11-27 | v1.164 | 画布顶栏未绑定数量芯片 | orjrs |
@@ -248,6 +249,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] 用户管理列表卡片视图（2026-11-27）
+
+- **原因**：跨模块去重；用户页仍只有表格
+- **落地**：`CfResourceCard` + `CfViewModeToggle`（`cf-users-view`）；搜索/分页共用
+- **主仓**：前端设计 v1.135
 
 ## [变更] 评估列表卡片视图（2026-11-27）
 
@@ -805,8 +812,8 @@
   - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
   - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
-  - [x] 可选 `CfResourceCard` 壳：agents/knowledge/teams/workflows/prompts/keys/mcp 已接
-  - [x] 知识库 / MCP 列表复用 `CfViewModeToggle`
+  - [x] 可选 `CfResourceCard` 壳：agents/knowledge/teams/workflows/prompts/keys/mcp/evals/users 已接
+  - [x] 知识库 / MCP / 评估 / 用户列表复用 `CfViewModeToggle`
 - **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`
 - **主仓**：前端设计同步
 

@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('users.title') }}</h1>
         <p class="cf-page-sub">{{ t('users.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-user-plus" @click="openCreateModal">
-        {{ t('users.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-users-view" />
+        <CfButton tone="primary" icon="i-lucide-user-plus" @click="openCreateModal">
+          {{ t('users.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -15,30 +18,83 @@
       <span class="list-hint">{{ t('common.hintDblclickEdit') }}</span>
     </div>
 
-    <div class="cf-panel">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <UInput
-            v-model="searchQuery"
-            class="search-input"
-            :placeholder="t('users.searchPh')"
-            icon="i-lucide-search"
-            @update:model-value="handleSearch"
-          />
-          <USelect
-            v-model="filterStatus"
-            class="status-filter"
-            :items="statusFilterOptions"
-            :placeholder="t('users.filterStatus')"
-            @update:model-value="handleSearch"
-          />
-        </div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <UInput
+          v-model="searchQuery"
+          class="search-input"
+          :placeholder="t('users.searchPh')"
+          icon="i-lucide-search"
+          @update:model-value="handleSearch"
+        />
+        <USelect
+          v-model="filterStatus"
+          class="status-filter"
+          :items="statusFilterOptions"
+          :placeholder="t('users.filterStatus')"
+          @update:model-value="handleSearch"
+        />
       </div>
+    </div>
 
-      <CfLoadingState v-if="loading" />
-      <CfEmptyState v-else-if="pagedUsers.length === 0" icon="i-lucide-users" :message="t('users.empty')" />
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState v-else-if="pagedUsers.length === 0" icon="i-lucide-users" :message="t('users.empty')" />
 
-      <div v-else class="cf-table-wrap">
+    <div v-else-if="viewMode === 'card'" class="user-grid">
+      <CfResourceCard
+        v-for="row in pagedUsers"
+        :key="row.id"
+        icon="i-lucide-user"
+        :title="row.name"
+        :description="row.email"
+        :meta="userCardMeta(row)"
+        @click="handleEdit(row)"
+      >
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="row.role === 'admin' ? 'error' : 'info'"
+          >
+            {{ row.role === 'admin' ? t('role.admin') : t('role.user') }}
+          </UBadge>
+          <UBadge size="sm" variant="subtle" :color="statusBadgeColor(row.status)">
+            {{ statusLabel(row.status) }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(row)"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-key-round"
+            :tip="t('users.resetPwd')"
+            @click="askResetPassword(row)"
+          />
+          <template v-if="row.role !== 'admin' && row.id !== 'admin'">
+            <CfButton
+              :tone="row.status === 'active' ? 'icon' : 'icon-accent'"
+              :icon="row.status === 'active' ? 'i-lucide-ban' : 'i-lucide-check'"
+              :tip="row.status === 'active' ? t('users.actionDisable') : t('users.actionEnable')"
+              @click="handleStatusChange(row.id, row.status)"
+            />
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(row)"
+            />
+          </template>
+        </template>
+      </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
@@ -110,26 +166,26 @@
           </tbody>
         </table>
       </div>
+    </div>
 
-      <div v-if="users.length > pageSize" class="pager">
-        <CfButton
-          tone="secondary"
-          icon="i-lucide-chevron-left"
-          :disabled="page <= 1"
-          @click="page--"
-        >
-          {{ t('common.prev') }}
-        </CfButton>
-        <span class="pager-page">{{ page }} / {{ userTotalPages }}</span>
-        <CfButton
-          tone="secondary"
-          icon="i-lucide-chevron-right"
-          :disabled="page >= userTotalPages"
-          @click="page++"
-        >
-          {{ t('common.next') }}
-        </CfButton>
-      </div>
+    <div v-if="!loading && users.length > pageSize" class="pager">
+      <CfButton
+        tone="secondary"
+        icon="i-lucide-chevron-left"
+        :disabled="page <= 1"
+        @click="page--"
+      >
+        {{ t('common.prev') }}
+      </CfButton>
+      <span class="pager-page">{{ page }} / {{ userTotalPages }}</span>
+      <CfButton
+        tone="secondary"
+        icon="i-lucide-chevron-right"
+        :disabled="page >= userTotalPages"
+        @click="page++"
+      >
+        {{ t('common.next') }}
+      </CfButton>
     </div>
 
     <CfModal
@@ -290,6 +346,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
+
 definePageMeta({
   layout: 'default',
   requiresAuth: true,
@@ -300,6 +358,7 @@ const { t, d } = useLocale()
 const { showSecurityLevel } = useSecurityFeatures()
 
 const loading = ref(false)
+const viewMode = ref<ViewMode>('card')
 const submitting = ref(false)
 const deletingLoading = ref(false)
 const users = ref<any[]>([])
@@ -407,6 +466,14 @@ function statusBadgeColor(status: string): 'success' | 'warning' | 'error' | 'ne
     locked: 'error',
   }
   return map[status] || 'neutral'
+}
+
+function userCardMeta(row: { created_at?: string, max_security_level?: string }) {
+  const parts = [d(row.created_at)]
+  if (showSecurityLevel.value) {
+    parts.push(userClearanceLabel(row.max_security_level))
+  }
+  return parts.filter(Boolean).join(' · ')
 }
 
 function validateUserForm() {
@@ -635,12 +702,25 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px 6px;
+  margin-bottom: 12px;
 }
 
 .toolbar-left {
