@@ -2006,6 +2006,9 @@ const addNode = (type: string) => {
     data.variable = ''
     data.bindCaption = resolveBindCaption(type, data)
   }
+  if (type === 'end') {
+    data.bindCaption = resolveBindCaption('end', data)
+  }
   const newNode = {
     id: `node-${Date.now()}`,
     type,
@@ -2131,6 +2134,9 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const v = String(d.variable || '').trim()
     if (!v) return t('editor.ioVarNone')
     return t('editor.ioVarCaption', { v })
+  }
+  if (kind === 'end') {
+    return t('editor.endCaption')
   }
   return ''
 }
@@ -2532,12 +2538,20 @@ function ensureBindConfigured(): boolean {
   return false
 }
 
+/** 至少有一个结束节点才允许保存/试跑 */
+function ensureHasEndNode(): boolean {
+  if (nodes.value.some(n => String(n.type || '') === 'end')) return true
+  toast.add({ title: t('editor.needEndNode'), color: 'warning' })
+  return false
+}
+
 const handleSave = async () => {
   if (isSmokeTest.value) {
     toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
     return
   }
   if (!ensureBindConfigured()) return
+  if (!ensureHasEndNode()) return
   saving.value = true
   try {
     const definition: WorkflowDefinition = {

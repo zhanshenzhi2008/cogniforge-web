@@ -33,7 +33,11 @@
       />
     </template>
     <template #node-end="{ data }">
-      <WorkflowFlowNode kind="end" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="end"
+        :label="data.label"
+        :hint="bindNodeHint('end', data)"
+      />
     </template>
     <template #node-llm="{ data }">
       <WorkflowFlowNode
