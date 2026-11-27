@@ -127,7 +127,7 @@
 - **原因**：改坏画布可恢复
 - **落地**：顶栏「版本」→ 列表回滚；保存定义时后端留快照
 - **含代码**：`pages/workflows/[id].vue`、`useWorkflows.ts`、i18n
-- **主仓**：`workflow_versions` + API v1.78`
+- **主仓**：`workflow_versions` + API v1.78
 
 ## [变更] 工作流列表复制（2026-11-26）
 
