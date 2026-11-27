@@ -5,16 +5,19 @@
         <h1 class="cf-page-title">{{ t('teams.title') }}</h1>
         <p class="cf-page-sub">{{ t('teams.sub') }}</p>
       </div>
-      <UButton color="primary" @click="showCreate = true">
-        {{ t('teams.new') }}
-      </UButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-teams-view" />
+        <UButton color="primary" @click="showCreate = true">
+          {{ t('teams.new') }}
+        </UButton>
+      </div>
     </div>
 
     <div v-if="loading" class="cf-panel">
       <CfLoadingState />
     </div>
     <div v-else-if="teams.length === 0" class="cf-panel">
-      <CfEmptyState :message="t('teams.empty')">
+      <CfEmptyState :icon="CF_ICONS.team" :message="t('teams.empty')">
         <template #action>
           <UButton color="primary" @click="showCreate = true">
             {{ t('teams.new') }}
@@ -22,18 +25,20 @@
         </template>
       </CfEmptyState>
     </div>
-    <div v-else class="team-grid">
-      <div v-for="team in teams" :key="team.id" class="cf-panel team-card">
-        <div class="team-card__head">
-          <strong>{{ team.name }}</strong>
-          <UBadge variant="subtle" color="neutral">{{ modeLabel(team.mode) }}</UBadge>
-        </div>
-        <p class="team-card__desc">{{ team.description || t('teams.noDesc') }}</p>
-        <p class="team-card__meta">
-          {{ t('teams.members', { n: (team.member_agent_ids || []).length }) }}
-          <span v-if="team.supervisor_agent_id"> · {{ t('teams.hasSupervisor') }}</span>
-        </p>
-        <div class="team-card__actions">
+    <div v-else-if="viewMode === 'card'" class="team-grid">
+      <CfResourceCard
+        v-for="team in teams"
+        :key="team.id"
+        :icon="CF_ICONS.team"
+        :title="team.name"
+        :description="team.description || t('teams.noDesc')"
+        :meta="memberMeta(team)"
+        @click="openPreview(team)"
+      >
+        <template #badges>
+          <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+        </template>
+        <template #actions>
           <UButton size="sm" variant="soft" @click="openPreview(team)">
             {{ t('teams.preview') }}
           </UButton>
@@ -58,7 +63,63 @@
           <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
             {{ t('common.delete') }}
           </UButton>
-        </div>
+        </template>
+      </CfResourceCard>
+    </div>
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('teams.mode') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="team in teams" :key="team.id">
+              <td>
+                <div class="team-name-cell">
+                  <span class="name">{{ team.name }}</span>
+                  <span class="cf-muted text-xs">{{ memberMeta(team) }}</span>
+                </div>
+              </td>
+              <td>
+                <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+              </td>
+              <td class="cf-muted">{{ team.description || '—' }}</td>
+              <td>
+                <div class="team-list-actions">
+                  <UButton size="sm" variant="soft" @click="openPreview(team)">
+                    {{ t('teams.preview') }}
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    variant="outline"
+                    :loading="expandingId === team.id"
+                    @click="expandPipeline(team)"
+                  >
+                    {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    variant="outline"
+                    :loading="expandingParallelId === team.id"
+                    :disabled="!(team.member_agent_ids || []).length"
+                    :title="t('teams.genParallelHint')"
+                    @click="expandParallel(team)"
+                  >
+                    {{ t('teams.genParallel') }}
+                  </UButton>
+                  <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
+                    {{ t('common.delete') }}
+                  </UButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -154,6 +215,8 @@
 <script setup lang="ts">
 import type { Agent } from '@/composables/useAgents'
 import type { AgentTeam, TeamMode, TeamRunState } from '@/composables/useTeams'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({ layout: 'default' })
 
@@ -165,6 +228,7 @@ const { list: listAgents } = useAgents()
 const { list: listConversations, get: getConversation } = useConversations()
 const expandingId = ref('')
 const expandingParallelId = ref('')
+const viewMode = ref<ViewMode>('card')
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
 
@@ -222,6 +286,13 @@ function modeLabel(mode: string) {
   if (mode === 'pipeline') return t('teams.modePipeline')
   if (mode === 'handoff') return t('teams.modeHandoff')
   return t('teams.modeSupervisor')
+}
+
+function memberMeta(team: AgentTeam) {
+  const n = (team.member_agent_ids || []).length
+  const base = t('teams.members', { n })
+  if (team.supervisor_agent_id) return `${base} · ${t('teams.hasSupervisor')}`
+  return base
 }
 
 async function fetchAll() {
@@ -422,36 +493,28 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.team-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-}
-.team-card {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.team-card__head {
+.header-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
-.team-card__desc {
-  font-size: 13px;
-  opacity: 0.75;
-  min-height: 2.5em;
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
-.team-card__meta {
-  font-size: 12px;
-  opacity: 0.65;
-}
-.team-card__actions {
+.team-name-cell {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  flex-direction: column;
+  gap: 2px;
+}
+.team-name-cell .name {
+  font-weight: 600;
+}
+.team-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .preview-log {
   max-height: 280px;
