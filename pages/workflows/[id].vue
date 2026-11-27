@@ -63,6 +63,16 @@
         <UIcon name="i-lucide-log-out" class="size-3.5" />
         <span>{{ t('editor.endOutgoingChip', { n: endOutgoingCount }) }}</span>
       </button>
+      <button
+        v-if="startIncomingCount > 0"
+        type="button"
+        class="unbound-chip unbound-chip--start-in"
+        :title="t('editor.startIncomingChipTip')"
+        @click="focusStartWithIncoming"
+      >
+        <UIcon name="i-lucide-log-in" class="size-3.5" />
+        <span>{{ t('editor.startIncomingChip', { n: startIncomingCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -1197,6 +1207,7 @@ import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
   findEndsWithOutgoing,
   findStartNodes,
+  findStartsWithIncoming,
   findUnreachableNodes,
 } from '@/utils/workflowReachability'
 import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
@@ -2565,6 +2576,9 @@ const extraStartCount = computed(() => Math.max(0, startNodeCount.value - 1))
 const endOutgoingCount = computed(
   () => findEndsWithOutgoing(nodes.value, edges.value).length,
 )
+const startIncomingCount = computed(
+  () => findStartsWithIncoming(nodes.value, edges.value).length,
+)
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
@@ -2608,6 +2622,19 @@ function focusExtraStartNode() {
 /** 顶栏芯片：打开仍有出边的结束/输出节点 */
 function focusEndWithOutgoing() {
   const bad = findEndsWithOutgoing(nodes.value, edges.value)
+  if (!bad.length) return
+  const first = bad[0]!
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
+/** 顶栏芯片：打开仍有入边的开始/输入节点 */
+function focusStartWithIncoming() {
+  const bad = findStartsWithIncoming(nodes.value, edges.value)
   if (!bad.length) return
   const first = bad[0]!
   const node = nodes.value.find(n => n.id === first.id)
@@ -2677,6 +2704,22 @@ function ensureNoEndOutgoing(): boolean {
   return false
 }
 
+/** 开始/输入节点不得再有入边（旧图/导入可能残留） */
+function ensureNoStartIncoming(): boolean {
+  const bad = findStartsWithIncoming(nodes.value, edges.value)
+  if (!bad.length) return true
+  const first = bad[0]!
+  toast.add({
+    title: t('editor.startIncomingNode', { name: first.label }),
+    description: bad.length > 1
+      ? t('editor.startIncomingMore', { n: bad.length - 1 })
+      : undefined,
+    color: 'warning',
+  })
+  focusStartWithIncoming()
+  return false
+}
+
 /** 所有非 start 节点须从 start 可达 */
 function ensureReachableFromStart(): boolean {
   const orphan = findUnreachableNodes(nodes.value, edges.value)
@@ -2702,6 +2745,7 @@ const handleSave = async () => {
   if (!ensureHasTerminalNodes()) return
   if (!ensureSingleStartNode()) return
   if (!ensureNoEndOutgoing()) return
+  if (!ensureNoStartIncoming()) return
   if (!ensureReachableFromStart()) return
   saving.value = true
   try {
@@ -2821,6 +2865,7 @@ const handleExecute = async () => {
   if (!ensureHasTerminalNodes()) return
   if (!ensureSingleStartNode()) return
   if (!ensureNoEndOutgoing()) return
+  if (!ensureNoStartIncoming()) return
   if (!ensureReachableFromStart()) return
 
   executing.value = true
@@ -2990,6 +3035,7 @@ const startDebug = async (startFromNode?: string) => {
   if (!ensureHasTerminalNodes()) return
   if (!ensureSingleStartNode()) return
   if (!ensureNoEndOutgoing()) return
+  if (!ensureNoStartIncoming()) return
   if (!ensureReachableFromStart()) return
 
   isDebugging.value = true
@@ -3458,6 +3504,16 @@ onMounted(() => {
 
 .unbound-chip--end-out:hover {
   background: #ffedd5;
+}
+
+.unbound-chip--start-in {
+  border-color: #15803d;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.unbound-chip--start-in:hover {
+  background: #dcfce7;
 }
 
 .exec-bar {

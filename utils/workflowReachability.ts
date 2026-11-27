@@ -36,6 +36,29 @@ export function findEndsWithOutgoing(
   return out
 }
 
+/** 开始类节点（start / input）不得作为边的终点；兼容旧图/导入脏数据 */
+export function findStartsWithIncoming(
+  nodes: { id: string, type?: string, data?: { label?: string } }[],
+  edges: { source: string, target: string }[],
+): { id: string, label: string, kind: string }[] {
+  const byId = new Map(nodes.map(n => [n.id, n]))
+  const seen = new Set<string>()
+  const out: { id: string, label: string, kind: string }[] = []
+  for (const e of edges) {
+    const n = byId.get(e.target)
+    if (!n || seen.has(n.id)) continue
+    const kind = String(n.type || '')
+    if (kind !== 'start' && kind !== 'input') continue
+    seen.add(n.id)
+    out.push({
+      id: n.id,
+      label: String(n.data?.label || kind || n.id),
+      kind,
+    })
+  }
+  return out
+}
+
 /** 从 start 出发，沿边走到的节点 id 集合（含 start；多 start 时只用第一个） */
 export function reachableFromStart(
   nodes: { id: string, type?: string }[],

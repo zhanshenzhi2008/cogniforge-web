@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   findEndsWithOutgoing,
   findStartNodes,
+  findStartsWithIncoming,
   findUnreachableNodes,
   reachableFromStart,
 } from './workflowReachability'
@@ -33,6 +34,22 @@ describe('workflowReachability', () => {
     ]
     expect(findEndsWithOutgoing(nodes, edges).map(n => n.id)).toEqual(['e', 'o'])
     expect(findEndsWithOutgoing(nodes, [{ source: 's', target: 'e' }])).toEqual([])
+  })
+
+  it('flags start/input nodes that still have incoming edges', () => {
+    const nodes = [
+      { id: 's', type: 'start', data: { label: '开始' } },
+      { id: 'i', type: 'input', data: { label: '输入' } },
+      { id: 'a', type: 'llm' },
+      { id: 'e', type: 'end' },
+    ]
+    const edges = [
+      { source: 'a', target: 's' },
+      { source: 'a', target: 'i' },
+      { source: 's', target: 'e' },
+    ]
+    expect(findStartsWithIncoming(nodes, edges).map(n => n.id)).toEqual(['s', 'i'])
+    expect(findStartsWithIncoming(nodes, [{ source: 's', target: 'e' }])).toEqual([])
   })
 
   it('marks only start when no edges', () => {

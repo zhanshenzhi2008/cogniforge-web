@@ -1310,6 +1310,19 @@ export const M = {
     'zh-CN': '开始/输入节点不能接入边',
     'en-US': 'Start/input nodes cannot receive edges',
   },
+  'editor.startIncomingNode': {
+    'zh-CN': '「{name}」是开始类节点，不能接入边',
+    'en-US': '“{name}” is a start-style node — no incoming edges',
+  },
+  'editor.startIncomingMore': {
+    'zh-CN': '另有 {n} 个开始类节点也有入边',
+    'en-US': '{n} more start-style node(s) also have incoming edges',
+  },
+  'editor.startIncomingChip': { 'zh-CN': '{n} 个开始有入边', 'en-US': '{n} start ins' },
+  'editor.startIncomingChipTip': {
+    'zh-CN': '点击打开仍有入边的开始/输入节点',
+    'en-US': 'Click to open a start/input node with incoming edges',
+  },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',
