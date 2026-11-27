@@ -405,9 +405,19 @@ export const M = {
   'agents.suggestedPrompts': { 'zh-CN': '预设问题', 'en-US': 'Suggested prompts' },
   'agents.suggestedPromptPh': { 'zh-CN': '预设问题 {n}', 'en-US': 'Suggestion {n}' },
   'agents.addSuggestedPrompt': { 'zh-CN': '添加预设问题', 'en-US': 'Add suggestion' },
+  'agents.guessYouWant': { 'zh-CN': '猜你想问', 'en-US': 'Suggested for you' },
+  'agents.fillGuessedPrompts': { 'zh-CN': '填入猜你想问', 'en-US': 'Fill guesses' },
+  'agents.fillGuessedOk': {
+    'zh-CN': '已填入 {n} 条推荐问句，可再编辑后保存',
+    'en-US': 'Filled {n} guessed prompts; edit then save',
+  },
+  'agents.fillGuessedEmpty': {
+    'zh-CN': '没有可新增的推荐（可能已存在相同问句）',
+    'en-US': 'No new guesses to add (may already exist)',
+  },
   'agents.suggestedPromptsHint': {
-    'zh-CN': '最多 6 条；预览与对话页空态可一点发送。',
-    'en-US': 'Up to 6 chips; one tap sends on preview and Playground.',
+    'zh-CN': '最多 6 条；空则预览/对话页自动「猜你想问」。可点「填入猜你想问」写入后再改。',
+    'en-US': 'Up to 6. If empty, preview/Playground shows guesses. Use Fill guesses then edit.',
   },
   'agents.boundKnowledge': { 'zh-CN': '绑定知识库', 'en-US': 'Knowledge bases' },
   'agents.boundKnowledgeHint': {

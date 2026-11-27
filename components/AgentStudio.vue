@@ -274,14 +274,24 @@
                 @click="removeSuggested(idx)"
               />
             </div>
-            <CfButton
-              v-if="form.suggested_prompts.length < 6"
-              tone="secondary"
-              icon="i-lucide-plus"
-              @click="addSuggested"
-            >
-              {{ t('agents.addSuggestedPrompt') }}
-            </CfButton>
+            <div class="suggested-actions">
+              <CfButton
+                v-if="form.suggested_prompts.length < 6"
+                tone="secondary"
+                icon="i-lucide-plus"
+                @click="addSuggested"
+              >
+                {{ t('agents.addSuggestedPrompt') }}
+              </CfButton>
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-sparkles"
+                :disabled="form.suggested_prompts.filter(s => s.trim()).length >= 6"
+                @click="fillGuessedSuggested"
+              >
+                {{ t('agents.fillGuessedPrompts') }}
+              </CfButton>
+            </div>
           </div>
           <p class="cfg-hint">{{ t('agents.suggestedPromptsHint') }}</p>
         </section>
@@ -507,11 +517,14 @@
                 }}
               </p>
               <div
-                v-if="stage === 'preview' && previewSuggested.length"
+                v-if="stage === 'preview' && previewChips.length"
                 class="stage-suggested"
               >
+                <p v-if="previewChipsAreGuessed" class="stage-suggested__label">
+                  {{ t('agents.guessYouWant') }}
+                </p>
                 <CfButton
-                  v-for="chip in previewSuggested"
+                  v-for="chip in previewChips"
                   :key="chip"
                   tone="secondary"
                   icon="i-lucide-sparkles"
@@ -596,6 +609,7 @@ import {
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
 import { resolveApiBase } from '~/utils/apiBase'
+import { guessSuggestedPrompts } from '~/utils/guessSuggestedPrompts'
 import {
   DEFAULT_PROMPT_VAR_SUGGESTIONS,
   detectMentionTrigger,
@@ -616,7 +630,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
-const { t, d } = useLocale()
+const { t, d, locale } = useLocale()
 const { create, update, listVersions, rollbackVersion } = useAgents()
 const { streamChat: streamAgentChat, streaming: agentStreaming, stopStream: stopAgentStream, error: agentChatError } = useAgentChat()
 const { streamChat: streamModelChat, streaming: buildStreaming, stopStream: stopBuildStream, error: buildChatError } = useChatStream()
@@ -726,6 +740,16 @@ const activeMessages = computed(() =>
 const previewSuggested = computed(() =>
   form.suggested_prompts.map(s => s.trim()).filter(Boolean).slice(0, 6),
 )
+const previewChipsAreGuessed = computed(() => previewSuggested.value.length === 0)
+const previewChips = computed(() => {
+  if (previewSuggested.value.length) return previewSuggested.value
+  return guessSuggestedPrompts({
+    name: form.name,
+    description: form.description,
+    locale: locale.value,
+    max: 3,
+  })
+})
 const hasReadyAttachments = computed(() =>
   pendingAttachments.value.some(a => a.id && a.status !== 'failed' && a.status !== 'uploading'),
 )
@@ -750,6 +774,25 @@ function addSuggested() {
 function removeSuggested(idx: number) {
   form.suggested_prompts.splice(idx, 1)
   markDirty()
+}
+
+function fillGuessedSuggested() {
+  const existing = form.suggested_prompts.map(s => s.trim()).filter(Boolean)
+  const room = 6 - existing.length
+  if (room <= 0) return
+  const guessed = guessSuggestedPrompts({
+    name: form.name,
+    description: form.description,
+    locale: locale.value,
+    max: room,
+  }).filter(g => !existing.includes(g))
+  if (!guessed.length) {
+    toast.add({ title: t('agents.fillGuessedEmpty'), color: 'warning' })
+    return
+  }
+  form.suggested_prompts = [...existing, ...guessed].slice(0, 6)
+  markDirty()
+  toast.add({ title: t('agents.fillGuessedOk', { n: guessed.length }), color: 'success' })
 }
 
 function sendSuggestion(text: string) {
@@ -1790,12 +1833,26 @@ onMounted(async () => {
   gap: 6px;
 }
 
+.suggested-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .stage-suggested {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin-top: 4px;
+}
+
+.stage-suggested__label {
+  flex-basis: 100%;
+  margin: 0 0 2px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
 }
 
 .stage-pending {

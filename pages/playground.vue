@@ -76,6 +76,9 @@
               <p class="empty-title font-display">{{ emptyHeroTitle }}</p>
               <p class="empty-sub">{{ emptyHeroSub }}</p>
               <div class="suggestion-chips">
+                <p v-if="suggestionChipsAreGuessed" class="suggestion-chips__label">
+                  {{ t('agents.guessYouWant') }}
+                </p>
                 <CfButton
                   v-for="chip in suggestionChips"
                   :key="chip"
@@ -288,6 +291,7 @@
 <script setup lang="ts">
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
+import { guessSuggestedPrompts } from '~/utils/guessSuggestedPrompts'
 import { CF_ICONS } from '~/constants/icons'
 import {
   CHAT_IMAGE_ACCEPT,
@@ -350,7 +354,7 @@ interface Model {
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const { t } = useLocale()
+const { t, locale } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
 const { getOne: getPrompt } = usePrompts()
 const { list: listConversations, get: getConversation, create: createConversation, update: updateConversation, remove: removeConversation } = useConversations()
@@ -403,12 +407,27 @@ const currentConversationId = ref('')
 const conversationTitle = ref('')
 let persistSeq = 0
 
+const suggestionChipsAreGuessed = computed(() => {
+  const fromAgent = (selectedAgentInfo.value?.suggested_prompts || [])
+    .map(s => String(s || '').trim())
+    .filter(Boolean)
+  return !!selectedAgentInfo.value && fromAgent.length === 0
+})
+
 const suggestionChips = computed(() => {
   const fromAgent = (selectedAgentInfo.value?.suggested_prompts || [])
     .map(s => String(s || '').trim())
     .filter(Boolean)
     .slice(0, 6)
   if (fromAgent.length) return fromAgent
+  if (selectedAgentInfo.value) {
+    return guessSuggestedPrompts({
+      name: selectedAgentInfo.value.name,
+      description: selectedAgentInfo.value.description,
+      locale: locale.value,
+      max: 3,
+    })
+  }
   return [t('play.chip1'), t('play.chip2'), t('play.chip3')]
 })
 
@@ -1497,6 +1516,14 @@ watch(sidebarCollapsed, (collapsed) => {
   margin-top: 12px;
   position: relative;
   max-width: 480px;
+}
+
+.suggestion-chips__label {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
 }
 
 .message-md {
