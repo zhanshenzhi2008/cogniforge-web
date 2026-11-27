@@ -724,9 +724,14 @@
                 v-model="nodeConfig.knowledgeBaseId"
                 class="w-full"
                 :items="kbOptions"
-                :placeholder="t('editor.pickKnowledge')"
+                :placeholder="kbOptions.length ? t('editor.pickKnowledge') : t('editor.kbPickEmpty')"
                 value-key="value"
+                :disabled="!kbOptions.length"
               />
+              <p v-if="!kbOptions.length" class="field__hint">
+                {{ t('editor.kbPickEmptyHint') }}
+                <NuxtLink to="/knowledge" class="field__link" target="_blank">{{ t('editor.kbGoCreate') }}</NuxtLink>
+              </p>
             </div>
 
             <div v-if="selectedKBDefaults" class="kb-defaults">
@@ -1897,6 +1902,15 @@ async function refreshWorkflowPickOptions() {
     .map(w => ({ label: w.name || w.id, value: w.id }))
 }
 
+async function refreshKbOptions() {
+  const res = await listKBs()
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  kbList.value = (res.data || []).filter(k => k.id)
+}
+
 const handleNodeClick = (event: any) => {
   selectedNode.value = event.node
   nodeConfig.name = event.node.data?.label || ''
@@ -1914,6 +1928,9 @@ const handleNodeClick = (event: any) => {
   }
   if (event.node?.type === 'subflow') {
     void refreshWorkflowPickOptions()
+  }
+  if (event.node?.type === 'search') {
+    void refreshKbOptions()
   }
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
@@ -2741,9 +2758,7 @@ onMounted(() => {
   void refreshTeamOptions()
   void refreshAgentOptions()
   void refreshWorkflowPickOptions()
-  listKBs().then((res) => {
-    kbList.value = (res.data || []).filter(k => k.id)
-  })
+  void refreshKbOptions()
   listProviders().then((res) => {
     providers.value = res.data || []
   })
