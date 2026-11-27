@@ -1114,6 +1114,7 @@ export const M = {
   'editor.userPrompt': { 'zh-CN': '用户提示', 'en-US': 'User prompt' },
   'editor.userPromptPh': { 'zh-CN': '可选；不填则自动用流程输入和上游输出', 'en-US': 'Optional; defaults to flow input and upstream outputs' },
   'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
+  'editor.llmStreamShort': { 'zh-CN': '流式', 'en-US': 'stream' },
   'editor.llmStreamHint': {
     'zh-CN': '从模型边收边汇总；调试时画布节点与侧栏会刷进度预览。',
     'en-US': 'Collects tokens as they arrive; debug canvas and sidebar show a live progress preview.',

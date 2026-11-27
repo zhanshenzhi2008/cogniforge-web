@@ -1946,7 +1946,10 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
   const d = data || {}
   if (kind === 'llm') {
     const id = String(d.model || '').trim()
-    return modelOptions.value.find(o => o.value === id)?.label || id
+    const name = modelOptions.value.find(o => o.value === id)?.label || id
+    if (!name) return ''
+    const stream = !!(d.llmStream ?? d.stream)
+    return stream ? `${name} · ${t('editor.llmStreamShort')}` : name
   }
   if (kind === 'http') {
     const method = String(d.method || d.httpMethod || 'GET').trim().toUpperCase() || 'GET'
@@ -1982,7 +1985,14 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
   }
   if (kind === 'search') {
     const id = String(d.knowledgeBaseId || '').trim()
-    return kbOptions.value.find(o => o.value === id)?.label || ''
+    const name = kbOptions.value.find(o => o.value === id)?.label || ''
+    if (!name) return ''
+    const parts = [name]
+    const mode = String(d.searchMode || d.search_mode || '').trim()
+    if (mode) parts.push(mode)
+    const topK = Number(d.topK ?? d.top_k ?? 0)
+    if (topK > 0) parts.push(`top ${topK}`)
+    return parts.join(' · ')
   }
   if (kind === 'subflow') {
     const id = String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
@@ -2002,7 +2012,10 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
   if (kind === 'wait') {
     const reason = String(d.waitReason || d.reason || 'approval').trim() || 'approval'
     const msg = String(d.waitMessage || d.message || '').trim()
-    return msg ? `${reason}: ${msg.length > 24 ? `${msg.slice(0, 22)}…` : msg}` : reason
+    let base = msg ? `${reason}: ${msg.length > 24 ? `${msg.slice(0, 22)}…` : msg}` : reason
+    const timeout = Number(d.timeoutSec ?? d.timeout_sec ?? d.timeout ?? 0)
+    if (timeout > 0) base = `${base} · ${timeout}s`
+    return base
   }
   if (kind === 'loop') {
     let loopType = String(d.loopType || d.type || 'times').trim() || 'times'
@@ -2204,6 +2217,14 @@ const saveNodeConfig = () => {
   if (node) {
     const nextBindData = {
       model: nodeConfig.model,
+      llmStream: !!nodeConfig.llmStream,
+      stream: !!nodeConfig.llmStream,
+      topK: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
+      top_k: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
+      searchMode: nodeConfig.searchMode || '',
+      search_mode: nodeConfig.searchMode || '',
+      timeoutSec: nodeConfig.timeoutSec || 0,
+      timeout_sec: nodeConfig.timeoutSec || 0,
       method: nodeConfig.httpMethod,
       httpMethod: nodeConfig.httpMethod,
       url: nodeConfig.httpUrl,
