@@ -65,7 +65,8 @@
                     <thead>
                       <tr>
                         <th>{{ t('common.name') }}</th>
-                        <th>{{ t('common.status') }}</th>
+                        <th>{{ t('kb.parseStatus') }}</th>
+                        <th>{{ t('kb.lifecycleCol') }}</th>
                         <th v-if="!previewDoc">{{ t('kb.chunks') }}</th>
                         <th v-if="!previewDoc">{{ t('kb.size') }}</th>
                         <th v-if="!previewDoc">{{ t('kb.time') }}</th>
@@ -94,6 +95,11 @@
                         <td>
                           <UBadge size="sm" variant="subtle" :color="docStatusColor(doc.status)">
                             {{ docStatusLabel(doc.status) }}
+                          </UBadge>
+                        </td>
+                        <td>
+                          <UBadge size="sm" variant="subtle" :color="lifecycleColor(doc.lifecycle_status)">
+                            {{ lifecycleLabel(doc.lifecycle_status) }}
                           </UBadge>
                         </td>
                         <td v-if="!previewDoc" class="cf-muted">{{ doc.chunk_count || '—' }}</td>
@@ -198,6 +204,38 @@
                   <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
                   <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
                   <span v-if="previewDirty" class="preview-dirty">{{ t('kb.unsaved') }}</span>
+                </div>
+                <div class="preview-validity">
+                  <div class="field field--compact">
+                    <label class="field__label">{{ t('kb.effectiveAt') }}</label>
+                    <UInput
+                      v-model="previewEffectiveLocal"
+                      type="datetime-local"
+                      size="sm"
+                      class="w-full"
+                      :disabled="lifecycleSaving"
+                    />
+                  </div>
+                  <div class="field field--compact">
+                    <label class="field__label">{{ t('kb.expireAt') }}</label>
+                    <UInput
+                      v-model="previewExpireLocal"
+                      type="datetime-local"
+                      size="sm"
+                      class="w-full"
+                      :disabled="lifecycleSaving"
+                    />
+                  </div>
+                  <CfButton
+                    tone="secondary"
+                    size="sm"
+                    icon="i-lucide-calendar-check"
+                    :loading="lifecycleSaving"
+                    :disabled="!validityDirty"
+                    @click="savePreviewValidity"
+                  >
+                    {{ t('kb.saveValidity') }}
+                  </CfButton>
                 </div>
                 <div v-if="previewDoc.error" class="preview-error">{{ previewDoc.error }}</div>
                 <div v-if="previewLoading" class="cf-state cf-state--compact">
@@ -1242,6 +1280,8 @@ const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const previewDoc = ref<DocumentPreview | null>(null)
 const previewLifecycle = ref('published')
+const previewEffectiveLocal = ref('')
+const previewExpireLocal = ref('')
 const lifecycleSaving = ref(false)
 const lifecycleOptions = computed(() => [
   { label: t('kb.lifecycle.draft'), value: 'draft' },
@@ -1249,6 +1289,60 @@ const lifecycleOptions = computed(() => [
   { label: t('kb.lifecycle.published'), value: 'published' },
   { label: t('kb.lifecycle.abolished'), value: 'abolished' },
 ])
+
+function toDatetimeLocal(iso?: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function fromDatetimeLocal(local: string): string | null {
+  if (!local) return null
+  const d = new Date(local)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+function syncValidityFromDoc(doc: Document | DocumentPreview) {
+  previewEffectiveLocal.value = toDatetimeLocal(doc.effective_at)
+  previewExpireLocal.value = toDatetimeLocal(doc.expire_at)
+}
+
+const validityDirty = computed(() => {
+  if (!previewDoc.value) return false
+  return (
+    previewEffectiveLocal.value !== toDatetimeLocal(previewDoc.value.effective_at)
+    || previewExpireLocal.value !== toDatetimeLocal(previewDoc.value.expire_at)
+  )
+})
+
+function lifecycleLabel(status?: string) {
+  const st = status || 'published'
+  const key = `kb.lifecycle.${st}`
+  const translated = t(key)
+  return translated === key ? st : translated
+}
+
+function lifecycleColor(status?: string): 'success' | 'warning' | 'error' | 'neutral' {
+  switch (status || 'published') {
+    case 'published': return 'success'
+    case 'draft': return 'neutral'
+    case 'review': return 'warning'
+    case 'abolished': return 'error'
+    default: return 'neutral'
+  }
+}
+
+function applyLifecycleDoc(doc: Document) {
+  if (!previewDoc.value) return
+  previewDoc.value = { ...previewDoc.value, ...doc }
+  previewLifecycle.value = doc.lifecycle_status || 'published'
+  syncValidityFromDoc(doc)
+  const idx = documents.value.findIndex(d => d.id === doc.id)
+  if (idx >= 0) documents.value[idx] = { ...documents.value[idx], ...doc }
+}
 
 async function savePreviewLifecycle(status: string) {
   if (!selectedKB.value || !previewDoc.value || !status) return
@@ -1263,11 +1357,31 @@ async function savePreviewLifecycle(status: string) {
       previewLifecycle.value = previewDoc.value.lifecycle_status || 'published'
       return
     }
-    previewDoc.value = { ...previewDoc.value, ...res.data }
-    previewLifecycle.value = res.data.lifecycle_status || 'published'
-    const idx = documents.value.findIndex(d => d.id === res.data!.id)
-    if (idx >= 0) documents.value[idx] = { ...documents.value[idx], ...res.data }
+    applyLifecycleDoc(res.data)
     toast.add({ title: t('kb.lifecycleSaved'), color: 'success' })
+  } finally {
+    lifecycleSaving.value = false
+  }
+}
+
+async function savePreviewValidity() {
+  if (!selectedKB.value || !previewDoc.value) return
+  lifecycleSaving.value = true
+  try {
+    const effective = fromDatetimeLocal(previewEffectiveLocal.value)
+    const expire = fromDatetimeLocal(previewExpireLocal.value)
+    const res = await updateDocLifecycle(selectedKB.value.id, previewDoc.value.id, {
+      effective_at: effective,
+      expire_at: expire,
+      clear_effective: !previewEffectiveLocal.value,
+      clear_expire: !previewExpireLocal.value,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.lifecycleFail'), color: 'error' })
+      return
+    }
+    applyLifecycleDoc(res.data)
+    toast.add({ title: t('kb.validitySaved'), color: 'success' })
   } finally {
     lifecycleSaving.value = false
   }
@@ -1348,6 +1462,7 @@ async function openDocPreview(doc: Document) {
   previewDoc.value = res.data
   previewEditContent.value = res.data.content || ''
   previewLifecycle.value = res.data.lifecycle_status || 'published'
+  syncValidityFromDoc(res.data)
 }
 
 function closeDocPreview() {
@@ -2675,6 +2790,25 @@ onBeforeUnmount(() => {
   padding: 8px 12px;
   font-size: 0.75rem;
   border-bottom: 1px solid var(--cf-line);
+}
+
+.preview-validity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.preview-validity .field--compact {
+  flex: 1 1 160px;
+  min-width: 140px;
+  margin: 0;
+}
+
+.preview-validity .field__label {
+  font-size: 0.7rem;
 }
 
 .preview-error {
