@@ -33,6 +33,16 @@
         <UIcon name="i-lucide-triangle-alert" class="size-3.5" />
         <span>{{ t('editor.unboundChip', { n: unboundBindCount }) }}</span>
       </button>
+      <button
+        v-if="unreachableCount > 0"
+        type="button"
+        class="unbound-chip unbound-chip--orphan"
+        :title="t('editor.unreachableChipTip')"
+        @click="focusFirstUnreachableNode"
+      >
+        <UIcon name="i-lucide-unlink" class="size-3.5" />
+        <span>{{ t('editor.unreachableChip', { n: unreachableCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -2508,12 +2518,28 @@ function findUnboundBindNodes(): { id: string, label: string, kind: string }[] {
 }
 
 const unboundBindCount = computed(() => findUnboundBindNodes().length)
+const unreachableCount = computed(
+  () => findUnreachableNodes(nodes.value, edges.value).length,
+)
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
   const unbound = findUnboundBindNodes()
   if (!unbound.length) return
   const first = unbound[0]!
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
+/** 顶栏芯片：打开第一个从 start 不可达的节点 */
+function focusFirstUnreachableNode() {
+  const orphan = findUnreachableNodes(nodes.value, edges.value)
+  if (!orphan.length) return
+  const first = orphan[0]!
   const node = nodes.value.find(n => n.id === first.id)
   if (node) {
     selectedNode.value = node
@@ -2565,12 +2591,7 @@ function ensureReachableFromStart(): boolean {
       : undefined,
     color: 'warning',
   })
-  const node = nodes.value.find(n => n.id === first.id)
-  if (node) {
-    selectedNode.value = node
-    configDrawer.value = true
-    handleNodeClick({ node })
-  }
+  focusFirstUnreachableNode()
   return false
 }
 
@@ -3303,6 +3324,16 @@ onMounted(() => {
 
 .unbound-chip:hover {
   background: #fef3c7;
+}
+
+.unbound-chip--orphan {
+  border-color: #64748b;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.unbound-chip--orphan:hover {
+  background: #f1f5f9;
 }
 
 .exec-bar {

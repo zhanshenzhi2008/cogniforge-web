@@ -1284,6 +1284,11 @@ export const M = {
     'zh-CN': '另有 {n} 个节点也不可达',
     'en-US': '{n} more node(s) also unreachable',
   },
+  'editor.unreachableChip': { 'zh-CN': '{n} 个未连通', 'en-US': '{n} disconnected' },
+  'editor.unreachableChipTip': {
+    'zh-CN': '点击打开第一个从开始走不到的节点',
+    'en-US': 'Click to open the first unreachable node',
+  },
   'editor.startVarsCaption': {
     'zh-CN': '{shown} 等 {n} 个',
     'en-US': '{shown} +{more}',
