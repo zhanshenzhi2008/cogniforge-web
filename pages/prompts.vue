@@ -17,6 +17,7 @@
         >
           {{ t('prompts.deletePrompt') }}
         </CfButton>
+        <CfViewModeToggle v-if="!active" v-model="viewMode" storage-key="cf-prompts-view" />
         <CfButton v-if="!active" tone="secondary" icon="i-lucide-download" @click="showImport = true">
           {{ t('prompts.import') }}
         </CfButton>
@@ -30,10 +31,34 @@
       <div class="list-toolbar">
         <span class="list-count">{{ t('prompts.count', { n: items.length }) }}</span>
       </div>
-      <div class="cf-panel">
-        <CfLoadingState v-if="loading" />
-        <CfEmptyState v-else-if="items.length === 0" icon="i-lucide-file-text" :message="t('prompts.empty')" />
-        <table v-else class="cf-data-table">
+      <CfLoadingState v-if="loading" />
+      <CfEmptyState
+        v-else-if="items.length === 0"
+        icon="i-lucide-file-text"
+        :message="t('prompts.empty')"
+      />
+      <div v-else-if="viewMode === 'card'" class="prompt-grid">
+        <CfResourceCard
+          v-for="p in items"
+          :key="p.id"
+          icon="i-lucide-file-text"
+          :title="p.name"
+          :description="p.description || t('common.noDesc')"
+          :meta="d(p.updated_at)"
+          @click="openDetail(p)"
+        >
+          <template #actions>
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(p)"
+            />
+          </template>
+        </CfResourceCard>
+      </div>
+      <div v-else class="cf-panel">
+        <table class="cf-data-table">
           <thead>
             <tr>
               <th>{{ t('common.name') }}</th>
@@ -329,6 +354,7 @@
 
 <script setup lang="ts">
 import type { Prompt, PromptVarDef, PromptVersion, PromptUsage } from '@/composables/usePrompts'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
 
 const { t, d } = useLocale()
@@ -340,6 +366,7 @@ const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 
 const loading = ref(true)
+const viewMode = ref<ViewMode>('card')
 const saving = ref(false)
 const savingVars = ref(false)
 const items = ref<Prompt[]>([])
