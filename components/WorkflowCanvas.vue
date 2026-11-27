@@ -83,10 +83,18 @@
       />
     </template>
     <template #node-delay="{ data }">
-      <WorkflowFlowNode kind="delay" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="delay"
+        :label="data.label"
+        :hint="bindNodeHint('delay', data)"
+      />
     </template>
     <template #node-wait="{ data }">
-      <WorkflowFlowNode kind="wait" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="wait"
+        :label="data.label"
+        :hint="bindNodeHint('wait', data)"
+      />
     </template>
     <template #node-search="{ data }">
       <WorkflowFlowNode

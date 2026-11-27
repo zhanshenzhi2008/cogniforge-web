@@ -1874,13 +1874,26 @@ function tidyLayout() {
 }
 
 const addNode = (type: string) => {
+  const data: Record<string, unknown> = {
+    label: getNodeLabel(type),
+  }
+  if (type === 'delay') {
+    data.delayDuration = 1
+    data.duration = 1
+    data.delayUnit = 'seconds'
+    data.unit = 'seconds'
+    data.bindCaption = resolveBindCaption('delay', data)
+  }
+  if (type === 'wait') {
+    data.waitReason = 'approval'
+    data.reason = 'approval'
+    data.bindCaption = resolveBindCaption('wait', data)
+  }
   const newNode = {
     id: `node-${Date.now()}`,
     type,
     position: { x: Math.random() * 300 + 50, y: Math.random() * 200 + 50 },
-    data: {
-      label: getNodeLabel(type),
-    },
+    data,
   }
   nodes.value.push(newNode)
 }
@@ -1931,6 +1944,22 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const id = String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
     return workflowPickOptions.value.find(o => o.value === id)?.label || ''
   }
+  if (kind === 'delay') {
+    const n = Number(d.delayDuration ?? d.duration ?? 0)
+    if (!(n > 0)) return ''
+    const unit = String(d.delayUnit || d.unit || 'seconds')
+    const unitLabel = unit === 'minutes'
+      ? t('editor.delayUnitMinutes')
+      : unit === 'hours'
+        ? t('editor.delayUnitHours')
+        : t('editor.delayUnitSeconds')
+    return `${n} ${unitLabel}`
+  }
+  if (kind === 'wait') {
+    const reason = String(d.waitReason || d.reason || 'approval').trim() || 'approval'
+    const msg = String(d.waitMessage || d.message || '').trim()
+    return msg ? `${reason}: ${msg.length > 24 ? `${msg.slice(0, 22)}…` : msg}` : reason
+  }
   return ''
 }
 
@@ -1938,7 +1967,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['llm', 'http', 'code', 'condition', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'http', 'code', 'condition', 'delay', 'wait', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2111,6 +2140,14 @@ const saveNodeConfig = () => {
             value: nodeConfig.conditionValue,
           }]
         : [],
+      delayDuration: nodeConfig.delayDuration,
+      duration: nodeConfig.delayDuration,
+      delayUnit: nodeConfig.delayUnit,
+      unit: nodeConfig.delayUnit,
+      waitReason: nodeConfig.waitReason,
+      reason: nodeConfig.waitReason,
+      waitMessage: nodeConfig.waitMessage,
+      message: nodeConfig.waitMessage,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
