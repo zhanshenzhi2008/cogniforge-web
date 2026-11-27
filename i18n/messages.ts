@@ -1446,7 +1446,13 @@ export const M = {
   'monitor.perPage': { 'zh-CN': '{n} 条/页', 'en-US': '{n} / page' },
 
   'users.title': { 'zh-CN': '用户', 'en-US': 'Users' },
-  'users.sub': { 'zh-CN': '管理账号与权限。', 'en-US': 'Manage accounts and access.' },
+  'users.sub': { 'zh-CN': '管理账号、角色与知识密级覆盖。', 'en-US': 'Manage accounts, roles, and clearance overrides.' },
+  'users.clearance': { 'zh-CN': '密级覆盖', 'en-US': 'Clearance override' },
+  'users.clearanceFollowRole': { 'zh-CN': '跟随角色', 'en-US': 'Follow role' },
+  'users.clearanceHint': {
+    'zh-CN': '有值时覆盖角色密级上限；空=用角色配置。检索过滤需开启 KB_ENFORCE_SECURITY_LEVEL。',
+    'en-US': 'When set, overrides the role clearance. Empty follows the role. Search filtering needs KB_ENFORCE_SECURITY_LEVEL.',
+  },
   'users.new': { 'zh-CN': '新建用户', 'en-US': 'New user' },
   'users.count': { 'zh-CN': '{n} 位用户', 'en-US': '{n} users' },
   'users.searchPh': { 'zh-CN': '搜索用户名/邮箱', 'en-US': 'Search name or email' },

@@ -52,6 +52,7 @@
               <th>{{ t('users.name') }}</th>
               <th>{{ t('common.email') }}</th>
               <th>{{ t('users.role') }}</th>
+              <th>{{ t('users.clearance') }}</th>
               <th>{{ t('common.status') }}</th>
               <th>{{ t('common.createdAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
@@ -75,6 +76,7 @@
                   {{ row.role === 'admin' ? t('role.admin') : t('role.user') }}
                 </UBadge>
               </td>
+              <td class="cf-muted">{{ userClearanceLabel(row.max_security_level) }}</td>
               <td>
                 <UBadge size="sm" variant="subtle" :color="statusBadgeColor(row.status)">
                   {{ statusLabel(row.status) }}
@@ -187,6 +189,17 @@
               :items="roleOptions"
               :placeholder="t('users.pickRole')"
             />
+          </div>
+
+          <div class="field">
+            <label class="field__label">{{ t('users.clearance') }}</label>
+            <USelect
+              v-model="userForm.max_security_level"
+              class="w-full"
+              :items="userClearanceOptions"
+              value-key="value"
+            />
+            <p class="field__hint">{{ t('users.clearanceHint') }}</p>
           </div>
 
           <div class="field">
@@ -335,6 +348,7 @@ const userForm = reactive({
   password: '',
   role: 'user',
   status: 'active',
+  max_security_level: '',
 })
 
 const errors = reactive({
@@ -347,6 +361,22 @@ const roleOptions = computed(() => [
   { label: t('role.user'), value: 'user' },
   { label: t('role.admin'), value: 'admin' },
 ])
+
+const userClearanceOptions = computed(() => [
+  { label: t('users.clearanceFollowRole'), value: '' },
+  { label: t('kb.security.public'), value: 'public' },
+  { label: t('kb.security.internal'), value: 'internal' },
+  { label: t('kb.security.confidential'), value: 'confidential' },
+  { label: t('kb.security.secret'), value: 'secret' },
+])
+
+function userClearanceLabel(level?: string) {
+  const lv = (level || '').trim()
+  if (!lv) return t('users.clearanceFollowRole')
+  const key = `kb.security.${lv}`
+  const translated = t(key)
+  return translated === key ? lv : translated
+}
 
 const statusOptions = computed(() => [
   { label: t('status.active'), value: 'active' },
@@ -461,6 +491,7 @@ const handleEdit = (row: any) => {
   userForm.name = row.name
   userForm.role = row.role
   userForm.status = row.status
+  userForm.max_security_level = row.max_security_level || ''
   errors.email = ''
   errors.name = ''
   errors.password = ''
@@ -479,6 +510,7 @@ const resetUserForm = () => {
   userForm.password = ''
   userForm.role = 'user'
   userForm.status = 'active'
+  userForm.max_security_level = ''
   selectedUserId.value = ''
   errors.email = ''
   errors.name = ''
@@ -494,6 +526,7 @@ const handleUserSubmit = async () => {
       name: normalizeUsername(userForm.name),
       role: userForm.role,
       status: userForm.status,
+      max_security_level: userForm.max_security_level || '',
     }
 
     if (!isEditing.value) {
