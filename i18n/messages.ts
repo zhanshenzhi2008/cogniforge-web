@@ -1118,6 +1118,23 @@ export const M = {
     'zh-CN': '当前：{mode} · Top-K {k}',
     'en-US': 'Now: {mode} · Top-K {k}',
   },
+  'kb.searchDebugFilters': { 'zh-CN': '排查过滤', 'en-US': 'Debug filters' },
+  'kb.searchDebugFiltersDesc': {
+    'zh-CN': '默认只召回「已发布」且在有效期内的文档。打开开关可临时放宽，方便核对草稿或过期内容。',
+    'en-US': 'By default only published, in-window docs are recalled. Turn switches on to temporarily relax filters for debugging.',
+  },
+  'kb.includeDrafts': { 'zh-CN': '包含草稿/审核', 'en-US': 'Include drafts / review' },
+  'kb.includeDraftsHint': {
+    'zh-CN': '召回草稿、审核中等非发布状态（仍不含废止）',
+    'en-US': 'Recall draft/review docs (abolished still excluded)',
+  },
+  'kb.includeDraftsShort': { 'zh-CN': '含草稿', 'en-US': 'drafts' },
+  'kb.ignoreValidity': { 'zh-CN': '忽略有效期', 'en-US': 'Ignore validity window' },
+  'kb.ignoreValidityHint': {
+    'zh-CN': '不检查生效/失效时间，便于测未到点或已过期文档',
+    'en-US': 'Skip effective/expire checks for not-yet or expired docs',
+  },
+  'kb.ignoreValidityShort': { 'zh-CN': '忽略期', 'en-US': 'no window' },
   'kb.settingsSearchMode': { 'zh-CN': '检索方式', 'en-US': 'Search mode' },
   'kb.settingsSearchModeDesc': {
     'zh-CN': '选一种默认检索方式。每种可单独设 Top-K、最低分和是否 Rerank；混合可调语义与关键词权重。关键字/混合引擎后续接入，配置先保存。',

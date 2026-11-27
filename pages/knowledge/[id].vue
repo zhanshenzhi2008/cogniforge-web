@@ -316,6 +316,9 @@
               <div class="search-toolbar">
                 <span class="search-toolbar__meta cf-muted">
                   {{ t('kb.searchTestMeta', { mode: searchModeLabel(searchMode), k: searchTopK }) }}
+                  <template v-if="searchIncludeDrafts || searchIgnoreValidity">
+                    · {{ searchDebugFlagsLabel }}
+                  </template>
                 </span>
                 <div class="search-actions">
                   <CfButton tone="secondary" icon="i-lucide-eraser" @click="clearSearch">
@@ -772,6 +775,24 @@
                   </template>
                 </div>
               </label>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3 class="settings-section__title">{{ t('kb.searchDebugFilters') }}</h3>
+            <p class="settings-section__desc">{{ t('kb.searchDebugFiltersDesc') }}</p>
+            <div class="search-debug-row">
+              <div class="search-debug-row__text">
+                <span>{{ t('kb.includeDrafts') }}</span>
+                <span class="search-debug-row__hint">{{ t('kb.includeDraftsHint') }}</span>
+              </div>
+              <USwitch v-model="searchDraft.include_drafts" size="sm" />
+            </div>
+            <div class="search-debug-row">
+              <div class="search-debug-row__text">
+                <span>{{ t('kb.ignoreValidity') }}</span>
+                <span class="search-debug-row__hint">{{ t('kb.ignoreValidityHint') }}</span>
+              </div>
+              <USwitch v-model="searchDraft.ignore_validity" size="sm" />
             </div>
           </section>
         </div>
@@ -1819,6 +1840,8 @@ const searchHybridWeight = ref(0.7)
 const searchMode = ref<'semantic' | 'keyword' | 'hybrid'>('semantic')
 const searchRerank = ref(false)
 const searchRerankProviderId = ref('')
+const searchIncludeDrafts = ref(false)
+const searchIgnoreValidity = ref(false)
 const searchSettingsOpen = ref(false)
 const searchDraft = reactive({
   mode: 'semantic' as 'semantic' | 'keyword' | 'hybrid',
@@ -1831,6 +1854,15 @@ const searchDraft = reactive({
   top_k_hybrid: 5,
   min_score_hybrid: 0.3,
   hybrid_semantic_weight: 0.7,
+  include_drafts: false,
+  ignore_validity: false,
+})
+
+const searchDebugFlagsLabel = computed(() => {
+  const parts: string[] = []
+  if (searchIncludeDrafts.value) parts.push(t('kb.includeDraftsShort'))
+  if (searchIgnoreValidity.value) parts.push(t('kb.ignoreValidityShort'))
+  return parts.join(' · ')
 })
 
 function searchModeLabel(mode: string) {
@@ -1913,6 +1945,8 @@ async function openSearchSettings() {
   searchDraft.min_score_keyword = modeMinScore(kb, 'keyword')
   searchDraft.top_k_hybrid = modeTopK(kb, 'hybrid')
   searchDraft.min_score_hybrid = modeMinScore(kb, 'hybrid')
+  searchDraft.include_drafts = searchIncludeDrafts.value
+  searchDraft.ignore_validity = searchIgnoreValidity.value
   searchDraft.hybrid_semantic_weight = clampHybridWeight(
     searchMode.value === 'hybrid' ? searchHybridWeight.value : kb?.hybrid_semantic_weight,
     0.7,
@@ -1941,6 +1975,8 @@ function applySearchSettings() {
   searchMode.value = mode
   searchRerank.value = !!searchDraft.rerank
   searchRerankProviderId.value = searchDraft.rerank ? String(searchDraft.rerank_provider_id || '') : ''
+  searchIncludeDrafts.value = !!searchDraft.include_drafts
+  searchIgnoreValidity.value = !!searchDraft.ignore_validity
   searchDraft.top_k_semantic = clampTopK(searchDraft.top_k_semantic)
   searchDraft.min_score_semantic = clampMinScore(searchDraft.min_score_semantic)
   searchDraft.top_k_keyword = clampTopK(searchDraft.top_k_keyword)
@@ -2158,6 +2194,8 @@ function clearSearch() {
   searchResults.value = []
   hasSearched.value = false
   searchDuration.value = 0
+  searchIncludeDrafts.value = false
+  searchIgnoreValidity.value = false
 }
 
 function onSearchKeydown(e: KeyboardEvent) {
@@ -2192,6 +2230,8 @@ const handleSearch = async () => {
       ...(searchRerank.value && searchRerankProviderId.value
         ? { rerank_provider_id: searchRerankProviderId.value }
         : {}),
+      ...(searchIncludeDrafts.value ? { include_drafts: true } : {}),
+      ...(searchIgnoreValidity.value ? { ignore_validity: true } : {}),
     })
 
     if (res.error) {
@@ -3030,6 +3070,35 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.search-debug-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cf-line);
+  font-size: 0.8125rem;
+  color: var(--cf-ink);
+}
+
+.search-debug-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.search-debug-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.search-debug-row__hint {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.35;
 }
 
 .search-topk-row {

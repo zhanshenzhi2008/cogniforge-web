@@ -198,6 +198,10 @@ export interface SearchInput {
   rerank?: boolean
   rerank_provider_id?: string
   hybrid_semantic_weight?: number
+  /** 管理排查：含草稿/审核等非发布文档 */
+  include_drafts?: boolean
+  /** 管理排查：忽略生效/失效时间窗 */
+  ignore_validity?: boolean
 }
 
 export const useKnowledgeBases = () => {
