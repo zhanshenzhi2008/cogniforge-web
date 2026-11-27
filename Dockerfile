@@ -17,6 +17,8 @@ COPY . .
 # 不要写成 /api：接口路径已包含 /api/v1，再拼会变成 /api/api/v1。
 ARG API_BASE=
 ENV API_BASE=$API_BASE
+ARG NUXT_PUBLIC_SHOW_SECURITY_LEVEL=
+ENV NUXT_PUBLIC_SHOW_SECURITY_LEVEL=$NUXT_PUBLIC_SHOW_SECURITY_LEVEL
 RUN pnpm build
 
 # =====================================================================

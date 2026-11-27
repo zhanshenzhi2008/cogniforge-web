@@ -202,6 +202,7 @@
                     @update:model-value="savePreviewLifecycle"
                   />
                   <USelect
+                    v-if="showSecurityLevel"
                     v-model="previewSecurity"
                     class="w-36"
                     size="sm"
@@ -1247,6 +1248,7 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { showSecurityLevel } = useSecurityFeatures()
 const route = useRoute()
 const {
   getKB,

@@ -52,7 +52,7 @@
               <th>{{ t('users.name') }}</th>
               <th>{{ t('common.email') }}</th>
               <th>{{ t('users.role') }}</th>
-              <th>{{ t('users.clearance') }}</th>
+              <th v-if="showSecurityLevel">{{ t('users.clearance') }}</th>
               <th>{{ t('common.status') }}</th>
               <th>{{ t('common.createdAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
@@ -76,7 +76,7 @@
                   {{ row.role === 'admin' ? t('role.admin') : t('role.user') }}
                 </UBadge>
               </td>
-              <td class="cf-muted">{{ userClearanceLabel(row.max_security_level) }}</td>
+              <td v-if="showSecurityLevel" class="cf-muted">{{ userClearanceLabel(row.max_security_level) }}</td>
               <td>
                 <UBadge size="sm" variant="subtle" :color="statusBadgeColor(row.status)">
                   {{ statusLabel(row.status) }}
@@ -191,7 +191,7 @@
             />
           </div>
 
-          <div class="field">
+          <div v-if="showSecurityLevel" class="field">
             <label class="field__label">{{ t('users.clearance') }}</label>
             <USelect
               v-model="userForm.max_security_level"
@@ -318,6 +318,7 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { showSecurityLevel } = useSecurityFeatures()
 
 const loading = ref(false)
 const submitting = ref(false)

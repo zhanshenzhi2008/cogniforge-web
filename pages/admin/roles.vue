@@ -36,7 +36,7 @@
               <th>{{ t('roles.system') }}</th>
               <th>{{ t('roles.default') }}</th>
               <th>{{ t('roles.permCount') }}</th>
-              <th>{{ t('roles.clearance') }}</th>
+              <th v-if="showSecurityLevel">{{ t('roles.clearance') }}</th>
               <th>{{ t('common.createdAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
@@ -70,7 +70,7 @@
                 </UBadge>
               </td>
               <td class="cf-muted">{{ row.permissions?.length || 0 }}</td>
-              <td class="cf-muted">{{ clearanceLabel(row.max_security_level) }}</td>
+              <td v-if="showSecurityLevel" class="cf-muted">{{ clearanceLabel(row.max_security_level) }}</td>
               <td class="cf-muted">{{ d(row.created_at) }}</td>
               <td @dblclick.stop>
                 <div class="action-btns">
@@ -158,7 +158,7 @@
             />
           </div>
 
-          <div class="field">
+          <div v-if="showSecurityLevel" class="field">
             <label class="field__label">{{ t('roles.clearance') }}</label>
             <USelect
               v-model="roleForm.max_security_level"
@@ -247,6 +247,7 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { showSecurityLevel } = useSecurityFeatures()
 
 const loading = ref(false)
 const submitting = ref(false)

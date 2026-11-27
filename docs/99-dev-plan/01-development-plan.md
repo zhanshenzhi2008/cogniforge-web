@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.127 | 通用版默认隐藏密级 UI（SHOW_SECURITY_LEVEL） | orjrs |
 | 2026-11-27 | v1.126 | 小队卡「生成并行图」对接 layout=parallel | orjrs |
 | 2026-11-27 | v1.125 | 监控页增加密级审计 Tab | orjrs |
 | 2026-11-27 | v1.124 | 同步密级审计 API（主仓 v1.90；管理端列表 UI 仍待） | orjrs |
@@ -129,6 +130,12 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 通用版隐藏密级 UI（2026-11-27）
+
+- **原因**：非金融客户不必看见密级/clearance
+- **落地**：`useSecurityFeatures`；`NUXT_PUBLIC_SHOW_SECURITY_LEVEL`；知识预览 / 用户·角色 / 监控审计 Tab
+- **默认**：关；金融构建 Dockerfile ARG 打开
 
 ## [变更] 小队并行扇出成图（2026-11-27）
 

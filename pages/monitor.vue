@@ -26,7 +26,7 @@
       </div>
     </div>
 
-    <div class="tab-row">
+    <div v-if="showSecurityLevel" class="tab-row">
       <button
         type="button"
         class="tab-btn"
@@ -45,7 +45,7 @@
       </button>
     </div>
 
-    <div v-if="activeTab === 'requests'" class="cf-panel">
+    <div v-if="activeTab === 'requests' || !showSecurityLevel" class="cf-panel">
       <div class="panel-header">
         <div>
           <h2 class="panel-title">{{ t('monitor.logs') }}</h2>
@@ -154,7 +154,7 @@
       </div>
     </div>
 
-    <div v-else class="cf-panel">
+    <div v-else-if="showSecurityLevel" class="cf-panel">
       <div class="panel-header">
         <div>
           <h2 class="panel-title">{{ t('monitor.securityAudits') }}</h2>
@@ -294,6 +294,7 @@ definePageMeta({
 
 const { listRequestLogs, getUsageStats, listSecurityAudits } = useMonitor()
 const { t, d } = useLocale()
+const { showSecurityLevel } = useSecurityFeatures()
 
 const activeTab = ref<'requests' | 'security'>('requests')
 const logs = ref<RequestLog[]>([])
