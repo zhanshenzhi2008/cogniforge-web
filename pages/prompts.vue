@@ -473,7 +473,9 @@ const versions = ref<PromptVersion[]>([])
 const usages = ref<PromptUsage[]>([])
 const varDefs = ref<PromptVarDef[]>([])
 const tagsDraft = ref('')
-const filterTag = ref('')
+/** USelect 禁止 item.value 为空串；用哨兵表示「全部」 */
+const FILTER_TAG_ALL = '__all__'
+const filterTag = ref(FILTER_TAG_ALL)
 const showCreate = ref(false)
 const showVer = ref(false)
 const showImport = ref(false)
@@ -511,14 +513,14 @@ const tagFilterOptions = computed(() => {
     }
   }
   return [
-    { label: t('prompts.filterTagAll'), value: '' },
+    { label: t('prompts.filterTagAll'), value: FILTER_TAG_ALL },
     ...[...set].sort((a, b) => a.localeCompare(b)).map(tag => ({ label: tag, value: tag })),
   ]
 })
 
 const filteredItems = computed(() => {
   const tag = filterTag.value.trim()
-  if (!tag) return items.value
+  if (!tag || tag === FILTER_TAG_ALL) return items.value
   return items.value.filter(p => (p.tags || []).includes(tag))
 })
 
@@ -841,12 +843,14 @@ const doImport = async () => {
 
 const loadAgents = async () => {
   const res = await listAgents()
-  agentOptions.value = (res.data || []).map(a => ({ label: a.name, value: a.id }))
+  const list = Array.isArray(res.data) ? res.data : []
+  agentOptions.value = list.map(a => ({ label: a.name, value: a.id }))
 }
 
 const loadSkills = async () => {
   const res = await listSkills()
-  skillOptions.value = (res.data || []).map(s => ({
+  const list = Array.isArray(res.data) ? res.data : []
+  skillOptions.value = list.map(s => ({
     label: s.is_built_in ? `${s.name}` : s.name,
     value: s.id,
   }))
@@ -854,7 +858,8 @@ const loadSkills = async () => {
 
 const loadModels = async () => {
   const res = await listModels()
-  modelOptions.value = (res.data || []).map(m => ({
+  const list = Array.isArray(res.data) ? res.data : []
+  modelOptions.value = list.map(m => ({
     label: m.name || m.id,
     value: m.id,
   }))

@@ -276,6 +276,35 @@ test.describe('prompts e2e', () => {
     await expect(verCards).toHaveCount(1)
   })
 
+  test('save draft then publish as current', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('草稿发布')
+    await page.getByPlaceholder('System prompt 正文').fill('正文-v1')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '草稿发布' })).toBeVisible()
+
+    await page.getByRole('button', { name: '发布新版本' }).click()
+    await page.getByPlaceholder('System prompt 正文').fill('正文-草稿')
+    await page.getByPlaceholder('本版改了什么').fill('先存草稿')
+    await page.getByLabel('立即发布并设为当前').uncheck()
+    await page.getByRole('button', { name: '创建' }).click()
+
+    const verCards = page.locator('.ver-card')
+    await expect(verCards).toHaveCount(2)
+    await expect(verCards.first().getByText('草稿', { exact: true })).toBeVisible()
+    await expect(verCards.first().getByText('正文-草稿', { exact: true })).toBeVisible()
+
+    await verCards.first().getByRole('button', { name: '发布' }).click()
+    await expect(verCards.first().getByText('已发布', { exact: true })).toBeVisible()
+    await expect(verCards.first().getByText('当前', { exact: true })).toBeVisible()
+    await expect(page.getByText('正文-草稿', { exact: true })).toBeVisible()
+  })
+
   test('archive old version then rollback publish', async ({ page }) => {
     await seedLoggedIn(page)
     await mockBackend(page)
