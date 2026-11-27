@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { WORKFLOW_PALETTE_TYPES } from './workflowNodeMeta'
 import {
   listMissingPaletteSettings,
   WORKFLOW_NODE_SETTINGS,
+  WORKFLOW_SETTINGS_PALETTE,
   workflowNodeSettingsByKind,
 } from './workflowNodeSettings'
 
 describe('workflowNodeSettings', () => {
   it('covers every palette node type', () => {
     expect(listMissingPaletteSettings()).toEqual([])
-    for (const kind of WORKFLOW_PALETTE_TYPES) {
+    for (const kind of WORKFLOW_SETTINGS_PALETTE) {
       const spec = workflowNodeSettingsByKind(kind)
       expect(spec, kind).toBeTruthy()
       expect(spec!.inPalette).toBe(true)

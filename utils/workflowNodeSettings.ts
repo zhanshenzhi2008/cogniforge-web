@@ -1,8 +1,42 @@
 /**
  * 工作流节点设置总表（产品/开发对照）。
  * 与编辑器抽屉字段对齐；改抽屉时同步更新本表与单测。
+ * 注意：不依赖 workflowNodeMeta（其拉 icons，vitest 下易解析失败）。
  */
-import { WORKFLOW_PALETTE_TYPES, type WorkflowNodeKind } from './workflowNodeMeta'
+
+export type WorkflowNodeKind =
+  | 'start'
+  | 'end'
+  | 'llm'
+  | 'agent'
+  | 'team'
+  | 'condition'
+  | 'loop'
+  | 'http'
+  | 'code'
+  | 'delay'
+  | 'wait'
+  | 'search'
+  | 'subflow'
+  | 'input'
+  | 'output'
+
+/** 与 WORKFLOW_PALETTE_TYPES 保持一致 */
+export const WORKFLOW_SETTINGS_PALETTE: WorkflowNodeKind[] = [
+  'start',
+  'end',
+  'llm',
+  'agent',
+  'team',
+  'search',
+  'subflow',
+  'condition',
+  'loop',
+  'http',
+  'code',
+  'delay',
+  'wait',
+]
 
 export type WorkflowNodeFieldSpec = {
   /** 抽屉 / data 主键 */
@@ -206,5 +240,5 @@ export function workflowNodeSettingsByKind(kind: string): WorkflowNodeSettingsSp
 /** 调色板类型必须都有总表条目 */
 export function listMissingPaletteSettings(): WorkflowNodeKind[] {
   const have = new Set(WORKFLOW_NODE_SETTINGS.map(s => s.kind))
-  return WORKFLOW_PALETTE_TYPES.filter(k => !have.has(k))
+  return WORKFLOW_SETTINGS_PALETTE.filter(k => !have.has(k))
 }
