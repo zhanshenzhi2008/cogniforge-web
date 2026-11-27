@@ -2116,9 +2116,51 @@ const handleDeleteNode = () => {
   toast.add({ title: t('editor.nodeDeleted'), color: 'success' })
 }
 
+function findUnboundBindNodes(): { id: string, label: string, kind: string }[] {
+  const out: { id: string, label: string, kind: string }[] = []
+  for (const n of nodes.value) {
+    const label = String(n.data?.label || getNodeLabel(n.type))
+    if (n.type === 'team' && !String(n.data?.teamId || '').trim()) {
+      out.push({ id: n.id, label, kind: 'team' })
+    }
+    else if (n.type === 'agent' && !String(n.data?.agentId || '').trim()) {
+      out.push({ id: n.id, label, kind: 'agent' })
+    }
+    else if (n.type === 'search' && !String(n.data?.knowledgeBaseId || '').trim()) {
+      out.push({ id: n.id, label, kind: 'search' })
+    }
+    else if (
+      n.type === 'subflow'
+      && !String(n.data?.subflowWorkflowId || n.data?.workflowId || n.data?.workflow_id || '').trim()
+    ) {
+      out.push({ id: n.id, label, kind: 'subflow' })
+    }
+  }
+  return out
+}
+
 const handleSave = async () => {
   if (isSmokeTest.value) {
     toast.add({ title: t('editor.noSaveOnTest'), color: 'info' })
+    return
+  }
+  const unbound = findUnboundBindNodes()
+  if (unbound.length) {
+    const first = unbound[0]!
+    const kindLabel = t(`editor.bindKind.${first.kind}` as any)
+    toast.add({
+      title: t('editor.bindRequired', { name: first.label, kind: kindLabel }),
+      description: unbound.length > 1
+        ? t('editor.bindRequiredMore', { n: unbound.length - 1 })
+        : undefined,
+      color: 'warning',
+    })
+    const node = nodes.value.find(n => n.id === first.id)
+    if (node) {
+      selectedNode.value = node
+      configDrawer.value = true
+      handleNodeClick({ node })
+    }
     return
   }
   saving.value = true
@@ -2137,6 +2179,8 @@ const handleSave = async () => {
           teamId: n.data?.teamId,
           agentId: n.data?.agentId,
           knowledgeBaseId: n.data?.knowledgeBaseId,
+          subflowWorkflowId: n.data?.subflowWorkflowId,
+          workflowId: n.data?.subflowWorkflowId || n.data?.workflowId,
           description: n.data?.description,
           query: n.data?.query,
           topK: n.data?.topK,
@@ -2185,7 +2229,11 @@ const handleSave = async () => {
                       ? { hybrid_semantic_weight: Number(n.data.hybridSemanticWeight) }
                       : {}),
                   }
-                : undefined,
+                : n.type === 'subflow'
+                  ? {
+                      workflow_id: n.data?.subflowWorkflowId || n.data?.workflowId || '',
+                    }
+                  : undefined,
       })),
       edges: edges.value.map(e => ({
         id: e.id,
