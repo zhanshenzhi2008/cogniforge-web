@@ -85,6 +85,51 @@
           />
         </section>
 
+        <section class="cfg-block">
+          <label class="cfg-label">{{ t('agents.openingMessage') }}</label>
+          <UTextarea
+            v-model="form.opening_message"
+            class="w-full"
+            :rows="2"
+            :placeholder="t('agents.openingMessagePh')"
+            @update:model-value="markDirty"
+          />
+          <p class="cfg-hint">{{ t('agents.openingMessageHint') }}</p>
+        </section>
+
+        <section class="cfg-block">
+          <label class="cfg-label">{{ t('agents.suggestedPrompts') }}</label>
+          <div class="suggested-list">
+            <div
+              v-for="(_item, idx) in form.suggested_prompts"
+              :key="idx"
+              class="suggested-row"
+            >
+              <UInput
+                v-model="form.suggested_prompts[idx]"
+                class="w-full"
+                :placeholder="t('agents.suggestedPromptPh', { n: idx + 1 })"
+                @update:model-value="markDirty"
+              />
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-x"
+                :aria-label="t('common.delete')"
+                @click="removeSuggested(idx)"
+              />
+            </div>
+            <CfButton
+              v-if="form.suggested_prompts.length < 6"
+              tone="secondary"
+              icon="i-lucide-plus"
+              @click="addSuggested"
+            >
+              {{ t('agents.addSuggestedPrompt') }}
+            </CfButton>
+          </div>
+          <p class="cfg-hint">{{ t('agents.suggestedPromptsHint') }}</p>
+        </section>
+
         <section class="cfg-row">
           <div class="cfg-row__main">
             <UIcon :name="CF_ICONS.ai" class="size-4" />
@@ -217,8 +262,26 @@
                 {{ stage === 'build' ? t('agents.studioBuildHeroTitle') : t('agents.studioPreviewHeroTitle') }}
               </h2>
               <p class="stage-hero__sub">
-                {{ stage === 'build' ? t('agents.studioBuildHeroSub') : t('agents.studioPreviewHeroSub') }}
+                {{
+                  stage === 'build'
+                    ? t('agents.studioBuildHeroSub')
+                    : (form.opening_message.trim() || t('agents.studioPreviewHeroSub'))
+                }}
               </p>
+              <div
+                v-if="stage === 'preview' && previewSuggested.length"
+                class="stage-suggested"
+              >
+                <CfButton
+                  v-for="chip in previewSuggested"
+                  :key="chip"
+                  tone="secondary"
+                  icon="i-lucide-sparkles"
+                  @click="sendSuggestion(chip)"
+                >
+                  {{ chip }}
+                </CfButton>
+              </div>
               <p
                 v-if="stage === 'build' && !agentId"
                 class="stage-hero__warn"
@@ -331,6 +394,8 @@ const form = reactive({
   model: '',
   system_prompt: '',
   prompt_id: '',
+  opening_message: '',
+  suggested_prompts: [] as string[],
   tools: [] as string[],
   skill_id: '',
 })
@@ -343,6 +408,26 @@ const chatStatus = computed<CfChatStatus>(() => (chatBusy.value ? 'streaming' : 
 const activeMessages = computed(() =>
   stage.value === 'build' ? buildMessages.value : previewMessages.value,
 )
+const previewSuggested = computed(() =>
+  form.suggested_prompts.map(s => s.trim()).filter(Boolean).slice(0, 6),
+)
+
+function addSuggested() {
+  if (form.suggested_prompts.length >= 6) return
+  form.suggested_prompts.push('')
+  markDirty()
+}
+
+function removeSuggested(idx: number) {
+  form.suggested_prompts.splice(idx, 1)
+  markDirty()
+}
+
+function sendSuggestion(text: string) {
+  if (!text.trim() || chatBusy.value) return
+  composer.value = text
+  void sendComposer()
+}
 
 const stagePlaceholder = computed(() =>
   stage.value === 'build'
@@ -413,6 +498,8 @@ function fillFromAgent(agent: Agent) {
   form.model = agent.model
   form.system_prompt = agent.system_prompt || ''
   form.prompt_id = agent.prompt_id || ''
+  form.opening_message = agent.opening_message || ''
+  form.suggested_prompts = [...(agent.suggested_prompts || [])]
   form.tools = [...(agent.tools || [])]
   form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
@@ -548,8 +635,10 @@ async function handleSave() {
         model: form.model,
         system_prompt: form.system_prompt,
         prompt_id: form.prompt_id || '',
+        opening_message: form.opening_message,
+        suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
         tools: form.tools,
-        skill_id: form.skill_id || undefined,
+        skill_id: form.skill_id || '',
         status: statusEnabled.value ? 'active' : 'disabled',
       }
       const res = await update(agentId.value, input)
@@ -571,6 +660,8 @@ async function handleSave() {
       model: form.model,
       system_prompt: form.system_prompt,
       prompt_id: form.prompt_id || undefined,
+      opening_message: form.opening_message || undefined,
+      suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
       tools: form.tools,
       skill_id: form.skill_id || undefined,
     }
@@ -836,6 +927,26 @@ onMounted(async () => {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--cf-ink);
+}
+
+.suggested-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggested-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stage-suggested {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .cfg-hint {

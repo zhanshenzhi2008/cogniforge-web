@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.134 | 工作室开场白 + 预设问题；Playground 空态展示 | orjrs |
 | 2026-11-27 | v1.133 | Playground 对话改走 useAgentChat / useChatStream | orjrs |
 | 2026-11-27 | v1.132 | 共用 CfFieldHelp 接知识库表单帮助图标 | orjrs |
 | 2026-11-27 | v1.131 | 共用 CfEmptyState / CfLoadingState 接列表空态与加载 | orjrs |
@@ -166,6 +167,12 @@
 - **原因**：选 Agent 时仍内联 SSE，与 useAgentChat 重复
 - **落地**：有 Agent → `useAgentChat`；无 Agent → `useChatStream`；透传 attachments / variables / mcp_servers 等
 - **主仓**：前端设计 v1.102；开发计划 v1.223
+
+## [变更] 工作室开场白与预设问题（2026-11-27）
+
+- **原因**：工作室 backlog；首屏欢迎与一点即发
+- **落地**：左侧开场白/预设问题；预览空态与 Playground 空态展示
+- **主仓**：API v1.95；DB v1.40；前端设计 v1.103
 
 ## [变更] 审计表展示 clearance 动作（2026-11-27）
 
@@ -584,7 +591,7 @@
 - **后续 TODO（智能体工作室 backlog）**：
   - **优先（有现成能力可接）**
     - [ ] 工作室绑定知识库（多选；对话走 `rag_kb_ids`；可选「使用者鉴权」）
-    - [ ] 对话开场白 + 预设问题（保存到 Agent；预览/Playground 首屏展示）
+    - [x] 对话开场白 + 预设问题（保存到 Agent；预览/Playground 首屏展示）
     - [ ] 预览区文件上传开关（对齐 Playground attachments）
     - [ ] 提示词 `/` 插变量、`@` 插技能/工具/知识库（编辑器增强）
     - [ ] 「了解更多」链到帮助文档/空状态说明页

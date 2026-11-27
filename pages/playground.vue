@@ -73,8 +73,8 @@
             <div class="empty-state">
               <div class="empty-glow" />
               <UIcon :name="CF_ICONS.chat" class="size-14 empty-icon" />
-              <p class="empty-title font-display">{{ t('play.emptyTitle') }}</p>
-              <p class="empty-sub">{{ t('play.emptySub') }}</p>
+              <p class="empty-title font-display">{{ emptyHeroTitle }}</p>
+              <p class="empty-sub">{{ emptyHeroSub }}</p>
               <div class="suggestion-chips">
                 <CfButton
                   v-for="chip in suggestionChips"
@@ -402,11 +402,27 @@ const currentConversationId = ref('')
 const conversationTitle = ref('')
 let persistSeq = 0
 
-const suggestionChips = computed(() => [
-  t('play.chip1'),
-  t('play.chip2'),
-  t('play.chip3'),
-])
+const suggestionChips = computed(() => {
+  const fromAgent = (selectedAgentInfo.value?.suggested_prompts || [])
+    .map(s => String(s || '').trim())
+    .filter(Boolean)
+    .slice(0, 6)
+  if (fromAgent.length) return fromAgent
+  return [t('play.chip1'), t('play.chip2'), t('play.chip3')]
+})
+
+const emptyHeroTitle = computed(() => {
+  if (selectedAgentInfo.value?.name) {
+    return t('play.withAgent', { name: selectedAgentInfo.value.name })
+  }
+  return t('play.emptyTitle')
+})
+
+const emptyHeroSub = computed(() => {
+  const opening = selectedAgentInfo.value?.opening_message?.trim()
+  if (opening) return opening
+  return t('play.emptySub')
+})
 
 const composerPlaceholder = computed(() => {
   if (quotaGone.value) return t('quota.placeholderDone')

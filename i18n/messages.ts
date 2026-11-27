@@ -392,6 +392,22 @@ export const M = {
   'agents.editTitle': { 'zh-CN': '编辑智能体', 'en-US': 'Edit agent' },
   'agents.namePh': { 'zh-CN': '请输入 Agent 名称', 'en-US': 'Agent name' },
   'agents.systemPrompt': { 'zh-CN': '系统提示', 'en-US': 'System prompt' },
+  'agents.openingMessage': { 'zh-CN': '开场白', 'en-US': 'Opening message' },
+  'agents.openingMessagePh': {
+    'zh-CN': '用户进入对话时先看到的欢迎语（可选）',
+    'en-US': 'Welcome text shown when a chat starts (optional)',
+  },
+  'agents.openingMessageHint': {
+    'zh-CN': '显示在工作室预览与对话页空态，不会发给模型。',
+    'en-US': 'Shown on studio preview and Playground empty state; not sent to the model.',
+  },
+  'agents.suggestedPrompts': { 'zh-CN': '预设问题', 'en-US': 'Suggested prompts' },
+  'agents.suggestedPromptPh': { 'zh-CN': '预设问题 {n}', 'en-US': 'Suggestion {n}' },
+  'agents.addSuggestedPrompt': { 'zh-CN': '添加预设问题', 'en-US': 'Add suggestion' },
+  'agents.suggestedPromptsHint': {
+    'zh-CN': '最多 6 条；预览与对话页空态可一点发送。',
+    'en-US': 'Up to 6 chips; one tap sends on preview and Playground.',
+  },
   'agents.systemPh': { 'zh-CN': '定义 Agent 的角色和行为...', 'en-US': 'Define the agent’s role and behavior…' },
   'agents.tools': { 'zh-CN': '工具', 'en-US': 'Tools' },
   'agents.pickModel': { 'zh-CN': '请选择模型', 'en-US': 'Select a model' },
