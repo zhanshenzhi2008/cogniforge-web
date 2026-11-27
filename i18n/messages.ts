@@ -404,7 +404,21 @@ export const M = {
   'teams.limitsMeta': { 'zh-CN': '深度≤{depth} · 步数≤{steps}', 'en-US': 'depth≤{depth} · steps≤{steps}' },
   'teams.limitsSaved': { 'zh-CN': '限额已保存', 'en-US': 'Limits saved' },
   'teams.genPipeline': { 'zh-CN': '生成流水线', 'en-US': 'Build pipeline' },
-  'teams.openPipeline': { 'zh-CN': '打开/更新流水线', 'en-US': 'Open / refresh pipeline' },
+  'teams.openPipeline': { 'zh-CN': '打开流水线', 'en-US': 'Open pipeline' },
+  'teams.regenPipeline': { 'zh-CN': '重新生成', 'en-US': 'Rebuild' },
+  'teams.regenPipelineTip': {
+    'zh-CN': '按当前成员重画串行流水线（会覆盖现有画布）',
+    'en-US': 'Rebuild linear pipeline from members (overwrites canvas)',
+  },
+  'teams.regenPipelineConfirm': {
+    'zh-CN': '将按当前成员重画串行流水线，覆盖「{name}」已绑定工作流的画布配置。继续？',
+    'en-US': 'Rebuild linear pipeline for “{name}” and overwrite the bound workflow canvas?',
+  },
+  'teams.regenParallelConfirm': {
+    'zh-CN': '将覆盖「{name}」已绑定工作流为并行扇出图。继续？',
+    'en-US': 'Overwrite “{name}” bound workflow with a parallel fan-out graph?',
+  },
+  'teams.regenConfirmBtn': { 'zh-CN': '覆盖生成', 'en-US': 'Overwrite' },
   'teams.genPipelineOk': { 'zh-CN': '已生成工作流', 'en-US': 'Workflow created' },
   'teams.genPipelineFail': { 'zh-CN': '未拿到工作流 ID', 'en-US': 'No workflow id returned' },
   'teams.genParallel': { 'zh-CN': '生成并行图', 'en-US': 'Build parallel fan-out' },

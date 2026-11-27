@@ -63,6 +63,17 @@
             {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
           </UButton>
           <UButton
+            v-if="team.workflow_id"
+            size="sm"
+            variant="ghost"
+            icon="i-lucide-refresh-cw"
+            :loading="expandingId === team.id"
+            :title="t('teams.regenPipelineTip')"
+            @click="askRegenPipeline(team, 'linear')"
+          >
+            {{ t('teams.regenPipeline') }}
+          </UButton>
+          <UButton
             size="sm"
             variant="outline"
             :loading="expandingParallelId === team.id"
@@ -126,6 +137,17 @@
                     @click="expandPipeline(team)"
                   >
                     {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
+                  </UButton>
+                  <UButton
+                    v-if="team.workflow_id"
+                    size="sm"
+                    variant="ghost"
+                    icon="i-lucide-refresh-cw"
+                    :loading="expandingId === team.id"
+                    :title="t('teams.regenPipelineTip')"
+                    @click="askRegenPipeline(team, 'linear')"
+                  >
+                    {{ t('teams.regenPipeline') }}
                   </UButton>
                   <UButton
                     size="sm"
@@ -273,6 +295,15 @@
       :loading="deletingLoading"
       @confirm="confirmDelete"
     />
+    <CfConfirmModal
+      v-model:open="regenVisible"
+      :title="t('teams.regenPipeline')"
+      :message="regenConfirmMessage"
+      :confirm-text="t('teams.regenConfirmBtn')"
+      confirm-icon="i-lucide-refresh-cw"
+      :loading="regenLoading"
+      @confirm="confirmRegenPipeline"
+    />
   </div>
 </template>
 
@@ -321,6 +352,16 @@ const lastFailHint = ref('')
 const deleteVisible = ref(false)
 const deletingLoading = ref(false)
 const deleting = ref<AgentTeam | null>(null)
+const regenVisible = ref(false)
+const regenLoading = ref(false)
+const regenTeam = ref<AgentTeam | null>(null)
+const regenLayout = ref<'linear' | 'parallel'>('linear')
+const regenConfirmMessage = computed(() => {
+  const name = regenTeam.value?.name ?? ''
+  return regenLayout.value === 'parallel'
+    ? t('teams.regenParallelConfirm', { name })
+    : t('teams.regenPipelineConfirm', { name })
+})
 
 function failHintFromRunState(rs: TeamRunState | null | undefined): string {
   if (!rs) return ''
@@ -561,50 +602,74 @@ async function sendPreview() {
   }
 }
 
+/** 已有绑定则只打开；没有则首次生成串行流水线 */
 async function expandPipeline(team: AgentTeam) {
-  if (expandingId.value || expandingParallelId.value) return
-  // 已绑定且用户点「打开」：直接进画布；若要重生成仍走 API（同按钮 regenerates then open）
-  expandingId.value = team.id
+  if (team.workflow_id) {
+    await router.push(`/workflows/${team.workflow_id}`)
+    return
+  }
+  await runExpandPipeline(team, 'linear')
+}
+
+/** 并行图：已有工作流时先确认覆盖 */
+function expandParallel(team: AgentTeam) {
+  if (team.workflow_id) {
+    askRegenPipeline(team, 'parallel')
+    return
+  }
+  void runExpandPipeline(team, 'parallel')
+}
+
+function askRegenPipeline(team: AgentTeam, layout: 'linear' | 'parallel') {
+  if (expandingId.value || expandingParallelId.value || regenLoading.value) return
+  regenTeam.value = team
+  regenLayout.value = layout
+  regenVisible.value = true
+}
+
+async function confirmRegenPipeline() {
+  if (!regenTeam.value) return
+  regenLoading.value = true
   try {
-    const res = await apiExpandPipeline(team.id)
-    if (res.error) {
-      toast.add({ title: res.error, color: 'error' })
-      return
-    }
-    const wfId = res.data?.workflow?.id || res.data?.team?.workflow_id
-    if (!wfId) {
-      toast.add({ title: t('teams.genPipelineFail'), color: 'error' })
-      return
-    }
-    toast.add({ title: t('teams.genPipelineOk'), color: 'success' })
-    await fetchAll()
-    await router.push(`/workflows/${wfId}`)
+    await runExpandPipeline(regenTeam.value, regenLayout.value)
+    regenVisible.value = false
+    regenTeam.value = null
   }
   finally {
-    expandingId.value = ''
+    regenLoading.value = false
   }
 }
 
-async function expandParallel(team: AgentTeam) {
+async function runExpandPipeline(team: AgentTeam, layout: 'linear' | 'parallel') {
   if (expandingId.value || expandingParallelId.value) return
-  expandingParallelId.value = team.id
+  const loadingRef = layout === 'parallel' ? expandingParallelId : expandingId
+  loadingRef.value = team.id
   try {
-    const res = await apiExpandPipeline(team.id, { layout: 'parallel' })
+    const res = await apiExpandPipeline(
+      team.id,
+      layout === 'parallel' ? { layout: 'parallel' } : undefined,
+    )
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       return
     }
     const wfId = res.data?.workflow?.id || res.data?.team?.workflow_id
     if (!wfId) {
-      toast.add({ title: t('teams.genParallelFail'), color: 'error' })
+      toast.add({
+        title: layout === 'parallel' ? t('teams.genParallelFail') : t('teams.genPipelineFail'),
+        color: 'error',
+      })
       return
     }
-    toast.add({ title: t('teams.genParallelOk'), color: 'success' })
+    toast.add({
+      title: layout === 'parallel' ? t('teams.genParallelOk') : t('teams.genPipelineOk'),
+      color: 'success',
+    })
     await fetchAll()
     await router.push(`/workflows/${wfId}`)
   }
   finally {
-    expandingParallelId.value = ''
+    loadingRef.value = ''
   }
 }
 
