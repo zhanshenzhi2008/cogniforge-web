@@ -37,7 +37,7 @@
           <span>{{ issue.label }}</span>
         </button>
       </template>
-      <div v-else class="issue-summary">
+      <div v-else ref="issueSummaryRef" class="issue-summary">
         <button
           type="button"
           class="unbound-chip unbound-chip--summary"
@@ -2346,6 +2346,7 @@ const handleNodeClick = (event: any) => {
 const handlePaneClick = () => {
   selectedNode.value = null
   configDrawer.value = false
+  issueMenuOpen.value = false
 }
 
 const saveNodeConfig = () => {
@@ -2675,14 +2676,52 @@ const issueTotalCount = computed(() =>
 /** 三种及以上问题收成摘要，避免顶栏挤爆 */
 const collapseIssueChips = computed(() => graphIssues.value.length >= 3)
 const issueMenuOpen = ref(false)
+const issueSummaryRef = ref<HTMLElement | null>(null)
+
+function closeIssueMenu() {
+  issueMenuOpen.value = false
+}
 
 function onIssueMenuPick(issue: GraphIssueChip) {
-  issueMenuOpen.value = false
+  closeIssueMenu()
   issue.focus()
 }
 
+function onIssueMenuPointerDown(ev: PointerEvent) {
+  if (!issueMenuOpen.value) return
+  const root = issueSummaryRef.value
+  const target = ev.target as Node | null
+  if (root && target && root.contains(target)) return
+  closeIssueMenu()
+}
+
+function onIssueMenuKeydown(ev: KeyboardEvent) {
+  if (ev.key === 'Escape' && issueMenuOpen.value) {
+    closeIssueMenu()
+  }
+}
+
 watch(collapseIssueChips, (collapsed) => {
-  if (!collapsed) issueMenuOpen.value = false
+  if (!collapsed) closeIssueMenu()
+})
+
+watch(issueMenuOpen, (open) => {
+  if (open) {
+    // 下一拍再挂，避免打开按钮的同一次点击立刻关掉
+    nextTick(() => {
+      document.addEventListener('pointerdown', onIssueMenuPointerDown, true)
+      document.addEventListener('keydown', onIssueMenuKeydown, true)
+    })
+  }
+  else {
+    document.removeEventListener('pointerdown', onIssueMenuPointerDown, true)
+    document.removeEventListener('keydown', onIssueMenuKeydown, true)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onIssueMenuPointerDown, true)
+  document.removeEventListener('keydown', onIssueMenuKeydown, true)
 })
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
