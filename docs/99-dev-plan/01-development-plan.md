@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.151 | 工作流列表 CfResourceCard + 卡片/表格切换 | orjrs |
 | 2026-11-27 | v1.150 | 小队列表 CfResourceCard + 卡片/表格切换 | orjrs |
 | 2026-11-27 | v1.149 | 同步工作室部署冒烟清单 A1–A12 | orjrs |
 | 2026-11-27 | v1.148 | 工作室虚拟机/IM 即将推出占位说明 | orjrs |
@@ -172,6 +173,12 @@
 - **原因**：前端组件去重；小队页原自绘卡片
 - **落地**：`CfResourceCard` + `CfViewModeToggle`（`cf-teams-view`）；列表表格视图
 - **主仓**：前端设计 v1.118
+
+## [变更] 工作流列表卡片壳（2026-11-27）
+
+- **原因**：前端组件去重；原先仅表格
+- **落地**：默认 `CfResourceCard` + `CfViewModeToggle`（`cf-workflows-view`）
+- **主仓**：前端设计 v1.119
 
 ## [变更] MCP 列表视图切换（2026-11-27）
 
@@ -693,7 +700,7 @@
   - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
   - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
-  - [x] 可选 `CfResourceCard` 壳：agents/knowledge/teams 已接；workflows 可按需跟
+  - [x] 可选 `CfResourceCard` 壳：agents/knowledge/teams/workflows 已接
   - [x] 知识库 / MCP 列表复用 `CfViewModeToggle`
 - **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`
 - **主仓**：前端设计同步

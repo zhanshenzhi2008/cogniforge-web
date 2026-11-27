@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('flows.title') }}</h1>
         <p class="cf-page-sub">{{ t('flows.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
-        {{ t('flows.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-workflows-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('flows.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -15,11 +18,65 @@
       <span class="list-hint">{{ t('flows.hint') }}</span>
     </div>
 
-    <div class="cf-panel">
-      <CfLoadingState v-if="loading" />
-      <CfEmptyState v-else-if="workflows.length === 0" :icon="CF_ICONS.workflow" :message="t('flows.empty')" />
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState
+      v-else-if="workflows.length === 0"
+      :icon="CF_ICONS.workflow"
+      :message="t('flows.empty')"
+    />
 
-      <div v-else class="cf-table-wrap">
+    <div v-else-if="viewMode === 'card'" class="flow-grid">
+      <CfResourceCard
+        v-for="workflow in workflows"
+        :key="workflow.id"
+        :icon="CF_ICONS.workflow"
+        :title="workflow.name"
+        :description="workflow.description || t('common.noDesc')"
+        :meta="`v${workflow.version} · ${d(workflow.created_at)}`"
+        :tip="t('flows.hint')"
+        @click="openCanvas(workflow)"
+      >
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="statusColor(workflow.status)"
+          >
+            {{ statusText(workflow.status) }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon"
+            icon="i-lucide-external-link"
+            :tip="t('flows.canvas')"
+            @click="openCanvas(workflow)"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-rocket"
+            :tip="t('flows.run')"
+            @click="handleExecute(workflow)"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-copy"
+            :tip="t('flows.clone')"
+            :loading="cloningId === workflow.id"
+            @click="handleClone(workflow)"
+          />
+          <CfButton
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(workflow)"
+          />
+        </template>
+      </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
@@ -147,6 +204,7 @@
 
 <script setup lang="ts">
 import type { Workflow } from '@/composables/useWorkflows'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
@@ -160,6 +218,7 @@ const toast = useToast()
 const { t, d } = useLocale()
 const { list, create, remove, clone, execute } = useWorkflows()
 const cloningId = ref('')
+const viewMode = ref<ViewMode>('card')
 
 const openSmokeTest = () => {
   navigateTo(`/workflows/${CANVAS_SMOKE_ID}`)
@@ -311,6 +370,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
 
 .list-count {
   font-size: 0.75rem;
