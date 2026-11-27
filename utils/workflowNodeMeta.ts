@@ -78,12 +78,13 @@ export function getWorkflowNodeMeta(type: string): WorkflowNodeMeta {
 }
 
 /** 需要侧栏绑定资源的节点类型 */
-export const WORKFLOW_BIND_KINDS = ['team', 'agent', 'search', 'subflow'] as const
+export const WORKFLOW_BIND_KINDS = ['llm', 'team', 'agent', 'search', 'subflow'] as const
 export type WorkflowBindKind = (typeof WORKFLOW_BIND_KINDS)[number]
 
 /** 画布 / 保存 / 执行共用：节点是否尚未绑定必填资源 */
 export function isWorkflowBindUnbound(kind: string, data?: Record<string, unknown> | null): boolean {
   const d = data || {}
+  if (kind === 'llm') return !String(d.model || '').trim()
   if (kind === 'team') return !String(d.teamId || '').trim()
   if (kind === 'agent') return !String(d.agentId || '').trim()
   if (kind === 'search') return !String(d.knowledgeBaseId || '').trim()

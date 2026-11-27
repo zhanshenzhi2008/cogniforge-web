@@ -32,7 +32,12 @@
       <WorkflowFlowNode kind="end" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-llm="{ data }">
-      <WorkflowFlowNode kind="llm" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="llm"
+        :label="data.label"
+        :hint="bindNodeHint('llm', data)"
+        :unbound="isWorkflowBindUnbound('llm', data)"
+      />
     </template>
     <template #node-agent="{ data }">
       <WorkflowFlowNode

@@ -239,6 +239,7 @@ const displayHint = computed(() => {
 .flow-node-output { border-color: #9333ea; }
 .flow-node-default { border-color: #94a3b8; }
 
+.flow-node--unbound.flow-node-llm,
 .flow-node--unbound.flow-node-agent,
 .flow-node--unbound.flow-node-team,
 .flow-node--unbound.flow-node-search,

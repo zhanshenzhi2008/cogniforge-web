@@ -1882,6 +1882,10 @@ const addNode = (type: string) => {
 
 function resolveBindCaption(kind: string, data?: Record<string, unknown> | null): string {
   const d = data || {}
+  if (kind === 'llm') {
+    const id = String(d.model || '').trim()
+    return modelOptions.value.find(o => o.value === id)?.label || id
+  }
   if (kind === 'team') {
     const id = String(d.teamId || '').trim()
     return teamOptions.value.find(o => o.value === id)?.label || ''
@@ -1905,7 +1909,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2041,6 +2045,7 @@ const saveNodeConfig = () => {
   const node = nodes.value.find(n => n.id === selectedNode.value.id)
   if (node) {
     const nextBindData = {
+      model: nodeConfig.model,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
@@ -2865,6 +2870,7 @@ onMounted(() => {
     modelOptions.value = (res.data || [])
       .filter(m => m.id)
       .map(m => ({ label: m.name || m.id, value: m.id }))
+    syncBindCaptions()
   })
   void refreshTeamOptions()
   void refreshAgentOptions()
