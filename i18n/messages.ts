@@ -273,6 +273,18 @@ export const M = {
     'en-US': 'This browser does not support speech',
   },
   'chat.ttsEmpty': { 'zh-CN': '没有可朗读的文字', 'en-US': 'Nothing to speak' },
+  'chat.sttStart': { 'zh-CN': '语音输入', 'en-US': 'Voice input' },
+  'chat.sttStop': { 'zh-CN': '停止听写', 'en-US': 'Stop dictation' },
+  'chat.sttListening': { 'zh-CN': '正在听…', 'en-US': 'Listening…' },
+  'chat.sttUnsupported': {
+    'zh-CN': '当前浏览器不支持语音输入（建议 Chrome）',
+    'en-US': 'Voice input is not supported in this browser (try Chrome)',
+  },
+  'chat.sttDenied': {
+    'zh-CN': '未获得麦克风权限，请在浏览器设置中允许',
+    'en-US': 'Microphone permission denied',
+  },
+  'chat.sttFail': { 'zh-CN': '语音识别失败，请重试', 'en-US': 'Speech recognition failed' },
   'play.placeholder': { 'zh-CN': '输入消息…（Enter 发送，Shift+Enter 换行）', 'en-US': 'Message… (Enter to send, Shift+Enter for newline)' },
   'play.hint': { 'zh-CN': 'Enter 发送 · 可粘贴或拖入图片/文件', 'en-US': 'Enter to send · paste or drop images/files' },
   'play.attachImage': { 'zh-CN': '添加图片', 'en-US': 'Attach image' },

@@ -70,6 +70,15 @@
         <template #footer>
           <div class="cf-chat-panel__footer">
             <div class="cf-chat-panel__footer-left">
+              <CfButton
+                v-if="sttEnabled"
+                :tone="listening ? 'icon-accent' : 'icon'"
+                :icon="listening ? 'i-lucide-mic-off' : 'i-lucide-mic'"
+                :tip="listening ? t('chat.sttStop') : t('chat.sttStart')"
+                :disabled="disabled || (submitStatus || status) === 'streaming'"
+                @click="toggleListen"
+              />
+              <span v-if="listening" class="cf-chat-panel__stt-live">{{ t('chat.sttListening') }}</span>
               <slot name="composer-actions" />
               <span v-if="hint" class="cf-chat-panel__hint">{{ hint }}</span>
             </div>
@@ -107,6 +116,7 @@ import {
   type CfChatMessageInput,
   type CfChatStatus,
 } from '~/utils/chatUi'
+import { startSpeechDictation, speechRecognitionSupported } from '~/utils/speechStt'
 import { isSpeaking, speakText, speechSupported, stopSpeech } from '~/utils/speechTts'
 import { CF_ICONS } from '~/constants/icons'
 
@@ -125,6 +135,8 @@ const props = withDefaults(
     markdown?: boolean
     /** 助手消息旁显示浏览器朗读按钮 */
     tts?: boolean
+    /** 输入框旁显示浏览器语音输入 */
+    stt?: boolean
     rows?: number
     maxrows?: number
     spacingOffset?: number
@@ -138,6 +150,7 @@ const props = withDefaults(
     submitOnEnter: true,
     markdown: true,
     tts: true,
+    stt: true,
     rows: 2,
     maxrows: 6,
     spacingOffset: 24,
@@ -158,10 +171,70 @@ const assistantBubble = { side: 'left' as const, variant: 'naked' as const, icon
 
 const uiMessages = computed(() => toUiChatMessages(props.messages))
 const ttsEnabled = computed(() => props.tts && speechSupported())
+const sttEnabled = computed(() => props.stt && speechRecognitionSupported())
 const speakingId = ref<string | null>(null)
+const listening = ref(false)
+const baseBeforeListen = ref('')
+let sttStop: (() => void) | null = null
 
 function clearSpeaking() {
   speakingId.value = null
+}
+
+function stopListen() {
+  sttStop?.()
+  sttStop = null
+  listening.value = false
+}
+
+function joinComposer(base: string, chunk: string) {
+  const c = chunk.trim()
+  if (!c) return base
+  const sep = base && !/\s$/.test(base) ? ' ' : ''
+  return `${base}${sep}${c}`
+}
+
+function toggleListen() {
+  if (!speechRecognitionSupported()) {
+    toast.add({ title: t('chat.sttUnsupported'), color: 'warning' })
+    return
+  }
+  if (listening.value) {
+    stopListen()
+    return
+  }
+  // avoid speaking over mic
+  stopSpeech()
+  clearSpeaking()
+  baseBeforeListen.value = props.modelValue || ''
+  const handle = startSpeechDictation({
+    lang: locale.value,
+    onFinal: (text) => {
+      baseBeforeListen.value = joinComposer(baseBeforeListen.value, text)
+      emit('update:modelValue', baseBeforeListen.value)
+    },
+    onInterim: (text) => {
+      emit('update:modelValue', joinComposer(baseBeforeListen.value, text))
+    },
+    onEnd: () => {
+      listening.value = false
+      sttStop = null
+    },
+    onError: (code) => {
+      stopListen()
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        toast.add({ title: t('chat.sttDenied'), color: 'error' })
+      } else if (code !== 'aborted' && code !== 'no-speech') {
+        toast.add({ title: t('chat.sttFail'), color: 'warning' })
+      }
+    },
+  })
+  if (!handle) {
+    toast.add({ title: t('chat.sttUnsupported'), color: 'warning' })
+    return
+  }
+  sttStop = handle.stop
+  listening.value = true
 }
 
 function toggleSpeak(id: string, text: string) {
@@ -174,6 +247,7 @@ function toggleSpeak(id: string, text: string) {
     clearSpeaking()
     return
   }
+  if (listening.value) stopListen()
   const ok = speakText(text, {
     lang: locale.value,
     onEnd: clearSpeaking,
@@ -187,6 +261,7 @@ function toggleSpeak(id: string, text: string) {
 }
 
 onBeforeUnmount(() => {
+  stopListen()
   stopSpeech()
 })
 
@@ -248,6 +323,12 @@ function onSubmit() {
   align-items: center;
   gap: 4px;
   opacity: 0.72;
+}
+
+.cf-chat-panel__stt-live {
+  font-size: 0.75rem;
+  color: var(--cf-accent, #0f9f8a);
+  white-space: nowrap;
 }
 
 .cf-chat-panel__composer-wrap {
