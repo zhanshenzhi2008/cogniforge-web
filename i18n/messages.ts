@@ -1025,6 +1025,13 @@ export const M = {
   'editor.node.delay': { 'zh-CN': '延时节点', 'en-US': 'Delay' },
   'editor.node.wait': { 'zh-CN': '等待/审批', 'en-US': 'Wait / Approve' },
   'editor.node.search': { 'zh-CN': '知识库检索', 'en-US': 'Knowledge search' },
+  'editor.node.subflow': { 'zh-CN': '子流程', 'en-US': 'Subflow' },
+  'editor.subflowPick': { 'zh-CN': '调用工作流', 'en-US': 'Call workflow' },
+  'editor.subflowPickPh': { 'zh-CN': '选择要嵌套的工作流', 'en-US': 'Pick a nested workflow' },
+  'editor.subflowHint': {
+    'zh-CN': '同步跑完子流程再继续；暂不支持子流程内等待/审批；最多嵌套 3 层，且不能调用自己。',
+    'en-US': 'Runs the nested workflow synchronously. Nested wait/approval not supported yet; max depth 3; cannot call itself.',
+  },
   'editor.pickKnowledge': { 'zh-CN': '请选择知识库', 'en-US': 'Select a knowledge base' },
   'editor.knowledgeBase': { 'zh-CN': '知识库', 'en-US': 'Knowledge base' },
   'editor.searchTopK': { 'zh-CN': '返回条数 Top-K', 'en-US': 'Top-K' },

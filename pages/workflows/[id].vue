@@ -496,6 +496,20 @@
             />
           </div>
 
+          <template v-if="selectedNode.type === 'subflow'">
+            <div class="field">
+              <label class="field__label">{{ t('editor.subflowPick') }}</label>
+              <USelect
+                v-model="nodeConfig.subflowWorkflowId"
+                class="w-full"
+                :items="subflowWorkflowOptions"
+                :placeholder="t('editor.subflowPickPh')"
+                value-key="value"
+              />
+              <p class="field__hint">{{ t('editor.subflowHint') }}</p>
+            </div>
+          </template>
+
           <template v-if="selectedNode.type === 'condition'">
             <div class="field">
               <label class="field__label">{{ t('editor.conditionField') }}</label>
@@ -1088,7 +1102,7 @@ const route = useRoute()
 const toast = useToast()
 const { t } = useLocale()
 const {
-  get, update, execute, listExecutions, getExecution, cancelExecution,
+  list: listWorkflows, get, update, execute, listExecutions, getExecution, cancelExecution,
   resumeExecution, approveExecution, rejectExecution, debug,
   listVersions, rollbackVersion,
   listSchedules, createSchedule, deleteSchedule, pauseSchedule, resumeSchedule, runScheduleNow,
@@ -1303,6 +1317,7 @@ const nodeConfig = reactive({
   loopCondition: '',
   codeLanguage: 'expression',
   codeSource: '',
+  subflowWorkflowId: '',
   variables: [] as {
     name: string
     type: string
@@ -1446,6 +1461,10 @@ function initDebugFormFromStartVars() {
 }
 
 const teamOptions = ref<{ label: string, value: string }[]>([])
+const workflowPickOptions = ref<{ label: string, value: string }[]>([])
+const subflowWorkflowOptions = computed(() =>
+  workflowPickOptions.value.filter(w => w.value !== workflowId.value),
+)
 const agentOptions = ref<{ label: string, value: string }[]>([])
 const kbList = ref<KnowledgeBase[]>([])
 const kbOptions = computed(() =>
@@ -1647,6 +1666,12 @@ const loadWorkflow = async () => {
               ? {
                   teamId: n.data?.teamId || n.config?.team_id || '',
                   prompt: n.data?.prompt || n.config?.task || n.config?.prompt || '',
+                }
+              : {}),
+            ...(n.type === 'subflow'
+              ? {
+                  subflowWorkflowId:
+                    n.data?.subflowWorkflowId || n.data?.workflowId || n.config?.workflow_id || '',
                 }
               : {}),
             ...(n.type === 'agent'
@@ -1855,6 +1880,8 @@ const handleNodeClick = (event: any) => {
   nodeConfig.loopCondition = event.node.data?.loopCondition || event.node.data?.condition || ''
   nodeConfig.codeLanguage = event.node.data?.codeLanguage || event.node.data?.language || 'expression'
   nodeConfig.codeSource = event.node.data?.codeSource || event.node.data?.code || ''
+  nodeConfig.subflowWorkflowId =
+    event.node.data?.subflowWorkflowId || event.node.data?.workflowId || event.node.data?.workflow_id || ''
   nodeConfig.variables = normalizeStartVars(
     event.node.data?.variables || event.node.config?.variables,
   ).map(v => ({ ...v }))
@@ -1953,6 +1980,13 @@ const saveNodeConfig = () => {
             codeSource: nodeConfig.codeSource,
             language: nodeConfig.codeLanguage || 'expression',
             code: nodeConfig.codeSource,
+          }
+        : {}),
+      ...(selectedNode.value.type === 'subflow'
+        ? {
+            subflowWorkflowId: nodeConfig.subflowWorkflowId,
+            workflowId: nodeConfig.subflowWorkflowId,
+            workflow_id: nodeConfig.subflowWorkflowId,
           }
         : {}),
       ...(selectedNode.value.type === 'start'
@@ -2604,6 +2638,11 @@ onMounted(() => {
       .filter(t => t.id)
       .map(t => ({ label: t.name || t.id, value: t.id }))
   })
+  listWorkflows().then((res) => {
+    workflowPickOptions.value = (res.data || [])
+      .filter(w => w.id)
+      .map(w => ({ label: w.name || w.id, value: w.id }))
+  })
   listAgents().then((res) => {
     agentOptions.value = (res.data || [])
       .filter(a => a.id)
@@ -2806,6 +2845,10 @@ onMounted(() => {
   color: #f59e0b;
 }
 
+.flow-node-subflow {
+  border-color: #0d9488;
+  background: color-mix(in oklab, #0d9488 12%, white);
+}
 .flow-node-search {
   border-color: #10b981;
   color: #10b981;
