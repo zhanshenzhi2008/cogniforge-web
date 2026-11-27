@@ -24,6 +24,16 @@
         <CfButton
           v-if="agentId"
           tone="secondary"
+          icon="i-lucide-history"
+          :tip="t('agents.studioVersions')"
+          @click="openVersions"
+        >
+          {{ t('agents.studioVersions') }}
+          <span v-if="currentVersion" class="studio-ver-badge">v{{ currentVersion }}</span>
+        </CfButton>
+        <CfButton
+          v-if="agentId"
+          tone="secondary"
           icon="i-lucide-scroll-text"
           :tip="t('agents.studioChatLogs')"
           @click="openChatLogs"
@@ -66,6 +76,37 @@
                 <span class="chat-logs__title">{{ item.title || t('play.newChat') }}</span>
                 <span class="chat-logs__time">{{ formatChatLogTime(item.updated_at) }}</span>
               </button>
+            </li>
+          </ul>
+        </div>
+      </template>
+    </USlideover>
+
+    <USlideover v-model:open="versionsOpen" :title="t('agents.studioVersionsTitle')" :ui="{ content: 'max-w-sm w-full' }">
+      <template #body>
+        <div class="chat-logs">
+          <p class="chat-logs__hint">{{ t('agents.studioVersionsHint') }}</p>
+          <CfLoadingState v-if="versionsLoading" />
+          <CfEmptyState
+            v-else-if="!versionList.length"
+            icon="i-lucide-history"
+            :message="t('agents.studioVersionsEmpty')"
+          />
+          <ul v-else class="chat-logs__list">
+            <li v-for="v in versionList" :key="v.id" class="version-row">
+              <div class="version-row__meta">
+                <strong>v{{ v.version }}</strong>
+                <span class="chat-logs__time">{{ formatChatLogTime(v.created_at) }}</span>
+                <span v-if="v.note" class="version-row__note">{{ v.note }}</span>
+              </div>
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-undo-2"
+                :loading="rollingBackVersion === v.version"
+                @click="confirmRollback(v.version)"
+              >
+                {{ t('agents.studioRollback') }}
+              </CfButton>
             </li>
           </ul>
         </div>
@@ -461,7 +502,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
+import type { Agent, AgentVersionSnap, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
 import type { ChatMessage } from '@/composables/useAgentChat'
 import type { ConversationSummary } from '@/composables/useConversations'
 import type { KnowledgeBase } from '@/composables/useKnowledgeBases'
@@ -511,7 +552,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const { t, d } = useLocale()
-const { create, update } = useAgents()
+const { create, update, listVersions, rollbackVersion } = useAgents()
 const { streamChat: streamAgentChat, streaming: agentStreaming, stopStream: stopAgentStream, error: agentChatError } = useAgentChat()
 const { streamChat: streamModelChat, streaming: buildStreaming, stopStream: stopBuildStream, error: buildChatError } = useChatStream()
 const { list: listMcpServers } = useMcpServers()
@@ -537,6 +578,11 @@ const studioUploadKBId = ref('')
 const chatLogsOpen = ref(false)
 const chatLogsLoading = ref(false)
 const chatLogs = ref<ConversationSummary[]>([])
+const versionsOpen = ref(false)
+const versionsLoading = ref(false)
+const versionList = ref<AgentVersionSnap[]>([])
+const rollingBackVersion = ref<number | null>(null)
+const currentVersion = ref<number | null>(null)
 const stageTipContent = {
   side: 'bottom' as const,
   align: 'start' as const,
@@ -834,6 +880,43 @@ function formatChatLogTime(iso: string) {
   return d(iso)
 }
 
+async function openVersions() {
+  if (!agentId.value) return
+  versionsOpen.value = true
+  versionsLoading.value = true
+  try {
+    const res = await listVersions(agentId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      versionList.value = []
+      return
+    }
+    versionList.value = res.data || []
+  } finally {
+    versionsLoading.value = false
+  }
+}
+
+async function confirmRollback(version: number) {
+  if (!agentId.value || rollingBackVersion.value != null) return
+  const ok = window.confirm(t('agents.studioRollbackConfirm', { v: version }))
+  if (!ok) return
+  rollingBackVersion.value = version
+  try {
+    const res = await rollbackVersion(agentId.value, version)
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('agents.studioRollbackFail'), color: 'error' })
+      return
+    }
+    fillFromAgent(res.data)
+    emit('saved', res.data)
+    toast.add({ title: t('agents.studioRollbackOk', { v: version }), color: 'success' })
+    versionsOpen.value = false
+  } finally {
+    rollingBackVersion.value = null
+  }
+}
+
 async function openChatLogs() {
   if (!agentId.value) return
   chatLogsOpen.value = true
@@ -884,6 +967,7 @@ function fillFromAgent(agent: Agent) {
   form.tools = [...(agent.tools || [])]
   form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
+  currentVersion.value = agent.version ?? null
   dirty.value = false
   errors.name = ''
   errors.model = ''
@@ -1044,7 +1128,7 @@ async function handleSave() {
         return
       }
       if (res.data) {
-        dirty.value = false
+        fillFromAgent(res.data)
         emit('saved', res.data)
         toast.add({ title: t('common.saveOk'), color: 'success' })
       }
@@ -1337,6 +1421,33 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+.studio-ver-badge {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.version-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.version-row__note {
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
 }
 
 .chat-logs {

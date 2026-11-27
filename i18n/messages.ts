@@ -427,6 +427,23 @@ export const M = {
     'en-US': 'When on, studio preview and Playground can upload docs for this agent.',
   },
   'agents.studioAttachOnly': { 'zh-CN': '（已附文档）', 'en-US': '(with attachments)' },
+  'agents.studioVersions': { 'zh-CN': '版本', 'en-US': 'Versions' },
+  'agents.studioVersionsTitle': { 'zh-CN': '配置版本历史', 'en-US': 'Config version history' },
+  'agents.studioVersionsHint': {
+    'zh-CN': '每次保存配置变更会留下快照；可回滚到历史版本（当前配置会先再存一版）。',
+    'en-US': 'Each config save creates a snapshot; rollback restores it (current config is snapshotted first).',
+  },
+  'agents.studioVersionsEmpty': {
+    'zh-CN': '还没有历史版本。修改并保存后再来看。',
+    'en-US': 'No history yet. Save a config change first.',
+  },
+  'agents.studioRollback': { 'zh-CN': '回滚', 'en-US': 'Rollback' },
+  'agents.studioRollbackConfirm': {
+    'zh-CN': '确认回滚到 v{v}？当前配置会先保存为新快照。',
+    'en-US': 'Rollback to v{v}? Current config will be snapshotted first.',
+  },
+  'agents.studioRollbackOk': { 'zh-CN': '已回滚到 v{v}', 'en-US': 'Rolled back to v{v}' },
+  'agents.studioRollbackFail': { 'zh-CN': '回滚失败', 'en-US': 'Rollback failed' },
   'agents.studioChatLogs': { 'zh-CN': '对话日志', 'en-US': 'Chat logs' },
   'agents.studioChatLogsHint': {
     'zh-CN': '只读查看该智能体在对话页的历史；点一条会打开对话页。',

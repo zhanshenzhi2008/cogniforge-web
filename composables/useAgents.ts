@@ -23,9 +23,19 @@ export interface Agent {
   input_filter: boolean
   output_filter: boolean
   status: 'active' | 'disabled'
+  version?: number
   metadata: Record<string, any>
   created_at: string
   updated_at: string
+}
+
+export interface AgentVersionSnap {
+  id: string
+  agent_id: string
+  version: number
+  config: string
+  note?: string
+  created_at: string
 }
 
 export interface CreateAgentInput {
@@ -112,11 +122,33 @@ export const useAgents = () => {
     }
   }
 
+  const listVersions = async (id: string): Promise<{ data?: AgentVersionSnap[]; error?: string }> => {
+    try {
+      const res = await api.get<AgentVersionSnap[]>(`/api/v1/agents/${id}/versions`)
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取版本失败' }
+    }
+  }
+
+  const rollbackVersion = async (id: string, version: number): Promise<{ data?: Agent; error?: string }> => {
+    try {
+      const res = await api.post<Agent>(`/api/v1/agents/${id}/versions/${version}/rollback`, {})
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '回滚失败' }
+    }
+  }
+
   return {
     list,
     get,
     create,
     update,
     remove,
+    listVersions,
+    rollbackVersion,
   }
 }
