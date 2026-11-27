@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('roles.title') }}</h1>
         <p class="cf-page-sub">{{ t('roles.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-shield-plus" @click="openCreateModal">
-        {{ t('roles.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-roles-view" />
+        <CfButton tone="primary" icon="i-lucide-shield-plus" @click="openCreateModal">
+          {{ t('roles.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -15,11 +18,60 @@
       <span class="list-hint">{{ t('common.hintDblclickEdit') }}</span>
     </div>
 
-    <div class="cf-panel">
-      <CfLoadingState v-if="loading" />
-      <CfEmptyState v-else-if="pagedRoles.length === 0" icon="i-lucide-shield" :message="t('roles.empty')" />
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState v-else-if="pagedRoles.length === 0" icon="i-lucide-shield" :message="t('roles.empty')" />
 
-      <div v-else class="cf-table-wrap">
+    <div v-else-if="viewMode === 'card'" class="role-grid">
+      <CfResourceCard
+        v-for="row in pagedRoles"
+        :key="row.id"
+        icon="i-lucide-shield"
+        :title="row.name"
+        :description="row.description || t('common.noDesc')"
+        :meta="roleCardMeta(row)"
+        @click="handleEdit(row)"
+      >
+        <template #sub>
+          <code class="role-code">{{ row.code }}</code>
+        </template>
+        <template #badges>
+          <UBadge
+            v-if="row.is_system"
+            size="sm"
+            variant="subtle"
+            color="error"
+          >
+            {{ t('roles.system') }}
+          </UBadge>
+          <UBadge
+            v-if="row.is_default"
+            size="sm"
+            variant="subtle"
+            color="success"
+          >
+            {{ t('roles.default') }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(row)"
+          />
+          <CfButton
+            v-if="!row.is_system"
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(row.id)"
+          />
+        </template>
+      </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
@@ -86,26 +138,26 @@
           </tbody>
         </table>
       </div>
+    </div>
 
-      <div v-if="roles.length > pageSize" class="pager">
-        <CfButton
-          tone="secondary"
-          icon="i-lucide-chevron-left"
-          :disabled="page <= 1"
-          @click="page--"
-        >
-          {{ t('common.prev') }}
-        </CfButton>
-        <span class="pager-page">{{ page }} / {{ roleTotalPages }}</span>
-        <CfButton
-          tone="secondary"
-          icon="i-lucide-chevron-right"
-          :disabled="page >= roleTotalPages"
-          @click="page++"
-        >
-          {{ t('common.next') }}
-        </CfButton>
-      </div>
+    <div v-if="!loading && roles.length > pageSize" class="pager">
+      <CfButton
+        tone="secondary"
+        icon="i-lucide-chevron-left"
+        :disabled="page <= 1"
+        @click="page--"
+      >
+        {{ t('common.prev') }}
+      </CfButton>
+      <span class="pager-page">{{ page }} / {{ roleTotalPages }}</span>
+      <CfButton
+        tone="secondary"
+        icon="i-lucide-chevron-right"
+        :disabled="page >= roleTotalPages"
+        @click="page++"
+      >
+        {{ t('common.next') }}
+      </CfButton>
     </div>
 
     <CfModal
@@ -217,6 +269,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
+
 definePageMeta({
   layout: 'default',
   requiresAuth: true,
@@ -227,6 +281,7 @@ const { t, d } = useLocale()
 const { showSecurityLevel } = useSecurityFeatures()
 
 const loading = ref(false)
+const viewMode = ref<ViewMode>('card')
 const submitting = ref(false)
 const deletingLoading = ref(false)
 const roles = ref<any[]>([])
@@ -264,6 +319,21 @@ function clearanceLabel(level?: string) {
   const key = `kb.security.${lv}`
   const translated = t(key)
   return translated === key ? lv : translated
+}
+
+function roleCardMeta(row: {
+  created_at?: string
+  permissions?: unknown[]
+  max_security_level?: string
+}) {
+  const parts = [
+    t('roles.permCount') + ': ' + (row.permissions?.length || 0),
+    d(row.created_at),
+  ]
+  if (showSecurityLevel.value) {
+    parts.push(clearanceLabel(row.max_security_level))
+  }
+  return parts.filter(Boolean).join(' · ')
 }
 
 const errors = reactive({
@@ -450,6 +520,19 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .name {
   font-weight: 600;
   color: var(--cf-ink);
@@ -482,7 +565,7 @@ onMounted(async () => {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 12px 0;
 }
 
 .pager-page {
