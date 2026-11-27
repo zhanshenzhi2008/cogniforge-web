@@ -23,6 +23,16 @@
       <UBadge v-else-if="isSmokeTest" size="sm" variant="subtle" color="warning">
         {{ t('editor.routeTest') }}
       </UBadge>
+      <button
+        v-if="unboundBindCount > 0"
+        type="button"
+        class="unbound-chip"
+        :title="t('editor.unboundChipTip')"
+        @click="focusFirstUnboundNode"
+      >
+        <UIcon name="i-lucide-triangle-alert" class="size-3.5" />
+        <span>{{ t('editor.unboundChip', { n: unboundBindCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -2130,6 +2140,21 @@ function findUnboundBindNodes(): { id: string, label: string, kind: string }[] {
   return out
 }
 
+const unboundBindCount = computed(() => findUnboundBindNodes().length)
+
+/** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
+function focusFirstUnboundNode() {
+  const unbound = findUnboundBindNodes()
+  if (!unbound.length) return
+  const first = unbound[0]!
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
 /** 未配置必填绑定时提示并打开首个节点；通过返回 true */
 function ensureBindConfigured(): boolean {
   const unbound = findUnboundBindNodes()
@@ -2143,12 +2168,7 @@ function ensureBindConfigured(): boolean {
       : undefined,
     color: 'warning',
   })
-  const node = nodes.value.find(n => n.id === first.id)
-  if (node) {
-    selectedNode.value = node
-    configDrawer.value = true
-    handleNodeClick({ node })
-  }
+  focusFirstUnboundNode()
   return false
 }
 
@@ -2859,6 +2879,26 @@ onMounted(() => {
   flex: 1;
   font-size: 16px;
   color: var(--cf-ink, inherit);
+}
+
+.unbound-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px dashed #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.unbound-chip:hover {
+  background: #fef3c7;
 }
 
 .exec-bar {
