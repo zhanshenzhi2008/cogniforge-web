@@ -1007,6 +1007,12 @@
             </CfButton>
           </div>
 
+          <div v-if="liveStreamProgress" class="debug-section debug-stream">
+            <div class="debug-section-title">{{ t('editor.debugStreamLive') }}</div>
+            <p class="debug-hint debug-hint--compact">{{ t('editor.debugStreamLiveHint') }}</p>
+            <pre class="debug-stream__text">{{ liveStreamProgress }}</pre>
+          </div>
+
           <div class="debug-timeline">
             <div class="debug-section-title">{{ t('editor.debugTimeline') }}</div>
             <p class="debug-hint debug-hint--compact">{{ t('editor.debugTimelineHint') }}</p>
@@ -2363,15 +2369,24 @@ const stopPolling = () => {
   isPolling.value = false
 }
 
-/** 按 node_runs / current_node 给画布节点上色（阶段十八 W1） */
+/** 按 node_runs / current_node 给画布节点上色；running 时刷 streamProgress（阶段十八 W1 + 流式 UI） */
 const applyNodeRunHighlight = (exec: {
   current_node?: string
-  node_runs?: { node_id: string; status: string; node_type?: string }[]
+  node_runs?: {
+    node_id: string
+    status: string
+    node_type?: string
+    detail?: { progress?: string }
+  }[]
 }) => {
   const byId = new Map<string, string>()
+  const progressById = new Map<string, string>()
   for (const r of exec.node_runs || []) {
     if (r.node_type === 'human_action') continue
     byId.set(r.node_id, r.status)
+    if (r.status === 'running' && r.detail?.progress) {
+      progressById.set(r.node_id, String(r.detail.progress))
+    }
   }
   if (exec.current_node && !byId.has(exec.current_node)) {
     byId.set(exec.current_node, 'running')
@@ -2384,7 +2399,12 @@ const applyNodeRunHighlight = (exec: {
     else if (st === 'failed') base.push('run-failed')
     else if (st === 'skipped') base.push('run-skipped')
     else if (st === 'waiting') base.push('run-waiting')
-    return { ...n, class: base.filter(Boolean).join(' ') }
+    const streamProgress = progressById.get(n.id) || undefined
+    return {
+      ...n,
+      class: base.filter(Boolean).join(' '),
+      data: { ...(n.data || {}), streamProgress },
+    }
   })
 }
 
@@ -2535,6 +2555,17 @@ const olderHistoryItems = computed(() => {
 
 const execInputPreview = computed(() => inputPreviewFrom(currentExecution.value || {}))
 
+/** 调试侧栏：当前 running 节点的流式进度文案 */
+const liveStreamProgress = computed(() => {
+  const ex = currentExecution.value
+  if (!ex || !['running', 'debugging', 'pending'].includes(ex.status || '')) return ''
+  const runs = (ex.node_runs || []) as { status?: string; detail?: { progress?: string } }[]
+  for (const r of runs) {
+    if (r.status === 'running' && r.detail?.progress) return String(r.detail.progress)
+  }
+  return ''
+})
+
 /** 这一次试跑的步骤时间线（审批挂在 wait 步骤说明里） */
 const execTimeline = computed(() => {
   const ex = currentExecution.value
@@ -2561,6 +2592,7 @@ const execTimeline = computed(() => {
       wait_reason?: string
       at?: string
       note?: string
+      progress?: string
     }
     created_at?: string
   }[]
@@ -2599,7 +2631,9 @@ const execTimeline = computed(() => {
     const label = nodeDisplayName(r.node_id) || r.node_id
     let note = ''
     if (r.error) note = truncateText(r.error, 80)
-    else if (nodeType === 'wait' || r.status === 'waiting') {
+    else if (r.status === 'running' && r.detail?.progress) {
+      note = truncateText(String(r.detail.progress), 120)
+    } else if (nodeType === 'wait' || r.status === 'waiting') {
       if (ex.status === 'waiting' && ex.current_node === r.node_id) {
         note = t('editor.debugTimelineWaiting')
       } else if (r.status === 'succeeded' || r.status === 'completed') {
@@ -3254,7 +3288,8 @@ onMounted(() => {
 .debug-output {
   margin-top: 8px;
 }
-.debug-output pre {
+.debug-output pre,
+.debug-stream__text {
   margin: 4px 0 0;
   padding: 8px 10px;
   max-height: 160px;
@@ -3266,6 +3301,11 @@ onMounted(() => {
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
+}
+.debug-stream__text {
+  max-height: 96px;
+  color: #4338ca;
+  border-color: color-mix(in oklab, #6366f1 35%, var(--cf-line, #e2e8f0));
 }
 
 .debug-log-item {

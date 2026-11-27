@@ -11,7 +11,10 @@
     />
 
     <UIcon :name="meta.icon" class="flow-node__icon size-4" />
-    <span class="flow-node__label">{{ label }}</span>
+    <div class="flow-node__text">
+      <span class="flow-node__label">{{ label }}</span>
+      <span v-if="hint" class="flow-node__hint" :title="hint">{{ hint }}</span>
+    </div>
 
     <!-- 条件：上下两个出口（真/假），鼠标从线头拖出 -->
     <template v-if="meta.handles === 'branch'">
@@ -53,6 +56,8 @@ import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 const props = defineProps<{
   kind: string
   label?: string
+  /** 调试流式进度等短提示 */
+  hint?: string
 }>()
 
 const { t } = useLocale()
@@ -81,8 +86,25 @@ const falseLabel = computed(() => t('editor.branchFalse'))
   opacity: 0.9;
 }
 
+.flow-node__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .flow-node__label {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-node__hint {
+  max-width: 160px;
+  font-size: 10px;
+  line-height: 1.25;
+  color: #4f46e5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

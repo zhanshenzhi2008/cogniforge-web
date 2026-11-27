@@ -26,46 +26,46 @@
     <MiniMap />
 
     <template #node-start="{ data }">
-      <WorkflowFlowNode kind="start" :label="data.label" />
+      <WorkflowFlowNode kind="start" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-end="{ data }">
-      <WorkflowFlowNode kind="end" :label="data.label" />
+      <WorkflowFlowNode kind="end" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-llm="{ data }">
-      <WorkflowFlowNode kind="llm" :label="data.label" />
+      <WorkflowFlowNode kind="llm" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-agent="{ data }">
-      <WorkflowFlowNode kind="agent" :label="data.label" />
+      <WorkflowFlowNode kind="agent" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-team="{ data }">
-      <WorkflowFlowNode kind="team" :label="data.label" />
+      <WorkflowFlowNode kind="team" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-condition="{ data }">
-      <WorkflowFlowNode kind="condition" :label="data.label" />
+      <WorkflowFlowNode kind="condition" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-loop="{ data }">
-      <WorkflowFlowNode kind="loop" :label="data.label" />
+      <WorkflowFlowNode kind="loop" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-http="{ data }">
-      <WorkflowFlowNode kind="http" :label="data.label" />
+      <WorkflowFlowNode kind="http" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-code="{ data }">
-      <WorkflowFlowNode kind="code" :label="data.label" />
+      <WorkflowFlowNode kind="code" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-delay="{ data }">
-      <WorkflowFlowNode kind="delay" :label="data.label" />
+      <WorkflowFlowNode kind="delay" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-wait="{ data }">
-      <WorkflowFlowNode kind="wait" :label="data.label" />
+      <WorkflowFlowNode kind="wait" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-search="{ data }">
-      <WorkflowFlowNode kind="search" :label="data.label" />
+      <WorkflowFlowNode kind="search" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-input="{ data }">
-      <WorkflowFlowNode kind="input" :label="data.label" />
+      <WorkflowFlowNode kind="input" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-output="{ data }">
-      <WorkflowFlowNode kind="output" :label="data.label" />
+      <WorkflowFlowNode kind="output" :label="data.label" :hint="data.streamProgress" />
     </template>
   </VueFlow>
 </template>

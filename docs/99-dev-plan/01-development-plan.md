@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.123 | 调试流式进度：画布 hint + 侧栏 Live stream | orjrs |
 | 2026-11-27 | v1.122 | 同步抬密鉴权说明（主仓 API v1.88） | orjrs |
 | 2026-11-27 | v1.121 | LLM 节点可开关流式生成 | orjrs |
 | 2026-11-27 | v1.120 | 用户管理可覆盖个人密级上限 | orjrs |
@@ -126,6 +127,13 @@
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
 
+## [变更] 调试流式进度 UI（2026-11-27）
+
+- **原因**：开了流式后要在编辑器里看见进度
+- **落地**：轮询 `node_runs.detail.progress` → 画布节点 hint + 侧栏「流式进度」+ 时间线 note
+- **主仓**：API v1.89 / `patchNodeRunProgress`
+- **含代码**：`WorkflowFlowNode`、`WorkflowCanvas`、`pages/workflows/[id].vue`
+
 ## [变更] 抬密鉴权同步（2026-11-27）
 
 - **原因**：主仓限制抬机密/绝密；前端沿用 lifecycle 错误提示
@@ -138,6 +146,7 @@
 - **落地**：LLM 配置「流式生成」开关 → `stream`
 - **含代码**：`pages/workflows/[id].vue`、i18n
 - **主仓**：`ChatCollectStream`（API v1.87）
+- **后续**：~~画布刷进度~~（2026-11-27 已跟，见 v1.123）
 
 ## [变更] 用户密级覆盖（2026-11-27）
 

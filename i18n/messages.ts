@@ -862,8 +862,13 @@ export const M = {
   'editor.userPromptPh': { 'zh-CN': '可选；不填则自动用流程输入和上游输出', 'en-US': 'Optional; defaults to flow input and upstream outputs' },
   'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
   'editor.llmStreamHint': {
-    'zh-CN': '从模型边收边汇总；调试日志会打进度。画布上暂不逐字刷 UI。',
-    'en-US': 'Collects tokens as they arrive; debug logs show progress. Canvas does not paint tokens live yet.',
+    'zh-CN': '从模型边收边汇总；调试时画布节点与侧栏会刷进度预览。',
+    'en-US': 'Collects tokens as they arrive; debug canvas and sidebar show a live progress preview.',
+  },
+  'editor.debugStreamLive': { 'zh-CN': '流式进度', 'en-US': 'Live stream' },
+  'editor.debugStreamLiveHint': {
+    'zh-CN': '当前节点边生成边刷新（约每秒）；完整正文在节点结束后见输出。',
+    'en-US': 'Refreshes about once a second while the node streams; full text appears in output when done.',
   },
   'editor.conditionPh': { 'zh-CN': '备注（可选）…', 'en-US': 'Notes (optional)…' },
   'editor.conditionField': { 'zh-CN': '判断字段', 'en-US': 'Field' },
