@@ -1176,6 +1176,18 @@ export const M = {
     'zh-CN': '从模型边收边汇总；调试时画布节点与侧栏会刷进度预览。',
     'en-US': 'Collects tokens as they arrive; debug canvas and sidebar show a live progress preview.',
   },
+  'editor.llmTemperature': { 'zh-CN': '温度', 'en-US': 'Temperature' },
+  'editor.llmTemperaturePh': { 'zh-CN': '0 = 跟模型默认', 'en-US': '0 = model default' },
+  'editor.llmTemperatureHint': {
+    'zh-CN': '大于 0 时覆盖本次调用；常见 0.2–1.0',
+    'en-US': 'When > 0, overrides this call; typical 0.2–1.0',
+  },
+  'editor.llmMaxTokens': { 'zh-CN': '最大生成长度', 'en-US': 'Max tokens' },
+  'editor.llmMaxTokensPh': { 'zh-CN': '0 = 跟模型默认', 'en-US': '0 = model default' },
+  'editor.llmMaxTokensHint': {
+    'zh-CN': '大于 0 时限制本次回复长度（tokens）',
+    'en-US': 'When > 0, caps completion length for this call',
+  },
   'editor.debugStreamLive': { 'zh-CN': '流式进度', 'en-US': 'Live stream' },
   'editor.debugStreamLiveHint': {
     'zh-CN': '当前节点边生成边刷新（约每秒）；完整正文在节点结束后见输出。',

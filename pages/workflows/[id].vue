@@ -520,6 +520,32 @@
             <USwitch v-model="nodeConfig.llmStream" size="sm" />
           </div>
 
+          <div v-if="selectedNode.type === 'llm'" class="field">
+            <label class="field__label">{{ t('editor.llmTemperature') }}</label>
+            <UInput
+              v-model.number="nodeConfig.llmTemperature"
+              type="number"
+              step="0.1"
+              min="0"
+              max="2"
+              class="w-full"
+              :placeholder="t('editor.llmTemperaturePh')"
+            />
+            <p class="field__hint">{{ t('editor.llmTemperatureHint') }}</p>
+          </div>
+
+          <div v-if="selectedNode.type === 'llm'" class="field">
+            <label class="field__label">{{ t('editor.llmMaxTokens') }}</label>
+            <UInput
+              v-model.number="nodeConfig.llmMaxTokens"
+              type="number"
+              min="0"
+              class="w-full"
+              :placeholder="t('editor.llmMaxTokensPh')"
+            />
+            <p class="field__hint">{{ t('editor.llmMaxTokensHint') }}</p>
+          </div>
+
           <div v-if="selectedNode.type === 'agent'" class="field">
             <label class="field__label">{{ t('editor.agentPick') }}</label>
             <USelect
@@ -1661,6 +1687,8 @@ const nodeConfig = reactive({
   systemPrompt: '',
   prompt: '',
   llmStream: false,
+  llmTemperature: 0,
+  llmMaxTokens: 0,
   teamId: '',
   agentId: '',
   knowledgeBaseId: '',
@@ -2165,6 +2193,30 @@ const loadWorkflow = async () => {
                   prompt: n.data?.prompt || n.config?.prompt || '',
                 }
               : {}),
+            ...(n.type === 'llm'
+              ? {
+                  model: n.data?.model || n.config?.model || '',
+                  systemPrompt: n.data?.systemPrompt || n.config?.system_prompt || '',
+                  prompt: n.data?.prompt || n.config?.prompt || '',
+                  llmStream: !!(n.data?.llmStream ?? n.data?.stream ?? n.config?.stream),
+                  stream: !!(n.data?.llmStream ?? n.data?.stream ?? n.config?.stream),
+                  temperature: Number(
+                    n.data?.temperature ?? n.data?.llmTemperature ?? n.config?.temperature ?? 0,
+                  ) || undefined,
+                  llmTemperature: Number(
+                    n.data?.llmTemperature ?? n.data?.temperature ?? n.config?.temperature ?? 0,
+                  ) || undefined,
+                  maxTokens: Number(
+                    n.data?.maxTokens ?? n.data?.llmMaxTokens ?? n.data?.max_tokens ?? n.config?.max_tokens ?? 0,
+                  ) || undefined,
+                  llmMaxTokens: Number(
+                    n.data?.llmMaxTokens ?? n.data?.maxTokens ?? n.data?.max_tokens ?? n.config?.max_tokens ?? 0,
+                  ) || undefined,
+                  max_tokens: Number(
+                    n.data?.max_tokens ?? n.data?.maxTokens ?? n.data?.llmMaxTokens ?? n.config?.max_tokens ?? 0,
+                  ) || undefined,
+                }
+              : {}),
             ...(n.type === 'search'
               ? {
                   knowledgeBaseId: n.data?.knowledgeBaseId || n.config?.knowledge_base_id || '',
@@ -2397,7 +2449,12 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const name = modelOptions.value.find(o => o.value === id)?.label || id
     if (!name) return ''
     const stream = !!(d.llmStream ?? d.stream)
-    return stream ? `${name} · ${t('editor.llmStreamShort')}` : name
+    let base = stream ? `${name} · ${t('editor.llmStreamShort')}` : name
+    const temp = Number(d.temperature ?? d.llmTemperature ?? 0)
+    const maxTok = Number(d.maxTokens ?? d.max_tokens ?? d.llmMaxTokens ?? 0)
+    if (temp > 0) base = `${base} · t=${temp}`
+    if (maxTok > 0) base = `${base} · max${maxTok}`
+    return base
   }
   if (kind === 'http') {
     const method = String(d.method || d.httpMethod || 'GET').trim().toUpperCase() || 'GET'
@@ -2610,6 +2667,12 @@ const handleNodeClick = (event: any) => {
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
   nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
   nodeConfig.llmStream = !!(event.node.data?.llmStream ?? event.node.data?.stream)
+  nodeConfig.llmTemperature = Number(
+    event.node.data?.llmTemperature ?? event.node.data?.temperature ?? 0,
+  ) || 0
+  nodeConfig.llmMaxTokens = Number(
+    event.node.data?.llmMaxTokens ?? event.node.data?.maxTokens ?? event.node.data?.max_tokens ?? 0,
+  ) || 0
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
   if (event.node?.type === 'llm') {
@@ -2706,6 +2769,11 @@ const saveNodeConfig = () => {
       model: nodeConfig.model,
       llmStream: !!nodeConfig.llmStream,
       stream: !!nodeConfig.llmStream,
+      llmTemperature: Number(nodeConfig.llmTemperature) > 0 ? Number(nodeConfig.llmTemperature) : 0,
+      temperature: Number(nodeConfig.llmTemperature) > 0 ? Number(nodeConfig.llmTemperature) : 0,
+      llmMaxTokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
+      maxTokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
+      max_tokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
       topK: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
       top_k: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
       searchMode: nodeConfig.searchMode || '',
@@ -2774,6 +2842,23 @@ const saveNodeConfig = () => {
       prompt: nodeConfig.prompt,
       llmStream: !!nodeConfig.llmStream,
       stream: !!nodeConfig.llmStream,
+      ...(selectedNode.value.type === 'llm'
+        ? (() => {
+            const temperature = Number(nodeConfig.llmTemperature) > 0
+              ? Number(nodeConfig.llmTemperature)
+              : undefined
+            const maxTokens = Number(nodeConfig.llmMaxTokens) > 0
+              ? Number(nodeConfig.llmMaxTokens)
+              : undefined
+            return {
+              llmTemperature: temperature,
+              temperature,
+              llmMaxTokens: maxTokens,
+              maxTokens,
+              max_tokens: maxTokens,
+            }
+          })()
+        : {}),
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
