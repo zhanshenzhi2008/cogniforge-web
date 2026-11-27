@@ -1273,6 +1273,8 @@ export const M = {
   'editor.startVarsNone': { 'zh-CN': '无入参', 'en-US': 'No inputs' },
   'editor.ioVarNone': { 'zh-CN': '未设变量', 'en-US': 'No variable' },
   'editor.ioVarCaption': { 'zh-CN': '变量 {{v}}', 'en-US': 'var {{v}}' },
+  'editor.endCaption': { 'zh-CN': '流程结束', 'en-US': 'Finish' },
+  'editor.needEndNode': { 'zh-CN': '请先添加结束节点', 'en-US': 'Add an End node first' },
   'editor.startVarsCaption': {
     'zh-CN': '{shown} 等 {n} 个',
     'en-US': '{shown} +{more}',
@@ -1352,6 +1354,8 @@ export const M = {
   'editor.bindKind.search': { 'zh-CN': '知识库', 'en-US': 'knowledge base' },
   'editor.bindKind.subflow': { 'zh-CN': '子工作流', 'en-US': 'nested workflow' },
   'editor.bindKind.loop': { 'zh-CN': '遍历数组', 'en-US': 'array to iterate' },
+  'editor.bindKind.input': { 'zh-CN': '变量名', 'en-US': 'variable' },
+  'editor.bindKind.output': { 'zh-CN': '变量名', 'en-US': 'variable' },
   'editor.nodeUnboundHint': { 'zh-CN': '尚未绑定，点开右侧配置', 'en-US': 'Not bound — open the side panel' },
   'editor.unboundChip': { 'zh-CN': '{n} 个未绑定', 'en-US': '{n} unbound' },
   'editor.unboundChipTip': { 'zh-CN': '点击打开第一个未配置节点', 'en-US': 'Click to open the first unbound node' },

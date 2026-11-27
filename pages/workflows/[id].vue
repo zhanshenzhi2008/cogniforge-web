@@ -2667,6 +2667,7 @@ const handleExecute = async () => {
     return
   }
   if (!ensureBindConfigured()) return
+  if (!ensureHasEndNode()) return
 
   executing.value = true
   try {
@@ -2832,6 +2833,7 @@ const startDebug = async (startFromNode?: string) => {
     return
   }
   if (!ensureBindConfigured()) return
+  if (!ensureHasEndNode()) return
 
   isDebugging.value = true
   executionLogs.value = []
