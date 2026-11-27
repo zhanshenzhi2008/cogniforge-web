@@ -46,7 +46,7 @@
         kind="llm"
         :label="data.label"
         :hint="bindNodeHint('llm', data)"
-        :unbound="isWorkflowBindUnbound('llm', data)"
+        :unbound="isWorkflowBindUnbound('llm', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -56,7 +56,7 @@
         kind="agent"
         :label="data.label"
         :hint="bindNodeHint('agent', data)"
-        :unbound="isWorkflowBindUnbound('agent', data)"
+        :unbound="isWorkflowBindUnbound('agent', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -66,7 +66,7 @@
         kind="team"
         :label="data.label"
         :hint="bindNodeHint('team', data)"
-        :unbound="isWorkflowBindUnbound('team', data)"
+        :unbound="isWorkflowBindUnbound('team', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -76,7 +76,7 @@
         kind="condition"
         :label="data.label"
         :hint="bindNodeHint('condition', data)"
-        :unbound="isWorkflowBindUnbound('condition', data)"
+        :unbound="isWorkflowBindUnbound('condition', data, bindOpts)"
         :orphan="isOrphan(id)"
         :branch-gap="isBranchGap(id)"
       />
@@ -86,7 +86,7 @@
         kind="loop"
         :label="data.label"
         :hint="bindNodeHint('loop', data)"
-        :unbound="isWorkflowBindUnbound('loop', data)"
+        :unbound="isWorkflowBindUnbound('loop', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -96,7 +96,7 @@
         kind="http"
         :label="data.label"
         :hint="bindNodeHint('http', data)"
-        :unbound="isWorkflowBindUnbound('http', data)"
+        :unbound="isWorkflowBindUnbound('http', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -106,7 +106,7 @@
         kind="code"
         :label="data.label"
         :hint="bindNodeHint('code', data)"
-        :unbound="isWorkflowBindUnbound('code', data)"
+        :unbound="isWorkflowBindUnbound('code', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -134,7 +134,7 @@
         kind="search"
         :label="data.label"
         :hint="bindNodeHint('search', data)"
-        :unbound="isWorkflowBindUnbound('search', data)"
+        :unbound="isWorkflowBindUnbound('search', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -144,7 +144,7 @@
         kind="subflow"
         :label="data.label"
         :hint="bindNodeHint('subflow', data)"
-        :unbound="isWorkflowBindUnbound('subflow', data)"
+        :unbound="isWorkflowBindUnbound('subflow', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -154,7 +154,7 @@
         kind="input"
         :label="data.label"
         :hint="bindNodeHint('input', data)"
-        :unbound="isWorkflowBindUnbound('input', data)"
+        :unbound="isWorkflowBindUnbound('input', data, bindOpts)"
         :orphan="isOrphan(id)"
         :dead-end="isDeadEnd(id)"
       />
@@ -164,7 +164,7 @@
         kind="output"
         :label="data.label"
         :hint="bindNodeHint('output', data)"
-        :unbound="isWorkflowBindUnbound('output', data)"
+        :unbound="isWorkflowBindUnbound('output', data, bindOpts)"
         :orphan="isOrphan(id)"
       />
     </template>
@@ -198,7 +198,11 @@ import {
 const props = defineProps<{
   nodes: any[]
   edges: any[]
+  /** 当前工作流 ID：子流程不得指向自身 */
+  currentWorkflowId?: string
 }>()
+
+const bindOpts = computed(() => ({ currentWorkflowId: props.currentWorkflowId }))
 
 const reachableIds = computed(() => reachableFromStart(props.nodes || [], props.edges || []))
 const hasStartNode = computed(() => (props.nodes || []).some(n => String(n?.type || '') === 'start'))
@@ -226,7 +230,7 @@ function isBranchGap(id: string) {
 function bindNodeHint(kind: string, data: Record<string, unknown> | null | undefined) {
   const stream = String(data?.streamProgress || '').trim()
   if (stream) return stream
-  if (isWorkflowBindUnbound(kind, data)) return undefined
+  if (isWorkflowBindUnbound(kind, data, bindOpts.value)) return undefined
   const caption = String(data?.bindCaption || '').trim()
   return caption || undefined
 }

@@ -232,6 +232,7 @@
             ref="flowCanvasRef"
             :nodes="nodes"
             :edges="edges"
+            :current-workflow-id="workflowId"
             @node-click="handleNodeClick"
             @pane-click="handlePaneClick"
             @connect="handleConnect"
@@ -582,6 +583,9 @@
               <p v-if="!subflowWorkflowOptions.length" class="field__hint">
                 {{ t('editor.subflowPickEmptyHint') }}
                 <NuxtLink to="/workflows" class="field__link" target="_blank">{{ t('editor.subflowGoCreate') }}</NuxtLink>
+              </p>
+              <p v-else-if="isSubflowSelfReference({ subflowWorkflowId: nodeConfig.subflowWorkflowId }, workflowId)" class="field__hint field__hint--warn">
+                {{ t('editor.subflowSelfHint') }}
               </p>
               <p v-else class="field__hint">{{ t('editor.subflowHint') }}</p>
             </div>
@@ -1312,7 +1316,7 @@ import {
   listStaleActiveExecutionIds,
 } from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
-import { isWorkflowBindUnbound } from '@/utils/workflowBind'
+import { isSubflowSelfReference, isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
   findConditionsMissingBranches,
   findDeadEndNodes,
@@ -2361,6 +2365,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     return parts.join(' · ')
   }
   if (kind === 'subflow') {
+    if (isSubflowSelfReference(d, workflowId.value)) return t('editor.subflowSelfCaption')
     const id = String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
     return workflowPickOptions.value.find(o => o.value === id)?.label || ''
   }
@@ -2788,15 +2793,17 @@ const handleDeleteNode = () => {
   toast.add({ title: t('editor.nodeDeleted'), color: 'success' })
 }
 
-function findUnboundBindNodes(): { id: string, label: string, kind: string }[] {
-  const out: { id: string, label: string, kind: string }[] = []
+function findUnboundBindNodes(): { id: string, label: string, kind: string, selfSubflow?: boolean }[] {
+  const out: { id: string, label: string, kind: string, selfSubflow?: boolean }[] = []
+  const bindOpts = { currentWorkflowId: workflowId.value }
   for (const n of nodes.value) {
     const kind = String(n.type || '')
-    if (!isWorkflowBindUnbound(kind, n.data)) continue
+    if (!isWorkflowBindUnbound(kind, n.data, bindOpts)) continue
     out.push({
       id: n.id,
       label: String(n.data?.label || getNodeLabel(kind)),
       kind,
+      selfSubflow: kind === 'subflow' && isSubflowSelfReference(n.data, workflowId.value),
     })
   }
   return out
@@ -3066,7 +3073,9 @@ function ensureBindConfigured(): boolean {
   const first = unbound[0]!
   const kindLabel = t(`editor.bindKind.${first.kind}` as any)
   toast.add({
-    title: t('editor.bindRequired', { name: first.label, kind: kindLabel }),
+    title: first.selfSubflow
+      ? t('editor.subflowSelfRequired', { name: first.label })
+      : t('editor.bindRequired', { name: first.label, kind: kindLabel }),
     description: unbound.length > 1
       ? t('editor.bindRequiredMore', { n: unbound.length - 1 })
       : undefined,
@@ -4427,6 +4436,9 @@ onMounted(() => {
   gap: 12px;
 }
 
+.field__hint--warn {
+  color: #b45309;
+}
 .field__hint {
   margin: 0;
   font-size: 11px;

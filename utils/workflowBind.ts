@@ -13,8 +13,34 @@ export const WORKFLOW_BIND_KINDS = [
 ] as const
 export type WorkflowBindKind = (typeof WORKFLOW_BIND_KINDS)[number]
 
+/** 子流程目标工作流 ID */
+export function subflowTargetId(data?: Record<string, unknown> | null): string {
+  const d = data || {}
+  return String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
+}
+
+/** 子流程是否指向当前工作流（会无限嵌套） */
+export function isSubflowSelfReference(
+  data: Record<string, unknown> | null | undefined,
+  currentWorkflowId?: string | null,
+): boolean {
+  const cur = String(currentWorkflowId || '').trim()
+  if (!cur) return false
+  const target = subflowTargetId(data)
+  return !!target && target === cur
+}
+
+export type WorkflowBindOpts = {
+  /** 当前编辑的工作流 ID；用于判定子流程是否自嵌套 */
+  currentWorkflowId?: string | null
+}
+
 /** 画布 / 保存 / 执行共用：节点是否尚未绑定必填资源 */
-export function isWorkflowBindUnbound(kind: string, data?: Record<string, unknown> | null): boolean {
+export function isWorkflowBindUnbound(
+  kind: string,
+  data?: Record<string, unknown> | null,
+  opts?: WorkflowBindOpts,
+): boolean {
   const d = data || {}
   if (kind === 'llm') return !String(d.model || '').trim()
   if (kind === 'http') return !String(d.url || d.httpUrl || '').trim()
@@ -30,7 +56,11 @@ export function isWorkflowBindUnbound(kind: string, data?: Record<string, unknow
   if (kind === 'agent') return !String(d.agentId || '').trim()
   if (kind === 'search') return !String(d.knowledgeBaseId || '').trim()
   if (kind === 'subflow') {
-    return !String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
+    const id = subflowTargetId(d)
+    if (!id) return true
+    // 旧图/导入可能仍指向自身；与引擎 RunNested 拒绝一致
+    if (isSubflowSelfReference(d, opts?.currentWorkflowId)) return true
+    return false
   }
   if (kind === 'input' || kind === 'output') {
     return !String(d.variable || '').trim()

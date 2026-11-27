@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { isWorkflowBindUnbound, WORKFLOW_BIND_KINDS } from './workflowBind'
+import {
+  isSubflowSelfReference,
+  isWorkflowBindUnbound,
+  subflowTargetId,
+  WORKFLOW_BIND_KINDS,
+} from './workflowBind'
 
 describe('isWorkflowBindUnbound', () => {
   it('covers all bind kinds', () => {
@@ -35,6 +40,15 @@ describe('isWorkflowBindUnbound', () => {
     expect(isWorkflowBindUnbound('search', { knowledgeBaseId: 'kb1' })).toBe(false)
     expect(isWorkflowBindUnbound('subflow', {})).toBe(true)
     expect(isWorkflowBindUnbound('subflow', { workflow_id: 'w1' })).toBe(false)
+    expect(isWorkflowBindUnbound('subflow', { workflow_id: 'w1' }, { currentWorkflowId: 'w1' })).toBe(true)
+    expect(isWorkflowBindUnbound('subflow', { subflowWorkflowId: 'w2' }, { currentWorkflowId: 'w1' })).toBe(false)
+  })
+
+  it('detects subflow self reference', () => {
+    expect(subflowTargetId({ workflow_id: 'abc' })).toBe('abc')
+    expect(isSubflowSelfReference({ subflowWorkflowId: 'wf-1' }, 'wf-1')).toBe(true)
+    expect(isSubflowSelfReference({ workflowId: 'wf-1' }, 'wf-2')).toBe(false)
+    expect(isSubflowSelfReference({}, 'wf-1')).toBe(false)
   })
 
   it('detects empty input / output variable', () => {

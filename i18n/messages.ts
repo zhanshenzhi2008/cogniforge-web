@@ -1498,6 +1498,15 @@ export const M = {
     'zh-CN': '同步跑完子流程再继续；暂不支持子流程内等待/审批；最多嵌套 3 层，且不能调用自己。',
     'en-US': 'Runs the nested workflow synchronously. Nested wait/approval not supported yet; max depth 3; cannot call itself.',
   },
+  'editor.subflowSelfHint': {
+    'zh-CN': '不能嵌套当前这份工作流，请另选其它流程。',
+    'en-US': 'Cannot nest this same workflow — pick a different one.',
+  },
+  'editor.subflowSelfCaption': { 'zh-CN': '不能嵌套自身', 'en-US': 'Cannot nest itself' },
+  'editor.subflowSelfRequired': {
+    'zh-CN': '「{name}」不能调用当前工作流，请改选其它流程',
+    'en-US': '“{name}” cannot call this workflow — pick another',
+  },
   'editor.pickKnowledge': { 'zh-CN': '请选择知识库', 'en-US': 'Select a knowledge base' },
   'editor.kbPickEmpty': { 'zh-CN': '暂无知识库', 'en-US': 'No knowledge bases' },
   'editor.kbPickEmptyHint': { 'zh-CN': '请先创建知识库并上传文档，再回来选择。', 'en-US': 'Create a knowledge base and upload docs first, then pick it here.' },
