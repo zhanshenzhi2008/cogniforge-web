@@ -369,19 +369,61 @@
 
     <CfModal v-model:open="compareVisible" :title="t('prompts.compareTitle')" :ui="{ content: 'sm:max-w-4xl' }">
       <template #body>
-        <div v-if="comparePair.length === 2" class="compare-grid">
-          <div v-for="v in comparePair" :key="v.id" class="compare-col">
+        <div v-if="comparePair.length === 2" class="compare-wrap">
+          <div class="compare-mode">
+            <CfButton
+              :tone="compareMode === 'line' ? 'primary' : 'secondary'"
+              icon="i-lucide-list"
+              @click="compareMode = 'line'"
+            >
+              {{ t('prompts.compareLine') }}
+            </CfButton>
+            <CfButton
+              :tone="compareMode === 'side' ? 'primary' : 'secondary'"
+              icon="i-lucide-columns-2"
+              @click="compareMode = 'side'"
+            >
+              {{ t('prompts.compareSide') }}
+            </CfButton>
+          </div>
+
+          <div v-if="compareMode === 'line'" class="diff-panel">
             <div class="compare-label">
-              <UBadge size="sm" variant="subtle" color="primary">v{{ v.version }}</UBadge>
-              <span class="cf-muted">{{ v.changelog || '—' }}</span>
+              <UBadge size="sm" variant="subtle" color="neutral">
+                v{{ comparePair[0]!.version }} → v{{ comparePair[1]!.version }}
+              </UBadge>
+              <span class="cf-muted">{{ t('prompts.compareLineHint') }}</span>
             </div>
-            <pre class="content compare-body">{{ v.content }}</pre>
+            <div class="diff-body" role="table">
+              <div
+                v-for="(row, idx) in compareDiffLines"
+                :key="idx"
+                class="diff-row"
+                :data-op="row.op"
+              >
+                <span class="diff-no">{{ row.leftNo ?? '' }}</span>
+                <span class="diff-no">{{ row.rightNo ?? '' }}</span>
+                <span class="diff-sign">{{ row.op === 'add' ? '+' : row.op === 'del' ? '−' : ' ' }}</span>
+                <pre class="diff-text">{{ row.text || ' ' }}</pre>
+              </div>
+              <p v-if="!compareDiffLines.length" class="cf-muted">{{ t('prompts.compareSame') }}</p>
+            </div>
+          </div>
+
+          <div v-else class="compare-grid">
+            <div v-for="v in comparePair" :key="v.id" class="compare-col">
+              <div class="compare-label">
+                <UBadge size="sm" variant="subtle" color="primary">v{{ v.version }}</UBadge>
+                <span class="cf-muted">{{ v.changelog || '—' }}</span>
+              </div>
+              <pre class="content compare-body">{{ v.content }}</pre>
+            </div>
           </div>
         </div>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <CfButton tone="secondary" @click="compareVisible = false">{{ t('common.cancel') }}</CfButton>
+          <CfButton tone="secondary" @click="compareVisible = false">{{ t('common.close') }}</CfButton>
         </div>
       </template>
     </CfModal>
@@ -392,6 +434,7 @@
 import type { Prompt, PromptVarDef, PromptVersion, PromptUsage } from '@/composables/usePrompts'
 import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
+import { lineDiff } from '@/utils/lineDiff'
 
 const { t, d } = useLocale()
 const toast = useToast()
@@ -496,6 +539,16 @@ const deletingLoading = ref(false)
 const compareIds = ref<string[]>([])
 const compareVisible = ref(false)
 const comparePair = ref<PromptVersion[]>([])
+const compareMode = ref<'line' | 'side'>('line')
+
+const compareDiffLines = computed(() => {
+  if (comparePair.value.length !== 2) return []
+  const [left, right] = comparePair.value
+  // 按版本号旧→新，方便读 diff
+  const older = (left!.version <= right!.version) ? left! : right!
+  const newer = older === left ? right! : left!
+  return lineDiff(older.content || '', newer.content || '')
+})
 const varSamples = reactive<Record<string, string>>({})
 
 const VAR_RE = /\{\{\s*([a-zA-Z_][\w]*)\s*\}\}/g
@@ -880,6 +933,9 @@ const openCompare = () => {
     toast.add({ title: t('prompts.compareNeedTwo'), color: 'warning' })
     return
   }
+  // 保证 pair[0] 为较低版本，行级 diff 更直观
+  comparePair.value = [...comparePair.value].sort((a, b) => a.version - b.version)
+  compareMode.value = 'line'
   compareVisible.value = true
 }
 
@@ -923,6 +979,42 @@ onMounted(() => {
 .block-head h3 { margin: 0; font-size: 15px; }
 .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .compare-hint { margin: 0 0 12px; font-size: 12px; }
+.compare-wrap { display: flex; flex-direction: column; gap: 12px; }
+.compare-mode { display: flex; gap: 8px; flex-wrap: wrap; }
+.diff-panel { display: flex; flex-direction: column; gap: 8px; }
+.diff-body {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--cf-line);
+  border-radius: 8px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.diff-row {
+  display: grid;
+  grid-template-columns: 40px 40px 16px 1fr;
+  gap: 4px;
+  padding: 0 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-row[data-op='add'] { background: color-mix(in oklab, #16a34a 12%, transparent); }
+.diff-row[data-op='del'] { background: color-mix(in oklab, #dc2626 12%, transparent); }
+.diff-no {
+  color: var(--cf-ink-soft);
+  text-align: right;
+  user-select: none;
+}
+.diff-sign { text-align: center; user-select: none; }
+.diff-row[data-op='add'] .diff-sign { color: #16a34a; }
+.diff-row[data-op='del'] .diff-sign { color: #dc2626; }
+.diff-text {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .ver-card {
   border: 1px solid var(--cf-line);
   border-radius: 8px;
