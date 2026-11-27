@@ -1274,6 +1274,7 @@ export const M = {
   'editor.ioVarNone': { 'zh-CN': '未设变量', 'en-US': 'No variable' },
   'editor.ioVarCaption': { 'zh-CN': '变量 {{v}}', 'en-US': 'var {{v}}' },
   'editor.endCaption': { 'zh-CN': '流程结束', 'en-US': 'Finish' },
+  'editor.needStartNode': { 'zh-CN': '请先添加开始节点', 'en-US': 'Add a Start node first' },
   'editor.needEndNode': { 'zh-CN': '请先添加结束节点', 'en-US': 'Add an End node first' },
   'editor.startVarsCaption': {
     'zh-CN': '{shown} 等 {n} 个',

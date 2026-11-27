@@ -2538,11 +2538,18 @@ function ensureBindConfigured(): boolean {
   return false
 }
 
-/** 至少有一个结束节点才允许保存/试跑 */
-function ensureHasEndNode(): boolean {
-  if (nodes.value.some(n => String(n.type || '') === 'end')) return true
-  toast.add({ title: t('editor.needEndNode'), color: 'warning' })
-  return false
+/** 至少有一个开始、一个结束节点才允许保存/试跑 */
+function ensureHasTerminalNodes(): boolean {
+  const kinds = new Set(nodes.value.map(n => String(n.type || '')))
+  if (!kinds.has('start')) {
+    toast.add({ title: t('editor.needStartNode'), color: 'warning' })
+    return false
+  }
+  if (!kinds.has('end')) {
+    toast.add({ title: t('editor.needEndNode'), color: 'warning' })
+    return false
+  }
+  return true
 }
 
 const handleSave = async () => {
@@ -2551,7 +2558,7 @@ const handleSave = async () => {
     return
   }
   if (!ensureBindConfigured()) return
-  if (!ensureHasEndNode()) return
+  if (!ensureHasTerminalNodes()) return
   saving.value = true
   try {
     const definition: WorkflowDefinition = {
@@ -2667,7 +2674,7 @@ const handleExecute = async () => {
     return
   }
   if (!ensureBindConfigured()) return
-  if (!ensureHasEndNode()) return
+  if (!ensureHasTerminalNodes()) return
 
   executing.value = true
   try {
@@ -2833,7 +2840,7 @@ const startDebug = async (startFromNode?: string) => {
     return
   }
   if (!ensureBindConfigured()) return
-  if (!ensureHasEndNode()) return
+  if (!ensureHasTerminalNodes()) return
 
   isDebugging.value = true
   executionLogs.value = []
