@@ -646,6 +646,7 @@
                 class="w-full"
                 :placeholder="t('editor.httpUrlPh')"
               />
+              <p class="field__hint">{{ t('editor.httpUrlHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.httpBody') }}</label>

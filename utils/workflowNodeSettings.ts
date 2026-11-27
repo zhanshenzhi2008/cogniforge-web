@@ -177,10 +177,10 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'httpMethod', labelZh: '方法' },
-      { key: 'httpUrl', labelZh: 'URL', required: true },
-      { key: 'httpBody', labelZh: '请求体' },
-      { key: 'httpHeaders', labelZh: '请求头', note: 'JSON 对象，如 {"Authorization":"Bearer …"}' },
-      { key: 'httpTimeout', labelZh: '超时秒', note: '默认 30' },
+      { key: 'httpUrl', labelZh: 'URL', required: true, note: '支持 {{变量}}' },
+      { key: 'httpBody', labelZh: '请求体', note: '支持 {{变量}}' },
+      { key: 'httpHeaders', labelZh: '请求头', note: 'JSON；值支持 {{变量}}' },
+      { key: 'httpTimeout', labelZh: '超时秒', note: '默认 30，会作用于本次请求' },
     ],
   },
   {
