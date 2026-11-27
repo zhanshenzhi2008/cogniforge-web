@@ -419,6 +419,7 @@ function auditResourceLabel(kind?: string) {
   if (kind === 'role') return t('monitor.resRole')
   if (kind === 'user') return t('monitor.resUser')
   if (kind === 'document') return t('monitor.resDoc')
+  if (kind === 'knowledge_base') return t('monitor.resKB')
   return kind || '—'
 }
 
@@ -427,6 +428,7 @@ function auditActionLabel(action?: string) {
   if (action.includes('role_clearance')) return t('monitor.actRoleClearance')
   if (action.includes('user_clearance')) return t('monitor.actUserClearance')
   if (action.includes('document_security')) return t('monitor.actDocSecurity')
+  if (action.includes('secured_search') || action.includes('kb_secured')) return t('monitor.actSecuredSearch')
   return action
 }
 
