@@ -1488,7 +1488,17 @@ export const M = {
   'users.resetPwdFail': { 'zh-CN': '重置失败', 'en-US': 'Reset failed' },
 
   'roles.title': { 'zh-CN': '角色', 'en-US': 'Roles' },
-  'roles.sub': { 'zh-CN': '权限与角色代码。', 'en-US': 'Permissions and role codes.' },
+  'roles.sub': { 'zh-CN': '权限、角色代码与知识密级上限。', 'en-US': 'Permissions, role codes, and knowledge clearance.' },
+  'roles.clearance': { 'zh-CN': '密级上限', 'en-US': 'Clearance' },
+  'roles.clearanceUnlimited': { 'zh-CN': '不限制（绝密）', 'en-US': 'Unlimited (secret)' },
+  'roles.clearanceHint': {
+    'zh-CN': '开启 KB_ENFORCE_SECURITY_LEVEL 后，检索只返回密级 ≤ 此上限的文档。空=不限制。',
+    'en-US': 'When KB_ENFORCE_SECURITY_LEVEL is on, search only returns docs at or below this clearance. Empty = unlimited.',
+  },
+  'roles.systemClearanceOnly': {
+    'zh-CN': '系统角色只能改密级上限，不能改名称与权限。',
+    'en-US': 'System roles can only change clearance, not name or permissions.',
+  },
   'roles.new': { 'zh-CN': '新建角色', 'en-US': 'New role' },
   'roles.count': { 'zh-CN': '{n} 个角色', 'en-US': '{n} roles' },
   'roles.empty': { 'zh-CN': '暂无角色', 'en-US': 'No roles' },

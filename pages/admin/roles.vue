@@ -36,6 +36,7 @@
               <th>{{ t('roles.system') }}</th>
               <th>{{ t('roles.default') }}</th>
               <th>{{ t('roles.permCount') }}</th>
+              <th>{{ t('roles.clearance') }}</th>
               <th>{{ t('common.createdAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
@@ -69,6 +70,7 @@
                 </UBadge>
               </td>
               <td class="cf-muted">{{ row.permissions?.length || 0 }}</td>
+              <td class="cf-muted">{{ clearanceLabel(row.max_security_level) }}</td>
               <td class="cf-muted">{{ d(row.created_at) }}</td>
               <td @dblclick.stop>
                 <div class="action-btns">
@@ -126,6 +128,7 @@
               v-model="roleForm.name"
               class="w-full"
               :placeholder="t('roles.namePh')"
+              :disabled="editingSystemRole"
               @update:model-value="errors.name = ''"
             />
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
@@ -151,10 +154,22 @@
               class="w-full"
               :rows="3"
               :placeholder="t('roles.descPh')"
+              :disabled="editingSystemRole"
             />
           </div>
 
           <div class="field">
+            <label class="field__label">{{ t('roles.clearance') }}</label>
+            <USelect
+              v-model="roleForm.max_security_level"
+              class="w-full"
+              :items="clearanceOptions"
+              value-key="value"
+            />
+            <p class="field__hint">{{ t('roles.clearanceHint') }}</p>
+          </div>
+
+          <div v-if="!editingSystemRole" class="field">
             <label class="field__label">{{ t('roles.perms') }}</label>
             <div class="perm-groups">
               <details
@@ -176,6 +191,7 @@
               </details>
             </div>
           </div>
+          <p v-else class="field__hint">{{ t('roles.systemClearanceOnly') }}</p>
         </form>
       </template>
 
@@ -249,8 +265,28 @@ const roleForm = reactive({
   name: '',
   code: '',
   description: '',
+  max_security_level: '',
   permission_ids: [] as string[],
+  is_system: false,
 })
+
+const editingSystemRole = computed(() => isEditing.value && roleForm.is_system)
+
+const clearanceOptions = computed(() => [
+  { label: t('roles.clearanceUnlimited'), value: '' },
+  { label: t('kb.security.public'), value: 'public' },
+  { label: t('kb.security.internal'), value: 'internal' },
+  { label: t('kb.security.confidential'), value: 'confidential' },
+  { label: t('kb.security.secret'), value: 'secret' },
+])
+
+function clearanceLabel(level?: string) {
+  const lv = (level || '').trim()
+  if (!lv) return t('roles.clearanceUnlimited')
+  const key = `kb.security.${lv}`
+  const translated = t(key)
+  return translated === key ? lv : translated
+}
 
 const errors = reactive({
   name: '',
@@ -288,10 +324,12 @@ function validateRoleForm() {
   errors.name = ''
   errors.code = ''
 
-  if (!roleForm.name.trim()) {
-    errors.name = t('roles.needName')
-  } else if (roleForm.name.trim().length < 2 || roleForm.name.trim().length > 100) {
-    errors.name = t('roles.nameLen')
+  if (!editingSystemRole.value) {
+    if (!roleForm.name.trim()) {
+      errors.name = t('roles.needName')
+    } else if (roleForm.name.trim().length < 2 || roleForm.name.trim().length > 100) {
+      errors.name = t('roles.nameLen')
+    }
   }
 
   if (!isEditing.value) {
@@ -340,7 +378,9 @@ const handleEdit = (row: any) => {
   roleForm.name = row.name
   roleForm.code = row.code
   roleForm.description = row.description || ''
+  roleForm.max_security_level = row.max_security_level || ''
   roleForm.permission_ids = row.permissions?.map((p: any) => p.id) || []
+  roleForm.is_system = !!row.is_system
   errors.name = ''
   errors.code = ''
   showRoleModal.value = true
@@ -356,7 +396,9 @@ const resetRoleForm = () => {
   roleForm.name = ''
   roleForm.code = ''
   roleForm.description = ''
+  roleForm.max_security_level = ''
   roleForm.permission_ids = []
+  roleForm.is_system = false
   selectedRoleId.value = ''
   errors.name = ''
   errors.code = ''
@@ -367,14 +409,19 @@ const handleRoleSubmit = async () => {
 
   submitting.value = true
   try {
-    const payload: any = {
-      name: roleForm.name,
-      description: roleForm.description,
-      permission_ids: roleForm.permission_ids,
-    }
-
-    if (!isEditing.value) {
-      payload.code = roleForm.code
+    let payload: any
+    if (editingSystemRole.value) {
+      payload = { max_security_level: roleForm.max_security_level || '' }
+    } else {
+      payload = {
+        name: roleForm.name,
+        description: roleForm.description,
+        max_security_level: roleForm.max_security_level || '',
+        permission_ids: roleForm.permission_ids,
+      }
+      if (!isEditing.value) {
+        payload.code = roleForm.code
+      }
     }
 
     const url = isEditing.value
