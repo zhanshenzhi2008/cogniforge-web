@@ -141,7 +141,23 @@
             </div>
           </section>
 
-          <p class="publish-foot">{{ t('agents.studioPublishImSoon') }}</p>
+          <section class="publish-block publish-block--soon">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-messages-square" class="size-3.5" />
+              {{ t('agents.studioPublishIm') }}
+              <UBadge size="sm" variant="subtle" color="neutral">{{ t('common.comingSoon') }}</UBadge>
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishImDesc') }}</p>
+          </section>
+
+          <section class="publish-block publish-block--soon">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-monitor" class="size-3.5" />
+              {{ t('agents.studioVm') }}
+              <UBadge size="sm" variant="subtle" color="neutral">{{ t('common.comingSoon') }}</UBadge>
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioVmDesc') }}</p>
+          </section>
         </div>
       </template>
     </USlideover>
@@ -356,6 +372,19 @@
             <span>{{ form.allow_attachments ? t('common.enabled') : t('common.disabled') }}</span>
           </div>
           <p class="cfg-hint">{{ t('agents.allowAttachmentsHint') }}</p>
+        </section>
+
+        <section class="cfg-row cfg-row--soon">
+          <div class="cfg-row__main">
+            <UIcon name="i-lucide-monitor" class="size-4" />
+            <span>{{ t('agents.studioVm') }}</span>
+            <UBadge size="sm" variant="subtle" color="neutral">{{ t('common.comingSoon') }}</UBadge>
+          </div>
+          <div class="status-row">
+            <USwitch :model-value="false" disabled />
+            <span>{{ t('common.disabled') }}</span>
+          </div>
+          <p class="cfg-hint">{{ t('agents.studioVmHint') }}</p>
         </section>
 
         <section class="cfg-row">
@@ -1647,10 +1676,13 @@ onMounted(async () => {
   gap: 0.5rem;
 }
 
-.publish-foot {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--ui-text-muted);
+.publish-block--soon {
+  opacity: 0.9;
+  background: color-mix(in oklab, var(--cf-ink) 3%, transparent);
+}
+
+.cfg-row--soon {
+  opacity: 0.85;
 }
 
 .version-row {

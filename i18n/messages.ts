@@ -44,6 +44,7 @@ export const M = {
   'common.more': { 'zh-CN': '更多', 'en-US': 'More' },
   'common.reset': { 'zh-CN': '重置', 'en-US': 'Reset' },
   'common.enabled': { 'zh-CN': '启用', 'en-US': 'Enabled' },
+  'common.comingSoon': { 'zh-CN': '即将推出', 'en-US': 'Coming soon' },
   'common.disabled': { 'zh-CN': '禁用', 'en-US': 'Disabled' },
   'common.yes': { 'zh-CN': '是', 'en-US': 'Yes' },
   'common.no': { 'zh-CN': '否', 'en-US': 'No' },
@@ -479,9 +480,19 @@ export const M = {
     'en-US': 'Embed Playground in an iframe; visitors still need site login (public embed later).',
   },
   'agents.studioPublishOpen': { 'zh-CN': '打开', 'en-US': 'Open' },
-  'agents.studioPublishImSoon': {
-    'zh-CN': '飞书 / 企微 / 钉钉等第三方 IM 渠道尚未接入，后续排期。',
-    'en-US': 'Feishu / WeCom / DingTalk channels are not wired yet.',
+  'agents.studioPublishIm': { 'zh-CN': '第三方 IM', 'en-US': 'Messaging apps' },
+  'agents.studioPublishImDesc': {
+    'zh-CN': '飞书 / 企微 / 钉钉机器人接入尚未落地；可先用网页对话或 API。也可在 MCP 页接已支持的 HTTP 工具。',
+    'en-US': 'Feishu / WeCom / DingTalk bots are not wired yet. Use web chat or API for now; HTTP tools can be added on the MCP page.',
+  },
+  'agents.studioVm': { 'zh-CN': '虚拟机', 'en-US': 'Virtual machine' },
+  'agents.studioVmDesc': {
+    'zh-CN': '桌面级沙箱虚拟机需套餐门禁与隔离运行时，尚未开放。代码执行请用已接入的沙箱工具。',
+    'en-US': 'Desktop VM sandbox needs plan gates and an isolated runtime — not available yet. Use connected sandbox tools for code.',
+  },
+  'agents.studioVmHint': {
+    'zh-CN': '即将推出：按套餐开通隔离虚拟机；当前不可用。',
+    'en-US': 'Coming soon: plan-gated isolated VMs; unavailable now.',
   },
   'agents.studioVersions': { 'zh-CN': '版本', 'en-US': 'Versions' },
   'agents.studioVersionsTitle': { 'zh-CN': '配置版本历史', 'en-US': 'Config version history' },
@@ -581,6 +592,10 @@ export const M = {
   'help.studioConfigAttach': {
     'zh-CN': '附件开关：预览区是否允许上传文件。',
     'en-US': 'Attachments: allow file upload in Preview.',
+  },
+  'help.studioConfigSoon': {
+    'zh-CN': '即将推出：虚拟机沙箱、飞书/企微/钉钉等 IM 渠道（发布侧栏可见占位说明）。',
+    'en-US': 'Coming soon: VM sandbox and Feishu/WeCom/DingTalk channels (see Publish panel).',
   },
   'agents.studioBuildEmpty': {
     'zh-CN': '在左侧完善模型、提示词和工具；也可在这里用对话构建并应用到配置。',

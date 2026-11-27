@@ -48,6 +48,7 @@
           <li>{{ t('help.studioConfigKb') }}</li>
           <li>{{ t('help.studioConfigOpening') }}</li>
           <li>{{ t('help.studioConfigAttach') }}</li>
+          <li>{{ t('help.studioConfigSoon') }}</li>
         </ul>
       </section>
     </div>
