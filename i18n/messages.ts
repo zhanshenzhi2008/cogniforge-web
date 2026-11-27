@@ -1240,6 +1240,11 @@ export const M = {
   'editor.node.start': { 'zh-CN': '开始', 'en-US': 'Start' },
   'editor.node.end': { 'zh-CN': '结束', 'en-US': 'End' },
   'editor.startVars': { 'zh-CN': '入参变量', 'en-US': 'Input variables' },
+  'editor.startVarsNone': { 'zh-CN': '无入参', 'en-US': 'No inputs' },
+  'editor.startVarsCaption': {
+    'zh-CN': '{shown} 等 {n} 个',
+    'en-US': '{shown} +{more}',
+  },
   'editor.startVarsHint': {
     'zh-CN': '定义本流程要收哪些输入。调试时会按此出表单；必填且无默认值时不能空跑',
     'en-US': 'Declare workflow inputs. Debug form follows this; required fields need a value or default.',

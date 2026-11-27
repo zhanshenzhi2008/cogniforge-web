@@ -1898,6 +1898,10 @@ const addNode = (type: string) => {
     data.max_iter = 100
     data.bindCaption = resolveBindCaption('loop', data)
   }
+  if (type === 'start') {
+    data.variables = []
+    data.bindCaption = resolveBindCaption('start', data)
+  }
   const newNode = {
     id: `node-${Date.now()}`,
     type,
@@ -1985,6 +1989,19 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     if (!(n > 0)) return t('editor.loopTypeTimes')
     return `${t('editor.loopTypeTimes')} ×${n}`
   }
+  if (kind === 'start') {
+    const raw = Array.isArray(d.variables) ? d.variables : []
+    const names = raw
+      .map((v: { name?: string }) => String(v?.name || '').trim())
+      .filter(Boolean)
+    if (!names.length) return t('editor.startVarsNone')
+    if (names.length <= 2) return names.join(', ')
+    return t('editor.startVarsCaption', {
+      shown: names.slice(0, 2).join(', '),
+      n: names.length,
+      more: names.length - 2,
+    })
+  }
   return ''
 }
 
@@ -1992,7 +2009,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['llm', 'http', 'code', 'condition', 'delay', 'wait', 'loop', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'http', 'code', 'condition', 'delay', 'wait', 'loop', 'start', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2181,6 +2198,7 @@ const saveNodeConfig = () => {
       max_iter: nodeConfig.loopMaxIter,
       loopCondition: nodeConfig.loopCondition,
       condition: nodeConfig.loopCondition,
+      variables: nodeConfig.variables,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,

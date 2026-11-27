@@ -26,7 +26,11 @@
     <MiniMap />
 
     <template #node-start="{ data }">
-      <WorkflowFlowNode kind="start" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="start"
+        :label="data.label"
+        :hint="bindNodeHint('start', data)"
+      />
     </template>
     <template #node-end="{ data }">
       <WorkflowFlowNode kind="end" :label="data.label" :hint="data.streamProgress" />
