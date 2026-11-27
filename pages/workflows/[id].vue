@@ -657,6 +657,16 @@
               />
             </div>
             <div class="field">
+              <label class="field__label">{{ t('editor.httpHeaders') }}</label>
+              <UTextarea
+                v-model="nodeConfig.httpHeaders"
+                class="w-full font-mono text-xs"
+                :rows="3"
+                :placeholder="t('editor.httpHeadersPh')"
+              />
+              <p class="field__hint">{{ t('editor.httpHeadersHint') }}</p>
+            </div>
+            <div class="field">
               <label class="field__label">{{ t('editor.httpTimeout') }}</label>
               <UInput
                 v-model.number="nodeConfig.httpTimeout"
@@ -1342,6 +1352,7 @@ import {
 } from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isSubflowSelfReference, isWorkflowBindUnbound } from '@/utils/workflowBind'
+import { formatHttpHeadersJson, parseHttpHeadersJson } from '@/utils/workflowHttpHeaders'
 import {
   findConditionsMissingBranches,
   findDeadEndNodes,
@@ -1642,6 +1653,7 @@ const nodeConfig = reactive({
   httpMethod: 'GET',
   httpUrl: '',
   httpBody: '',
+  httpHeaders: '',
   httpTimeout: 30,
   delayDuration: 1,
   delayUnit: 'seconds',
@@ -2350,7 +2362,10 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     if (!url) return ''
     const short = url.length > 36 ? `${url.slice(0, 34)}…` : url
     const timeout = Number(d.timeout ?? d.httpTimeout ?? 0)
-    const base = `${method} ${short}`
+    const headers = parseHttpHeadersJson(d.headers ?? d.httpHeaders)
+    const headerN = headers ? Object.keys(headers).length : 0
+    let base = `${method} ${short}`
+    if (headerN > 0) base = `${base} · ${t('editor.httpHeadersShort', { n: headerN })}`
     return timeout > 0 && timeout !== 30 ? `${base} · ${timeout}s` : base
   }
   if (kind === 'code') {
@@ -2589,6 +2604,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.httpBody = typeof bodyRaw === 'string'
     ? bodyRaw
     : (bodyRaw != null ? JSON.stringify(bodyRaw, null, 2) : '')
+  nodeConfig.httpHeaders = formatHttpHeadersJson(
+    event.node.data?.headers ?? event.node.data?.httpHeaders,
+  )
   nodeConfig.httpTimeout = Number(event.node.data?.timeout || event.node.data?.httpTimeout || 30) || 30
   nodeConfig.delayDuration = Number(
     event.node.data?.delayDuration ?? event.node.data?.duration ?? 1,
@@ -2736,10 +2754,16 @@ const saveNodeConfig = () => {
             if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
               try { body = JSON.parse(trimmed) } catch { /* keep string */ }
             }
+            const headers = parseHttpHeadersJson(nodeConfig.httpHeaders)
+            if (String(nodeConfig.httpHeaders || '').trim() && !headers) {
+              toast.add({ title: t('editor.httpHeadersInvalid'), color: 'warning' })
+            }
             return {
               method: nodeConfig.httpMethod || 'GET',
               url: nodeConfig.httpUrl,
               body: trimmed ? body : undefined,
+              headers: headers || undefined,
+              httpHeaders: headers || undefined,
               timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
             }
           })()

@@ -1188,6 +1188,20 @@ export const M = {
   'editor.httpUrl': { 'zh-CN': '请求地址', 'en-US': 'URL' },
   'editor.httpUrlPh': { 'zh-CN': 'https://api.example.com/…', 'en-US': 'https://api.example.com/…' },
   'editor.httpBody': { 'zh-CN': '请求体', 'en-US': 'Body' },
+  'editor.httpHeaders': { 'zh-CN': '请求头（JSON）', 'en-US': 'Headers (JSON)' },
+  'editor.httpHeadersPh': {
+    'zh-CN': '{\n  "Authorization": "Bearer your_token"\n}',
+    'en-US': '{\n  "Authorization": "Bearer your_token"\n}',
+  },
+  'editor.httpHeadersHint': {
+    'zh-CN': '键值对象；会覆盖默认 Content-Type 以外的同名头',
+    'en-US': 'Key/value object; overrides same-named headers besides the default Content-Type',
+  },
+  'editor.httpHeadersInvalid': {
+    'zh-CN': '请求头不是合法 JSON 对象，已忽略',
+    'en-US': 'Headers must be a JSON object — ignored',
+  },
+  'editor.httpHeadersShort': { 'zh-CN': '{n}头', 'en-US': '{n} hdr' },
   'editor.httpBodyPh': { 'zh-CN': 'JSON 或纯文本（可选）', 'en-US': 'JSON or plain text (optional)' },
   'editor.httpTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
   'editor.httpTimeoutPh': { 'zh-CN': '默认 30', 'en-US': 'Default 30' },
