@@ -1167,8 +1167,8 @@ export const M = {
     'en-US': 'e.g. You are a {{role}} assistant…',
   },
   'editor.llmPromptHint': {
-    'zh-CN': '文案可用 {{变量}}（入参或上游写入的变量）',
-    'en-US': 'Text supports {{vars}} from inputs or upstream variables',
+    'zh-CN': '可用 {{变量}}；留空则接上游 last_agent_content（LLM/智能体输出）',
+    'en-US': 'Supports {{vars}}; empty uses upstream last_agent_content (LLM/agent output)',
   },
   'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
   'editor.llmStreamShort': { 'zh-CN': '流式', 'en-US': 'stream' },

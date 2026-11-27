@@ -89,7 +89,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       NAME_FIELD,
       { key: 'model', labelZh: '模型', required: true },
       { key: 'systemPrompt', labelZh: '系统提示', note: '支持 {{变量}}' },
-      { key: 'prompt', labelZh: '用户提示', note: '支持 {{变量}}；空则用流程输入' },
+      { key: 'prompt', labelZh: '用户提示', note: '支持 {{变量}}；空则接 last_agent_content / 流程输入' },
       { key: 'llmStream', labelZh: '流式收集', note: 'data.stream / llmStream' },
       { key: 'llmTemperature', labelZh: '温度', note: '0=默认；data.temperature' },
       { key: 'llmMaxTokens', labelZh: '最大生成长度', note: '0=默认；data.maxTokens / max_tokens' },
