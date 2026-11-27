@@ -285,6 +285,13 @@
         />
       </template>
     </USlideover>
+
+    <CfConfirmModal
+      v-model:open="deleteConvOpen"
+      :message="t('play.deleteConfirm')"
+      :loading="deletingConv"
+      @confirm="confirmDeleteConversation"
+    />
   </div>
 </template>
 
@@ -1277,17 +1284,34 @@ const loadConversation = async (id: string) => {
   await setConversationQuery(res.data.id)
 }
 
-const deleteConversation = async (id: string) => {
+const deleteConvOpen = ref(false)
+const deletingConv = ref(false)
+const pendingDeleteConvId = ref<string | null>(null)
+
+const deleteConversation = (id: string) => {
   if (!id) return
-  if (!window.confirm(t('play.deleteConfirm'))) return
-  const res = await removeConversation(id)
-  if (res.error) {
-    notifyError(res.error)
-    return
-  }
-  conversations.value = conversations.value.filter(item => item.id !== id)
-  if (currentConversationId.value === id) {
-    startNewChat()
+  pendingDeleteConvId.value = id
+  deleteConvOpen.value = true
+}
+
+const confirmDeleteConversation = async () => {
+  const id = pendingDeleteConvId.value
+  if (!id) return
+  deletingConv.value = true
+  try {
+    const res = await removeConversation(id)
+    if (res.error) {
+      notifyError(res.error)
+      return
+    }
+    conversations.value = conversations.value.filter(item => item.id !== id)
+    deleteConvOpen.value = false
+    pendingDeleteConvId.value = null
+    if (currentConversationId.value === id) {
+      startNewChat()
+    }
+  } finally {
+    deletingConv.value = false
   }
 }
 
