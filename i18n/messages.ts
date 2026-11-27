@@ -914,6 +914,7 @@ export const M = {
   'evals.actual': { 'zh-CN': '模型回答', 'en-US': 'Actual' },
   'evals.listFail': { 'zh-CN': '加载评测集失败', 'en-US': 'Failed to load suites' },
   'evals.deleteText': { 'zh-CN': '确定删除「{name}」及其用例、运行记录？', 'en-US': 'Delete "{name}" and its cases/runs?' },
+  'evals.deleteCaseText': { 'zh-CN': '确定删除这条用例？', 'en-US': 'Delete this test case?' },
   'evals.noCases': { 'zh-CN': '先添加至少一条用例再运行', 'en-US': 'Add at least one case before running' },
   'evals.back': { 'zh-CN': '返回列表', 'en-US': 'Back' },
 

@@ -276,6 +276,19 @@
         </div>
       </template>
     </CfModal>
+
+    <CfConfirmModal
+      v-model:open="deleteSuiteOpen"
+      :message="t('evals.deleteText', { name: pendingSuite?.name ?? '' })"
+      :loading="deletingSuite"
+      @confirm="confirmDeleteSuite"
+    />
+    <CfConfirmModal
+      v-model:open="deleteCaseOpen"
+      :message="t('evals.deleteCaseText')"
+      :loading="deletingCase"
+      @confirm="confirmDeleteCase"
+    />
   </div>
 </template>
 
@@ -459,14 +472,32 @@ const createSuite = async () => {
   if (res.data) await openSuite(res.data)
 }
 
-const askDelete = async (s: EvalSuite) => {
-  if (!confirm(t('evals.deleteText', { name: s.name }))) return
-  const res = await api.deleteSuite(s.id)
-  if (res.error) {
-    toast.add({ title: res.error, color: 'error' })
-    return
+const deleteSuiteOpen = ref(false)
+const deletingSuite = ref(false)
+const pendingSuite = ref<EvalSuite | null>(null)
+
+const askDelete = (s: EvalSuite) => {
+  pendingSuite.value = s
+  deleteSuiteOpen.value = true
+}
+
+const confirmDeleteSuite = async () => {
+  if (!pendingSuite.value) return
+  deletingSuite.value = true
+  try {
+    const res = await api.deleteSuite(pendingSuite.value.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    deleteSuiteOpen.value = false
+    const id = pendingSuite.value.id
+    pendingSuite.value = null
+    if (activeSuite.value?.id === id) closeSuite()
+    await loadSuites()
+  } finally {
+    deletingSuite.value = false
   }
-  await loadSuites()
 }
 
 const addCase = async () => {
@@ -490,15 +521,32 @@ const addCase = async () => {
   cases.value = list.data || []
 }
 
-const removeCase = async (id: string) => {
-  const res = await api.deleteCase(id)
-  if (res.error) {
-    toast.add({ title: res.error, color: 'error' })
-    return
-  }
-  if (activeSuite.value) {
-    const list = await api.listCases(activeSuite.value.id)
-    cases.value = list.data || []
+const deleteCaseOpen = ref(false)
+const deletingCase = ref(false)
+const pendingCaseId = ref<string | null>(null)
+
+const removeCase = (id: string) => {
+  pendingCaseId.value = id
+  deleteCaseOpen.value = true
+}
+
+const confirmDeleteCase = async () => {
+  if (!pendingCaseId.value) return
+  deletingCase.value = true
+  try {
+    const res = await api.deleteCase(pendingCaseId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    deleteCaseOpen.value = false
+    pendingCaseId.value = null
+    if (activeSuite.value) {
+      const list = await api.listCases(activeSuite.value.id)
+      cases.value = list.data || []
+    }
+  } finally {
+    deletingCase.value = false
   }
 }
 
