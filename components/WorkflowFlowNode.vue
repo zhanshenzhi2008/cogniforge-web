@@ -4,8 +4,9 @@
     :class="[
       `flow-node-${meta.tone}`,
       { 'flow-node--unbound': unbound },
-      { 'flow-node--orphan': orphan && !unbound && !deadEnd },
+      { 'flow-node--orphan': orphan && !unbound && !deadEnd && !branchGap },
       { 'flow-node--dead-end': deadEnd && !unbound && !orphan },
+      { 'flow-node--branch-gap': branchGap && !unbound && !orphan && !deadEnd },
     ]"
   >
     <!-- 左侧入口线头：结束/普通节点可接；开始节点无入口 -->
@@ -26,8 +27,9 @@
         class="flow-node__hint"
         :class="{
           'flow-node__hint--warn': unbound && !hint,
-          'flow-node__hint--orphan': orphan && !unbound && !deadEnd && !hint,
+          'flow-node__hint--orphan': orphan && !unbound && !deadEnd && !branchGap && !hint,
           'flow-node__hint--dead-end': deadEnd && !unbound && !orphan && !hint,
+          'flow-node__hint--branch-gap': branchGap && !unbound && !orphan && !deadEnd && !hint,
         }"
         :title="displayHint"
       >{{ displayHint }}</span>
@@ -51,6 +53,12 @@
       :title="deadEndHint"
       aria-hidden="true"
     >×</span>
+    <span
+      v-else-if="branchGap"
+      class="flow-node__badge flow-node__badge--branch-gap"
+      :title="branchGapHint"
+      aria-hidden="true"
+    >≠</span>
 
     <!-- 条件：上下两个出口（真/假），鼠标从线头拖出 -->
     <template v-if="meta.handles === 'branch'">
@@ -100,6 +108,8 @@ const props = defineProps<{
   orphan?: boolean
   /** 可达但无出边（死胡同） */
   deadEnd?: boolean
+  /** 条件节点缺真/假出边 */
+  branchGap?: boolean
 }>()
 
 const { t } = useLocale()
@@ -109,11 +119,13 @@ const falseLabel = computed(() => t('editor.branchFalse'))
 const unboundHint = computed(() => t('editor.nodeUnboundHint'))
 const orphanHint = computed(() => t('editor.nodeOrphanHint'))
 const deadEndHint = computed(() => t('editor.nodeDeadEndHint'))
+const branchGapHint = computed(() => t('editor.nodeBranchGapHint'))
 const displayHint = computed(() => {
   if (props.hint) return props.hint
   if (props.unbound) return unboundHint.value
   if (props.orphan) return orphanHint.value
   if (props.deadEnd) return deadEndHint.value
+  if (props.branchGap) return branchGapHint.value
   return ''
 })
 </script>
@@ -155,6 +167,13 @@ const displayHint = computed(() => {
   box-shadow: 0 0 0 2px rgb(124 58 237 / 0.22);
 }
 
+.flow-node--branch-gap {
+  border-color: #d97706;
+  border-style: dashed;
+  background: #fffbeb;
+  box-shadow: 0 0 0 2px rgb(217 119 6 / 0.22);
+}
+
 .flow-node__badge {
   position: absolute;
   top: -7px;
@@ -178,6 +197,10 @@ const displayHint = computed(() => {
 
 .flow-node__badge--dead-end {
   background: #7c3aed;
+}
+
+.flow-node__badge--branch-gap {
+  background: #d97706;
 }
 
 .flow-node__icon {
@@ -219,6 +242,10 @@ const displayHint = computed(() => {
 
 .flow-node__hint--dead-end {
   color: #6d28d9;
+}
+
+.flow-node__hint--branch-gap {
+  color: #b45309;
 }
 
 /* ProcessOn 风格线头：常显淡点，悬停放大可拖 */

@@ -78,6 +78,7 @@
         :hint="bindNodeHint('condition', data)"
         :unbound="isWorkflowBindUnbound('condition', data)"
         :orphan="isOrphan(id)"
+        :branch-gap="isBranchGap(id)"
       />
     </template>
     <template #node-loop="{ data, id }">
@@ -188,7 +189,11 @@ import { computed } from 'vue'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
-import { findDeadEndNodes, reachableFromStart } from '@/utils/workflowReachability'
+import {
+  findConditionsMissingBranches,
+  findDeadEndNodes,
+  reachableFromStart,
+} from '@/utils/workflowReachability'
 
 const props = defineProps<{
   nodes: any[]
@@ -200,6 +205,9 @@ const hasStartNode = computed(() => (props.nodes || []).some(n => String(n?.type
 const deadEndIds = computed(() => new Set(
   findDeadEndNodes(props.nodes || [], props.edges || []).map(n => n.id),
 ))
+const branchGapIds = computed(() => new Set(
+  findConditionsMissingBranches(props.nodes || [], props.edges || []).map(n => n.id),
+))
 
 function isOrphan(id: string) {
   if (!hasStartNode.value) return false
@@ -208,6 +216,10 @@ function isOrphan(id: string) {
 
 function isDeadEnd(id: string) {
   return deadEndIds.value.has(id)
+}
+
+function isBranchGap(id: string) {
+  return branchGapIds.value.has(id)
 }
 
 /** 流式进度优先；已绑定则显示资源名副文案 */
