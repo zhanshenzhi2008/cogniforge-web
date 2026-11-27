@@ -1889,6 +1889,15 @@ const addNode = (type: string) => {
     data.reason = 'approval'
     data.bindCaption = resolveBindCaption('wait', data)
   }
+  if (type === 'loop') {
+    data.loopType = 'times'
+    data.type = 'times'
+    data.loopCount = 3
+    data.count = 3
+    data.loopMaxIter = 100
+    data.max_iter = 100
+    data.bindCaption = resolveBindCaption('loop', data)
+  }
   const newNode = {
     id: `node-${Date.now()}`,
     type,
@@ -1960,6 +1969,22 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const msg = String(d.waitMessage || d.message || '').trim()
     return msg ? `${reason}: ${msg.length > 24 ? `${msg.slice(0, 22)}…` : msg}` : reason
   }
+  if (kind === 'loop') {
+    let loopType = String(d.loopType || d.type || 'times').trim() || 'times'
+    if (loopType === 'count') loopType = 'times'
+    if (loopType === 'while') {
+      const cond = String(d.loopCondition || d.condition || '').trim()
+      const max = Number(d.loopMaxIter ?? d.max_iter ?? 100) || 100
+      if (cond) {
+        const short = cond.length > 24 ? `${cond.slice(0, 22)}…` : cond
+        return `${t('editor.loopTypeWhile')}: ${short}`
+      }
+      return `${t('editor.loopTypeWhile')} ≤${max}`
+    }
+    const n = Number(d.loopCount ?? d.count ?? 0)
+    if (!(n > 0)) return t('editor.loopTypeTimes')
+    return `${t('editor.loopTypeTimes')} ×${n}`
+  }
   return ''
 }
 
@@ -1967,7 +1992,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['llm', 'http', 'code', 'condition', 'delay', 'wait', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'http', 'code', 'condition', 'delay', 'wait', 'loop', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2148,6 +2173,14 @@ const saveNodeConfig = () => {
       reason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
       message: nodeConfig.waitMessage,
+      loopType: nodeConfig.loopType,
+      type: nodeConfig.loopType,
+      loopCount: nodeConfig.loopCount,
+      count: nodeConfig.loopCount,
+      loopMaxIter: nodeConfig.loopMaxIter,
+      max_iter: nodeConfig.loopMaxIter,
+      loopCondition: nodeConfig.loopCondition,
+      condition: nodeConfig.loopCondition,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,

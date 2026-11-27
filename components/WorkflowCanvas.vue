@@ -64,7 +64,11 @@
       />
     </template>
     <template #node-loop="{ data }">
-      <WorkflowFlowNode kind="loop" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="loop"
+        :label="data.label"
+        :hint="bindNodeHint('loop', data)"
+      />
     </template>
     <template #node-http="{ data }">
       <WorkflowFlowNode
