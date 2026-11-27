@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatNodeRunOutputPreview,
   isUntakenConditionSkip,
@@ -30,5 +31,19 @@ describe('workflowDebugStep', () => {
     expect(findLatestTimelineKeyForNode(steps, 'n1')).toBe('a2')
     expect(findLatestTimelineKeyForNode(steps, 'n2')).toBe('b1')
     expect(findLatestTimelineKeyForNode(steps, 'missing')).toBe(null)
+  })
+
+  it('dims edges whose target is skipped', () => {
+    const status = new Map([['no', 'skipped'], ['yes', 'succeeded']])
+    const [e1, e2] = decorateEdgesForSkippedTargets([
+      { id: '1', target: 'no', style: { stroke: '#dc2626' }, animated: true },
+      { id: '2', target: 'yes', style: { stroke: '#16a34a' }, animated: true },
+    ], status)
+    expect(e1?.class).toContain('run-edge-skipped')
+    expect(e1?.animated).toBe(false)
+    expect(e1?.style?.opacity).toBe(0.35)
+    expect(e2?.class).not.toContain('run-edge-skipped')
+    expect(e2?.animated).toBe(true)
+    expect(e2?.style?.opacity).toBeUndefined()
   })
 })

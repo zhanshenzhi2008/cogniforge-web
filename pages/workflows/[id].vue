@@ -1261,6 +1261,7 @@ import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
 import {
+  decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatNodeRunOutputPreview,
   isUntakenConditionSkip,
@@ -3532,6 +3533,7 @@ const applyNodeRunHighlight = (exec: {
       data: { ...(n.data || {}), streamProgress },
     }
   })
+  edges.value = decorateEdgesForSkippedTargets(edges.value, byId)
 }
 
 const cancellingExecId = ref<string | null>(null)
@@ -4238,6 +4240,15 @@ onMounted(() => {
   box-shadow: 0 0 0 2px #ea580c;
 }
 .canvas-container :deep(.vue-flow__node.run-skipped) {
+  opacity: 0.55;
+}
+.canvas-container :deep(.vue-flow__edge.run-edge-skipped) {
+  opacity: 0.4;
+}
+.canvas-container :deep(.vue-flow__edge.run-edge-skipped .vue-flow__edge-path) {
+  stroke-dasharray: 5 4;
+}
+.canvas-container :deep(.vue-flow__edge.run-edge-skipped .vue-flow__edge-text) {
   opacity: 0.55;
 }
 

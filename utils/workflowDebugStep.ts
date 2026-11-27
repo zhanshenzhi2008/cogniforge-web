@@ -45,3 +45,39 @@ export function findLatestTimelineKeyForNode(
   }
   return null
 }
+
+type EdgeRunLike = {
+  target?: string
+  class?: string
+  animated?: boolean
+  style?: Record<string, any>
+  [k: string]: any
+}
+
+/** 指向 skipped 目标的边淡显、虚线、停动画 */
+export function decorateEdgesForSkippedTargets<T extends EdgeRunLike>(
+  edges: T[],
+  statusByNodeId: Map<string, string>,
+): T[] {
+  return edges.map((edge) => {
+    const skipped = statusByNodeId.get(String(edge.target || '')) === 'skipped'
+    const classes = String(edge.class || '')
+      .split(/\s+/)
+      .filter(c => c && c !== 'run-edge-skipped')
+    if (skipped) classes.push('run-edge-skipped')
+    const style = { ...(edge.style || {}) }
+    if (skipped) {
+      style.opacity = 0.35
+      style.strokeDasharray = '5 4'
+    } else {
+      delete style.opacity
+      delete style.strokeDasharray
+    }
+    return {
+      ...edge,
+      class: classes.join(' '),
+      animated: skipped ? false : true,
+      style,
+    }
+  })
+}
