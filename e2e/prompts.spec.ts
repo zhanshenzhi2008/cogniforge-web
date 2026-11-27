@@ -242,6 +242,23 @@ async function mockPromptAPI(page: Page) {
       }
     }
 
+    const usageList = path.match(/\/api\/v1\/prompts\/([^/]+)\/usages$/)
+    if (usageList && method === 'GET') {
+      await json([])
+      return
+    }
+
+    const onePrompt = path.match(/\/api\/v1\/prompts\/([^/]+)$/)
+    if (onePrompt && method === 'GET' && !path.endsWith('/prompts')) {
+      const p = items.find(x => x.id === onePrompt[1])
+      if (p) {
+        const list = versions.get(p.id) || []
+        const current = list.find(v => v.id === p.current_version_id) || list[0] || null
+        await json({ prompt: p, current_version: current })
+        return
+      }
+    }
+
     const verList = path.match(/\/api\/v1\/prompts\/([^/]+)\/versions$/)
     if (verList) {
       const pid = verList[1]
@@ -355,6 +372,43 @@ test.describe('prompts e2e', () => {
     await expect(verCards.first().getByText('已发布', { exact: true })).toBeVisible()
     await expect(verCards.first().getByText('当前', { exact: true })).toBeVisible()
     await expect(page.getByText('正文-草稿', { exact: true })).toBeVisible()
+  })
+
+  test('show bound agents in prompt usages', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('绑定展示')
+    await page.getByPlaceholder('System prompt 正文').fill('绑定正文')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '绑定展示' })).toBeVisible()
+    await expect(page.getByText('还没有 Agent 绑定这条提示词')).toBeVisible()
+
+    await page.getByRole('button', { name: '返回列表' }).click()
+    await expect(page.getByText('还没有提示词')).toBeHidden()
+
+    await page.route(/\/api\/v1\/prompts\/[^/]+\/usages$/, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue()
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(ok([
+          { agent_id: 'a-bound', agent_name: '客服 Agent' },
+        ])),
+      })
+    })
+
+    await page.getByText('绑定展示', { exact: true }).click()
+    await expect(page.getByRole('heading', { name: '绑定展示' })).toBeVisible()
+    await expect(page.getByText('被哪些 Agent 使用')).toBeVisible()
+    await expect(page.getByText('客服 Agent')).toBeVisible()
+    await expect(page.getByText('还没有 Agent 绑定这条提示词')).toBeHidden()
   })
 
   test('import prompt from agent', async ({ page }) => {
