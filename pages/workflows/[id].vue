@@ -1119,11 +1119,14 @@
             <div class="debug-section-title">{{ t('editor.debugTimeline') }}</div>
             <p class="debug-hint debug-hint--compact">{{ t('editor.debugTimelineHint') }}</p>
             <div v-if="execTimeline.length === 0" class="debug-empty">{{ t('editor.debugTimelineEmpty') }}</div>
-            <div
+            <button
               v-for="(step, idx) in execTimeline"
               :key="step.key"
+              type="button"
               class="debug-timeline__item"
+              :class="{ 'is-selected': selectedTimelineKey === step.key }"
               :data-status="step.status"
+              @click="selectTimelineStep(step)"
             >
               <span class="debug-timeline__idx">{{ idx + 1 }}</span>
               <span class="debug-status-dot" :class="step.status" />
@@ -1135,6 +1138,30 @@
                 </div>
                 <div v-if="step.note" class="debug-timeline__note">{{ step.note }}</div>
               </div>
+            </button>
+            <div v-if="selectedTimelineStep" class="debug-step-summary">
+              <div class="debug-section-title">{{ t('editor.debugStepSummary') }}</div>
+              <dl class="debug-step-summary__meta">
+                <div>
+                  <dt>{{ t('editor.debugStepStatus') }}</dt>
+                  <dd>{{ execStatusLabel(selectedTimelineStep.status) }}</dd>
+                </div>
+                <div v-if="selectedTimelineStep.durationMs != null && selectedTimelineStep.durationMs > 0">
+                  <dt>{{ t('editor.debugStepDuration') }}</dt>
+                  <dd>{{ t('editor.debugTimelineMs', { ms: selectedTimelineStep.durationMs }) }}</dd>
+                </div>
+              </dl>
+              <p v-if="selectedTimelineStep.error" class="debug-step-summary__error">
+                {{ selectedTimelineStep.error }}
+              </p>
+              <pre
+                v-if="selectedTimelineStep.outputPreview"
+                class="debug-step-summary__out"
+              >{{ selectedTimelineStep.outputPreview }}</pre>
+              <p
+                v-else-if="!selectedTimelineStep.error"
+                class="debug-hint debug-hint--compact"
+              >{{ t('editor.debugStepNoOutput') }}</p>
             </div>
           </div>
 
@@ -1233,6 +1260,7 @@ import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
+import { formatNodeRunOutputPreview, isUntakenConditionSkip } from '@/utils/workflowDebugStep'
 import { isActiveExecutionStatus, isStaleActiveExecution } from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
@@ -3676,16 +3704,24 @@ const liveStreamProgress = computed(() => {
   return ''
 })
 
+type TimelineStep = {
+  key: string
+  nodeId: string
+  nodeType: string
+  label: string
+  status: string
+  note: string
+  durationMs?: number | null
+  error?: string
+  outputPreview?: string
+}
+
+const selectedTimelineKey = ref<string | null>(null)
+
 /** 这一次试跑的步骤时间线（审批挂在 wait 步骤说明里） */
 const execTimeline = computed(() => {
   const ex = currentExecution.value
-  if (!ex) return [] as {
-    key: string
-    nodeType: string
-    label: string
-    status: string
-    note: string
-  }[]
+  if (!ex) return [] as TimelineStep[]
   const runs = (ex.node_runs || []) as {
     id?: string
     node_id: string
@@ -3694,6 +3730,7 @@ const execTimeline = computed(() => {
     error?: string
     attempt?: number
     duration_ms?: number
+    output?: unknown
     detail?: {
       human_action?: boolean
       action?: string
@@ -3710,10 +3747,14 @@ const execTimeline = computed(() => {
     if (ex.current_node) {
       return [{
         key: `cur-${ex.current_node}`,
+        nodeId: ex.current_node,
         nodeType: 'default',
         label: nodeDisplayName(ex.current_node),
         status: ex.status === 'waiting' ? 'waiting' : (ex.status || 'running'),
         note: ex.status === 'waiting' ? t('editor.debugTimelineWaiting') : '',
+        durationMs: null,
+        error: '',
+        outputPreview: '',
       }]
     }
     return []
@@ -3730,12 +3771,16 @@ const execTimeline = computed(() => {
       const noteExtra = r.detail?.note ? ` · ${truncateText(r.detail.note, 40)}` : ''
       return {
         key: r.id || `human-${r.node_id}-${r.attempt || i}`,
+        nodeId: r.detail?.wait_node_id || r.node_id,
         nodeType: 'human_action',
         label: action === 'reject'
           ? t('editor.debugTimelineRejectAction', { node: waitLabel })
           : t('editor.debugTimelineApproveAction', { node: waitLabel }),
         status: r.status || (action === 'reject' ? 'rejected' : 'approved'),
         note: t('editor.debugTimelineAudit', { actor, when: when ? formatWaitUntil(when) : '—' }) + noteExtra,
+        durationMs: r.duration_ms ?? null,
+        error: r.error ? truncateText(r.error, 240) : '',
+        outputPreview: formatNodeRunOutputPreview(r.output),
       }
     }
     const label = nodeDisplayName(r.node_id) || r.node_id
@@ -3750,19 +3795,45 @@ const execTimeline = computed(() => {
         note = t('editor.debugTimelineApproved')
       }
     } else if (r.status === 'skipped') {
-      note = t('editor.debugTimelineSkipped')
+      note = isUntakenConditionSkip(r.output)
+        ? t('editor.debugTimelineSkippedBranch')
+        : t('editor.debugTimelineSkipped')
     } else if (r.duration_ms != null && r.duration_ms > 0) {
       note = t('editor.debugTimelineMs', { ms: r.duration_ms })
     }
     return {
       key: r.id || `${r.node_id}-${r.attempt || i}`,
+      nodeId: r.node_id,
       nodeType,
       label,
       status: r.status || 'pending',
       note,
+      durationMs: r.duration_ms ?? null,
+      error: r.error ? truncateText(r.error, 240) : '',
+      outputPreview: formatNodeRunOutputPreview(r.output),
     }
   })
 })
+
+const selectedTimelineStep = computed(() =>
+  execTimeline.value.find(s => s.key === selectedTimelineKey.value) || null,
+)
+
+watch(() => currentExecution.value?.id, () => {
+  selectedTimelineKey.value = null
+})
+
+function selectTimelineStep(step: TimelineStep) {
+  selectedTimelineKey.value = selectedTimelineKey.value === step.key ? null : step.key
+  if (!step.nodeId || step.nodeType === 'human_action') return
+  const n = nodes.value.find((x: any) => x.id === step.nodeId)
+  if (!n) return
+  selectedNode.value = n
+  nodes.value = nodes.value.map((x: any) => ({
+    ...x,
+    selected: x.id === step.nodeId,
+  }))
+}
 
 /** 点历史记录：拉详情、高亮画布；若仍在跑则继续轮询 */
 const selectHistoryExecution = async (executionId: string) => {
@@ -4649,8 +4720,23 @@ onMounted(() => {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 0;
+  width: 100%;
+  margin: 0;
+  padding: 8px 4px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
   border-bottom: 1px solid color-mix(in oklab, var(--cf-line, #e2e8f0) 70%, transparent);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.debug-timeline__item:hover {
+  background: color-mix(in oklab, var(--cf-accent, #3b82f6) 6%, transparent);
+}
+.debug-timeline__item.is-selected {
+  background: color-mix(in oklab, var(--cf-accent, #3b82f6) 10%, #fff);
 }
 .debug-timeline__item:last-child {
   border-bottom: 0;
@@ -4686,6 +4772,52 @@ onMounted(() => {
   margin-top: 2px;
   font-size: 11px;
   color: var(--cf-ink-soft, #64748b);
+  word-break: break-word;
+}
+.debug-step-summary {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  background: var(--cf-bg, #f8fafc);
+}
+.debug-step-summary__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+.debug-step-summary__meta dt {
+  display: inline;
+  margin: 0;
+  color: var(--cf-ink-muted, #64748b);
+}
+.debug-step-summary__meta dt::after {
+  content: '：';
+}
+.debug-step-summary__meta dd {
+  display: inline;
+  margin: 0;
+  font-weight: 500;
+}
+.debug-step-summary__error {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #dc2626;
+  word-break: break-word;
+}
+.debug-step-summary__out {
+  margin: 0;
+  padding: 8px 10px;
+  max-height: 140px;
+  overflow: auto;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 .debug-timeline__item[data-status='waiting'] .debug-timeline__note {
