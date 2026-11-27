@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.133 | Playground 对话改走 useAgentChat / useChatStream | orjrs |
 | 2026-11-27 | v1.132 | 共用 CfFieldHelp 接知识库表单帮助图标 | orjrs |
 | 2026-11-27 | v1.131 | 共用 CfEmptyState / CfLoadingState 接列表空态与加载 | orjrs |
 | 2026-11-27 | v1.130 | 共用 CfConfirmModal 接各列表删除确认 | orjrs |
@@ -159,6 +160,12 @@
 - **原因**：知识库检索/分段旁帮助图标重复手写 UTooltip
 - **落地**：`CfFieldHelp`；`pages/knowledge/[id].vue` 检索查询与分段参数标签旁
 - **主仓**：前端设计 v1.101；开发计划 v1.222
+
+## [变更] Playground 改走共用聊天 composable（2026-11-27）
+
+- **原因**：选 Agent 时仍内联 SSE，与 useAgentChat 重复
+- **落地**：有 Agent → `useAgentChat`；无 Agent → `useChatStream`；透传 attachments / variables / mcp_servers 等
+- **主仓**：前端设计 v1.102；开发计划 v1.223
 
 ## [变更] 审计表展示 clearance 动作（2026-11-27）
 
@@ -562,7 +569,7 @@
   - 新增 `useChatStream`（`/chat/stream`）、`mapChatHttpError`、`chatUi` 映射；`useAgentChat` 仍专责 Agent 对话
   - 提示词试跑改为走 `useChatStream`
 - **后续 TODO（跨模块去重，未做）**：
-  - [ ] Playground 选 Agent 时改为调 `useAgentChat`（去掉内联 agent SSE）
+  - [x] Playground 选 Agent 时改为调 `useAgentChat`（无 Agent 走 `useChatStream`）
   - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
   - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
