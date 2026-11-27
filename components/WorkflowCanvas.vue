@@ -32,113 +32,127 @@
         :hint="bindNodeHint('start', data)"
       />
     </template>
-    <template #node-end="{ data }">
+    <template #node-end="{ data, id }">
       <WorkflowFlowNode
         kind="end"
         :label="data.label"
         :hint="bindNodeHint('end', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-llm="{ data }">
+    <template #node-llm="{ data, id }">
       <WorkflowFlowNode
         kind="llm"
         :label="data.label"
         :hint="bindNodeHint('llm', data)"
         :unbound="isWorkflowBindUnbound('llm', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-agent="{ data }">
+    <template #node-agent="{ data, id }">
       <WorkflowFlowNode
         kind="agent"
         :label="data.label"
         :hint="bindNodeHint('agent', data)"
         :unbound="isWorkflowBindUnbound('agent', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-team="{ data }">
+    <template #node-team="{ data, id }">
       <WorkflowFlowNode
         kind="team"
         :label="data.label"
         :hint="bindNodeHint('team', data)"
         :unbound="isWorkflowBindUnbound('team', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-condition="{ data }">
+    <template #node-condition="{ data, id }">
       <WorkflowFlowNode
         kind="condition"
         :label="data.label"
         :hint="bindNodeHint('condition', data)"
         :unbound="isWorkflowBindUnbound('condition', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-loop="{ data }">
+    <template #node-loop="{ data, id }">
       <WorkflowFlowNode
         kind="loop"
         :label="data.label"
         :hint="bindNodeHint('loop', data)"
         :unbound="isWorkflowBindUnbound('loop', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-http="{ data }">
+    <template #node-http="{ data, id }">
       <WorkflowFlowNode
         kind="http"
         :label="data.label"
         :hint="bindNodeHint('http', data)"
         :unbound="isWorkflowBindUnbound('http', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-code="{ data }">
+    <template #node-code="{ data, id }">
       <WorkflowFlowNode
         kind="code"
         :label="data.label"
         :hint="bindNodeHint('code', data)"
         :unbound="isWorkflowBindUnbound('code', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-delay="{ data }">
+    <template #node-delay="{ data, id }">
       <WorkflowFlowNode
         kind="delay"
         :label="data.label"
         :hint="bindNodeHint('delay', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-wait="{ data }">
+    <template #node-wait="{ data, id }">
       <WorkflowFlowNode
         kind="wait"
         :label="data.label"
         :hint="bindNodeHint('wait', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-search="{ data }">
+    <template #node-search="{ data, id }">
       <WorkflowFlowNode
         kind="search"
         :label="data.label"
         :hint="bindNodeHint('search', data)"
         :unbound="isWorkflowBindUnbound('search', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-subflow="{ data }">
+    <template #node-subflow="{ data, id }">
       <WorkflowFlowNode
         kind="subflow"
         :label="data.label"
         :hint="bindNodeHint('subflow', data)"
         :unbound="isWorkflowBindUnbound('subflow', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-input="{ data }">
+    <template #node-input="{ data, id }">
       <WorkflowFlowNode
         kind="input"
         :label="data.label"
         :hint="bindNodeHint('input', data)"
         :unbound="isWorkflowBindUnbound('input', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
-    <template #node-output="{ data }">
+    <template #node-output="{ data, id }">
       <WorkflowFlowNode
         kind="output"
         :label="data.label"
         :hint="bindNodeHint('output', data)"
         :unbound="isWorkflowBindUnbound('output', data)"
+        :orphan="isOrphan(id)"
       />
     </template>
   </VueFlow>
@@ -158,13 +172,23 @@ import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
+import { computed } from 'vue'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
+import { reachableFromStart } from '@/utils/workflowReachability'
 
-defineProps<{
+const props = defineProps<{
   nodes: any[]
   edges: any[]
 }>()
+
+const reachableIds = computed(() => reachableFromStart(props.nodes || [], props.edges || []))
+const hasStartNode = computed(() => (props.nodes || []).some(n => String(n?.type || '') === 'start'))
+
+function isOrphan(id: string) {
+  if (!hasStartNode.value) return false
+  return !reachableIds.value.has(id)
+}
 
 /** 流式进度优先；已绑定则显示资源名副文案 */
 function bindNodeHint(kind: string, data: Record<string, unknown> | null | undefined) {

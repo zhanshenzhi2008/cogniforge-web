@@ -1371,6 +1371,7 @@ export const M = {
   'editor.bindKind.input': { 'zh-CN': '变量名', 'en-US': 'variable' },
   'editor.bindKind.output': { 'zh-CN': '变量名', 'en-US': 'variable' },
   'editor.nodeUnboundHint': { 'zh-CN': '尚未绑定，点开右侧配置', 'en-US': 'Not bound — open the side panel' },
+  'editor.nodeOrphanHint': { 'zh-CN': '从开始走不到，请连边', 'en-US': 'Unreachable from Start — connect an edge' },
   'editor.unboundChip': { 'zh-CN': '{n} 个未绑定', 'en-US': '{n} unbound' },
   'editor.unboundChipTip': { 'zh-CN': '点击打开第一个未配置节点', 'en-US': 'Click to open the first unbound node' },
   'editor.knowledgeBase': { 'zh-CN': '知识库', 'en-US': 'Knowledge base' },

@@ -4,6 +4,7 @@
     :class="[
       `flow-node-${meta.tone}`,
       { 'flow-node--unbound': unbound },
+      { 'flow-node--orphan': orphan && !unbound },
     ]"
   >
     <!-- 左侧入口线头：结束/普通节点可接；开始节点无入口 -->
@@ -22,7 +23,10 @@
       <span
         v-if="displayHint"
         class="flow-node__hint"
-        :class="{ 'flow-node__hint--warn': unbound && !hint }"
+        :class="{
+          'flow-node__hint--warn': unbound && !hint,
+          'flow-node__hint--orphan': orphan && !unbound && !hint,
+        }"
         :title="displayHint"
       >{{ displayHint }}</span>
     </div>
@@ -33,6 +37,12 @@
       :title="unboundHint"
       aria-hidden="true"
     >!</span>
+    <span
+      v-else-if="orphan"
+      class="flow-node__badge flow-node__badge--orphan"
+      :title="orphanHint"
+      aria-hidden="true"
+    >?</span>
 
     <!-- 条件：上下两个出口（真/假），鼠标从线头拖出 -->
     <template v-if="meta.handles === 'branch'">
@@ -78,6 +88,8 @@ const props = defineProps<{
   hint?: string
   /** 必填资源未绑定时醒目标记 */
   unbound?: boolean
+  /** 从开始节点不可达 */
+  orphan?: boolean
 }>()
 
 const { t } = useLocale()
@@ -85,9 +97,11 @@ const meta = computed(() => getWorkflowNodeMeta(props.kind))
 const trueLabel = computed(() => t('editor.branchTrue'))
 const falseLabel = computed(() => t('editor.branchFalse'))
 const unboundHint = computed(() => t('editor.nodeUnboundHint'))
+const orphanHint = computed(() => t('editor.nodeOrphanHint'))
 const displayHint = computed(() => {
   if (props.hint) return props.hint
   if (props.unbound) return unboundHint.value
+  if (props.orphan) return orphanHint.value
   return ''
 })
 </script>
@@ -114,6 +128,14 @@ const displayHint = computed(() => {
   box-shadow: 0 0 0 2px rgb(245 158 11 / 0.22);
 }
 
+.flow-node--orphan {
+  border-color: #64748b;
+  border-style: dashed;
+  background: #f8fafc;
+  box-shadow: 0 0 0 2px rgb(100 116 139 / 0.2);
+  opacity: 0.92;
+}
+
 .flow-node__badge {
   position: absolute;
   top: -7px;
@@ -129,6 +151,10 @@ const displayHint = computed(() => {
   text-align: center;
   box-shadow: 0 0 0 2px #fff;
   pointer-events: none;
+}
+
+.flow-node__badge--orphan {
+  background: #64748b;
 }
 
 .flow-node__icon {
@@ -162,6 +188,10 @@ const displayHint = computed(() => {
 
 .flow-node__hint--warn {
   color: #b45309;
+}
+
+.flow-node__hint--orphan {
+  color: #64748b;
 }
 
 /* ProcessOn 风格线头：常显淡点，悬停放大可拖 */
