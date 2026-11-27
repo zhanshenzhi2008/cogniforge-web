@@ -45,6 +45,58 @@ async function mockPromptAPI(page: Page) {
       return
     }
 
+    if (method === 'POST' && path.endsWith('/api/v1/prompts/import')) {
+      const body = req.postDataJSON() as {
+        agent_id?: string
+        skill_id?: string
+        name?: string
+      }
+      const name = body.name?.trim()
+        || (body.agent_id === 'a-e2e' ? '客服 Agent' : body.skill_id ? 'Skill 提示词' : '导入提示词')
+      const content = body.agent_id
+        ? '你是从 Agent 导入的助手'
+        : '你是从 Skill 导入的助手'
+      const existing = items.find(p => p.name === name)
+      if (existing) {
+        const list = versions.get(existing.id) || []
+        const v: PromptVersion = {
+          id: `pv-${existing.id}-${list.length + 1}`,
+          prompt_id: existing.id,
+          version: list.length + 1,
+          status: 'published',
+          content,
+          created_at: now(),
+        }
+        list.unshift(v)
+        versions.set(existing.id, list)
+        existing.current_version_id = v.id
+        existing.updated_at = now()
+        await json({ prompt: existing, current_version: v })
+        return
+      }
+      const id = `p-imp-${items.length + 1}`
+      const vid = `pv-${id}-1`
+      const p: Prompt = {
+        id,
+        name,
+        current_version_id: vid,
+        created_at: now(),
+        updated_at: now(),
+      }
+      const v: PromptVersion = {
+        id: vid,
+        prompt_id: id,
+        version: 1,
+        status: 'published',
+        content,
+        created_at: now(),
+      }
+      items.push(p)
+      versions.set(id, [v])
+      await json({ prompt: p, current_version: v })
+      return
+    }
+
     if (method === 'POST' && path.endsWith('/api/v1/prompts')) {
       const body = req.postDataJSON() as {
         name?: string
@@ -303,6 +355,40 @@ test.describe('prompts e2e', () => {
     await expect(verCards.first().getByText('已发布', { exact: true })).toBeVisible()
     await expect(verCards.first().getByText('当前', { exact: true })).toBeVisible()
     await expect(page.getByText('正文-草稿', { exact: true })).toBeVisible()
+  })
+
+  test('import prompt from agent', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+    // LIFO：覆盖 helpers 里空 agents 列表
+    await page.route(/\/api\/v1\/agents$/, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue()
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(ok([
+          { id: 'a-e2e', name: '客服 Agent', description: '', model: 'deepseek-chat' },
+        ])),
+      })
+    })
+
+    await page.goto('/prompts')
+    await expect(page.getByText('还没有提示词')).toBeVisible()
+    await page.getByRole('button', { name: '导入提示词' }).click()
+    await expect(page.getByRole('heading', { name: '导入提示词' })).toBeVisible()
+
+    await page.getByRole('combobox').filter({ hasText: '选择 Agent' }).click()
+    await page.getByRole('option', { name: '客服 Agent' }).click()
+    await page.getByRole('button', { name: '创建' }).click()
+
+    await expect(page.getByText('已导入为新提示词')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '客服 Agent' })).toBeVisible()
+    await expect(page.getByText('你是从 Agent 导入的助手')).toBeVisible()
+    await expect(page.getByText('v1', { exact: true })).toBeVisible()
   })
 
   test('archive old version then rollback publish', async ({ page }) => {

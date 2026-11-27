@@ -480,8 +480,8 @@ const showCreate = ref(false)
 const showVer = ref(false)
 const showImport = ref(false)
 const importKind = ref<'agent' | 'skill'>('agent')
-const importAgentId = ref('')
-const importSkillId = ref('')
+const importAgentId = ref<string | undefined>(undefined)
+const importSkillId = ref<string | undefined>(undefined)
 const agentOptions = ref<{ label: string; value: string }[]>([])
 const skillOptions = ref<{ label: string; value: string }[]>([])
 const importKindOptions = computed(() => [
@@ -830,8 +830,8 @@ const doImport = async () => {
     return
   }
   showImport.value = false
-  importAgentId.value = ''
-  importSkillId.value = ''
+  importAgentId.value = undefined
+  importSkillId.value = undefined
   const ver = res.data?.current_version
   toast.add({
     title: ver && ver.version > 1 ? t('prompts.importUpdated') : t('prompts.importCreated'),
