@@ -187,6 +187,7 @@
               <th>{{ t('monitor.time') }}</th>
               <th>{{ t('monitor.auditActor') }}</th>
               <th>{{ t('monitor.auditResource') }}</th>
+              <th>{{ t('monitor.auditAction') }}</th>
               <th>{{ t('monitor.auditChange') }}</th>
               <th>{{ t('common.status') }}</th>
               <th>{{ t('monitor.auditDetail') }}</th>
@@ -196,7 +197,10 @@
             <tr v-for="row in securityAudits" :key="row.id" class="list-row">
               <td class="cf-muted">{{ d(row.created_at) }}</td>
               <td class="cf-muted" :title="row.actor_user_id">{{ shortId(row.actor_user_id) }}</td>
-              <td class="path-cell" :title="row.resource_id">{{ shortId(row.resource_id) }}</td>
+              <td class="path-cell" :title="`${row.resource_type}:${row.resource_id}`">
+                {{ auditResourceLabel(row.resource_type) }} {{ shortId(row.resource_id) }}
+              </td>
+              <td class="cf-muted">{{ auditActionLabel(row.action) }}</td>
               <td>
                 {{ securityLabel(row.old_value) }}
                 <span class="cf-muted">→</span>
@@ -404,10 +408,26 @@ function shortId(id?: string) {
 }
 
 function securityLabel(level?: string) {
-  const lv = (level || '').toLowerCase()
+  if (level === undefined || level === null || level === '') return '—'
+  const lv = String(level).toLowerCase()
   const key = `kb.security.${lv}`
   const label = t(key)
-  return label === key ? (level || '—') : label
+  return label === key ? level : label
+}
+
+function auditResourceLabel(kind?: string) {
+  if (kind === 'role') return t('monitor.resRole')
+  if (kind === 'user') return t('monitor.resUser')
+  if (kind === 'document') return t('monitor.resDoc')
+  return kind || '—'
+}
+
+function auditActionLabel(action?: string) {
+  if (!action) return '—'
+  if (action.includes('role_clearance')) return t('monitor.actRoleClearance')
+  if (action.includes('user_clearance')) return t('monitor.actUserClearance')
+  if (action.includes('document_security')) return t('monitor.actDocSecurity')
+  return action
 }
 
 async function loadSecurityAudits() {
