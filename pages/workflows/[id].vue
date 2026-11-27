@@ -43,6 +43,14 @@
         </CfButton>
         <CfButton
           tone="secondary"
+          icon="i-lucide-history"
+          :disabled="isSmokeTest"
+          @click="openVersions"
+        >
+          {{ t('editor.versions') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
           icon="i-lucide-layout-grid"
           :disabled="nodes.length === 0"
           @click="tidyLayout"
@@ -215,6 +223,43 @@
             >
               {{ t('common.save') }}
             </CfButton>
+          </div>
+        </div>
+      </template>
+    </CfModal>
+
+    <CfModal
+      v-model:open="versionsOpen"
+      :title="t('editor.versionsTitle')"
+      :ui="{ content: 'sm:max-w-lg' }"
+    >
+      <template #body>
+        <p class="debug-hint debug-hint--compact">{{ t('editor.versionsHint') }}</p>
+        <div v-if="versionsLoading" class="cf-state">{{ t('common.loading') }}</div>
+        <div v-else-if="!versionList.length" class="cf-state">{{ t('editor.versionsEmpty') }}</div>
+        <ul v-else class="version-list">
+          <li v-for="v in versionList" :key="v.id" class="version-list__item">
+            <div>
+              <strong>v{{ v.version }}</strong>
+              <span class="cf-muted"> · {{ formatExecTime(v) }}</span>
+              <span v-if="v.note" class="cf-muted"> · {{ v.note }}</span>
+            </div>
+            <CfButton
+              tone="secondary"
+              size="sm"
+              icon="i-lucide-undo-2"
+              :loading="rollingBackVersion === v.version"
+              @click="confirmRollback(v.version)"
+            >
+              {{ t('editor.rollback') }}
+            </CfButton>
+          </li>
+        </ul>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="versionsOpen = false">{{ t('common.close') }}</CfButton>
           </div>
         </div>
       </template>
@@ -922,7 +967,7 @@ import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 
 import { useRoute } from 'vue-router'
-import { useWorkflows, type WorkflowDefinition } from '@/composables/useWorkflows'
+import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap } from '@/composables/useWorkflows'
 import { useKnowledgeBases, type KnowledgeBase } from '@/composables/useKnowledgeBases'
 import { useProviders, hasCap, rerankModelLabel } from '@/composables/useProviders'
 
@@ -950,7 +995,50 @@ definePageMeta({
 const route = useRoute()
 const toast = useToast()
 const { t } = useLocale()
-const { get, update, execute, listExecutions, getExecution, cancelExecution, resumeExecution, approveExecution, rejectExecution, debug } = useWorkflows()
+const {
+  get, update, execute, listExecutions, getExecution, cancelExecution,
+  resumeExecution, approveExecution, rejectExecution, debug,
+  listVersions, rollbackVersion,
+} = useWorkflows()
+
+const versionsOpen = ref(false)
+const versionsLoading = ref(false)
+const versionList = ref<WorkflowVersionSnap[]>([])
+const rollingBackVersion = ref<number | null>(null)
+
+const openVersions = async () => {
+  if (!workflowId.value || isSmokeTest.value) return
+  versionsOpen.value = true
+  versionsLoading.value = true
+  try {
+    const res = await listVersions(workflowId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      versionList.value = []
+      return
+    }
+    versionList.value = res.data || []
+  } finally {
+    versionsLoading.value = false
+  }
+}
+
+const confirmRollback = async (version: number) => {
+  if (!workflowId.value || !confirm(t('editor.rollbackConfirm', { version }))) return
+  rollingBackVersion.value = version
+  try {
+    const res = await rollbackVersion(workflowId.value, version)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: t('editor.rollbackOk', { version }), color: 'success' })
+    versionsOpen.value = false
+    await loadWorkflow()
+  } finally {
+    rollingBackVersion.value = null
+  }
+}
 const { list: listModels } = useModels()
 const { list: listTeams } = useTeams()
 const { list: listAgents } = useAgents()
@@ -2687,6 +2775,24 @@ onMounted(() => {
   font-size: 12px;
   color: var(--cf-ink, #334155);
   word-break: break-word;
+}
+
+.version-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.version-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in oklab, var(--cf-border, #e2e8f0) 80%, transparent);
+  border-radius: 8px;
 }
 
 .modal-actions__right {

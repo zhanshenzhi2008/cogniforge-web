@@ -46,6 +46,15 @@ export interface WorkflowExecution {
   created_at: string
 }
 
+export interface WorkflowVersionSnap {
+  id: string
+  workflow_id: string
+  version: number
+  definition: string
+  note?: string
+  created_at: string
+}
+
 export interface CreateWorkflowInput {
   name: string
   description?: string
@@ -145,6 +154,26 @@ export const useWorkflows = () => {
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '复制工作流失败' }
+    }
+  }
+
+  const listVersions = async (id: string): Promise<{ data?: WorkflowVersionSnap[]; error?: string }> => {
+    try {
+      const res = await api.get<WorkflowVersionSnap[]>(`/api/v1/workflows/${id}/versions`)
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取版本列表失败' }
+    }
+  }
+
+  const rollbackVersion = async (id: string, version: number): Promise<{ data?: Workflow; error?: string }> => {
+    try {
+      const res = await api.post<Workflow>(`/api/v1/workflows/${id}/versions/${version}/rollback`, {})
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '回滚失败' }
     }
   }
 
@@ -264,6 +293,8 @@ export const useWorkflows = () => {
     update,
     remove,
     clone,
+    listVersions,
+    rollbackVersion,
     execute,
     getExecution,
     listExecutions,
