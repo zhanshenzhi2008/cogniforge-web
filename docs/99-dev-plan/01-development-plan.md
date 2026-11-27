@@ -742,7 +742,7 @@
   - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
   - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
-  - [x] 可选 `CfResourceCard` 壳：agents/knowledge/teams/workflows/prompts/keys 已接
+  - [x] 可选 `CfResourceCard` 壳：agents/knowledge/teams/workflows/prompts/keys/mcp 已接
   - [x] 知识库 / MCP 列表复用 `CfViewModeToggle`
 - **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`
 - **主仓**：前端设计同步
