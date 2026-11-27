@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.132 | 共用 CfFieldHelp 接知识库表单帮助图标 | orjrs |
 | 2026-11-27 | v1.131 | 共用 CfEmptyState / CfLoadingState 接列表空态与加载 | orjrs |
 | 2026-11-27 | v1.130 | 共用 CfConfirmModal 接各列表删除确认 | orjrs |
 | 2026-11-27 | v1.129 | 监控审计支持密级检索动作文案 | orjrs |
@@ -152,6 +153,12 @@
 - **原因**：列表空态与加载态重复手写 cf-state
 - **落地**：`CfEmptyState`、`CfLoadingState`；接 agents/teams/models/mcp/prompts/kb/workflows/keys/users/roles/monitor/evals
 - **主仓**：前端设计 v1.100；开发计划 v1.221
+
+## [变更] CfFieldHelp 表单帮助图标（2026-11-27）
+
+- **原因**：知识库检索/分段旁帮助图标重复手写 UTooltip
+- **落地**：`CfFieldHelp`；`pages/knowledge/[id].vue` 检索查询与分段参数标签旁
+- **主仓**：前端设计 v1.101；开发计划 v1.222
 
 ## [变更] 审计表展示 clearance 动作（2026-11-27）
 
@@ -558,7 +565,7 @@
   - [ ] Playground 选 Agent 时改为调 `useAgentChat`（去掉内联 agent SSE）
   - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [x] `CfEmptyState` / `CfLoadingState`：统一空态与加载（主要列表页）
-  - [ ] `CfFieldHelp`：表单旁帮助图标（知识库等）
+  - [x] `CfFieldHelp`：表单旁帮助图标（知识库检索/分段已接）
   - [ ] 可选 `CfResourceCard` 壳：agents/models/mcp/knowledge 卡片骨架
   - [ ] MCP/知识库等列表复用 `CfViewModeToggle`（若需要卡片+表格）
 - **包含代码**：`components/CfChatPanel.vue`、`composables/useChatStream.ts`、`utils/chatUi.ts`、`utils/chatHttpError.ts`、`AgentStudio.vue`、`playground.vue`、`prompts.vue`

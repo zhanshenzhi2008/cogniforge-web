@@ -308,11 +308,7 @@
                     <span>{{ searchModeLabel(searchMode) }}</span>
                     <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 shrink-0 opacity-70" />
                   </button>
-                  <UTooltip :text="t('kb.searchQueryTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.searchQueryTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.searchQueryTip')" />
                 </div>
                 <UTextarea
                   v-model="searchQuery"
@@ -1038,11 +1034,7 @@
               <div class="field">
                 <label class="field__label">
                   <span>{{ t('kb.splitMode') }}</span>
-                  <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.splitModeTip')" />
                 </label>
                 <USelect
                   v-model="parseForm.split_mode"
@@ -1054,33 +1046,21 @@
               <div class="field">
                 <label class="field__label">
                   <span>{{ t('kb.chunkSize') }}</span>
-                  <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.chunkSizeTip')" />
                 </label>
                 <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
               </div>
               <div class="field">
                 <label class="field__label">
                   <span>{{ t('kb.chunkOverlap') }}</span>
-                  <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.chunkOverlapTip')" />
                 </label>
                 <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
               </div>
               <div v-if="parseForm.split_mode === 'separator'" class="field">
                 <label class="field__label">
                   <span>{{ t('kb.splitSeparator') }}</span>
-                  <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.splitSeparatorTip')" />
                 </label>
                 <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
               </div>
@@ -1610,8 +1590,6 @@ const sourceTabs = computed(() => [
   { value: 'web' as const, label: t('kb.sourceWeb'), icon: 'i-lucide-globe' },
   { value: 'text' as const, label: t('kb.sourceText'), icon: 'i-lucide-file-pen-line' },
 ])
-const fieldHelpTooltipContent = { side: 'top' as const, collisionPadding: 8 }
-const fieldHelpTooltipUi = { content: 'max-w-xs whitespace-normal' }
 
 function newUploadId() {
   return `up_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
@@ -3222,24 +3200,6 @@ onBeforeUnmount(() => {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--cf-ink);
-}
-
-.field__help {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--cf-muted, #64748b);
-  cursor: help;
-  line-height: 1;
-}
-
-.field__help:hover,
-.field__help:focus-visible {
-  color: var(--cf-ink);
-  outline: none;
 }
 
 .field__error {
