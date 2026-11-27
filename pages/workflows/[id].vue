@@ -1038,8 +1038,18 @@
               {{ shortExecId(currentExecution.id) }}
             </span>
           </div>
-          <div v-if="execInputPreview" class="debug-meta">
-            {{ t('editor.debugInputPreview', { text: execInputPreview }) }}
+          <div v-if="execInputPreview || currentExecution.input" class="debug-meta debug-meta--input">
+            <span v-if="execInputPreview">{{ t('editor.debugInputPreview', { text: execInputPreview }) }}</span>
+            <button
+              v-if="formatExecutionInputJson(currentExecution.input)"
+              type="button"
+              class="debug-reuse-input"
+              :title="t('editor.debugReuseInputHint')"
+              @click="reuseExecutionInput(currentExecution.input)"
+            >
+              <UIcon name="i-lucide-clipboard-paste" class="size-3.5" />
+              <span>{{ t('editor.debugReuseInput') }}</span>
+            </button>
           </div>
           <p v-if="currentExecution.current_node" class="debug-meta">
             {{ t('editor.debugAtNode', { name: nodeDisplayName(currentExecution.current_node) }) }}
@@ -1226,18 +1236,30 @@
                 <div v-if="row.secondary" class="debug-log-secondary">{{ row.secondary }}</div>
                 <div class="debug-log-id" :title="row.item.id">{{ shortExecId(row.item.id) }}</div>
               </button>
-              <button
-                v-if="row.cancellable"
-                type="button"
-                class="debug-log-cancel"
-                :class="{ 'debug-log-cancel--stale': row.stale }"
-                :disabled="cancellingExecId === row.item.id"
-                :title="t('editor.cancelRun')"
-                @click.stop="cancelHistoryExecution(row.item.id)"
-              >
-                <UIcon name="i-lucide-square" class="size-3.5" />
-                <span>{{ row.stale ? t('editor.cancelStuckRun') : t('editor.cancelRun') }}</span>
-              </button>
+              <div class="debug-log-item__actions">
+                <button
+                  v-if="formatExecutionInputJson(row.item.input)"
+                  type="button"
+                  class="debug-reuse-input"
+                  :title="t('editor.debugReuseInputHint')"
+                  @click.stop="reuseExecutionInput(row.item.input)"
+                >
+                  <UIcon name="i-lucide-clipboard-paste" class="size-3.5" />
+                  <span>{{ t('editor.debugReuseInput') }}</span>
+                </button>
+                <button
+                  v-if="row.cancellable"
+                  type="button"
+                  class="debug-log-cancel"
+                  :class="{ 'debug-log-cancel--stale': row.stale }"
+                  :disabled="cancellingExecId === row.item.id"
+                  :title="t('editor.cancelRun')"
+                  @click.stop="cancelHistoryExecution(row.item.id)"
+                >
+                  <UIcon name="i-lucide-square" class="size-3.5" />
+                  <span>{{ row.stale ? t('editor.cancelStuckRun') : t('editor.cancelRun') }}</span>
+                </button>
+              </div>
             </div>
           </template>
         </div>
@@ -1279,6 +1301,7 @@ import {
   clearCanvasRunDecorations,
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
+  formatExecutionInputJson,
   formatNodeRunOutputPreview,
   isSeededDebugSkip,
   isUntakenConditionSkip,
@@ -1733,6 +1756,18 @@ function syncDebugFormFromInput() {
       }
     }
   } catch { /* ignore */ }
+}
+
+/** 把某次试跑的输入填回上方表单，方便改一点再跑 */
+function reuseExecutionInput(input: unknown) {
+  const json = formatExecutionInputJson(input)
+  if (!json) {
+    toast.add({ title: t('editor.debugReuseInputEmpty'), color: 'warning' })
+    return
+  }
+  debugInput.value = json
+  syncDebugFormFromInput()
+  toast.add({ title: t('editor.debugReuseInputOk'), color: 'success' })
 }
 
 function initDebugFormFromStartVars() {
@@ -4788,6 +4823,34 @@ onMounted(() => {
 }
 .debug-log-item.is-stale {
   border-color: color-mix(in oklab, #f59e0b 45%, transparent);
+}
+.debug-meta--input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.debug-log-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.debug-reuse-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  background: #fff;
+  color: var(--cf-ink-soft, #64748b);
+  font-size: 11px;
+  cursor: pointer;
+}
+.debug-reuse-input:hover {
+  border-color: color-mix(in oklab, var(--cf-accent, #3b82f6) 55%, var(--cf-line, #e2e8f0));
+  color: var(--cf-accent, #2563eb);
 }
 .debug-log-cancel {
   display: inline-flex;

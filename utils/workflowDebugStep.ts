@@ -1,3 +1,34 @@
+/** 把某次试跑的 input 压成可回填的 JSON 文本；无内容返回 null */
+export function formatExecutionInputJson(input: unknown): string | null {
+  if (input == null) return null
+  if (typeof input === 'string') {
+    const trimmed = input.trim()
+    if (!trimmed) return null
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2)
+    } catch {
+      return trimmed
+    }
+  }
+  if (typeof input === 'object') {
+    if (Array.isArray(input)) {
+      try {
+        return JSON.stringify(input, null, 2)
+      } catch {
+        return null
+      }
+    }
+    if (Object.keys(input as object).length === 0) return null
+    try {
+      return JSON.stringify(input, null, 2)
+    } catch {
+      return null
+    }
+  }
+  const text = String(input).trim()
+  return text || null
+}
+
 /** 节点运行输出压成侧栏摘要用的短文案 */
 export function formatNodeRunOutputPreview(output: unknown, maxLen = 400): string {
   if (output == null || output === '') return ''

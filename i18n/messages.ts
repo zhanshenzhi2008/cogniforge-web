@@ -1112,6 +1112,13 @@ export const M = {
   'editor.cancelAllStuckFail': { 'zh-CN': '取消卡住的试跑失败', 'en-US': 'Failed to cancel stuck runs' },
   'editor.debugAtNode': { 'zh-CN': '停在节点：{name}', 'en-US': 'At node: {name}' },
   'editor.debugInputPreview': { 'zh-CN': '输入：{text}', 'en-US': 'Input: {text}' },
+  'editor.debugReuseInput': { 'zh-CN': '填入上方再跑', 'en-US': 'Reuse in form' },
+  'editor.debugReuseInputHint': {
+    'zh-CN': '把这次输入填回上方，改完可再点开始调试',
+    'en-US': 'Copy this run’s input into the form above so you can tweak and rerun',
+  },
+  'editor.debugReuseInputOk': { 'zh-CN': '已填入上方输入', 'en-US': 'Input filled into the form' },
+  'editor.debugReuseInputEmpty': { 'zh-CN': '这次没有可回填的输入', 'en-US': 'This run has no reusable input' },
   'editor.debugOutput': { 'zh-CN': '输出', 'en-US': 'Output' },
   'editor.debugNodeRuns': { 'zh-CN': '节点：共 {total} · 成功 {ok} · 失败 {fail} · 进行中 {running}', 'en-US': 'Nodes: {total} total · {ok} ok · {fail} failed · {running} running' },
   'editor.debugLoadFail': { 'zh-CN': '加载执行详情失败', 'en-US': 'Failed to load run details' },

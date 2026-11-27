@@ -3,12 +3,21 @@ import {
   clearCanvasRunDecorations,
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
+  formatExecutionInputJson,
   formatNodeRunOutputPreview,
   isSeededDebugSkip,
   isUntakenConditionSkip,
 } from './workflowDebugStep'
 
 describe('workflowDebugStep', () => {
+  it('formats execution input for reuse into the debug form', () => {
+    expect(formatExecutionInputJson(null)).toBe(null)
+    expect(formatExecutionInputJson({})).toBe(null)
+    expect(formatExecutionInputJson({ query: 'hi' })).toBe('{\n  "query": "hi"\n}')
+    expect(formatExecutionInputJson('{"a":1}')).toBe('{\n  "a": 1\n}')
+    expect(formatExecutionInputJson('  ')).toBe(null)
+  })
+
   it('prefers text/content fields and truncates', () => {
     expect(formatNodeRunOutputPreview({ text: 'hello world' })).toBe('hello world')
     expect(formatNodeRunOutputPreview({ content: 'abc' })).toBe('abc')
