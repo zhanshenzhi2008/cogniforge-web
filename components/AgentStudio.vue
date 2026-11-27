@@ -271,7 +271,13 @@
                 <div class="flex flex-col gap-1.5 text-left">
                   <strong class="text-sm">{{ t('agents.studioBuild') }}</strong>
                   <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioBuildTip') }}</p>
-                  <span class="text-xs font-medium underline underline-offset-2 opacity-95">{{ t('agents.studioLearnMore') }}</span>
+                  <NuxtLink
+                    to="/help/agent-studio"
+                    class="text-xs font-medium underline underline-offset-2 opacity-95 hover:opacity-100"
+                    @click.stop
+                  >
+                    {{ t('agents.studioLearnMore') }}
+                  </NuxtLink>
                 </div>
               </template>
             </UTooltip>
@@ -301,6 +307,13 @@
                 <div class="flex flex-col gap-1.5 text-left">
                   <strong class="text-sm">{{ t('agents.studioPreview') }}</strong>
                   <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioPreviewTip') }}</p>
+                  <NuxtLink
+                    to="/help/agent-studio"
+                    class="text-xs font-medium underline underline-offset-2 opacity-95 hover:opacity-100"
+                    @click.stop
+                  >
+                    {{ t('agents.studioLearnMore') }}
+                  </NuxtLink>
                 </div>
               </template>
             </UTooltip>

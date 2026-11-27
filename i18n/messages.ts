@@ -459,6 +459,56 @@ export const M = {
     'en-US': 'Test it like a user. Your interaction will not affect the Agent\'s subsequent behavior.',
   },
   'agents.studioLearnMore': { 'zh-CN': '了解更多', 'en-US': 'Learn more' },
+  'help.studioTitle': { 'zh-CN': '智能体工作室说明', 'en-US': 'Agent Studio guide' },
+  'help.studioSub': {
+    'zh-CN': '左侧配模型与能力，右侧用「构建」写提示词、「预览」像用户试聊。',
+    'en-US': 'Configure on the left; use Build for prompts and Preview to chat like a user.',
+  },
+  'help.studioBuildStep1': {
+    'zh-CN': '用自然语言描述目标，可勾选已接入的 MCP 工具。',
+    'en-US': 'Describe the goal in natural language; pick connected MCP tools.',
+  },
+  'help.studioBuildStep2': {
+    'zh-CN': '点「应用到配置」把提示词与工具写回左侧表单。',
+    'en-US': 'Use Apply to write prompt and tools back into the left form.',
+  },
+  'help.studioBuildStep3': {
+    'zh-CN': '点「保存」固化到 Agent；清单外工具请先到 MCP 页接入。',
+    'en-US': 'Save to solidify the Agent; add missing tools on the MCP page first.',
+  },
+  'help.studioPreviewStep1': {
+    'zh-CN': '需先保存 Agent，再在预览里像用户一样试对话。',
+    'en-US': 'Save the Agent first, then chat like a user in Preview.',
+  },
+  'help.studioPreviewStep2': {
+    'zh-CN': '预览聊天不会改左侧配置，也不会影响后续行为。',
+    'en-US': 'Preview chats do not change the left config or later behavior.',
+  },
+  'help.studioPreviewStep3': {
+    'zh-CN': '若开启附件，可上传文件再提问（与对话页一致）。',
+    'en-US': 'If attachments are on, upload files before asking (same as Playground).',
+  },
+  'help.studioConfigTitle': { 'zh-CN': '左侧常用配置', 'en-US': 'Left-side essentials' },
+  'help.studioConfigModel': {
+    'zh-CN': '模型：选择对话用的 LLM。',
+    'en-US': 'Model: pick the LLM used for chat.',
+  },
+  'help.studioConfigPrompt': {
+    'zh-CN': '提示词 / 技能 / 工具：定义人设与可调用能力。',
+    'en-US': 'Prompt / skills / tools: define persona and callable capabilities.',
+  },
+  'help.studioConfigKb': {
+    'zh-CN': '知识库：多选绑定后，对话会自动检索。',
+    'en-US': 'Knowledge bases: multi-select; chats retrieve automatically.',
+  },
+  'help.studioConfigOpening': {
+    'zh-CN': '开场白与预设问题：空态展示，点击即可发送。',
+    'en-US': 'Opening message and suggested prompts: shown when empty; click to send.',
+  },
+  'help.studioConfigAttach': {
+    'zh-CN': '附件开关：预览区是否允许上传文件。',
+    'en-US': 'Attachments: allow file upload in Preview.',
+  },
   'agents.studioBuildEmpty': {
     'zh-CN': '在左侧完善模型、提示词和工具；也可在这里用对话构建并应用到配置。',
     'en-US': 'Set model, prompt and tools on the left; or build here and apply to the form.',
