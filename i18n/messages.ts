@@ -860,6 +860,11 @@ export const M = {
   'editor.pickModel': { 'zh-CN': '请选择模型', 'en-US': 'Select a model' },
   'editor.userPrompt': { 'zh-CN': '用户提示', 'en-US': 'User prompt' },
   'editor.userPromptPh': { 'zh-CN': '可选；不填则自动用流程输入和上游输出', 'en-US': 'Optional; defaults to flow input and upstream outputs' },
+  'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
+  'editor.llmStreamHint': {
+    'zh-CN': '从模型边收边汇总；调试日志会打进度。画布上暂不逐字刷 UI。',
+    'en-US': 'Collects tokens as they arrive; debug logs show progress. Canvas does not paint tokens live yet.',
+  },
   'editor.conditionPh': { 'zh-CN': '备注（可选）…', 'en-US': 'Notes (optional)…' },
   'editor.conditionField': { 'zh-CN': '判断字段', 'en-US': 'Field' },
   'editor.conditionFieldPh': { 'zh-CN': '如 status 或 {{nodes.xxx.output}}', 'en-US': 'e.g. status or {{nodes.xxx.output}}' },

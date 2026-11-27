@@ -456,6 +456,14 @@
             />
           </div>
 
+          <div v-if="selectedNode.type === 'llm'" class="field field--row">
+            <div>
+              <label class="field__label">{{ t('editor.llmStream') }}</label>
+              <p class="field__hint">{{ t('editor.llmStreamHint') }}</p>
+            </div>
+            <USwitch v-model="nodeConfig.llmStream" size="sm" />
+          </div>
+
           <div v-if="selectedNode.type === 'agent'" class="field">
             <label class="field__label">{{ t('editor.agentPick') }}</label>
             <USelect
@@ -1287,6 +1295,7 @@ const nodeConfig = reactive({
   model: '',
   systemPrompt: '',
   prompt: '',
+  llmStream: false,
   teamId: '',
   agentId: '',
   knowledgeBaseId: '',
@@ -1839,6 +1848,7 @@ const handleNodeClick = (event: any) => {
   nodeConfig.model = event.node.data?.model || firstConfiguredModel()
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
   nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
+  nodeConfig.llmStream = !!(event.node.data?.llmStream ?? event.node.data?.stream)
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
@@ -1908,6 +1918,8 @@ const saveNodeConfig = () => {
       model: nodeConfig.model,
       systemPrompt: nodeConfig.systemPrompt,
       prompt: nodeConfig.prompt,
+      llmStream: !!nodeConfig.llmStream,
+      stream: !!nodeConfig.llmStream,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
@@ -2916,6 +2928,13 @@ onMounted(() => {
   font-weight: 500;
   color: var(--cf-ink-soft, #64748b);
 }
+.field--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field__hint {
   margin: 0;
   font-size: 11px;
