@@ -1756,6 +1756,7 @@ const loadWorkflow = async () => {
         nodes.value = []
         edges.value = []
       }
+      syncBindCaptions()
     }
   }
 }
@@ -1879,6 +1880,38 @@ const addNode = (type: string) => {
   nodes.value.push(newNode)
 }
 
+function resolveBindCaption(kind: string, data?: Record<string, unknown> | null): string {
+  const d = data || {}
+  if (kind === 'team') {
+    const id = String(d.teamId || '').trim()
+    return teamOptions.value.find(o => o.value === id)?.label || ''
+  }
+  if (kind === 'agent') {
+    const id = String(d.agentId || '').trim()
+    return agentOptions.value.find(o => o.value === id)?.label || ''
+  }
+  if (kind === 'search') {
+    const id = String(d.knowledgeBaseId || '').trim()
+    return kbOptions.value.find(o => o.value === id)?.label || ''
+  }
+  if (kind === 'subflow') {
+    const id = String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
+    return workflowPickOptions.value.find(o => o.value === id)?.label || ''
+  }
+  return ''
+}
+
+/** 选项列表刷新后，给已绑定节点补上资源名副文案 */
+function syncBindCaptions() {
+  nodes.value = nodes.value.map((n) => {
+    const kind = String(n.type || '')
+    if (!['team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    const caption = resolveBindCaption(kind, n.data)
+    if ((n.data?.bindCaption || '') === caption) return n
+    return { ...n, data: { ...n.data, bindCaption: caption } }
+  })
+}
+
 async function refreshTeamOptions() {
   const res = await listTeams()
   if (res.error) {
@@ -1888,6 +1921,7 @@ async function refreshTeamOptions() {
   teamOptions.value = (res.data || [])
     .filter(t => t.id && (!t.status || t.status === 'active'))
     .map(t => ({ label: t.name || t.id, value: t.id }))
+  syncBindCaptions()
 }
 
 async function refreshAgentOptions() {
@@ -1899,6 +1933,7 @@ async function refreshAgentOptions() {
   agentOptions.value = (res.data || [])
     .filter(a => a.id)
     .map(a => ({ label: a.name || a.id, value: a.id }))
+  syncBindCaptions()
 }
 
 async function refreshWorkflowPickOptions() {
@@ -1910,6 +1945,7 @@ async function refreshWorkflowPickOptions() {
   workflowPickOptions.value = (res.data || [])
     .filter(w => w.id)
     .map(w => ({ label: w.name || w.id, value: w.id }))
+  syncBindCaptions()
 }
 
 async function refreshKbOptions() {
@@ -1919,6 +1955,7 @@ async function refreshKbOptions() {
     return
   }
   kbList.value = (res.data || []).filter(k => k.id)
+  syncBindCaptions()
 }
 
 const handleNodeClick = (event: any) => {
@@ -2003,6 +2040,14 @@ const saveNodeConfig = () => {
 
   const node = nodes.value.find(n => n.id === selectedNode.value.id)
   if (node) {
+    const nextBindData = {
+      teamId: nodeConfig.teamId,
+      agentId: nodeConfig.agentId,
+      knowledgeBaseId: nodeConfig.knowledgeBaseId,
+      subflowWorkflowId: nodeConfig.subflowWorkflowId,
+      workflowId: nodeConfig.subflowWorkflowId,
+      workflow_id: nodeConfig.subflowWorkflowId,
+    }
     node.data = {
       ...node.data,
       label: nodeConfig.name,
@@ -2014,6 +2059,7 @@ const saveNodeConfig = () => {
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
+      bindCaption: resolveBindCaption(String(selectedNode.value.type || ''), nextBindData),
       description: nodeConfig.description,
       query: nodeConfig.query,
       topK: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,

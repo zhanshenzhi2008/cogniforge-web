@@ -38,7 +38,7 @@
       <WorkflowFlowNode
         kind="agent"
         :label="data.label"
-        :hint="data.streamProgress"
+        :hint="bindNodeHint('agent', data)"
         :unbound="isWorkflowBindUnbound('agent', data)"
       />
     </template>
@@ -46,7 +46,7 @@
       <WorkflowFlowNode
         kind="team"
         :label="data.label"
-        :hint="data.streamProgress"
+        :hint="bindNodeHint('team', data)"
         :unbound="isWorkflowBindUnbound('team', data)"
       />
     </template>
@@ -72,7 +72,7 @@
       <WorkflowFlowNode
         kind="search"
         :label="data.label"
-        :hint="data.streamProgress"
+        :hint="bindNodeHint('search', data)"
         :unbound="isWorkflowBindUnbound('search', data)"
       />
     </template>
@@ -80,7 +80,7 @@
       <WorkflowFlowNode
         kind="subflow"
         :label="data.label"
-        :hint="data.streamProgress"
+        :hint="bindNodeHint('subflow', data)"
         :unbound="isWorkflowBindUnbound('subflow', data)"
       />
     </template>
@@ -114,6 +114,15 @@ defineProps<{
   nodes: any[]
   edges: any[]
 }>()
+
+/** 流式进度优先；已绑定则显示资源名副文案 */
+function bindNodeHint(kind: string, data: Record<string, unknown> | null | undefined) {
+  const stream = String(data?.streamProgress || '').trim()
+  if (stream) return stream
+  if (isWorkflowBindUnbound(kind, data)) return undefined
+  const caption = String(data?.bindCaption || '').trim()
+  return caption || undefined
+}
 
 /**
  * 箭头端点约定（ProcessOn 风格线头拖拽）：
