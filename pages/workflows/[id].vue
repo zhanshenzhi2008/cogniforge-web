@@ -470,9 +470,14 @@
               v-model="nodeConfig.agentId"
               class="w-full"
               :items="agentOptions"
-              :placeholder="t('editor.agentPickPh')"
+              :placeholder="agentOptions.length ? t('editor.agentPickPh') : t('editor.agentPickEmpty')"
               value-key="value"
+              :disabled="!agentOptions.length"
             />
+            <p v-if="!agentOptions.length" class="field__hint">
+              {{ t('editor.agentPickEmptyHint') }}
+              <NuxtLink to="/agents/new" class="field__link" target="_blank">{{ t('editor.agentGoCreate') }}</NuxtLink>
+            </p>
           </div>
           <div v-if="selectedNode.type === 'agent'" class="field">
             <label class="field__label">{{ t('editor.userPrompt') }}</label>
@@ -1865,6 +1870,17 @@ async function refreshTeamOptions() {
     .map(t => ({ label: t.name || t.id, value: t.id }))
 }
 
+async function refreshAgentOptions() {
+  const res = await listAgents()
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  agentOptions.value = (res.data || [])
+    .filter(a => a.id)
+    .map(a => ({ label: a.name || a.id, value: a.id }))
+}
+
 const handleNodeClick = (event: any) => {
   selectedNode.value = event.node
   nodeConfig.name = event.node.data?.label || ''
@@ -1876,6 +1892,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
   if (event.node?.type === 'team') {
     void refreshTeamOptions()
+  }
+  if (event.node?.type === 'agent') {
+    void refreshAgentOptions()
   }
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
@@ -2701,15 +2720,11 @@ onMounted(() => {
       .map(m => ({ label: m.name || m.id, value: m.id }))
   })
   void refreshTeamOptions()
+  void refreshAgentOptions()
   listWorkflows().then((res) => {
     workflowPickOptions.value = (res.data || [])
       .filter(w => w.id)
       .map(w => ({ label: w.name || w.id, value: w.id }))
-  })
-  listAgents().then((res) => {
-    agentOptions.value = (res.data || [])
-      .filter(a => a.id)
-      .map(a => ({ label: a.name || a.id, value: a.id }))
   })
   listKBs().then((res) => {
     kbList.value = (res.data || []).filter(k => k.id)
