@@ -1886,6 +1886,13 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const id = String(d.model || '').trim()
     return modelOptions.value.find(o => o.value === id)?.label || id
   }
+  if (kind === 'http') {
+    const method = String(d.method || d.httpMethod || 'GET').trim().toUpperCase() || 'GET'
+    const url = String(d.url || d.httpUrl || '').trim()
+    if (!url) return ''
+    const short = url.length > 36 ? `${url.slice(0, 34)}…` : url
+    return `${method} ${short}`
+  }
   if (kind === 'team') {
     const id = String(d.teamId || '').trim()
     return teamOptions.value.find(o => o.value === id)?.label || ''
@@ -1909,7 +1916,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['llm', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'http', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2046,6 +2053,10 @@ const saveNodeConfig = () => {
   if (node) {
     const nextBindData = {
       model: nodeConfig.model,
+      method: nodeConfig.httpMethod,
+      httpMethod: nodeConfig.httpMethod,
+      url: nodeConfig.httpUrl,
+      httpUrl: nodeConfig.httpUrl,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,

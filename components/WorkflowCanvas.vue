@@ -62,7 +62,12 @@
       <WorkflowFlowNode kind="loop" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-http="{ data }">
-      <WorkflowFlowNode kind="http" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="http"
+        :label="data.label"
+        :hint="bindNodeHint('http', data)"
+        :unbound="isWorkflowBindUnbound('http', data)"
+      />
     </template>
     <template #node-code="{ data }">
       <WorkflowFlowNode kind="code" :label="data.label" :hint="data.streamProgress" />

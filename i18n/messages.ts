@@ -1304,6 +1304,7 @@ export const M = {
   'editor.bindRequired': { 'zh-CN': '「{name}」还没选{kind}，请先配置再保存', 'en-US': '“{name}” has no {kind} selected — configure it before saving' },
   'editor.bindRequiredMore': { 'zh-CN': '另有 {n} 个节点也未配置', 'en-US': '{n} more node(s) also need configuration' },
   'editor.bindKind.llm': { 'zh-CN': '模型', 'en-US': 'model' },
+  'editor.bindKind.http': { 'zh-CN': '请求地址', 'en-US': 'request URL' },
   'editor.bindKind.team': { 'zh-CN': '团队', 'en-US': 'team' },
   'editor.bindKind.agent': { 'zh-CN': '智能体', 'en-US': 'agent' },
   'editor.bindKind.search': { 'zh-CN': '知识库', 'en-US': 'knowledge base' },
