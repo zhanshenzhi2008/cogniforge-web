@@ -112,14 +112,28 @@
 
         <section class="cfg-block">
           <label class="cfg-label">{{ t('agents.systemPrompt') }}</label>
-          <UTextarea
-            v-model="form.system_prompt"
-            class="w-full cfg-prompt"
-            :rows="8"
-            :placeholder="t('agents.studioPromptPh')"
-            :disabled="!!form.prompt_id"
-            @update:model-value="markDirty"
-          />
+          <div class="cfg-prompt-wrap">
+            <UTextarea
+              ref="promptTextareaRef"
+              v-model="form.system_prompt"
+              class="w-full cfg-prompt"
+              :rows="8"
+              :placeholder="form.prompt_id ? t('agents.studioPromptPh') : t('agents.studioPromptMentionPh')"
+              :disabled="!!form.prompt_id"
+              @update:model-value="onPromptInput"
+              @keydown="onPromptKeydown"
+            />
+            <PromptMentionMenu
+              ref="mentionMenuRef"
+              :open="mentionOpen"
+              :items="mentionItems"
+              :hint="mentionHint"
+              :aria-label="t('agents.studioPromptMentionAria')"
+              @pick="pickMention"
+              @close="closeMention"
+            />
+          </div>
+          <p v-if="!form.prompt_id" class="cfg-hint">{{ t('agents.studioPromptMentionHint') }}</p>
         </section>
 
         <section class="cfg-block">
@@ -453,6 +467,8 @@ import type { ConversationSummary } from '@/composables/useConversations'
 import type { KnowledgeBase } from '@/composables/useKnowledgeBases'
 import type { McpServer } from '@/composables/useMcpServers'
 import type { Skill } from '@/composables/useSkills'
+import PromptMentionMenu from '@/components/PromptMentionMenu.vue'
+import type { PromptMentionItem } from '@/components/PromptMentionMenu.vue'
 import { CF_ICONS } from '~/constants/icons'
 import {
   detectUnsupportedBuildIntents,
@@ -474,6 +490,14 @@ import {
 } from '~/utils/chatAttachments'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
+import {
+  DEFAULT_PROMPT_VAR_SUGGESTIONS,
+  detectMentionTrigger,
+  extractVarNames,
+  formatVarInsert,
+  replaceRange,
+  type MentionTrigger,
+} from '~/utils/promptInsert'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -496,6 +520,12 @@ const { list: listModels } = useModels()
 const { list: listPrompts } = usePrompts()
 const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
 const { list: listConversations } = useConversations()
+
+const promptTextareaRef = ref<{ $el?: HTMLElement } | null>(null)
+const mentionMenuRef = ref<{ onKey: (e: KeyboardEvent) => boolean } | null>(null)
+const mentionOpen = ref(false)
+const mentionTrigger = ref<MentionTrigger | null>(null)
+const mentionItems = ref<PromptMentionItem[]>([])
 
 const saving = ref(false)
 const dirty = ref(false)
@@ -641,6 +671,160 @@ const skillOptions = computed(() => [
   { label: t('agents.clearSkill'), value: '' },
   ...skills.value.map((s) => ({ label: `${s.icon || ''} ${s.name}`.trim(), value: s.id })),
 ])
+
+const mentionHint = computed(() =>
+  mentionTrigger.value?.kind === '@'
+    ? t('agents.studioPromptAtHint')
+    : t('agents.studioPromptSlashHint'),
+)
+
+function getPromptNativeTextarea(): HTMLTextAreaElement | null {
+  const root = promptTextareaRef.value?.$el
+  if (!root) return null
+  if (root instanceof HTMLTextAreaElement) return root
+  return root.querySelector?.('textarea') ?? null
+}
+
+function closeMention() {
+  mentionOpen.value = false
+  mentionTrigger.value = null
+  mentionItems.value = []
+}
+
+function buildSlashItems(query: string): PromptMentionItem[] {
+  const q = query.trim().toLowerCase()
+  const fromText = extractVarNames(form.system_prompt)
+  const names = [...new Set([...fromText, ...DEFAULT_PROMPT_VAR_SUGGESTIONS])]
+  const filtered = names.filter(n => !q || n.toLowerCase().includes(q))
+  const items: PromptMentionItem[] = filtered.slice(0, 12).map(name => ({
+    id: `var:${name}`,
+    label: `{{${name}}}`,
+    group: t('agents.studioPromptVarGroup'),
+    icon: 'i-lucide-braces',
+    insert: `${formatVarInsert(name)} `,
+    kind: 'var',
+  }))
+  if (q && /^[a-zA-Z_][\w]*$/.test(q) && !names.some(n => n.toLowerCase() === q)) {
+    items.unshift({
+      id: `var-new:${q}`,
+      label: formatVarInsert(q),
+      group: t('agents.studioPromptVarNew'),
+      icon: 'i-lucide-plus',
+      insert: `${formatVarInsert(q)} `,
+      kind: 'var',
+    })
+  }
+  return items
+}
+
+function buildAtItems(query: string): PromptMentionItem[] {
+  const q = query.trim().toLowerCase()
+  const match = (label: string) => !q || label.toLowerCase().includes(q)
+  const items: PromptMentionItem[] = []
+  for (const s of skills.value) {
+    if (!match(s.name)) continue
+    items.push({
+      id: `skill:${s.id}`,
+      label: s.name,
+      group: t('agents.skill'),
+      icon: 'i-lucide-sparkles',
+      insert: `[@${t('agents.skill')}: ${s.name}] `,
+      kind: 'skill',
+      resourceId: s.id,
+    })
+  }
+  for (const srv of mcpServers.value) {
+    if (!match(srv.name)) continue
+    items.push({
+      id: `tool:${srv.id}`,
+      label: srv.name,
+      group: t('agents.tools'),
+      icon: 'i-lucide-wrench',
+      insert: `[@${t('agents.tools')}: ${srv.name}] `,
+      kind: 'tool',
+      resourceId: srv.id,
+    })
+  }
+  for (const kb of knowledgeBases.value.filter(k => k.status === 'active')) {
+    if (!match(kb.name)) continue
+    items.push({
+      id: `kb:${kb.id}`,
+      label: kb.name,
+      group: t('agents.boundKnowledge'),
+      icon: CF_ICONS.knowledge,
+      insert: `[@${t('agents.boundKnowledge')}: ${kb.name}] `,
+      kind: 'kb',
+      resourceId: kb.id,
+    })
+  }
+  return items.slice(0, 16)
+}
+
+function refreshMentionFromCaret() {
+  if (form.prompt_id) {
+    closeMention()
+    return
+  }
+  const el = getPromptNativeTextarea()
+  if (!el) {
+    closeMention()
+    return
+  }
+  const trigger = detectMentionTrigger(el.value, el.selectionStart)
+  mentionTrigger.value = trigger
+  if (!trigger) {
+    closeMention()
+    return
+  }
+  mentionItems.value = trigger.kind === '/'
+    ? buildSlashItems(trigger.query)
+    : buildAtItems(trigger.query)
+  mentionOpen.value = mentionItems.value.length > 0
+}
+
+function onPromptInput() {
+  markDirty()
+  nextTick(() => refreshMentionFromCaret())
+}
+
+function onPromptKeydown(e: KeyboardEvent) {
+  if (mentionOpen.value && mentionMenuRef.value?.onKey(e)) return
+  if (e.key === 'Escape' && mentionOpen.value) {
+    closeMention()
+    return
+  }
+  nextTick(() => refreshMentionFromCaret())
+}
+
+function applyPromptText(value: string, caret: number) {
+  form.system_prompt = value
+  markDirty()
+  nextTick(() => {
+    const el = getPromptNativeTextarea()
+    if (!el) return
+    el.focus()
+    el.setSelectionRange(caret, caret)
+  })
+}
+
+function pickMention(item: PromptMentionItem) {
+  const trigger = mentionTrigger.value
+  const el = getPromptNativeTextarea()
+  if (!trigger || !el) {
+    closeMention()
+    return
+  }
+  if (item.kind === 'skill' && item.resourceId) {
+    form.skill_id = item.resourceId
+  } else if (item.kind === 'tool' && item.resourceId) {
+    toggleTool(item.resourceId, true)
+  } else if (item.kind === 'kb' && item.resourceId) {
+    toggleKnowledge(item.resourceId, true)
+  }
+  const { value, caret } = replaceRange(el.value, trigger.start, trigger.end, item.insert)
+  closeMention()
+  applyPromptText(value, caret)
+}
 
 function goBack() {
   navigateTo('/agents')
@@ -1373,6 +1557,10 @@ onMounted(async () => {
   font-size: 0.72rem;
   color: var(--cf-ink-soft);
   line-height: 1.4;
+}
+
+.cfg-prompt-wrap {
+  position: relative;
 }
 
 .cfg-prompt :deep(textarea) {

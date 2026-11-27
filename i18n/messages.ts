@@ -494,8 +494,8 @@ export const M = {
     'en-US': 'Model: pick the LLM used for chat.',
   },
   'help.studioConfigPrompt': {
-    'zh-CN': '提示词 / 技能 / 工具：定义人设与可调用能力。',
-    'en-US': 'Prompt / skills / tools: define persona and callable capabilities.',
+    'zh-CN': '提示词：可用 / 插 {{变量}}、@ 绑定技能/工具/知识库；也可选手册提示词资产。',
+    'en-US': 'Prompt: type / for {{vars}}, @ to bind skill/tool/KB; or pick a prompt asset.',
   },
   'help.studioConfigKb': {
     'zh-CN': '知识库：多选绑定后，对话会自动检索。',
@@ -585,6 +585,29 @@ export const M = {
     'en-US': 'Installing new tools in chat is unsupported. Add them on the MCP page, then select them here',
   },
   'agents.studioChatPh': { 'zh-CN': '发消息给 {name}', 'en-US': 'Message {name}' },
+  'agents.studioPromptMentionPh': {
+    'zh-CN': '输入系统提示；键入 / 插入 {{变量}}，键入 @ 引用技能/工具/知识库',
+    'en-US': 'System prompt; type / for {{vars}}, @ for skill/tool/knowledge',
+  },
+  'agents.studioPromptMentionHint': {
+    'zh-CN': '/ 插入变量；@ 绑定技能、工具或知识库，并写入可读标注（不做运行时解析）。',
+    'en-US': '/ inserts {{vars}}; @ binds skill/tool/KB and inserts a readable note (not runtime-parsed).',
+  },
+  'agents.studioPromptMentionAria': {
+    'zh-CN': '提示词插入菜单',
+    'en-US': 'Prompt insert menu',
+  },
+  'agents.studioPromptSlashHint': {
+    'zh-CN': '选择或新建变量，插入为 {{name}}',
+    'en-US': 'Pick or create a variable as {{name}}',
+  },
+  'agents.studioPromptAtHint': {
+    'zh-CN': '选择后会勾选左侧绑定，并插入 [@类型: 名称]',
+    'en-US': 'Selecting binds on the left and inserts [@type: name]',
+  },
+  'agents.studioPromptVarGroup': { 'zh-CN': '变量', 'en-US': 'Variable' },
+  'agents.studioPromptVarNew': { 'zh-CN': '新建', 'en-US': 'New' },
+  'agents.skill': { 'zh-CN': '技能', 'en-US': 'Skill' },
   'agents.studioPromptPh': {
     'zh-CN': '写清角色、边界和回答风格。可从技能模板开始，再微调。',
     'en-US': 'Describe role, boundaries and tone. Start from a skill template if you like.',
