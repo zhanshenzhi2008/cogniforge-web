@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { findUnreachableNodes, reachableFromStart } from './workflowReachability'
+import { findStartNodes, findUnreachableNodes, reachableFromStart } from './workflowReachability'
 
 describe('workflowReachability', () => {
+  it('lists all start nodes in order', () => {
+    const nodes = [
+      { id: 's1', type: 'start', data: { label: '开始 A' } },
+      { id: 'a', type: 'llm' },
+      { id: 's2', type: 'start', data: { label: '开始 B' } },
+    ]
+    expect(findStartNodes(nodes)).toEqual([
+      { id: 's1', label: '开始 A' },
+      { id: 's2', label: '开始 B' },
+    ])
+  })
+
   it('marks only start when no edges', () => {
     const nodes = [
       { id: 's', type: 'start' },

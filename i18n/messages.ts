@@ -1276,6 +1276,19 @@ export const M = {
   'editor.endCaption': { 'zh-CN': '流程结束', 'en-US': 'Finish' },
   'editor.needStartNode': { 'zh-CN': '请先添加开始节点', 'en-US': 'Add a Start node first' },
   'editor.needEndNode': { 'zh-CN': '请先添加结束节点', 'en-US': 'Add an End node first' },
+  'editor.onlyOneStart': {
+    'zh-CN': '已有开始节点，请先删除再添加',
+    'en-US': 'A Start node already exists — delete it before adding another',
+  },
+  'editor.multiStartNode': {
+    'zh-CN': '只能有一个开始节点（当前 {n} 个），请删掉多余的',
+    'en-US': 'Only one Start node allowed (now {n}) — delete the extras',
+  },
+  'editor.multiStartChip': { 'zh-CN': '{n} 个开始', 'en-US': '{n} starts' },
+  'editor.multiStartChipTip': {
+    'zh-CN': '点击打开多余的开始节点',
+    'en-US': 'Click to open an extra Start node',
+  },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',

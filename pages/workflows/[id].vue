@@ -43,6 +43,16 @@
         <UIcon name="i-lucide-unlink" class="size-3.5" />
         <span>{{ t('editor.unreachableChip', { n: unreachableCount }) }}</span>
       </button>
+      <button
+        v-if="extraStartCount > 0"
+        type="button"
+        class="unbound-chip unbound-chip--multi-start"
+        :title="t('editor.multiStartChipTip')"
+        @click="focusExtraStartNode"
+      >
+        <UIcon name="i-lucide-git-branch-plus" class="size-3.5" />
+        <span>{{ t('editor.multiStartChip', { n: startNodeCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -1174,7 +1184,7 @@ import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
-import { findUnreachableNodes } from '@/utils/workflowReachability'
+import { findStartNodes, findUnreachableNodes } from '@/utils/workflowReachability'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
@@ -1985,6 +1995,10 @@ function tidyLayout() {
 }
 
 const addNode = (type: string) => {
+  if (type === 'start' && nodes.value.some(n => n.type === 'start')) {
+    toast.add({ title: t('editor.onlyOneStart'), color: 'warning' })
+    return
+  }
   const data: Record<string, unknown> = {
     label: getNodeLabel(type),
   }
@@ -2521,6 +2535,8 @@ const unboundBindCount = computed(() => findUnboundBindNodes().length)
 const unreachableCount = computed(
   () => findUnreachableNodes(nodes.value, edges.value).length,
 )
+const startNodeCount = computed(() => findStartNodes(nodes.value).length)
+const extraStartCount = computed(() => Math.max(0, startNodeCount.value - 1))
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
@@ -2541,6 +2557,19 @@ function focusFirstUnreachableNode() {
   if (!orphan.length) return
   const first = orphan[0]!
   const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
+/** 顶栏芯片：打开第二个及以后的开始节点 */
+function focusExtraStartNode() {
+  const starts = findStartNodes(nodes.value)
+  if (starts.length < 2) return
+  const extra = starts[1]!
+  const node = nodes.value.find(n => n.id === extra.id)
   if (node) {
     selectedNode.value = node
     configDrawer.value = true
@@ -2579,6 +2608,18 @@ function ensureHasTerminalNodes(): boolean {
   return true
 }
 
+/** 只能有一个开始节点（可达性 BFS 也只认第一个） */
+function ensureSingleStartNode(): boolean {
+  const starts = findStartNodes(nodes.value)
+  if (starts.length <= 1) return true
+  toast.add({
+    title: t('editor.multiStartNode', { n: starts.length }),
+    color: 'warning',
+  })
+  focusExtraStartNode()
+  return false
+}
+
 /** 所有非 start 节点须从 start 可达 */
 function ensureReachableFromStart(): boolean {
   const orphan = findUnreachableNodes(nodes.value, edges.value)
@@ -2602,6 +2643,7 @@ const handleSave = async () => {
   }
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
+  if (!ensureSingleStartNode()) return
   if (!ensureReachableFromStart()) return
   saving.value = true
   try {
@@ -2719,6 +2761,7 @@ const handleExecute = async () => {
   }
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
+  if (!ensureSingleStartNode()) return
   if (!ensureReachableFromStart()) return
 
   executing.value = true
@@ -2886,6 +2929,7 @@ const startDebug = async (startFromNode?: string) => {
   }
   if (!ensureBindConfigured()) return
   if (!ensureHasTerminalNodes()) return
+  if (!ensureSingleStartNode()) return
   if (!ensureReachableFromStart()) return
 
   isDebugging.value = true
@@ -3334,6 +3378,16 @@ onMounted(() => {
 
 .unbound-chip--orphan:hover {
   background: #f1f5f9;
+}
+
+.unbound-chip--multi-start {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.unbound-chip--multi-start:hover {
+  background: #fee2e2;
 }
 
 .exec-bar {

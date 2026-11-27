@@ -1,4 +1,19 @@
-/** 从 start 出发，沿边走到的节点 id 集合（含 start） */
+/** 图中所有开始节点（按原顺序） */
+export function findStartNodes(
+  nodes: { id: string, type?: string, data?: { label?: string } }[],
+): { id: string, label: string }[] {
+  const out: { id: string, label: string }[] = []
+  for (const n of nodes) {
+    if (String(n.type || '') !== 'start') continue
+    out.push({
+      id: n.id,
+      label: String(n.data?.label || 'start'),
+    })
+  }
+  return out
+}
+
+/** 从 start 出发，沿边走到的节点 id 集合（含 start；多 start 时只用第一个） */
 export function reachableFromStart(
   nodes: { id: string, type?: string }[],
   edges: { source: string, target: string }[],
