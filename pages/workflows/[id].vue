@@ -1261,6 +1261,7 @@ import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
 import {
+  clearCanvasRunDecorations,
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatNodeRunOutputPreview,
@@ -3449,7 +3450,13 @@ const startDebug = async (startFromNode?: string) => {
   isDebugging.value = true
   executionLogs.value = []
   currentExecution.value = null
+  selectedTimelineKey.value = null
   showDebugPanel.value = true
+  {
+    const cleared = clearCanvasRunDecorations(nodes.value, edges.value)
+    nodes.value = cleared.nodes
+    edges.value = cleared.edges
+  }
 
   try {
     const input = prepareDebugInput()
@@ -3538,6 +3545,13 @@ const applyNodeRunHighlight = (exec: {
 
 const cancellingExecId = ref<string | null>(null)
 
+const clearCanvasRunHighlight = () => {
+  const cleared = clearCanvasRunDecorations(nodes.value, edges.value)
+  nodes.value = cleared.nodes
+  edges.value = cleared.edges
+  selectedTimelineKey.value = null
+}
+
 const cancelDebug = async () => {
   if (!currentExecution.value?.id) return
   const res = await cancelExecution(workflowId.value, currentExecution.value.id)
@@ -3550,6 +3564,7 @@ const cancelDebug = async () => {
   if (currentExecution.value) {
     currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
   }
+  clearCanvasRunHighlight()
   toast.add({ title: t('editor.runCancelled'), color: 'success' })
   await loadExecutionHistory()
 }
@@ -3571,6 +3586,7 @@ const cancelHistoryExecution = async (executionId: string) => {
       stopPolling()
       isDebugging.value = false
       currentExecution.value = { ...currentExecution.value, status: 'cancelled' }
+      clearCanvasRunHighlight()
     }
     toast.add({ title: t('editor.runCancelled'), color: 'success' })
     await loadExecutionHistory()

@@ -81,3 +81,18 @@ export function decorateEdgesForSkippedTargets<T extends EdgeRunLike>(
     }
   })
 }
+
+/** 新开调试/取消后清掉节点与边上的运行态样式 */
+export function clearCanvasRunDecorations<
+  N extends { class?: string, data?: Record<string, any> },
+  E extends EdgeRunLike,
+>(nodes: N[], edges: E[]): { nodes: N[], edges: E[] } {
+  const nextNodes = nodes.map((n) => {
+    const base = String(n.class || '').split(/\s+/).filter(c => c && !c.startsWith('run-'))
+    const data = { ...(n.data || {}) }
+    delete data.streamProgress
+    return { ...n, class: base.join(' '), data }
+  })
+  const nextEdges = decorateEdgesForSkippedTargets(edges, new Map())
+  return { nodes: nextNodes, edges: nextEdges }
+}

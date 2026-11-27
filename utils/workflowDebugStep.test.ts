@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clearCanvasRunDecorations,
   decorateEdgesForSkippedTargets,
   findLatestTimelineKeyForNode,
   formatNodeRunOutputPreview,
@@ -45,5 +46,18 @@ describe('workflowDebugStep', () => {
     expect(e2?.class).not.toContain('run-edge-skipped')
     expect(e2?.animated).toBe(true)
     expect(e2?.style?.opacity).toBeUndefined()
+  })
+
+  it('clears run decorations from nodes and edges', () => {
+    const { nodes, edges } = clearCanvasRunDecorations(
+      [{ id: 'a', class: 'foo run-succeeded', data: { streamProgress: 'hi', label: 'A' } }],
+      [{ id: 'e', target: 'b', class: 'run-edge-skipped', style: { opacity: 0.35, stroke: '#x' }, animated: false }],
+    )
+    expect(nodes[0]?.class).toBe('foo')
+    expect(nodes[0]?.data?.streamProgress).toBeUndefined()
+    expect(nodes[0]?.data?.label).toBe('A')
+    expect(edges[0]?.class).not.toContain('run-edge-skipped')
+    expect(edges[0]?.style?.opacity).toBeUndefined()
+    expect(edges[0]?.animated).toBe(true)
   })
 })
