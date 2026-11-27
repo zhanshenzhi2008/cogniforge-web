@@ -152,6 +152,7 @@ export interface Document {
   file_path: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   lifecycle_status?: 'draft' | 'review' | 'published' | 'abolished' | string
+  security_level?: 'public' | 'internal' | 'confidential' | 'secret' | string
   effective_at?: string | null
   expire_at?: string | null
   error: string
@@ -409,6 +410,7 @@ export const useKnowledgeBases = () => {
     docId: string,
     input: {
       lifecycle_status?: string
+      security_level?: string
       effective_at?: string | null
       expire_at?: string | null
       clear_effective?: boolean

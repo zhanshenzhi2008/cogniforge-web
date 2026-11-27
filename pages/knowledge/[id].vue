@@ -201,6 +201,15 @@
                     :disabled="lifecycleSaving"
                     @update:model-value="savePreviewLifecycle"
                   />
+                  <USelect
+                    v-model="previewSecurity"
+                    class="w-36"
+                    size="sm"
+                    :items="securityOptions"
+                    value-key="value"
+                    :disabled="lifecycleSaving"
+                    @update:model-value="savePreviewSecurity"
+                  />
                   <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
                   <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
                   <span v-if="previewDirty" class="preview-dirty">{{ t('kb.unsaved') }}</span>
@@ -1301,6 +1310,7 @@ const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const previewDoc = ref<DocumentPreview | null>(null)
 const previewLifecycle = ref('published')
+const previewSecurity = ref('internal')
 const previewEffectiveLocal = ref('')
 const previewExpireLocal = ref('')
 const lifecycleSaving = ref(false)
@@ -1309,6 +1319,12 @@ const lifecycleOptions = computed(() => [
   { label: t('kb.lifecycle.review'), value: 'review' },
   { label: t('kb.lifecycle.published'), value: 'published' },
   { label: t('kb.lifecycle.abolished'), value: 'abolished' },
+])
+const securityOptions = computed(() => [
+  { label: t('kb.security.public'), value: 'public' },
+  { label: t('kb.security.internal'), value: 'internal' },
+  { label: t('kb.security.confidential'), value: 'confidential' },
+  { label: t('kb.security.secret'), value: 'secret' },
 ])
 
 function toDatetimeLocal(iso?: string | null) {
@@ -1360,6 +1376,7 @@ function applyLifecycleDoc(doc: Document) {
   if (!previewDoc.value) return
   previewDoc.value = { ...previewDoc.value, ...doc }
   previewLifecycle.value = doc.lifecycle_status || 'published'
+  previewSecurity.value = doc.security_level || 'internal'
   syncValidityFromDoc(doc)
   const idx = documents.value.findIndex(d => d.id === doc.id)
   if (idx >= 0) documents.value[idx] = { ...documents.value[idx], ...doc }
@@ -1380,6 +1397,26 @@ async function savePreviewLifecycle(status: string) {
     }
     applyLifecycleDoc(res.data)
     toast.add({ title: t('kb.lifecycleSaved'), color: 'success' })
+  } finally {
+    lifecycleSaving.value = false
+  }
+}
+
+async function savePreviewSecurity(level: string) {
+  if (!selectedKB.value || !previewDoc.value || !level) return
+  if ((previewDoc.value.security_level || 'internal') === level) return
+  lifecycleSaving.value = true
+  try {
+    const res = await updateDocLifecycle(selectedKB.value.id, previewDoc.value.id, {
+      security_level: level,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.securityFail'), color: 'error' })
+      previewSecurity.value = previewDoc.value.security_level || 'internal'
+      return
+    }
+    applyLifecycleDoc(res.data)
+    toast.add({ title: t('kb.securitySaved'), color: 'success' })
   } finally {
     lifecycleSaving.value = false
   }
@@ -1432,6 +1469,7 @@ function clearPreviewState() {
   previewSaving.value = false
   previewMaximized.value = false
   previewLifecycle.value = 'published'
+  previewSecurity.value = 'internal'
   previewEffectiveLocal.value = ''
   previewExpireLocal.value = ''
 }
@@ -1486,6 +1524,7 @@ async function openDocPreview(doc: Document) {
   previewDoc.value = res.data
   previewEditContent.value = res.data.content || ''
   previewLifecycle.value = res.data.lifecycle_status || 'published'
+  previewSecurity.value = res.data.security_level || 'internal'
   syncValidityFromDoc(res.data)
 }
 
