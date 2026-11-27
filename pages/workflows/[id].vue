@@ -1365,6 +1365,7 @@ const loopTypeOptions = computed(() => [
 
 const codeLanguageOptions = computed(() => [
   { label: t('editor.codeLangExpression'), value: 'expression' },
+  { label: t('editor.codeLangPython'), value: 'python' },
   { label: t('editor.codeLangJavascript'), value: 'javascript' },
 ])
 
