@@ -225,6 +225,42 @@ export const useWorkflows = () => {
     }
   }
 
+  const pauseSchedule = async (id: string, scheduleId: string): Promise<{ error?: string }> => {
+    try {
+      const res = await api.post(`/api/v1/workflows/${id}/schedules/${scheduleId}/pause`, {})
+      if (res.error) return { error: res.error }
+      return {}
+    } catch (err: any) {
+      return { error: err.message || '暂停调度失败' }
+    }
+  }
+
+  const resumeSchedule = async (id: string, scheduleId: string): Promise<{ error?: string }> => {
+    try {
+      const res = await api.post(`/api/v1/workflows/${id}/schedules/${scheduleId}/resume`, {})
+      if (res.error) return { error: res.error }
+      return {}
+    } catch (err: any) {
+      return { error: err.message || '恢复调度失败' }
+    }
+  }
+
+  const runScheduleNow = async (
+    id: string,
+    scheduleId: string,
+  ): Promise<{ executionId?: string; error?: string }> => {
+    try {
+      const res = await api.post<{ execution_id: string }>(
+        `/api/v1/workflows/${id}/schedules/${scheduleId}/run`,
+        {},
+      )
+      if (res.error) return { error: res.error }
+      return { executionId: res.data?.execution_id }
+    } catch (err: any) {
+      return { error: err.message || '立即执行失败' }
+    }
+  }
+
   const execute = async (id: string, input?: Record<string, any>): Promise<{ executionId?: string; status?: string; error?: string }> => {
     try {
       const res = await api.post<{ execution_id: string; status: string }>(`/api/v1/workflows/${id}/execute`, { input })
@@ -346,6 +382,9 @@ export const useWorkflows = () => {
     listSchedules,
     createSchedule,
     deleteSchedule,
+    pauseSchedule,
+    resumeSchedule,
+    runScheduleNow,
     execute,
     getExecution,
     listExecutions,

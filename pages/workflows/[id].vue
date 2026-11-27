@@ -276,12 +276,37 @@
                 · {{ t('editor.scheduleRuns', { n: s.run_count || 0 }) }}
               </div>
             </div>
-            <CfButton
-              tone="icon-danger"
-              icon="i-lucide-trash-2"
-              :tip="t('common.delete')"
-              @click="removeSchedule(s.id)"
-            />
+            <div class="version-list__actions">
+              <CfButton
+                tone="icon"
+                icon="i-lucide-play"
+                :tip="t('editor.scheduleRunNow')"
+                :loading="scheduleActionId === `run:${s.id}`"
+                @click="runSchedule(s.id)"
+              />
+              <CfButton
+                v-if="s.is_active"
+                tone="icon"
+                icon="i-lucide-pause"
+                :tip="t('editor.schedulePause')"
+                :loading="scheduleActionId === `pause:${s.id}`"
+                @click="toggleSchedule(s.id, false)"
+              />
+              <CfButton
+                v-else
+                tone="icon"
+                icon="i-lucide-play-circle"
+                :tip="t('editor.scheduleResume')"
+                :loading="scheduleActionId === `resume:${s.id}`"
+                @click="toggleSchedule(s.id, true)"
+              />
+              <CfButton
+                tone="icon-danger"
+                icon="i-lucide-trash-2"
+                :tip="t('common.delete')"
+                @click="removeSchedule(s.id)"
+              />
+            </div>
           </li>
           <li v-if="!scheduleList.length" class="cf-muted" style="padding: 8px 0">{{ t('editor.schedulesEmpty') }}</li>
         </ul>
@@ -1066,12 +1091,13 @@ const {
   get, update, execute, listExecutions, getExecution, cancelExecution,
   resumeExecution, approveExecution, rejectExecution, debug,
   listVersions, rollbackVersion,
-  listSchedules, createSchedule, deleteSchedule,
+  listSchedules, createSchedule, deleteSchedule, pauseSchedule, resumeSchedule, runScheduleNow,
 } = useWorkflows()
 
 const schedulesOpen = ref(false)
 const schedulesLoading = ref(false)
 const scheduleSaving = ref(false)
+const scheduleActionId = ref<string | null>(null)
 const scheduleList = ref<WorkflowSchedule[]>([])
 const scheduleForm = reactive({ name: '', cron: '0 0 9 * * *' })
 
@@ -1127,6 +1153,47 @@ const removeSchedule = async (scheduleId: string) => {
   }
   toast.add({ title: t('common.deleteOk'), color: 'success' })
   await openSchedules()
+}
+
+const toggleSchedule = async (scheduleId: string, resume: boolean) => {
+  if (!workflowId.value) return
+  const key = `${resume ? 'resume' : 'pause'}:${scheduleId}`
+  scheduleActionId.value = key
+  try {
+    const res = resume
+      ? await resumeSchedule(workflowId.value, scheduleId)
+      : await pauseSchedule(workflowId.value, scheduleId)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({
+      title: resume ? t('editor.scheduleResumed') : t('editor.schedulePausedOk'),
+      color: 'success',
+    })
+    await openSchedules()
+  } finally {
+    scheduleActionId.value = null
+  }
+}
+
+const runSchedule = async (scheduleId: string) => {
+  if (!workflowId.value) return
+  scheduleActionId.value = `run:${scheduleId}`
+  try {
+    const res = await runScheduleNow(workflowId.value, scheduleId)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({
+      title: t('editor.scheduleRunStarted', { id: (res.executionId || '').slice(0, 8) }),
+      color: 'success',
+    })
+    await openSchedules()
+  } finally {
+    scheduleActionId.value = null
+  }
 }
 
 const versionsOpen = ref(false)
@@ -2925,6 +2992,13 @@ onMounted(() => {
   padding: 8px 10px;
   border: 1px solid color-mix(in oklab, var(--cf-border, #e2e8f0) 80%, transparent);
   border-radius: 8px;
+}
+
+.version-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .modal-actions__right {
