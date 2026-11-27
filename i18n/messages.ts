@@ -1543,8 +1543,8 @@ export const M = {
   'editor.teamPickHint': { 'zh-CN': '运行时由主管分派或交接；等同竞品的多智能体 / Crew 节点', 'en-US': 'Runs as supervisor/handoff; like multi-agent / Crew nodes elsewhere' },
   'editor.teamTask': { 'zh-CN': '团队任务', 'en-US': 'Team task' },
   'editor.teamTaskPh': {
-    'zh-CN': '如 处理工单 {{ticket_id}}…',
-    'en-US': 'e.g. Handle ticket {{ticket_id}}…',
+    'zh-CN': '如 处理工单 {{ticket_id}}…；留空接上游 last_agent_content',
+    'en-US': 'e.g. Handle ticket {{ticket_id}}…; empty = upstream last_agent_content',
   },
   'editor.agentPick': { 'zh-CN': '绑定智能体', 'en-US': 'Agent' },
   'editor.agentPickPh': { 'zh-CN': '选择智能体', 'en-US': 'Select an agent' },

@@ -112,7 +112,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'teamId', labelZh: '小队', required: true },
-      { key: 'prompt', labelZh: '任务说明', note: '支持 {{变量}}' },
+      { key: 'prompt', labelZh: '任务说明', note: '支持 {{变量}}；空则接 last_agent_content' },
     ],
   },
   {
