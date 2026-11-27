@@ -14,6 +14,7 @@
         >
           {{ t('evals.back') }}
         </CfButton>
+        <CfViewModeToggle v-if="!activeSuite" v-model="viewMode" storage-key="cf-evals-view" />
         <CfButton v-if="!activeSuite" tone="primary" icon="i-lucide-plus" @click="showCreate = true">
           {{ t('evals.new') }}
         </CfButton>
@@ -25,40 +26,58 @@
       <div class="list-toolbar">
         <span class="list-count">{{ t('evals.count', { n: suites.length }) }}</span>
       </div>
-      <div class="cf-panel">
-        <CfLoadingState v-if="loading" />
-        <CfEmptyState
-          v-else-if="suites.length === 0"
+      <CfLoadingState v-if="loading" />
+      <CfEmptyState
+        v-else-if="suites.length === 0"
+        icon="i-lucide-clipboard-check"
+        :message="t('evals.empty')"
+      />
+      <div v-else-if="viewMode === 'card'" class="eval-grid">
+        <CfResourceCard
+          v-for="s in suites"
+          :key="s.id"
           icon="i-lucide-clipboard-check"
-          :message="t('evals.empty')"
-        />
-        <div v-else class="cf-table-wrap">
-          <table class="cf-data-table">
-            <thead>
-              <tr>
-                <th>{{ t('common.name') }}</th>
-                <th>{{ t('common.description') }}</th>
-                <th>{{ t('common.updatedAt') }}</th>
-                <th class="cf-col-actions">{{ t('common.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="s in suites" :key="s.id" class="row-click" @click="openSuite(s)">
-                <td class="name">{{ s.name }}</td>
-                <td class="cf-muted">{{ s.description || '—' }}</td>
-                <td class="cf-muted">{{ d(s.updated_at) }}</td>
-                <td @click.stop>
-                  <CfButton
-                    tone="icon-danger"
-                    icon="i-lucide-trash-2"
-                    :tip="t('common.delete')"
-                    @click="askDelete(s)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          :title="s.name"
+          :description="s.description || t('common.noDesc')"
+          :meta="d(s.updated_at)"
+          @click="openSuite(s)"
+        >
+          <template #actions>
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(s)"
+            />
+          </template>
+        </CfResourceCard>
+      </div>
+      <div v-else class="cf-panel">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('common.updatedAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in suites" :key="s.id" class="row-click" @click="openSuite(s)">
+              <td class="name">{{ s.name }}</td>
+              <td class="cf-muted">{{ s.description || '—' }}</td>
+              <td class="cf-muted">{{ d(s.updated_at) }}</td>
+              <td @click.stop>
+                <CfButton
+                  tone="icon-danger"
+                  icon="i-lucide-trash-2"
+                  :tip="t('common.delete')"
+                  @click="askDelete(s)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </template>
 
@@ -263,6 +282,7 @@
 <script setup lang="ts">
 import type { EvalCase, EvalResult, EvalRun, EvalSuite } from '@/composables/useEvals'
 import type { PromptVarDef } from '@/composables/usePrompts'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
 
 const { t, d } = useLocale()
@@ -270,6 +290,7 @@ const toast = useToast()
 const api = useEvals()
 
 const loading = ref(true)
+const viewMode = ref<ViewMode>('card')
 const saving = ref(false)
 const running = ref(false)
 const suites = ref<EvalSuite[]>([])
@@ -535,7 +556,12 @@ onMounted(loadSuites)
 </script>
 
 <style scoped>
-.header-actions { display: flex; gap: 8px; align-items: center; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.eval-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
 .list-toolbar { margin-bottom: 10px; }
 .list-count { font-size: 13px; color: var(--cf-ink-soft); }
 .row-click { cursor: pointer; }
