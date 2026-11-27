@@ -12,6 +12,7 @@ export interface Workflow {
   definition: string
   status: 'draft' | 'published' | 'archived'
   version: number
+  webhook_url?: string
   created_at: string
   updated_at: string
 }
@@ -66,6 +67,20 @@ export interface UpdateWorkflowInput {
   description?: string
   status?: string
   definition?: WorkflowDefinition
+  webhook_url?: string
+}
+
+export interface WorkflowSchedule {
+  id: string
+  workflow_id: string
+  name: string
+  cron_expression: string
+  is_active: boolean
+  default_input?: Record<string, any>
+  last_run?: string | null
+  next_run?: string | null
+  run_count?: number
+  created_at: string
 }
 
 export interface WorkflowDefinition {
@@ -174,6 +189,39 @@ export const useWorkflows = () => {
       return { data: res.data }
     } catch (err: any) {
       return { error: err.message || '回滚失败' }
+    }
+  }
+
+  const listSchedules = async (id: string): Promise<{ data?: WorkflowSchedule[]; error?: string }> => {
+    try {
+      const res = await api.get<WorkflowSchedule[]>(`/api/v1/workflows/${id}/schedules`)
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取调度失败' }
+    }
+  }
+
+  const createSchedule = async (
+    id: string,
+    input: { name?: string; cron_expression: string; default_input?: Record<string, any>; is_active?: boolean },
+  ): Promise<{ data?: WorkflowSchedule; error?: string }> => {
+    try {
+      const res = await api.post<WorkflowSchedule>(`/api/v1/workflows/${id}/schedules`, input)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '创建调度失败' }
+    }
+  }
+
+  const deleteSchedule = async (id: string, scheduleId: string): Promise<{ error?: string }> => {
+    try {
+      const res = await api.del(`/api/v1/workflows/${id}/schedules/${scheduleId}`)
+      if (res.error) return { error: res.error }
+      return {}
+    } catch (err: any) {
+      return { error: err.message || '删除调度失败' }
     }
   }
 
@@ -295,6 +343,9 @@ export const useWorkflows = () => {
     clone,
     listVersions,
     rollbackVersion,
+    listSchedules,
+    createSchedule,
+    deleteSchedule,
     execute,
     getExecution,
     listExecutions,

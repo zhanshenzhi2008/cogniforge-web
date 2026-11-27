@@ -51,6 +51,14 @@
         </CfButton>
         <CfButton
           tone="secondary"
+          icon="i-lucide-clock"
+          :disabled="isSmokeTest"
+          @click="openSchedules"
+        >
+          {{ t('editor.schedules') }}
+        </CfButton>
+        <CfButton
+          tone="secondary"
           icon="i-lucide-layout-grid"
           :disabled="nodes.length === 0"
           @click="tidyLayout"
@@ -209,6 +217,15 @@
               :placeholder="t('editor.descPh')"
             />
           </div>
+          <div class="field">
+            <label class="field__label">{{ t('editor.webhookUrl') }}</label>
+            <UInput
+              v-model="workflowBasicInfo.webhookUrl"
+              class="w-full"
+              :placeholder="t('editor.webhookUrlPh')"
+            />
+            <p class="field__hint">{{ t('editor.webhookUrlHint') }}</p>
+          </div>
         </div>
       </template>
       <template #footer>
@@ -223,6 +240,56 @@
             >
               {{ t('common.save') }}
             </CfButton>
+          </div>
+        </div>
+      </template>
+    </CfModal>
+
+    <CfModal
+      v-model:open="schedulesOpen"
+      :title="t('editor.schedulesTitle')"
+      :ui="{ content: 'sm:max-w-lg' }"
+    >
+      <template #body>
+        <p class="debug-hint debug-hint--compact">{{ t('editor.schedulesHint') }}</p>
+        <div class="form-grid" style="margin-top: 12px">
+          <div class="field">
+            <label class="field__label">{{ t('editor.cronExpr') }}</label>
+            <UInput v-model="scheduleForm.cron" class="w-full font-mono text-xs" :placeholder="t('editor.cronExprPh')" />
+          </div>
+          <div class="field">
+            <label class="field__label">{{ t('common.name') }}</label>
+            <UInput v-model="scheduleForm.name" class="w-full" :placeholder="t('editor.scheduleNamePh')" />
+          </div>
+          <CfButton tone="primary" icon="i-lucide-plus" :loading="scheduleSaving" @click="addSchedule">
+            {{ t('editor.scheduleAdd') }}
+          </CfButton>
+        </div>
+        <div v-if="schedulesLoading" class="cf-state">{{ t('common.loading') }}</div>
+        <ul v-else class="version-list" style="margin-top: 16px">
+          <li v-for="s in scheduleList" :key="s.id" class="version-list__item">
+            <div>
+              <strong>{{ s.name || s.id.slice(0, 8) }}</strong>
+              <div class="cf-muted font-mono text-xs">{{ s.cron_expression }}</div>
+              <div class="cf-muted text-xs">
+                {{ s.is_active ? t('editor.scheduleActive') : t('editor.schedulePaused') }}
+                · {{ t('editor.scheduleRuns', { n: s.run_count || 0 }) }}
+              </div>
+            </div>
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="removeSchedule(s.id)"
+            />
+          </li>
+          <li v-if="!scheduleList.length" class="cf-muted" style="padding: 8px 0">{{ t('editor.schedulesEmpty') }}</li>
+        </ul>
+      </template>
+      <template #footer>
+        <div class="modal-actions">
+          <div class="modal-actions__right">
+            <CfButton tone="secondary" icon="i-lucide-x" @click="schedulesOpen = false">{{ t('common.close') }}</CfButton>
           </div>
         </div>
       </template>
@@ -967,7 +1034,7 @@ import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 
 import { useRoute } from 'vue-router'
-import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap } from '@/composables/useWorkflows'
+import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
 import { useKnowledgeBases, type KnowledgeBase } from '@/composables/useKnowledgeBases'
 import { useProviders, hasCap, rerankModelLabel } from '@/composables/useProviders'
 
@@ -999,7 +1066,68 @@ const {
   get, update, execute, listExecutions, getExecution, cancelExecution,
   resumeExecution, approveExecution, rejectExecution, debug,
   listVersions, rollbackVersion,
+  listSchedules, createSchedule, deleteSchedule,
 } = useWorkflows()
+
+const schedulesOpen = ref(false)
+const schedulesLoading = ref(false)
+const scheduleSaving = ref(false)
+const scheduleList = ref<WorkflowSchedule[]>([])
+const scheduleForm = reactive({ name: '', cron: '0 0 9 * * *' })
+
+const openSchedules = async () => {
+  if (!workflowId.value || isSmokeTest.value) return
+  schedulesOpen.value = true
+  schedulesLoading.value = true
+  try {
+    const res = await listSchedules(workflowId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      scheduleList.value = []
+      return
+    }
+    scheduleList.value = res.data || []
+  } finally {
+    schedulesLoading.value = false
+  }
+}
+
+const addSchedule = async () => {
+  if (!workflowId.value) return
+  const cron = scheduleForm.cron.trim()
+  if (!cron) {
+    toast.add({ title: t('editor.cronRequired'), color: 'warning' })
+    return
+  }
+  scheduleSaving.value = true
+  try {
+    const res = await createSchedule(workflowId.value, {
+      name: scheduleForm.name.trim() || undefined,
+      cron_expression: cron,
+      is_active: true,
+    })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: t('editor.scheduleAdded'), color: 'success' })
+    scheduleForm.name = ''
+    await openSchedules()
+  } finally {
+    scheduleSaving.value = false
+  }
+}
+
+const removeSchedule = async (scheduleId: string) => {
+  if (!workflowId.value || !confirm(t('editor.scheduleDeleteConfirm'))) return
+  const res = await deleteSchedule(workflowId.value, scheduleId)
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  toast.add({ title: t('common.deleteOk'), color: 'success' })
+  await openSchedules()
+}
 
 const versionsOpen = ref(false)
 const versionsLoading = ref(false)
@@ -1067,6 +1195,7 @@ const editPopoverShow = ref(false)
 const workflowBasicInfo = reactive({
   name: '',
   description: '',
+  webhookUrl: '',
 })
 
 const nodes = ref<any[]>([])
@@ -1434,6 +1563,7 @@ const loadWorkflow = async () => {
     workflowName.value = workflow.name
     workflowBasicInfo.name = workflow.name
     workflowBasicInfo.description = workflow.description || ''
+    workflowBasicInfo.webhookUrl = workflow.webhook_url || ''
     if (workflow.definition) {
       try {
         const def: WorkflowDefinition = typeof workflow.definition === 'string'
@@ -1527,6 +1657,7 @@ const handleSaveBasic = async () => {
     const res = await update(workflowId.value, {
       name: workflowBasicInfo.name,
       description: workflowBasicInfo.description,
+      webhook_url: workflowBasicInfo.webhookUrl.trim(),
     })
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
@@ -1536,6 +1667,7 @@ const handleSaveBasic = async () => {
     if (currentWorkflow.value) {
       currentWorkflow.value.name = workflowBasicInfo.name
       currentWorkflow.value.description = workflowBasicInfo.description
+      currentWorkflow.value.webhook_url = workflowBasicInfo.webhookUrl.trim()
     }
     toast.add({ title: t('editor.infoSaved'), color: 'success' })
     editPopoverShow.value = false
