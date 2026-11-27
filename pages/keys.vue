@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('keys.title') }}</h1>
         <p class="cf-page-sub">{{ t('keys.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreateKey">
-        {{ t('keys.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-keys-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreateKey">
+          {{ t('keys.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -15,11 +18,50 @@
       <span class="list-hint">{{ t('keys.hint') }}</span>
     </div>
 
-    <div class="cf-panel">
-      <CfLoadingState v-if="loading" />
-      <CfEmptyState v-else-if="keys.length === 0" :icon="CF_ICONS.key" :message="t('keys.empty')" />
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState
+      v-else-if="keys.length === 0"
+      :icon="CF_ICONS.key"
+      :message="t('keys.empty')"
+    />
 
-      <div v-else class="cf-table-wrap">
+    <div v-else-if="viewMode === 'card'" class="key-grid">
+      <CfResourceCard
+        v-for="row in keys"
+        :key="row.id"
+        :icon="CF_ICONS.key"
+        :title="row.name"
+        :meta="d(row.created_at)"
+        class="key-card"
+      >
+        <template #actions>
+          <CfButton
+            tone="icon"
+            :icon="row.show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+            :tip="row.show ? t('common.hide') : t('common.show')"
+            @click="row.show = !row.show"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-copy"
+            :tip="t('keys.copy')"
+            @click="copyRowKey(row)"
+          />
+          <CfButton
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('keys.revoke')"
+            @click="askDelete(row)"
+          />
+        </template>
+        <template #description>
+          <code class="key-secret-text">{{ row.show ? row.key : row.maskedKey }}</code>
+        </template>
+      </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
@@ -131,6 +173,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { CF_ICONS } from '~/constants/icons'
 
 interface ApiKey {
@@ -150,6 +193,7 @@ const toast = useToast()
 const { t, d } = useLocale()
 const { get, post, del } = useApi()
 
+const viewMode = ref<ViewMode>('card')
 const loading = ref(false)
 const creating = ref(false)
 const keys = ref<ApiKey[]>([])
@@ -250,6 +294,21 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.key-card {
+  cursor: default;
+}
 
 .list-count {
   font-size: 0.75rem;
