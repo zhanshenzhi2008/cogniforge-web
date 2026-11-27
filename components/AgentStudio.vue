@@ -183,7 +183,7 @@
                 tone="secondary"
                 icon="i-lucide-undo-2"
                 :loading="rollingBackVersion === v.version"
-                @click="confirmRollback(v.version)"
+                @click="askRollback(v.version)"
               >
                 {{ t('agents.studioRollback') }}
               </CfButton>
@@ -604,6 +604,15 @@
         </CfChatPanel>
       </section>
     </div>
+
+    <CfConfirmModal
+      v-model:open="rollbackOpen"
+      :title="t('agents.studioRollback')"
+      :message="t('agents.studioRollbackConfirm', { v: pendingRollbackVersion ?? '' })"
+      confirm-icon="i-lucide-undo-2"
+      :loading="rollingBackVersion != null"
+      @confirm="doRollback"
+    />
   </div>
 </template>
 
@@ -1094,10 +1103,18 @@ async function openVersions() {
   }
 }
 
-async function confirmRollback(version: number) {
+const rollbackOpen = ref(false)
+const pendingRollbackVersion = ref<number | null>(null)
+
+function askRollback(version: number) {
   if (!agentId.value || rollingBackVersion.value != null) return
-  const ok = window.confirm(t('agents.studioRollbackConfirm', { v: version }))
-  if (!ok) return
+  pendingRollbackVersion.value = version
+  rollbackOpen.value = true
+}
+
+async function doRollback() {
+  const version = pendingRollbackVersion.value
+  if (!agentId.value || version == null || rollingBackVersion.value != null) return
   rollingBackVersion.value = version
   try {
     const res = await rollbackVersion(agentId.value, version)
@@ -1108,6 +1125,8 @@ async function confirmRollback(version: number) {
     fillFromAgent(res.data)
     emit('saved', res.data)
     toast.add({ title: t('agents.studioRollbackOk', { v: version }), color: 'success' })
+    rollbackOpen.value = false
+    pendingRollbackVersion.value = null
     versionsOpen.value = false
   } finally {
     rollingBackVersion.value = null

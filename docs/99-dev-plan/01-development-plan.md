@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.189 | 工作室版本回滚改用 CfConfirmModal | orjrs |
 | 2026-11-27 | v1.188 | Playground 删对话改用 CfConfirmModal | orjrs |
 | 2026-11-27 | v1.187 | 评估页删除改用 CfConfirmModal | orjrs |
 | 2026-11-27 | v1.186 | Cron 六段校验与确认框 | orjrs |
@@ -270,6 +271,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] 工作室版本回滚改用 CfConfirmModal（2026-11-27）
+
+- **原因**：配置版本回滚仍用浏览器 confirm
+- **落地**：`AgentStudio` 改用 CfConfirmModal
+- **主仓**：前端设计 v1.156
 
 ## [变更] Playground 删对话改用 CfConfirmModal（2026-11-27）
 
