@@ -297,37 +297,19 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('prompts.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <CfButton tone="secondary" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-          <CfButton tone="danger" :loading="deletingLoading" @click="confirmDelete">
-            {{ t('common.delete') }}
-          </CfButton>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('prompts.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
 
-    <CfModal v-model:open="deleteVerVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('prompts.deleteVersionText', { n: deletingVer?.version ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <CfButton tone="secondary" @click="deleteVerVisible = false">{{ t('common.cancel') }}</CfButton>
-          <CfButton tone="danger" :loading="deletingLoading" @click="confirmDeleteVersion">
-            {{ t('common.delete') }}
-          </CfButton>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVerVisible"
+      :message="t('prompts.deleteVersionText', { n: deletingVer?.version ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDeleteVersion"
+    />
 
     <CfModal v-model:open="compareVisible" :title="t('prompts.compareTitle')" :ui="{ content: 'sm:max-w-4xl' }">
       <template #body>

@@ -255,32 +255,12 @@
       </template>
     </CfModal>
 
-    <!-- Delete Confirm -->
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('mcp.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">
-              {{ t('common.cancel') }}
-            </CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('mcp.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 

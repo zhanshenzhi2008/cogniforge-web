@@ -139,19 +139,12 @@
       </template>
     </UModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p>{{ t('teams.deleteText', { name: deleting?.name ?? '' }) }}</p>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <CfButton tone="secondary" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-          <CfButton tone="danger" strong :loading="deletingLoading" @click="confirmDelete">
-            {{ t('common.delete') }}
-          </CfButton>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('teams.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 

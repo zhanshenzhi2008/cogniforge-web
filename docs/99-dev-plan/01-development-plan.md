@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.130 | 共用 CfConfirmModal 接各列表删除确认 | orjrs |
 | 2026-11-27 | v1.129 | 监控审计支持密级检索动作文案 | orjrs |
 | 2026-11-27 | v1.128 | 监控审计表展示角色/用户 clearance 动作 | orjrs |
 | 2026-11-27 | v1.127 | 通用版默认隐藏密级 UI（SHOW_SECURITY_LEVEL） | orjrs |
@@ -138,6 +139,12 @@
 - **原因**：主仓 `kb_secured_search` 需可读标签
 - **落地**：i18n + 审计动作/知识库对象文案
 - **主仓**：API v1.94
+
+## [变更] CfConfirmModal 列表删除确认（2026-11-27）
+
+- **原因**：各列表手写同一套删除确认弹窗
+- **落地**：`components/CfConfirmModal.vue`；接 agents/teams/models/keys/workflows/knowledge/prompts/mcp/users/roles
+- **主仓**：前端设计 v1.99；开发计划 v1.220
 
 ## [变更] 审计表展示 clearance 动作（2026-11-27）
 
@@ -542,7 +549,7 @@
   - 提示词试跑改为走 `useChatStream`
 - **后续 TODO（跨模块去重，未做）**：
   - [ ] Playground 选 Agent 时改为调 `useAgentChat`（去掉内联 agent SSE）
-  - [ ] `CfConfirmModal`：列表页删除确认（agents/models/mcp/knowledge/workflows/keys/prompts/users）
+  - [x] `CfConfirmModal`：列表页删除确认（agents/teams/models/mcp/knowledge/workflows/keys/prompts/users/roles）
   - [ ] `CfEmptyState` / `CfLoadingState`：统一空态与加载
   - [ ] `CfFieldHelp`：表单旁帮助图标（知识库等）
   - [ ] 可选 `CfResourceCard` 壳：agents/models/mcp/knowledge 卡片骨架

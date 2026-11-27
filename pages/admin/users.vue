@@ -246,27 +246,13 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('users.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="confirm-text">{{ t('users.deleteText') }}</p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :title="t('users.deleteTitle')"
+      :message="t('users.deleteText')"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
 
     <CfModal v-model:open="resetConfirmVisible" :title="t('users.resetPwdTitle')" :ui="{ content: 'sm:max-w-md' }">
       <template #body>

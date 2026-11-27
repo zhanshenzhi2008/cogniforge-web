@@ -213,29 +213,13 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="showDeleteModal" :title="t('roles.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="confirm-text">
-          {{ t('roles.deleteText') }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="showDeleteModal = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="handleDeleteConfirm"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="showDeleteModal"
+      :title="t('roles.deleteTitle')"
+      :message="t('roles.deleteText')"
+      :loading="deletingLoading"
+      @confirm="handleDeleteConfirm"
+    />
   </div>
 </template>
 

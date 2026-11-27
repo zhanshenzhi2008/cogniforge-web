@@ -125,27 +125,15 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('keys.revokeTitle')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">{{ t('keys.revokeText') }}</p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-ban"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('keys.revoke') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :title="t('keys.revokeTitle')"
+      :message="t('keys.revokeText')"
+      :confirm-text="t('keys.revoke')"
+      confirm-icon="i-lucide-ban"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
