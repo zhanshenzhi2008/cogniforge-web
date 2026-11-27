@@ -21,6 +21,15 @@
         </button>
       </div>
       <div class="studio-top__right">
+        <CfButton
+          v-if="agentId"
+          tone="secondary"
+          icon="i-lucide-scroll-text"
+          :tip="t('agents.studioChatLogs')"
+          @click="openChatLogs"
+        >
+          {{ t('agents.studioChatLogs') }}
+        </CfButton>
         <span class="studio-save-state" :class="{ 'studio-save-state--ok': !dirty }">
           ● {{ dirty ? t('agents.studioUnsaved') : t('agents.studioSaved') }}
         </span>
@@ -34,6 +43,34 @@
         </CfButton>
       </div>
     </header>
+
+    <USlideover v-model:open="chatLogsOpen" :title="t('agents.studioChatLogs')" :ui="{ content: 'max-w-sm w-full' }">
+      <template #body>
+        <div class="chat-logs">
+          <p class="chat-logs__hint">{{ t('agents.studioChatLogsHint') }}</p>
+          <CfLoadingState v-if="chatLogsLoading" />
+          <CfEmptyState
+            v-else-if="!chatLogs.length"
+            icon="i-lucide-scroll-text"
+            :message="t('agents.studioChatLogsEmpty')"
+          >
+            <template #action>
+              <CfButton tone="primary" icon="i-lucide-messages-square" @click="goPlaygroundNew">
+                {{ t('agents.studioOpenPlayground') }}
+              </CfButton>
+            </template>
+          </CfEmptyState>
+          <ul v-else class="chat-logs__list">
+            <li v-for="item in chatLogs" :key="item.id">
+              <button type="button" class="chat-logs__item" @click="openConversation(item.id)">
+                <span class="chat-logs__title">{{ item.title || t('play.newChat') }}</span>
+                <span class="chat-logs__time">{{ formatChatLogTime(item.updated_at) }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </template>
+    </USlideover>
 
     <div class="studio-body">
       <!-- Left: configuration -->
@@ -399,6 +436,7 @@
 <script setup lang="ts">
 import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
 import type { ChatMessage } from '@/composables/useAgentChat'
+import type { ConversationSummary } from '@/composables/useConversations'
 import type { KnowledgeBase } from '@/composables/useKnowledgeBases'
 import type { McpServer } from '@/composables/useMcpServers'
 import type { Skill } from '@/composables/useSkills'
@@ -435,7 +473,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
-const { t } = useLocale()
+const { t, d } = useLocale()
 const { create, update } = useAgents()
 const { streamChat: streamAgentChat, streaming: agentStreaming, stopStream: stopAgentStream, error: agentChatError } = useAgentChat()
 const { streamChat: streamModelChat, streaming: buildStreaming, stopStream: stopBuildStream, error: buildChatError } = useChatStream()
@@ -444,6 +482,7 @@ const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 const { list: listPrompts } = usePrompts()
 const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
+const { list: listConversations } = useConversations()
 
 const saving = ref(false)
 const dirty = ref(false)
@@ -452,6 +491,9 @@ const composer = ref('')
 const pendingAttachments = ref<PendingAttachment[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const studioUploadKBId = ref('')
+const chatLogsOpen = ref(false)
+const chatLogsLoading = ref(false)
+const chatLogs = ref<ConversationSummary[]>([])
 const stageTipContent = {
   side: 'bottom' as const,
   align: 'start' as const,
@@ -589,6 +631,39 @@ const skillOptions = computed(() => [
 
 function goBack() {
   navigateTo('/agents')
+}
+
+function formatChatLogTime(iso: string) {
+  return d(iso)
+}
+
+async function openChatLogs() {
+  if (!agentId.value) return
+  chatLogsOpen.value = true
+  chatLogsLoading.value = true
+  try {
+    const res = await listConversations({ agent_id: agentId.value })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      chatLogs.value = []
+      return
+    }
+    chatLogs.value = res.data || []
+  } finally {
+    chatLogsLoading.value = false
+  }
+}
+
+function openConversation(id: string) {
+  if (!agentId.value || !id) return
+  chatLogsOpen.value = false
+  void navigateTo(`/playground?agent=${encodeURIComponent(agentId.value)}&c=${encodeURIComponent(id)}`)
+}
+
+function goPlaygroundNew() {
+  if (!agentId.value) return
+  chatLogsOpen.value = false
+  void navigateTo(`/playground?agent=${encodeURIComponent(agentId.value)}`)
 }
 
 function markDirty() {
@@ -1065,6 +1140,61 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+.chat-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-logs__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.45;
+}
+
+.chat-logs__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-logs__item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--cf-line);
+  border-radius: 0.65rem;
+  background: color-mix(in oklab, var(--cf-accent) 4%, transparent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-logs__item:hover {
+  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
+}
+
+.chat-logs__title {
+  font-size: 0.9rem;
+  font-weight: 550;
+  color: var(--cf-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.chat-logs__time {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
 }
 
 .studio-top__right {

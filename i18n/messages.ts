@@ -427,6 +427,16 @@ export const M = {
     'en-US': 'When on, studio preview and Playground can upload docs for this agent.',
   },
   'agents.studioAttachOnly': { 'zh-CN': '（已附文档）', 'en-US': '(with attachments)' },
+  'agents.studioChatLogs': { 'zh-CN': '对话日志', 'en-US': 'Chat logs' },
+  'agents.studioChatLogsHint': {
+    'zh-CN': '只读查看该智能体在对话页的历史；点一条会打开对话页。',
+    'en-US': 'Read-only history from Playground for this agent. Click to open.',
+  },
+  'agents.studioChatLogsEmpty': {
+    'zh-CN': '还没有对话记录，去对话页聊几句吧。',
+    'en-US': 'No chats yet — try Playground first.',
+  },
+  'agents.studioOpenPlayground': { 'zh-CN': '打开对话页', 'en-US': 'Open Playground' },
   'agents.systemPh': { 'zh-CN': '定义 Agent 的角色和行为...', 'en-US': 'Define the agent’s role and behavior…' },
   'agents.tools': { 'zh-CN': '工具', 'en-US': 'Tools' },
   'agents.pickModel': { 'zh-CN': '请选择模型', 'en-US': 'Select a model' },
