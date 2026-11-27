@@ -13,23 +13,36 @@
         class="cf-chat-panel__messages"
       >
         <template #content="{ message }">
-          <slot
-            name="content"
-            :message="message"
-            :text="partsToText(message?.parts)"
-          >
-            <div
-              v-if="markdown && partsToText(message?.parts)"
-              class="cf-chat-panel__md"
-              v-html="renderChatMarkdown(partsToText(message?.parts))"
-            />
-            <div
-              v-else-if="partsToText(message?.parts)"
-              class="cf-chat-panel__plain"
+          <div class="cf-chat-panel__msg">
+            <slot
+              name="content"
+              :message="message"
+              :text="partsToText(message?.parts)"
             >
-              {{ partsToText(message?.parts) }}
+              <div
+                v-if="markdown && partsToText(message?.parts)"
+                class="cf-chat-panel__md"
+                v-html="renderChatMarkdown(partsToText(message?.parts))"
+              />
+              <div
+                v-else-if="partsToText(message?.parts)"
+                class="cf-chat-panel__plain"
+              >
+                {{ partsToText(message?.parts) }}
+              </div>
+            </slot>
+            <div
+              v-if="ttsEnabled && message?.role === 'assistant' && partsToText(message?.parts)"
+              class="cf-chat-panel__msg-actions"
+            >
+              <CfButton
+                :tone="speakingId === message.id ? 'icon-accent' : 'icon'"
+                :icon="speakingId === message.id ? 'i-lucide-square' : 'i-lucide-volume-2'"
+                :tip="speakingId === message.id ? t('chat.ttsStop') : t('chat.ttsSpeak')"
+                @click="toggleSpeak(message.id, partsToText(message?.parts))"
+              />
             </div>
-          </slot>
+          </div>
         </template>
         <template #indicator>
           <slot name="indicator">
@@ -94,6 +107,7 @@ import {
   type CfChatMessageInput,
   type CfChatStatus,
 } from '~/utils/chatUi'
+import { isSpeaking, speakText, speechSupported, stopSpeech } from '~/utils/speechTts'
 import { CF_ICONS } from '~/constants/icons'
 
 const props = withDefaults(
@@ -109,6 +123,8 @@ const props = withDefaults(
     submitStatus?: CfChatStatus
     submitOnEnter?: boolean
     markdown?: boolean
+    /** 助手消息旁显示浏览器朗读按钮 */
+    tts?: boolean
     rows?: number
     maxrows?: number
     spacingOffset?: number
@@ -121,6 +137,7 @@ const props = withDefaults(
     status: 'ready',
     submitOnEnter: true,
     markdown: true,
+    tts: true,
     rows: 2,
     maxrows: 6,
     spacingOffset: 24,
@@ -133,12 +150,45 @@ const emit = defineEmits<{
   stop: []
 }>()
 
-const { t } = useLocale()
+const { t, locale } = useLocale()
+const toast = useToast()
 
 const userBubble = { side: 'right' as const, variant: 'soft' as const, icon: CF_ICONS.user }
 const assistantBubble = { side: 'left' as const, variant: 'naked' as const, icon: CF_ICONS.ai }
 
 const uiMessages = computed(() => toUiChatMessages(props.messages))
+const ttsEnabled = computed(() => props.tts && speechSupported())
+const speakingId = ref<string | null>(null)
+
+function clearSpeaking() {
+  speakingId.value = null
+}
+
+function toggleSpeak(id: string, text: string) {
+  if (!speechSupported()) {
+    toast.add({ title: t('chat.ttsUnsupported'), color: 'warning' })
+    return
+  }
+  if (speakingId.value === id && isSpeaking()) {
+    stopSpeech()
+    clearSpeaking()
+    return
+  }
+  const ok = speakText(text, {
+    lang: locale.value,
+    onEnd: clearSpeaking,
+    onError: clearSpeaking,
+  })
+  if (!ok) {
+    toast.add({ title: t('chat.ttsEmpty'), color: 'warning' })
+    return
+  }
+  speakingId.value = id
+}
+
+onBeforeUnmount(() => {
+  stopSpeech()
+})
 
 function onInput(value: string) {
   emit('update:modelValue', value)
@@ -184,6 +234,20 @@ function onSubmit() {
   word-break: break-word;
   line-height: 1.55;
   font-size: 0.9rem;
+}
+
+.cf-chat-panel__msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cf-chat-panel__msg-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.72;
 }
 
 .cf-chat-panel__composer-wrap {

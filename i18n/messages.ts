@@ -266,6 +266,13 @@ export const M = {
   'play.emptyTitle': { 'zh-CN': '开始对话', 'en-US': 'Start a conversation' },
   'play.emptySub': { 'zh-CN': '从左边选一条历史，或直接发消息开始新对话。', 'en-US': 'Pick a past chat on the left, or send a message to start a new one.' },
   'play.thinking': { 'zh-CN': '正在思考…', 'en-US': 'Thinking…' },
+  'chat.ttsSpeak': { 'zh-CN': '朗读', 'en-US': 'Speak' },
+  'chat.ttsStop': { 'zh-CN': '停止朗读', 'en-US': 'Stop speaking' },
+  'chat.ttsUnsupported': {
+    'zh-CN': '当前浏览器不支持语音朗读',
+    'en-US': 'This browser does not support speech',
+  },
+  'chat.ttsEmpty': { 'zh-CN': '没有可朗读的文字', 'en-US': 'Nothing to speak' },
   'play.placeholder': { 'zh-CN': '输入消息…（Enter 发送，Shift+Enter 换行）', 'en-US': 'Message… (Enter to send, Shift+Enter for newline)' },
   'play.hint': { 'zh-CN': 'Enter 发送 · 可粘贴或拖入图片/文件', 'en-US': 'Enter to send · paste or drop images/files' },
   'play.attachImage': { 'zh-CN': '添加图片', 'en-US': 'Attach image' },
