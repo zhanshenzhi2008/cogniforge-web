@@ -4,7 +4,9 @@ import { isWorkflowBindUnbound, WORKFLOW_BIND_KINDS } from './workflowBind'
 describe('isWorkflowBindUnbound', () => {
   it('covers all bind kinds', () => {
     expect(WORKFLOW_BIND_KINDS).toEqual(
-      expect.arrayContaining(['llm', 'http', 'code', 'condition', 'team', 'agent', 'search', 'subflow']),
+      expect.arrayContaining([
+        'llm', 'http', 'code', 'condition', 'team', 'agent', 'search', 'subflow', 'input', 'output',
+      ]),
     )
   })
 
@@ -35,9 +37,17 @@ describe('isWorkflowBindUnbound', () => {
     expect(isWorkflowBindUnbound('subflow', { workflow_id: 'w1' })).toBe(false)
   })
 
+  it('detects empty input / output variable', () => {
+    expect(isWorkflowBindUnbound('input', {})).toBe(true)
+    expect(isWorkflowBindUnbound('input', { variable: 'q' })).toBe(false)
+    expect(isWorkflowBindUnbound('output', {})).toBe(true)
+    expect(isWorkflowBindUnbound('output', { variable: 'result' })).toBe(false)
+  })
+
   it('ignores unknown kinds', () => {
     expect(isWorkflowBindUnbound('delay', {})).toBe(false)
     expect(isWorkflowBindUnbound('start', {})).toBe(false)
+    expect(isWorkflowBindUnbound('end', {})).toBe(false)
     expect(isWorkflowBindUnbound('loop', { loopType: 'times' })).toBe(false)
     expect(isWorkflowBindUnbound('loop', { loopType: 'for_each' })).toBe(true)
     expect(isWorkflowBindUnbound('loop', { loopType: 'for_each', loopArrayVar: 'items' })).toBe(false)

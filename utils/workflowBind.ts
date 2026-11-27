@@ -1,5 +1,16 @@
-/** 需要侧栏绑定资源的节点类型 */
-export const WORKFLOW_BIND_KINDS = ['llm', 'http', 'code', 'condition', 'team', 'agent', 'search', 'subflow'] as const
+/** 需要侧栏绑定资源的节点类型（含 input/output 必填变量） */
+export const WORKFLOW_BIND_KINDS = [
+  'llm',
+  'http',
+  'code',
+  'condition',
+  'team',
+  'agent',
+  'search',
+  'subflow',
+  'input',
+  'output',
+] as const
 export type WorkflowBindKind = (typeof WORKFLOW_BIND_KINDS)[number]
 
 /** 画布 / 保存 / 执行共用：节点是否尚未绑定必填资源 */
@@ -20,6 +31,9 @@ export function isWorkflowBindUnbound(kind: string, data?: Record<string, unknow
   if (kind === 'search') return !String(d.knowledgeBaseId || '').trim()
   if (kind === 'subflow') {
     return !String(d.subflowWorkflowId || d.workflowId || d.workflow_id || '').trim()
+  }
+  if (kind === 'input' || kind === 'output') {
+    return !String(d.variable || '').trim()
   }
   if (kind === 'loop') {
     let loopType = String(d.loopType || d.type || 'times').trim() || 'times'

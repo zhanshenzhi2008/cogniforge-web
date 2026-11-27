@@ -126,6 +126,7 @@
         kind="input"
         :label="data.label"
         :hint="bindNodeHint('input', data)"
+        :unbound="isWorkflowBindUnbound('input', data)"
       />
     </template>
     <template #node-output="{ data }">
@@ -133,6 +134,7 @@
         kind="output"
         :label="data.label"
         :hint="bindNodeHint('output', data)"
+        :unbound="isWorkflowBindUnbound('output', data)"
       />
     </template>
   </VueFlow>
