@@ -1336,6 +1336,19 @@ export const M = {
     'zh-CN': '点击打开缺真/假出边的条件节点',
     'en-US': 'Click to open a condition missing a true/false edge',
   },
+  'editor.deadEndNode': {
+    'zh-CN': '「{name}」没有出边，流程会卡在这里',
+    'en-US': '“{name}” has no outgoing edge — the flow will stop here',
+  },
+  'editor.deadEndMore': {
+    'zh-CN': '另有 {n} 个节点也没有出边',
+    'en-US': '{n} more node(s) also have no outgoing edge',
+  },
+  'editor.deadEndChip': { 'zh-CN': '{n} 个死胡同', 'en-US': '{n} dead ends' },
+  'editor.deadEndChipTip': {
+    'zh-CN': '点击打开没有出边的非结束节点',
+    'en-US': 'Click to open a non-end node with no outgoing edge',
+  },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   findConditionsMissingBranches,
+  findDeadEndNodes,
   findEndsWithOutgoing,
   findStartNodes,
   findStartsWithIncoming,
@@ -75,6 +76,20 @@ describe('workflowReachability', () => {
     expect(findConditionsMissingBranches(nodes, [
       { source: 's', target: 'c1' },
     ])[0]?.missing).toBe('both')
+  })
+
+  it('flags reachable non-end nodes with no outgoing edges', () => {
+    const nodes = [
+      { id: 's', type: 'start' },
+      { id: 'a', type: 'llm', data: { label: '卡死' } },
+      { id: 'orphan', type: 'http', data: { label: '孤儿' } },
+      { id: 'e', type: 'end' },
+    ]
+    const edges = [
+      { source: 's', target: 'a' },
+      // a 无出边；orphan 不可达；end 允许无出边
+    ]
+    expect(findDeadEndNodes(nodes, edges).map(n => n.id)).toEqual(['a'])
   })
 
   it('marks only start when no edges', () => {

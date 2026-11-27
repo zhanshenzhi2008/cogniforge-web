@@ -115,6 +115,34 @@ export function reachableFromStart(
   return seen
 }
 
+/**
+ * 从 start 可达、但不是结束类、却没有任何出边的节点（死胡同）。
+ * 条件节点由 findConditionsMissingBranches 覆盖，这里跳过。
+ */
+export function findDeadEndNodes(
+  nodes: { id: string, type?: string, data?: { label?: string } }[],
+  edges: { source: string, target: string }[],
+): { id: string, label: string, kind: string }[] {
+  if (!nodes.length) return []
+  const hasStart = nodes.some(n => String(n.type || '') === 'start')
+  if (!hasStart) return []
+  const reachable = reachableFromStart(nodes, edges)
+  const hasOut = new Set(edges.map(e => e.source))
+  const out: { id: string, label: string, kind: string }[] = []
+  for (const n of nodes) {
+    const kind = String(n.type || '')
+    if (kind === 'end' || kind === 'output' || kind === 'condition') continue
+    if (!reachable.has(n.id)) continue
+    if (hasOut.has(n.id)) continue
+    out.push({
+      id: n.id,
+      label: String(n.data?.label || kind || n.id),
+      kind,
+    })
+  }
+  return out
+}
+
 /** 相对 start 不可达的节点（无 start 时返回全部非空图节点） */
 export function findUnreachableNodes(
   nodes: { id: string, type?: string, data?: { label?: string } }[],

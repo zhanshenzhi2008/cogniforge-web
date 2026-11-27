@@ -83,6 +83,16 @@
         <UIcon name="i-lucide-git-fork" class="size-3.5" />
         <span>{{ t('editor.conditionBranchChip', { n: conditionBranchCount }) }}</span>
       </button>
+      <button
+        v-if="deadEndCount > 0"
+        type="button"
+        class="unbound-chip unbound-chip--dead-end"
+        :title="t('editor.deadEndChipTip')"
+        @click="focusDeadEndNode"
+      >
+        <UIcon name="i-lucide-circle-off" class="size-3.5" />
+        <span>{{ t('editor.deadEndChip', { n: deadEndCount }) }}</span>
+      </button>
       <div class="header-actions">
         <CfButton
           tone="secondary"
@@ -1216,6 +1226,7 @@ import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNod
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
   findConditionsMissingBranches,
+  findDeadEndNodes,
   findEndsWithOutgoing,
   findStartNodes,
   findStartsWithIncoming,
@@ -2593,6 +2604,9 @@ const startIncomingCount = computed(
 const conditionBranchCount = computed(
   () => findConditionsMissingBranches(nodes.value, edges.value).length,
 )
+const deadEndCount = computed(
+  () => findDeadEndNodes(nodes.value, edges.value).length,
+)
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
 function focusFirstUnboundNode() {
@@ -2662,6 +2676,19 @@ function focusStartWithIncoming() {
 /** 顶栏芯片：打开缺真/假出边的条件节点 */
 function focusConditionMissingBranch() {
   const bad = findConditionsMissingBranches(nodes.value, edges.value)
+  if (!bad.length) return
+  const first = bad[0]!
+  const node = nodes.value.find(n => n.id === first.id)
+  if (node) {
+    selectedNode.value = node
+    configDrawer.value = true
+    handleNodeClick({ node })
+  }
+}
+
+/** 顶栏芯片：打开没有出边的非结束节点 */
+function focusDeadEndNode() {
+  const bad = findDeadEndNodes(nodes.value, edges.value)
   if (!bad.length) return
   const first = bad[0]!
   const node = nodes.value.find(n => n.id === first.id)
@@ -2763,6 +2790,22 @@ function ensureConditionBranches(): boolean {
   return false
 }
 
+/** 可达的非结束节点须有出边，否则流程会卡死 */
+function ensureNoDeadEnds(): boolean {
+  const bad = findDeadEndNodes(nodes.value, edges.value)
+  if (!bad.length) return true
+  const first = bad[0]!
+  toast.add({
+    title: t('editor.deadEndNode', { name: first.label }),
+    description: bad.length > 1
+      ? t('editor.deadEndMore', { n: bad.length - 1 })
+      : undefined,
+    color: 'warning',
+  })
+  focusDeadEndNode()
+  return false
+}
+
 /** 所有非 start 节点须从 start 可达 */
 function ensureReachableFromStart(): boolean {
   const orphan = findUnreachableNodes(nodes.value, edges.value)
@@ -2790,6 +2833,7 @@ const handleSave = async () => {
   if (!ensureNoEndOutgoing()) return
   if (!ensureNoStartIncoming()) return
   if (!ensureConditionBranches()) return
+  if (!ensureNoDeadEnds()) return
   if (!ensureReachableFromStart()) return
   saving.value = true
   try {
@@ -2911,6 +2955,7 @@ const handleExecute = async () => {
   if (!ensureNoEndOutgoing()) return
   if (!ensureNoStartIncoming()) return
   if (!ensureConditionBranches()) return
+  if (!ensureNoDeadEnds()) return
   if (!ensureReachableFromStart()) return
 
   executing.value = true
@@ -3082,6 +3127,7 @@ const startDebug = async (startFromNode?: string) => {
   if (!ensureNoEndOutgoing()) return
   if (!ensureNoStartIncoming()) return
   if (!ensureConditionBranches()) return
+  if (!ensureNoDeadEnds()) return
   if (!ensureReachableFromStart()) return
 
   isDebugging.value = true
@@ -3570,6 +3616,16 @@ onMounted(() => {
 
 .unbound-chip--branch:hover {
   background: #fef3c7;
+}
+
+.unbound-chip--dead-end {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.unbound-chip--dead-end:hover {
+  background: #ede9fe;
 }
 
 .exec-bar {
