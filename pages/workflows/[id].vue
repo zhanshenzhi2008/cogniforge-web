@@ -522,10 +522,15 @@
                 v-model="nodeConfig.subflowWorkflowId"
                 class="w-full"
                 :items="subflowWorkflowOptions"
-                :placeholder="t('editor.subflowPickPh')"
+                :placeholder="subflowWorkflowOptions.length ? t('editor.subflowPickPh') : t('editor.subflowPickEmpty')"
                 value-key="value"
+                :disabled="!subflowWorkflowOptions.length"
               />
-              <p class="field__hint">{{ t('editor.subflowHint') }}</p>
+              <p v-if="!subflowWorkflowOptions.length" class="field__hint">
+                {{ t('editor.subflowPickEmptyHint') }}
+                <NuxtLink to="/workflows" class="field__link" target="_blank">{{ t('editor.subflowGoCreate') }}</NuxtLink>
+              </p>
+              <p v-else class="field__hint">{{ t('editor.subflowHint') }}</p>
             </div>
           </template>
 
@@ -1881,6 +1886,17 @@ async function refreshAgentOptions() {
     .map(a => ({ label: a.name || a.id, value: a.id }))
 }
 
+async function refreshWorkflowPickOptions() {
+  const res = await listWorkflows()
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  workflowPickOptions.value = (res.data || [])
+    .filter(w => w.id)
+    .map(w => ({ label: w.name || w.id, value: w.id }))
+}
+
 const handleNodeClick = (event: any) => {
   selectedNode.value = event.node
   nodeConfig.name = event.node.data?.label || ''
@@ -1895,6 +1911,9 @@ const handleNodeClick = (event: any) => {
   }
   if (event.node?.type === 'agent') {
     void refreshAgentOptions()
+  }
+  if (event.node?.type === 'subflow') {
+    void refreshWorkflowPickOptions()
   }
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
@@ -2721,11 +2740,7 @@ onMounted(() => {
   })
   void refreshTeamOptions()
   void refreshAgentOptions()
-  listWorkflows().then((res) => {
-    workflowPickOptions.value = (res.data || [])
-      .filter(w => w.id)
-      .map(w => ({ label: w.name || w.id, value: w.id }))
-  })
+  void refreshWorkflowPickOptions()
   listKBs().then((res) => {
     kbList.value = (res.data || []).filter(k => k.id)
   })

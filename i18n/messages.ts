@@ -1279,6 +1279,9 @@ export const M = {
   'editor.node.subflow': { 'zh-CN': '子流程', 'en-US': 'Subflow' },
   'editor.subflowPick': { 'zh-CN': '调用工作流', 'en-US': 'Call workflow' },
   'editor.subflowPickPh': { 'zh-CN': '选择要嵌套的工作流', 'en-US': 'Pick a nested workflow' },
+  'editor.subflowPickEmpty': { 'zh-CN': '暂无其它工作流', 'en-US': 'No other workflows' },
+  'editor.subflowPickEmptyHint': { 'zh-CN': '需要另建一份工作流才能嵌套；当前这份不会出现在列表里。', 'en-US': 'Create another workflow to nest; the current one is excluded.' },
+  'editor.subflowGoCreate': { 'zh-CN': '去工作流列表 →', 'en-US': 'Go to workflows →' },
   'editor.subflowHint': {
     'zh-CN': '同步跑完子流程再继续；暂不支持子流程内等待/审批；最多嵌套 3 层，且不能调用自己。',
     'en-US': 'Runs the nested workflow synchronously. Nested wait/approval not supported yet; max depth 3; cannot call itself.',
