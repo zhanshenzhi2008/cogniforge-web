@@ -617,6 +617,7 @@
                 class="w-full"
                 :placeholder="t('editor.conditionValuePh')"
               />
+              <p class="field__hint">{{ t('editor.conditionValueHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('common.description') }}</label>
@@ -802,6 +803,7 @@
               :rows="3"
               :placeholder="t('editor.waitMessagePh')"
             />
+            <p class="field__hint">{{ t('editor.waitMessageHint') }}</p>
           </div>
           <div v-if="selectedNode.type === 'wait'" class="field">
             <label class="field__label">{{ t('editor.waitTimeout') }}</label>
