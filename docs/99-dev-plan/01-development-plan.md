@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.126 | 小队卡「生成并行图」对接 layout=parallel | orjrs |
 | 2026-11-27 | v1.125 | 监控页增加密级审计 Tab | orjrs |
 | 2026-11-27 | v1.124 | 同步密级审计 API（主仓 v1.90；管理端列表 UI 仍待） | orjrs |
 | 2026-11-27 | v1.123 | 调试流式进度：画布 hint + 侧栏 Live stream | orjrs |
@@ -128,6 +129,13 @@
 | 2026-10-15 | v1.2 | 评估页：提示词/版本下拉，免手抄 version id | orjrs |
 | 2026-10-15 | v1.1 | 阶段十七：/prompts + 评估页 prompt/system_prompt | orjrs |
 | 2026-10-15 | v1.0 | 阶段十六：/evals 评估页 | orjrs |
+
+## [变更] 小队并行扇出成图（2026-11-27）
+
+- **原因**：M4；一键生成工人并行工作流
+- **落地**：小队卡「生成并行图」→ `expand-pipeline` + `layout=parallel`
+- **含代码**：`pages/teams/index.vue`、`useTeams.expandPipeline`
+- **主仓**：API v1.91
 
 ## [变更] 监控页密级审计 Tab（2026-11-27）
 

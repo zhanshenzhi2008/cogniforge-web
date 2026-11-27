@@ -42,6 +42,16 @@
           >
             {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
           </UButton>
+          <UButton
+            size="sm"
+            variant="outline"
+            :loading="expandingParallelId === team.id"
+            :disabled="!(team.member_agent_ids || []).length"
+            :title="t('teams.genParallelHint')"
+            @click="expandParallel(team)"
+          >
+            {{ t('teams.genParallel') }}
+          </UButton>
           <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
             {{ t('common.delete') }}
           </UButton>
@@ -158,6 +168,7 @@ const { list, create, remove, chat, expandPipeline: apiExpandPipeline } = useTea
 const { list: listAgents } = useAgents()
 const { list: listConversations, get: getConversation } = useConversations()
 const expandingId = ref('')
+const expandingParallelId = ref('')
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
 
@@ -340,7 +351,7 @@ async function sendPreview() {
 }
 
 async function expandPipeline(team: AgentTeam) {
-  if (expandingId.value) return
+  if (expandingId.value || expandingParallelId.value) return
   // 已绑定且用户点「打开」：直接进画布；若要重生成仍走 API（同按钮 regenerates then open）
   expandingId.value = team.id
   try {
@@ -360,6 +371,29 @@ async function expandPipeline(team: AgentTeam) {
   }
   finally {
     expandingId.value = ''
+  }
+}
+
+async function expandParallel(team: AgentTeam) {
+  if (expandingId.value || expandingParallelId.value) return
+  expandingParallelId.value = team.id
+  try {
+    const res = await apiExpandPipeline(team.id, { layout: 'parallel' })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    const wfId = res.data?.workflow?.id || res.data?.team?.workflow_id
+    if (!wfId) {
+      toast.add({ title: t('teams.genParallelFail'), color: 'error' })
+      return
+    }
+    toast.add({ title: t('teams.genParallelOk'), color: 'success' })
+    await fetchAll()
+    await router.push(`/workflows/${wfId}`)
+  }
+  finally {
+    expandingParallelId.value = ''
   }
 }
 

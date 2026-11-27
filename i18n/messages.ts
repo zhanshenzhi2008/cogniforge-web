@@ -372,6 +372,13 @@ export const M = {
   'teams.openPipeline': { 'zh-CN': '打开/更新流水线', 'en-US': 'Open / refresh pipeline' },
   'teams.genPipelineOk': { 'zh-CN': '已生成工作流', 'en-US': 'Workflow created' },
   'teams.genPipelineFail': { 'zh-CN': '未拿到工作流 ID', 'en-US': 'No workflow id returned' },
+  'teams.genParallel': { 'zh-CN': '生成并行图', 'en-US': 'Build parallel fan-out' },
+  'teams.genParallelHint': {
+    'zh-CN': '工人从开始节点并行扇出，汇合到结束（最多 8；不含主管）',
+    'en-US': 'Workers fan out from start and join at end (max 8; supervisor excluded)',
+  },
+  'teams.genParallelOk': { 'zh-CN': '已生成并行扇出工作流', 'en-US': 'Parallel fan-out workflow created' },
+  'teams.genParallelFail': { 'zh-CN': '未拿到工作流 ID', 'en-US': 'No workflow id returned' },
   'teams.deleteText': { 'zh-CN': '确定删除小队「{name}」？', 'en-US': 'Delete team “{name}”?' },
 
   'agents.title': { 'zh-CN': '智能体', 'en-US': 'Agents' },

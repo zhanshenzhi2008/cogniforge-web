@@ -168,11 +168,12 @@ export const useTeams = () => {
 
   const expandPipeline = async (
     id: string,
+    opts?: { layout?: 'parallel' | 'linear' | 'team' },
   ): Promise<{ data?: { team?: AgentTeam, workflow?: { id: string, name?: string } }, error?: string }> => {
     try {
       const res = await api.post<{ team?: AgentTeam, workflow?: { id: string, name?: string } }>(
         `/api/v1/teams/${id}/expand-pipeline`,
-        {},
+        opts?.layout ? { layout: opts.layout } : {},
       )
       if (res.error) return { error: res.error }
       return { data: res.data }
