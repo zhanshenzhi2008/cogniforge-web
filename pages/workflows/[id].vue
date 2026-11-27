@@ -1162,7 +1162,8 @@
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
-import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta, isWorkflowBindUnbound } from '@/utils/workflowNodeMeta'
+import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
+import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
@@ -2001,6 +2002,10 @@ const addNode = (type: string) => {
     data.variables = []
     data.bindCaption = resolveBindCaption('start', data)
   }
+  if (type === 'input' || type === 'output') {
+    data.variable = ''
+    data.bindCaption = resolveBindCaption(type, data)
+  }
   const newNode = {
     id: `node-${Date.now()}`,
     type,
@@ -2121,6 +2126,11 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
       n: names.length,
       more: names.length - 2,
     })
+  }
+  if (kind === 'input' || kind === 'output') {
+    const v = String(d.variable || '').trim()
+    if (!v) return t('editor.ioVarNone')
+    return t('editor.ioVarCaption', { v })
   }
   return ''
 }
@@ -2338,6 +2348,7 @@ const saveNodeConfig = () => {
       loopKeyVar: nodeConfig.loopKeyVar,
       key_var: nodeConfig.loopKeyVar,
       variables: nodeConfig.variables,
+      variable: nodeConfig.variable,
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,

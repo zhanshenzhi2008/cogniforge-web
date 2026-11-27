@@ -76,9 +76,3 @@ export function getWorkflowNodeMeta(type: string): WorkflowNodeMeta {
     handles: 'io',
   }
 }
-
-export {
-  WORKFLOW_BIND_KINDS,
-  isWorkflowBindUnbound,
-  type WorkflowBindKind,
-} from './workflowBind'

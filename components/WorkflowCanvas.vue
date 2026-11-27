@@ -122,10 +122,18 @@
       />
     </template>
     <template #node-input="{ data }">
-      <WorkflowFlowNode kind="input" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="input"
+        :label="data.label"
+        :hint="bindNodeHint('input', data)"
+      />
     </template>
     <template #node-output="{ data }">
-      <WorkflowFlowNode kind="output" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="output"
+        :label="data.label"
+        :hint="bindNodeHint('output', data)"
+      />
     </template>
   </VueFlow>
 </template>
@@ -145,7 +153,7 @@ import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
-import { isWorkflowBindUnbound } from '@/utils/workflowNodeMeta'
+import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 
 defineProps<{
   nodes: any[]

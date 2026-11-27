@@ -1271,6 +1271,8 @@ export const M = {
   'editor.node.end': { 'zh-CN': '结束', 'en-US': 'End' },
   'editor.startVars': { 'zh-CN': '入参变量', 'en-US': 'Input variables' },
   'editor.startVarsNone': { 'zh-CN': '无入参', 'en-US': 'No inputs' },
+  'editor.ioVarNone': { 'zh-CN': '未设变量', 'en-US': 'No variable' },
+  'editor.ioVarCaption': { 'zh-CN': '变量 {{v}}', 'en-US': 'var {{v}}' },
   'editor.startVarsCaption': {
     'zh-CN': '{shown} 等 {n} 个',
     'en-US': '{shown} +{more}',
