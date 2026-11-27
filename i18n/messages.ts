@@ -1296,6 +1296,7 @@ export const M = {
   'editor.bindKind.agent': { 'zh-CN': '智能体', 'en-US': 'agent' },
   'editor.bindKind.search': { 'zh-CN': '知识库', 'en-US': 'knowledge base' },
   'editor.bindKind.subflow': { 'zh-CN': '子工作流', 'en-US': 'nested workflow' },
+  'editor.nodeUnboundHint': { 'zh-CN': '尚未绑定，点开右侧配置', 'en-US': 'Not bound — open the side panel' },
   'editor.knowledgeBase': { 'zh-CN': '知识库', 'en-US': 'Knowledge base' },
   'editor.searchTopK': { 'zh-CN': '返回条数 Top-K', 'en-US': 'Top-K' },
   'editor.searchMinScore': { 'zh-CN': '最低相似度', 'en-US': 'Min score' },

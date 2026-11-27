@@ -1105,7 +1105,7 @@
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
-import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
+import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta, isWorkflowBindUnbound } from '@/utils/workflowNodeMeta'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
@@ -2119,22 +2119,13 @@ const handleDeleteNode = () => {
 function findUnboundBindNodes(): { id: string, label: string, kind: string }[] {
   const out: { id: string, label: string, kind: string }[] = []
   for (const n of nodes.value) {
-    const label = String(n.data?.label || getNodeLabel(n.type))
-    if (n.type === 'team' && !String(n.data?.teamId || '').trim()) {
-      out.push({ id: n.id, label, kind: 'team' })
-    }
-    else if (n.type === 'agent' && !String(n.data?.agentId || '').trim()) {
-      out.push({ id: n.id, label, kind: 'agent' })
-    }
-    else if (n.type === 'search' && !String(n.data?.knowledgeBaseId || '').trim()) {
-      out.push({ id: n.id, label, kind: 'search' })
-    }
-    else if (
-      n.type === 'subflow'
-      && !String(n.data?.subflowWorkflowId || n.data?.workflowId || n.data?.workflow_id || '').trim()
-    ) {
-      out.push({ id: n.id, label, kind: 'subflow' })
-    }
+    const kind = String(n.type || '')
+    if (!isWorkflowBindUnbound(kind, n.data)) continue
+    out.push({
+      id: n.id,
+      label: String(n.data?.label || getNodeLabel(kind)),
+      kind,
+    })
   }
   return out
 }

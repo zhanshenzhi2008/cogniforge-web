@@ -35,10 +35,20 @@
       <WorkflowFlowNode kind="llm" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-agent="{ data }">
-      <WorkflowFlowNode kind="agent" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="agent"
+        :label="data.label"
+        :hint="data.streamProgress"
+        :unbound="isWorkflowBindUnbound('agent', data)"
+      />
     </template>
     <template #node-team="{ data }">
-      <WorkflowFlowNode kind="team" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="team"
+        :label="data.label"
+        :hint="data.streamProgress"
+        :unbound="isWorkflowBindUnbound('team', data)"
+      />
     </template>
     <template #node-condition="{ data }">
       <WorkflowFlowNode kind="condition" :label="data.label" :hint="data.streamProgress" />
@@ -59,7 +69,20 @@
       <WorkflowFlowNode kind="wait" :label="data.label" :hint="data.streamProgress" />
     </template>
     <template #node-search="{ data }">
-      <WorkflowFlowNode kind="search" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="search"
+        :label="data.label"
+        :hint="data.streamProgress"
+        :unbound="isWorkflowBindUnbound('search', data)"
+      />
+    </template>
+    <template #node-subflow="{ data }">
+      <WorkflowFlowNode
+        kind="subflow"
+        :label="data.label"
+        :hint="data.streamProgress"
+        :unbound="isWorkflowBindUnbound('subflow', data)"
+      />
     </template>
     <template #node-input="{ data }">
       <WorkflowFlowNode kind="input" :label="data.label" :hint="data.streamProgress" />
@@ -85,6 +108,7 @@ import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
+import { isWorkflowBindUnbound } from '@/utils/workflowNodeMeta'
 
 defineProps<{
   nodes: any[]

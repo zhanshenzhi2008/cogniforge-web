@@ -1,5 +1,11 @@
 <template>
-  <div class="flow-node" :class="`flow-node-${meta.tone}`">
+  <div
+    class="flow-node"
+    :class="[
+      `flow-node-${meta.tone}`,
+      { 'flow-node--unbound': unbound },
+    ]"
+  >
     <!-- 左侧入口线头：结束/普通节点可接；开始节点无入口 -->
     <Handle
       v-if="meta.handles !== 'start'"
@@ -13,8 +19,20 @@
     <UIcon :name="meta.icon" class="flow-node__icon size-4" />
     <div class="flow-node__text">
       <span class="flow-node__label">{{ label }}</span>
-      <span v-if="hint" class="flow-node__hint" :title="hint">{{ hint }}</span>
+      <span
+        v-if="displayHint"
+        class="flow-node__hint"
+        :class="{ 'flow-node__hint--warn': unbound && !hint }"
+        :title="displayHint"
+      >{{ displayHint }}</span>
     </div>
+
+    <span
+      v-if="unbound"
+      class="flow-node__badge"
+      :title="unboundHint"
+      aria-hidden="true"
+    >!</span>
 
     <!-- 条件：上下两个出口（真/假），鼠标从线头拖出 -->
     <template v-if="meta.handles === 'branch'">
@@ -56,14 +74,22 @@ import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 const props = defineProps<{
   kind: string
   label?: string
-  /** 调试流式进度等短提示 */
+  /** 调试流式进度等短提示（优先于未绑定提示） */
   hint?: string
+  /** 必填资源未绑定时醒目标记 */
+  unbound?: boolean
 }>()
 
 const { t } = useLocale()
 const meta = computed(() => getWorkflowNodeMeta(props.kind))
 const trueLabel = computed(() => t('editor.branchTrue'))
 const falseLabel = computed(() => t('editor.branchFalse'))
+const unboundHint = computed(() => t('editor.nodeUnboundHint'))
+const displayHint = computed(() => {
+  if (props.hint) return props.hint
+  if (props.unbound) return unboundHint.value
+  return ''
+})
 </script>
 
 <style scoped>
@@ -79,6 +105,30 @@ const falseLabel = computed(() => t('editor.branchFalse'))
   border: 1px solid var(--cf-line, #e5e7eb);
   font-size: 13px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+.flow-node--unbound {
+  border-color: #f59e0b;
+  border-style: dashed;
+  background: #fffbeb;
+  box-shadow: 0 0 0 2px rgb(245 158 11 / 0.22);
+}
+
+.flow-node__badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+  pointer-events: none;
 }
 
 .flow-node__icon {
@@ -108,6 +158,10 @@ const falseLabel = computed(() => t('editor.branchFalse'))
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.flow-node__hint--warn {
+  color: #b45309;
 }
 
 /* ProcessOn 风格线头：常显淡点，悬停放大可拖 */
@@ -180,7 +234,15 @@ const falseLabel = computed(() => t('editor.branchFalse'))
 .flow-node-delay { border-color: #a855f7; }
 .flow-node-wait { border-color: #ea580c; }
 .flow-node-search { border-color: #0284c7; }
+.flow-node-subflow { border-color: #0d9488; }
 .flow-node-input { border-color: #22c55e; }
 .flow-node-output { border-color: #9333ea; }
 .flow-node-default { border-color: #94a3b8; }
+
+.flow-node--unbound.flow-node-agent,
+.flow-node--unbound.flow-node-team,
+.flow-node--unbound.flow-node-search,
+.flow-node--unbound.flow-node-subflow {
+  border-color: #f59e0b;
+}
 </style>
