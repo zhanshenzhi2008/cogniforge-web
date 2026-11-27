@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { fromDefinitionEdge, toDefinitionEdge } from './workflowEdge'
+import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from './workflowEdge'
 
 describe('workflowEdge', () => {
+  it('maps condition handles to true/false', () => {
+    expect(conditionBranchKind('s-top')).toBe('true')
+    expect(conditionBranchKind('true')).toBe('true')
+    expect(conditionBranchKind('s-bottom')).toBe('false')
+    expect(conditionBranchKind('false')).toBe('false')
+    expect(conditionBranchKind('')).toBe(null)
+    expect(conditionBranchKind('s')).toBe(null)
+  })
+
   it('round-trips condition branch handles', () => {
     const saved = toDefinitionEdge({
       id: 'e1',

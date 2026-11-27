@@ -8,6 +8,17 @@ export type WorkflowEdgeLike = {
   targetHandle?: string | null
   source_handle?: string | null
   target_handle?: string | null
+  label?: string | null
+}
+
+/** 条件出边句柄 → 真/假；无法识别则 null */
+export function conditionBranchKind(
+  handle?: string | null,
+): 'true' | 'false' | null {
+  const h = String(handle || '').trim().toLowerCase()
+  if (h === 's-top' || h === 'true') return 'true'
+  if (h === 's-bottom' || h === 'false') return 'false'
+  return null
 }
 
 /** 写入 definition：camel + snake 双写，兼容 Vue Flow 与 Go `source_handle` */

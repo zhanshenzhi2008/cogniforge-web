@@ -588,6 +588,7 @@
           </template>
 
           <template v-if="selectedNode.type === 'condition'">
+            <p class="field__hint field__hint--block">{{ t('editor.conditionOutletHint') }}</p>
             <div class="field">
               <label class="field__label">{{ t('editor.conditionField') }}</label>
               <UInput
@@ -1209,7 +1210,7 @@
 import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
-import { fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
+import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
 import {
@@ -1227,20 +1228,6 @@ import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type W
 import { useKnowledgeBases, type KnowledgeBase } from '@/composables/useKnowledgeBases'
 import { useProviders, hasCap, rerankModelLabel } from '@/composables/useProviders'
 
-function withEdgeArrow(edge: { id: string, source: string, target: string, [k: string]: any }) {
-  return {
-    ...edge,
-    animated: true,
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 18,
-      height: 18,
-      color: '#4f46e5',
-    },
-    style: { stroke: '#4f46e5', strokeWidth: 2, ...(edge.style || {}) },
-  }
-}
-
 /** Same as the list page smoke button: skip the API, only verify the dynamic route + Vue Flow. */
 const CANVAS_SMOKE_ID = '__canvas_smoke__'
 
@@ -1251,6 +1238,34 @@ definePageMeta({
 const route = useRoute()
 const toast = useToast()
 const { t } = useLocale()
+
+function withEdgeArrow(edge: { id: string, source: string, target: string, [k: string]: any }) {
+  const kind = conditionBranchKind(edge.sourceHandle)
+  const branchLabel = kind === 'true'
+    ? t('editor.branchTrue')
+    : kind === 'false'
+      ? t('editor.branchFalse')
+      : undefined
+  const branchStroke = kind === 'true' ? '#16a34a' : kind === 'false' ? '#dc2626' : '#4f46e5'
+  return {
+    ...edge,
+    ...(branchLabel ? {
+      label: branchLabel,
+      labelStyle: { fill: branchStroke, fontWeight: 600, fontSize: 11 },
+      labelBgStyle: { fill: kind === 'true' ? '#ecfdf5' : '#fef2f2', fillOpacity: 0.95 },
+      labelBgPadding: [4, 2] as [number, number],
+      labelBgBorderRadius: 4,
+    } : {}),
+    animated: true,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: branchStroke,
+    },
+    style: { stroke: branchStroke, strokeWidth: 2, ...(edge.style || {}) },
+  }
+}
 const {
   list: listWorkflows, get, update, execute, listExecutions, getExecution, cancelExecution,
   resumeExecution, approveExecution, rejectExecution, debug,
@@ -4136,6 +4151,9 @@ onMounted(() => {
   line-height: 1.4;
   color: var(--cf-ink-soft, #64748b);
   opacity: 0.85;
+}
+.field__hint--block {
+  margin-bottom: 8px;
 }
 .field__link {
   color: var(--cf-accent, #0f9f8a);

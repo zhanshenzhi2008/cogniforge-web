@@ -284,14 +284,13 @@ const displayHint = computed(() => {
   position: absolute;
   font-size: 10px;
   line-height: 1;
+  font-weight: 600;
   color: #92400e;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.flow-node:hover .flow-handle-tag {
-  opacity: 0.9;
+  opacity: 0.85;
+  background: rgba(255, 251, 235, 0.92);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 .flow-handle-tag--top {
