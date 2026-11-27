@@ -56,7 +56,12 @@
       />
     </template>
     <template #node-condition="{ data }">
-      <WorkflowFlowNode kind="condition" :label="data.label" :hint="data.streamProgress" />
+      <WorkflowFlowNode
+        kind="condition"
+        :label="data.label"
+        :hint="bindNodeHint('condition', data)"
+        :unbound="isWorkflowBindUnbound('condition', data)"
+      />
     </template>
     <template #node-loop="{ data }">
       <WorkflowFlowNode kind="loop" :label="data.label" :hint="data.streamProgress" />

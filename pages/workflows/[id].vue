@@ -1901,6 +1901,15 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const short = first.length > 28 ? `${first.slice(0, 26)}…` : first
     return `${lang}: ${short}`
   }
+  if (kind === 'condition') {
+    const conds = Array.isArray(d.conditions) ? d.conditions : []
+    const first = conds[0] as { field?: string, operator?: string, value?: string } | undefined
+    const field = String(d.conditionField || first?.field || '').trim()
+    if (!field) return ''
+    const op = String(d.conditionOperator || first?.operator || '==').trim() || '=='
+    const val = String(d.conditionValue ?? first?.value ?? '').trim()
+    return val ? `${field} ${op} ${val}` : `${field} ${op}`
+  }
   if (kind === 'team') {
     const id = String(d.teamId || '').trim()
     return teamOptions.value.find(o => o.value === id)?.label || ''
@@ -1924,7 +1933,7 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
 function syncBindCaptions() {
   nodes.value = nodes.value.map((n) => {
     const kind = String(n.type || '')
-    if (!['llm', 'http', 'code', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
+    if (!['llm', 'http', 'code', 'condition', 'team', 'agent', 'search', 'subflow'].includes(kind)) return n
     const caption = resolveBindCaption(kind, n.data)
     if ((n.data?.bindCaption || '') === caption) return n
     return { ...n, data: { ...n.data, bindCaption: caption } }
@@ -2069,6 +2078,16 @@ const saveNodeConfig = () => {
       language: nodeConfig.codeLanguage,
       codeSource: nodeConfig.codeSource,
       code: nodeConfig.codeSource,
+      conditionField: nodeConfig.conditionField,
+      conditionOperator: nodeConfig.conditionOperator,
+      conditionValue: nodeConfig.conditionValue,
+      conditions: nodeConfig.conditionField
+        ? [{
+            field: nodeConfig.conditionField,
+            operator: nodeConfig.conditionOperator || '==',
+            value: nodeConfig.conditionValue,
+          }]
+        : [],
       teamId: nodeConfig.teamId,
       agentId: nodeConfig.agentId,
       knowledgeBaseId: nodeConfig.knowledgeBaseId,
