@@ -47,75 +47,64 @@
     </div>
 
     <div v-else-if="viewMode === 'card'" class="mcp-grid">
-      <article
+      <CfResourceCard
         v-for="srv in filteredServers"
         :key="srv.id"
-        class="mcp-card"
+        :icon="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'"
+        :title="srv.name"
+        :description="srvDesc(srv) || t('mcp.noDesc')"
         :class="{ 'mcp-card--off': !srv.enabled }"
         @click="openDetail(srv)"
       >
-        <div class="mcp-card__top">
-          <div class="mcp-card__icon" :class="srv.type === 'built-in' ? 'is-builtin' : 'is-http'">
-            <UIcon :name="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'" class="size-5" />
-          </div>
-          <div class="mcp-card__titles">
-            <h3 class="mcp-card__name">{{ srv.name }}</h3>
-            <div class="mcp-card__tags">
-              <UBadge
-                size="sm"
-                variant="subtle"
-                :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
-              >
-                {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
-              </UBadge>
-              <span class="tool-pill" @click.stop="openDetail(srv)">
-                {{ t('mcp.toolsEnabled', { n: srv.tool_count ?? 0 }) }}
-              </span>
-            </div>
-          </div>
-          <div class="mcp-card__switch" @click.stop>
-            <USwitch
-              v-if="srv.type !== 'built-in'"
-              :model-value="srv.enabled"
-              :disabled="togglingId === srv.id"
-              @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
-            />
-            <UBadge v-else size="sm" variant="subtle" color="success">
-              {{ t('common.enabled') }}
-            </UBadge>
-          </div>
-        </div>
-
-        <p class="mcp-card__desc">{{ srvDesc(srv) || t('mcp.noDesc') }}</p>
-
-        <div class="mcp-card__foot">
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
+          >
+            {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
+          </UBadge>
+          <span class="tool-pill" @click.stop="openDetail(srv)">
+            {{ t('mcp.toolsEnabled', { n: srv.tool_count ?? 0 }) }}
+          </span>
+        </template>
+        <template #actions>
+          <USwitch
+            v-if="srv.type !== 'built-in'"
+            :model-value="srv.enabled"
+            :disabled="togglingId === srv.id"
+            @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
+          />
+          <UBadge v-else size="sm" variant="subtle" color="success">
+            {{ t('common.enabled') }}
+          </UBadge>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-eye"
+            :tip="t('mcp.viewDetail')"
+            @click="openDetail(srv)"
+          />
+          <CfButton
+            v-if="srv.type !== 'built-in'"
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(srv)"
+          />
+          <CfButton
+            v-if="srv.type !== 'built-in'"
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(srv)"
+          />
+        </template>
+        <template #meta>
           <span class="cf-muted mono url-snip" :title="srv.url || ''">
             {{ srv.type === 'built-in' ? t('mcp.builtinShort') : (srv.url || '—') }}
           </span>
-          <div class="action-btns" @click.stop>
-            <CfButton
-              tone="icon-accent"
-              icon="i-lucide-eye"
-              :tip="t('mcp.viewDetail')"
-              @click="openDetail(srv)"
-            />
-            <CfButton
-              v-if="srv.type !== 'built-in'"
-              tone="icon-accent"
-              icon="i-lucide-pencil"
-              :tip="t('common.edit')"
-              @click="handleEdit(srv)"
-            />
-            <CfButton
-              v-if="srv.type !== 'built-in'"
-              tone="icon-danger"
-              icon="i-lucide-trash-2"
-              :tip="t('common.delete')"
-              @click="askDelete(srv)"
-            />
-          </div>
-        </div>
-      </article>
+        </template>
+      </CfResourceCard>
     </div>
 
     <div v-else class="cf-panel">
@@ -653,72 +642,8 @@ onMounted(() => { fetchServers() })
   gap: 0.85rem;
 }
 
-.mcp-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 1rem 1.05rem;
-  border-radius: 0.85rem;
-  border: 1px solid color-mix(in oklab, var(--cf-line) 90%, transparent);
-  background: color-mix(in oklab, var(--cf-nav-surface, var(--ui-bg)) 70%, transparent);
-  cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.mcp-card:hover {
-  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
-  box-shadow: 0 8px 24px color-mix(in oklab, var(--cf-accent) 8%, transparent);
-  transform: translateY(-1px);
-}
-
 .mcp-card--off {
   opacity: 0.72;
-}
-
-.mcp-card__top {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-}
-
-.mcp-card__icon {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.6rem;
-  flex-shrink: 0;
-}
-
-.mcp-card__icon.is-builtin {
-  background: color-mix(in oklab, var(--cf-accent) 16%, transparent);
-  color: var(--cf-accent);
-}
-
-.mcp-card__icon.is-http {
-  background: color-mix(in oklab, var(--cf-ink) 8%, transparent);
-  color: var(--cf-ink-soft);
-}
-
-.mcp-card__titles {
-  flex: 1;
-  min-width: 0;
-}
-
-.mcp-card__name {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 650;
-  color: var(--cf-ink);
-  line-height: 1.3;
-}
-
-.mcp-card__tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.35rem;
 }
 
 .tool-pill {
@@ -729,38 +654,12 @@ onMounted(() => { fetchServers() })
   background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
 }
 
-.mcp-card__switch {
-  flex-shrink: 0;
-  padding-top: 0.15rem;
-}
-
-.mcp-card__desc {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--cf-ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 2.25em;
-}
-
-.mcp-card__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid color-mix(in oklab, var(--cf-line) 70%, transparent);
-}
-
 .url-snip {
   font-size: 0.7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 60%;
+  max-width: 100%;
 }
 
 .action-btns {
