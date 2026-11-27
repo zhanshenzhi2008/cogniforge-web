@@ -29,7 +29,14 @@
 
     <template v-if="!active">
       <div class="list-toolbar">
-        <span class="list-count">{{ t('prompts.count', { n: items.length }) }}</span>
+        <span class="list-count">{{ t('prompts.count', { n: filteredItems.length }) }}</span>
+        <USelect
+          v-model="filterTag"
+          class="tag-filter"
+          :items="tagFilterOptions"
+          value-key="value"
+          :placeholder="t('prompts.filterTagPh')"
+        />
       </div>
       <CfLoadingState v-if="loading" />
       <CfEmptyState
@@ -37,9 +44,14 @@
         icon="i-lucide-file-text"
         :message="t('prompts.empty')"
       />
+      <CfEmptyState
+        v-else-if="filteredItems.length === 0"
+        icon="i-lucide-tags"
+        :message="t('prompts.filterTagEmpty')"
+      />
       <div v-else-if="viewMode === 'card'" class="prompt-grid">
         <CfResourceCard
-          v-for="p in items"
+          v-for="p in filteredItems"
           :key="p.id"
           icon="i-lucide-file-text"
           :title="p.name"
@@ -47,6 +59,17 @@
           :meta="d(p.updated_at)"
           @click="openDetail(p)"
         >
+          <template #badges>
+            <UBadge
+              v-for="tag in (p.tags || []).slice(0, 3)"
+              :key="tag"
+              size="sm"
+              variant="subtle"
+              color="neutral"
+            >
+              {{ tag }}
+            </UBadge>
+          </template>
           <template #actions>
             <CfButton
               tone="icon-danger"
@@ -63,14 +86,16 @@
             <tr>
               <th>{{ t('common.name') }}</th>
               <th>{{ t('common.description') }}</th>
+              <th>{{ t('prompts.tags') }}</th>
               <th>{{ t('common.updatedAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in items" :key="p.id" class="row-click" @click="openDetail(p)">
+            <tr v-for="p in filteredItems" :key="p.id" class="row-click" @click="openDetail(p)">
               <td class="name">{{ p.name }}</td>
               <td class="cf-muted">{{ p.description || '—' }}</td>
+              <td class="cf-muted">{{ (p.tags || []).join(', ') || '—' }}</td>
               <td class="cf-muted">{{ d(p.updated_at) }}</td>
               <td @click.stop>
                 <CfButton
@@ -92,6 +117,15 @@
         <p v-if="sourceLabel(active)" class="source-line">{{ sourceLabel(active) }}</p>
         <p class="cf-muted">{{ active.description }}</p>
       </div>
+
+      <section class="cf-panel block">
+        <div class="block-head">
+          <h3>{{ t('prompts.tags') }}</h3>
+          <CfButton tone="primary" :loading="savingTags" @click="saveTags">{{ t('prompts.saveTags') }}</CfButton>
+        </div>
+        <UInput v-model="tagsDraft" class="w-full" :placeholder="t('prompts.tagsPh')" />
+        <p class="cf-muted try-hint">{{ t('prompts.tagsHint') }}</p>
+      </section>
 
       <section class="cf-panel block">
         <div class="block-head">
@@ -263,6 +297,8 @@
           <h3>{{ t('prompts.new') }}</h3>
           <UInput v-model="form.name" :placeholder="t('prompts.namePh')" class="w-full" />
           <UTextarea v-model="form.description" :placeholder="t('prompts.descPh')" class="w-full" :rows="2" />
+          <UInput v-model="form.tags" :placeholder="t('prompts.tagsPh')" class="w-full" />
+          <p class="cf-muted try-hint">{{ t('prompts.tagsHint') }}</p>
           <UTextarea v-model="form.content" :placeholder="t('prompts.contentPh')" class="w-full" :rows="6" />
           <div class="modal-actions">
             <CfButton tone="secondary" @click="showCreate = false">{{ t('common.cancel') }}</CfButton>
@@ -369,11 +405,14 @@ const loading = ref(true)
 const viewMode = ref<ViewMode>('card')
 const saving = ref(false)
 const savingVars = ref(false)
+const savingTags = ref(false)
 const items = ref<Prompt[]>([])
 const active = ref<Prompt | null>(null)
 const versions = ref<PromptVersion[]>([])
 const usages = ref<PromptUsage[]>([])
 const varDefs = ref<PromptVarDef[]>([])
+const tagsDraft = ref('')
+const filterTag = ref('')
 const showCreate = ref(false)
 const showVer = ref(false)
 const showImport = ref(false)
@@ -387,8 +426,40 @@ const importKindOptions = computed(() => [
   { label: t('prompts.importSkill'), value: 'skill' },
 ])
 const modelOptions = ref<{ label: string; value: string }[]>([])
-const form = reactive({ name: '', description: '', content: '' })
+const form = reactive({ name: '', description: '', content: '', tags: '' })
 const verForm = reactive({ content: '', changelog: '', publish: true })
+
+function parseTags(raw: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const part of String(raw || '').split(/[,，]/)) {
+    const tag = part.trim()
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+  }
+  return out
+}
+
+const tagFilterOptions = computed(() => {
+  const set = new Set<string>()
+  for (const p of items.value) {
+    for (const tag of p.tags || []) {
+      const t0 = String(tag || '').trim()
+      if (t0) set.add(t0)
+    }
+  }
+  return [
+    { label: t('prompts.filterTagAll'), value: '' },
+    ...[...set].sort((a, b) => a.localeCompare(b)).map(tag => ({ label: tag, value: tag })),
+  ]
+})
+
+const filteredItems = computed(() => {
+  const tag = filterTag.value.trim()
+  if (!tag) return items.value
+  return items.value.filter(p => (p.tags || []).includes(tag))
+})
 
 const tryVersionId = ref('')
 const tryModel = ref('')
@@ -488,6 +559,7 @@ const openDetail = async (p: Prompt) => {
   active.value = p
   compareIds.value = []
   varDefs.value = (p.variables || []).map(v => ({ ...v }))
+  tagsDraft.value = (p.tags || []).join(', ')
   const [verRes, useRes, one] = await Promise.all([
     api.listVersions(p.id),
     api.listUsages(p.id),
@@ -498,6 +570,7 @@ const openDetail = async (p: Prompt) => {
   if (one.data?.prompt) {
     active.value = one.data.prompt
     varDefs.value = (one.data.prompt.variables || []).map(v => ({ ...v }))
+    tagsDraft.value = (one.data.prompt.tags || []).join(', ')
   }
   if (versions.value[0]) {
     verForm.content = versions.value[0].content
@@ -512,6 +585,7 @@ const closeDetail = () => {
   versions.value = []
   usages.value = []
   varDefs.value = []
+  tagsDraft.value = ''
   compareIds.value = []
   tryAnswer.value = ''
   tryError.value = ''
@@ -544,6 +618,24 @@ const saveVarDefs = async () => {
   if (res.data) {
     active.value = res.data
     tryVars.value = initVarFormValues(cleaned)
+  }
+  toast.add({ title: t('common.saveOk'), color: 'success' })
+  await load()
+}
+
+const saveTags = async () => {
+  if (!active.value) return
+  savingTags.value = true
+  const tags = parseTags(tagsDraft.value)
+  const res = await api.update(active.value.id, { tags })
+  savingTags.value = false
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  if (res.data) {
+    active.value = res.data
+    tagsDraft.value = (res.data.tags || []).join(', ')
   }
   toast.add({ title: t('common.saveOk'), color: 'success' })
   await load()
@@ -662,10 +754,12 @@ const loadModels = async () => {
 const doCreate = async () => {
   if (!form.name.trim()) return
   saving.value = true
+  const tags = parseTags(form.tags)
   const res = await api.create({
     name: form.name.trim(),
     description: form.description,
     content: form.content,
+    tags: tags.length ? tags : undefined,
   })
   saving.value = false
   if (res.error) {
@@ -676,6 +770,7 @@ const doCreate = async () => {
   form.name = ''
   form.description = ''
   form.content = ''
+  form.tags = ''
   await load()
   if (res.data?.prompt) await openDetail(res.data.prompt)
 }
@@ -803,8 +898,15 @@ onMounted(() => {
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 12px;
 }
-.list-toolbar { margin-bottom: 10px; }
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
 .list-count { font-size: 13px; color: var(--cf-ink-soft); }
+.tag-filter { width: 180px; }
 .row-click { cursor: pointer; }
 .row-click:hover { background: color-mix(in oklab, var(--cf-ink) 4%, transparent); }
 .name { font-weight: 600; }
