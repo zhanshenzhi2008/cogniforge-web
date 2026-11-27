@@ -34,6 +34,15 @@
         <CfButton
           v-if="agentId"
           tone="secondary"
+          icon="i-lucide-share-2"
+          :tip="t('agents.studioPublish')"
+          @click="openPublish"
+        >
+          {{ t('agents.studioPublish') }}
+        </CfButton>
+        <CfButton
+          v-if="agentId"
+          tone="secondary"
           icon="i-lucide-scroll-text"
           :tip="t('agents.studioChatLogs')"
           @click="openChatLogs"
@@ -78,6 +87,61 @@
               </button>
             </li>
           </ul>
+        </div>
+      </template>
+    </USlideover>
+
+    <USlideover v-model:open="publishOpen" :title="t('agents.studioPublishTitle')" :ui="{ content: 'max-w-md w-full' }">
+      <template #body>
+        <div class="publish-panel">
+          <p class="chat-logs__hint">{{ t('agents.studioPublishHint') }}</p>
+
+          <section class="publish-block">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-globe" class="size-3.5" />
+              {{ t('agents.studioPublishWeb') }}
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishWebDesc') }}</p>
+            <pre class="publish-code">{{ publishWebLink }}</pre>
+            <div class="publish-actions">
+              <CfButton tone="secondary" icon="i-lucide-copy" @click="copyText(publishWebLink, 'web')">
+                {{ t('common.copy') }}
+              </CfButton>
+              <CfButton tone="secondary" icon="i-lucide-external-link" @click="openPublishWeb">
+                {{ t('agents.studioPublishOpen') }}
+              </CfButton>
+            </div>
+          </section>
+
+          <section class="publish-block">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-code-xml" class="size-3.5" />
+              {{ t('agents.studioPublishApi') }}
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishApiDesc') }}</p>
+            <pre class="publish-code">{{ publishApiCurl }}</pre>
+            <div class="publish-actions">
+              <CfButton tone="secondary" icon="i-lucide-copy" @click="copyText(publishApiCurl, 'api')">
+                {{ t('common.copy') }}
+              </CfButton>
+            </div>
+          </section>
+
+          <section class="publish-block">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-app-window" class="size-3.5" />
+              {{ t('agents.studioPublishEmbed') }}
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishEmbedDesc') }}</p>
+            <pre class="publish-code">{{ publishEmbedHtml }}</pre>
+            <div class="publish-actions">
+              <CfButton tone="secondary" icon="i-lucide-copy" @click="copyText(publishEmbedHtml, 'embed')">
+                {{ t('common.copy') }}
+              </CfButton>
+            </div>
+          </section>
+
+          <p class="publish-foot">{{ t('agents.studioPublishImSoon') }}</p>
         </div>
       </template>
     </USlideover>
@@ -531,6 +595,7 @@ import {
 } from '~/utils/chatAttachments'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
+import { resolveApiBase } from '~/utils/apiBase'
 import {
   DEFAULT_PROMPT_VAR_SUGGESTIONS,
   detectMentionTrigger,
@@ -583,6 +648,38 @@ const versionsLoading = ref(false)
 const versionList = ref<AgentVersionSnap[]>([])
 const rollingBackVersion = ref<number | null>(null)
 const currentVersion = ref<number | null>(null)
+const publishOpen = ref(false)
+const copiedKey = ref<'web' | 'api' | 'embed' | ''>('')
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+const runtimeConfig = useRuntimeConfig()
+const siteOrigin = computed(() => {
+  if (import.meta.client) return window.location.origin
+  return ''
+})
+const publishWebLink = computed(() => {
+  if (!agentId.value) return ''
+  return `${siteOrigin.value}/playground?agent=${encodeURIComponent(agentId.value)}`
+})
+const publishApiBase = computed(() => {
+  const base = resolveApiBase(String(runtimeConfig.public?.apiBase ?? ''))
+  if (base) return base
+  return siteOrigin.value || 'https://cogniforge.example.com'
+})
+const publishApiCurl = computed(() => {
+  if (!agentId.value) return ''
+  const url = `${publishApiBase.value}/api/v1/agents/${agentId.value}/chat`
+  return [
+    `curl -N -X POST '${url}' \\`,
+    `  -H 'Authorization: Bearer <API_KEY_OR_JWT>' \\`,
+    `  -H 'Content-Type: application/json' \\`,
+    `  -d '{"messages":[{"role":"user","content":"你好"}],"stream":true}'`,
+  ].join('\n')
+})
+const publishEmbedHtml = computed(() => {
+  if (!publishWebLink.value) return ''
+  return `<iframe\n  src="${publishWebLink.value}"\n  title="CogniForge Agent"\n  style="width:100%;height:640px;border:0;border-radius:12px"\n  allow="clipboard-write"\n></iframe>`
+})
 const stageTipContent = {
   side: 'bottom' as const,
   align: 'start' as const,
@@ -878,6 +975,34 @@ function goBack() {
 
 function formatChatLogTime(iso: string) {
   return d(iso)
+}
+
+function openPublish() {
+  if (!agentId.value) return
+  publishOpen.value = true
+  copiedKey.value = ''
+}
+
+function openPublishWeb() {
+  if (!publishWebLink.value) return
+  if (import.meta.client) {
+    window.open(publishWebLink.value, '_blank', 'noopener,noreferrer')
+  }
+}
+
+async function copyText(text: string, key: 'web' | 'api' | 'embed') {
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedKey.value = key
+    if (copiedTimer) clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copiedKey.value = ''
+    }, 1600)
+    toast.add({ title: t('common.copied'), color: 'success' })
+  } catch {
+    toast.add({ title: t('common.copyFail'), color: 'error' })
+  }
 }
 
 async function openVersions() {
@@ -1427,6 +1552,62 @@ onMounted(async () => {
   margin-left: 4px;
   font-size: 0.75rem;
   opacity: 0.75;
+}
+
+.publish-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.publish-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+}
+
+.publish-block__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.publish-block__desc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+}
+
+.publish-code {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+  max-height: 160px;
+}
+
+.publish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.publish-foot {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
 }
 
 .version-row {

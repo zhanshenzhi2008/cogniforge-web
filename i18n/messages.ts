@@ -54,6 +54,7 @@ export const M = {
   'common.member': { 'zh-CN': '成员', 'en-US': 'Member' },
   'common.back': { 'zh-CN': '返回', 'en-US': 'Back' },
   'common.copied': { 'zh-CN': '已复制到剪贴板', 'en-US': 'Copied to clipboard' },
+  'common.copyFail': { 'zh-CN': '复制失败', 'en-US': 'Copy failed' },
   'common.deleteConfirm': { 'zh-CN': '删除确认', 'en-US': 'Delete' },
   'common.deleteOk': { 'zh-CN': '删除成功', 'en-US': 'Deleted' },
   'common.deleteFail': { 'zh-CN': '删除失败', 'en-US': 'Could not delete' },
@@ -427,6 +428,32 @@ export const M = {
     'en-US': 'When on, studio preview and Playground can upload docs for this agent.',
   },
   'agents.studioAttachOnly': { 'zh-CN': '（已附文档）', 'en-US': '(with attachments)' },
+  'agents.studioPublish': { 'zh-CN': '发布', 'en-US': 'Publish' },
+  'agents.studioPublishTitle': { 'zh-CN': '发布渠道', 'en-US': 'Publish channels' },
+  'agents.studioPublishHint': {
+    'zh-CN': '把已保存的智能体接到网页、API 或嵌入页。调用需登录或 API Key。',
+    'en-US': 'Connect the saved agent via web, API, or embed. Calls need login or an API key.',
+  },
+  'agents.studioPublishWeb': { 'zh-CN': '网页对话', 'en-US': 'Web chat' },
+  'agents.studioPublishWebDesc': {
+    'zh-CN': '打开对话页并预选本智能体（需已登录）。',
+    'en-US': 'Open Playground with this agent preselected (login required).',
+  },
+  'agents.studioPublishApi': { 'zh-CN': 'API 调用', 'en-US': 'API call' },
+  'agents.studioPublishApiDesc': {
+    'zh-CN': '服务端或脚本调用 POST /agents/:id/chat；把 Bearer 换成你的 JWT 或 API Key。',
+    'en-US': 'Call POST /agents/:id/chat from server/scripts; replace Bearer with your JWT or API key.',
+  },
+  'agents.studioPublishEmbed': { 'zh-CN': '网页嵌入', 'en-US': 'Embed' },
+  'agents.studioPublishEmbedDesc': {
+    'zh-CN': '用 iframe 嵌入对话页；访客仍需能登录本站（公开免登嵌入后续再做）。',
+    'en-US': 'Embed Playground in an iframe; visitors still need site login (public embed later).',
+  },
+  'agents.studioPublishOpen': { 'zh-CN': '打开', 'en-US': 'Open' },
+  'agents.studioPublishImSoon': {
+    'zh-CN': '飞书 / 企微 / 钉钉等第三方 IM 渠道尚未接入，后续排期。',
+    'en-US': 'Feishu / WeCom / DingTalk channels are not wired yet.',
+  },
   'agents.studioVersions': { 'zh-CN': '版本', 'en-US': 'Versions' },
   'agents.studioVersionsTitle': { 'zh-CN': '配置版本历史', 'en-US': 'Config version history' },
   'agents.studioVersionsHint': {
