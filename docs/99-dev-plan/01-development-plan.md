@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-27 | v1.136 | 工作室预览附件上传（allow_attachments） | orjrs |
 | 2026-11-27 | v1.135 | 工作室可绑定知识库（rag_kb_ids） | orjrs |
 | 2026-11-27 | v1.134 | 工作室开场白 + 预设问题；Playground 空态展示 | orjrs |
 | 2026-11-27 | v1.133 | Playground 对话改走 useAgentChat / useChatStream | orjrs |
@@ -180,6 +181,12 @@
 - **原因**：工作室 backlog；对话自动检索
 - **落地**：左侧多选知识库 → `rag_kb_ids`；预览/对话走 Agent 时后端合并 RAG
 - **主仓**：API v1.96；DB v1.41；前端设计 v1.104
+
+## [变更] 工作室预览附件上传（2026-11-27）
+
+- **原因**：工作室 backlog；对齐 Playground attachments
+- **落地**：左侧「允许上传附件」；预览回形针上传；Playground 选 Agent 时按开关显隐
+- **主仓**：API v1.97；DB v1.42；前端设计 v1.105
 
 ## [变更] 审计表展示 clearance 动作（2026-11-27）
 
@@ -599,7 +606,7 @@
   - **优先（有现成能力可接）**
     - [x] 工作室绑定知识库（多选；对话走 `rag_kb_ids`；「使用者鉴权」仍待）
     - [x] 对话开场白 + 预设问题（保存到 Agent；预览/Playground 首屏展示）
-    - [ ] 预览区文件上传开关（对齐 Playground attachments）
+    - [x] 预览区文件上传开关（对齐 Playground attachments）
     - [ ] 提示词 `/` 插变量、`@` 插技能/工具/知识库（编辑器增强）
     - [ ] 「了解更多」链到帮助文档/空状态说明页
     - [ ] 顶栏「对话日志」：该 Agent 历史会话列表（只读跳 Playground）

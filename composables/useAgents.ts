@@ -15,6 +15,7 @@ export interface Agent {
   opening_message?: string
   suggested_prompts?: string[]
   rag_kb_ids?: string[]
+  allow_attachments?: boolean
   tools: string[] // MCP Server ID 列表
   skill_id?: string // 阶段十五：从 SKILL 创建
   memory_type: string
@@ -36,6 +37,7 @@ export interface CreateAgentInput {
   opening_message?: string
   suggested_prompts?: string[]
   rag_kb_ids?: string[]
+  allow_attachments?: boolean
   tools?: string[]
   skill_id?: string
   mcp_servers?: string[]
@@ -50,6 +52,7 @@ export interface UpdateAgentInput {
   opening_message?: string
   suggested_prompts?: string[]
   rag_kb_ids?: string[]
+  allow_attachments?: boolean
   tools?: string[]
   skill_id?: string
   mcp_servers?: string[]

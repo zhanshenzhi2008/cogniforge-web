@@ -421,6 +421,12 @@ export const M = {
     'zh-CN': '最多绑定 8 个知识库',
     'en-US': 'At most 8 knowledge bases',
   },
+  'agents.allowAttachments': { 'zh-CN': '允许上传附件', 'en-US': 'Allow file upload' },
+  'agents.allowAttachmentsHint': {
+    'zh-CN': '开启后，工作室预览与对话页选此智能体时可上传文档检索。',
+    'en-US': 'When on, studio preview and Playground can upload docs for this agent.',
+  },
+  'agents.studioAttachOnly': { 'zh-CN': '（已附文档）', 'en-US': '(with attachments)' },
   'agents.systemPh': { 'zh-CN': '定义 Agent 的角色和行为...', 'en-US': 'Define the agent’s role and behavior…' },
   'agents.tools': { 'zh-CN': '工具', 'en-US': 'Tools' },
   'agents.pickModel': { 'zh-CN': '请选择模型', 'en-US': 'Select a model' },

@@ -241,6 +241,7 @@
               @click="imageInput?.click()"
             />
             <CfButton
+              v-if="fileAttachAllowed"
               tone="icon"
               icon="i-lucide-paperclip"
               :tip="t('play.attachFile')"
@@ -409,6 +410,12 @@ const suggestionChips = computed(() => {
     .slice(0, 6)
   if (fromAgent.length) return fromAgent
   return [t('play.chip1'), t('play.chip2'), t('play.chip3')]
+})
+
+/** 无 Agent 时始终可传文件；有 Agent 时看 allow_attachments */
+const fileAttachAllowed = computed(() => {
+  if (selectedAgent.value === NONE_AGENT) return true
+  return !!selectedAgentInfo.value?.allow_attachments
 })
 
 const emptyHeroTitle = computed(() => {

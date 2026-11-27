@@ -182,6 +182,18 @@
 
         <section class="cfg-row">
           <div class="cfg-row__main">
+            <UIcon name="i-lucide-paperclip" class="size-4" />
+            <span>{{ t('agents.allowAttachments') }}</span>
+          </div>
+          <div class="status-row">
+            <USwitch v-model="form.allow_attachments" @update:model-value="markDirty" />
+            <span>{{ form.allow_attachments ? t('common.enabled') : t('common.disabled') }}</span>
+          </div>
+          <p class="cfg-hint">{{ t('agents.allowAttachmentsHint') }}</p>
+        </section>
+
+        <section class="cfg-row">
+          <div class="cfg-row__main">
             <UIcon name="i-lucide-power" class="size-4" />
             <span>{{ t('common.status') }}</span>
           </div>
@@ -265,13 +277,51 @@
           :status="chatStatus"
           :placeholder="stagePlaceholder"
           :submit-label="stageSubmitLabel"
-          :submit-disabled="chatBusy || !composer.trim() || (stage === 'preview' && !agentId)"
+          :submit-disabled="composerSubmitDisabled"
           :markdown="true"
           composer-wrap-class="stage-composer-wrap"
           prompt-class="stage-prompt"
           @submit="sendComposer"
           @stop="stopActiveStream"
         >
+          <template v-if="stage === 'preview' && form.allow_attachments" #before-composer>
+            <div v-if="pendingAttachments.length" class="stage-pending">
+              <div
+                v-for="att in pendingAttachments"
+                :key="att.localId"
+                class="stage-pending__chip"
+              >
+                <UIcon name="i-lucide-file-text" class="size-3.5 shrink-0" />
+                <span class="stage-pending__name">{{ att.name }}</span>
+                <span class="stage-pending__st">{{ att.status }}</span>
+                <button
+                  type="button"
+                  class="stage-pending__rm"
+                  :aria-label="t('common.delete')"
+                  @click="removePendingAttachment(att.localId)"
+                >
+                  <UIcon name="i-lucide-x" class="size-3.5" />
+                </button>
+              </div>
+            </div>
+          </template>
+          <template v-if="stage === 'preview' && form.allow_attachments" #composer-actions>
+            <input
+              ref="fileInput"
+              type="file"
+              class="sr-only"
+              :accept="CHAT_DOC_ACCEPT"
+              multiple
+              @change="onFileInputChange"
+            >
+            <CfButton
+              tone="secondary"
+              icon="i-lucide-paperclip"
+              :tip="t('play.attachFile')"
+              :disabled="chatBusy || !agentId || pendingAttachments.length >= CHAT_DOC_MAX_COUNT"
+              @click="fileInput?.click()"
+            />
+          </template>
           <template #empty>
             <div class="stage-hero">
               <div class="stage-hero__mark" aria-hidden="true">
@@ -361,6 +411,16 @@ import {
   stripAgentBuildFence,
   type UnsupportedBuildKind,
 } from '~/utils/agentBuildConfig'
+import {
+  assertDocBatch,
+  CHAT_DOC_ACCEPT,
+  CHAT_DOC_MAX_COUNT,
+  ChatDocError,
+  guessChatDocType,
+  partitionChatDocs,
+  toSendAttachments,
+  type PendingAttachment,
+} from '~/utils/chatAttachments'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
 
@@ -383,12 +443,15 @@ const { list: listMcpServers } = useMcpServers()
 const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 const { list: listPrompts } = usePrompts()
-const { listKBs } = useKnowledgeBases()
+const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
 
 const saving = ref(false)
 const dirty = ref(false)
 const stage = ref<'build' | 'preview'>('build')
 const composer = ref('')
+const pendingAttachments = ref<PendingAttachment[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
+const studioUploadKBId = ref('')
 const stageTipContent = {
   side: 'bottom' as const,
   align: 'start' as const,
@@ -419,6 +482,7 @@ const form = reactive({
   opening_message: '',
   suggested_prompts: [] as string[],
   rag_kb_ids: [] as string[],
+  allow_attachments: false,
   tools: [] as string[],
   skill_id: '',
 })
@@ -434,6 +498,20 @@ const activeMessages = computed(() =>
 const previewSuggested = computed(() =>
   form.suggested_prompts.map(s => s.trim()).filter(Boolean).slice(0, 6),
 )
+const hasReadyAttachments = computed(() =>
+  pendingAttachments.value.some(a => a.id && a.status !== 'failed' && a.status !== 'uploading'),
+)
+const attachmentsUploading = computed(() =>
+  pendingAttachments.value.some(a => a.status === 'uploading'),
+)
+const composerSubmitDisabled = computed(() => {
+  if (chatBusy.value) return true
+  if (stage.value === 'preview' && !agentId.value) return true
+  if (attachmentsUploading.value) return true
+  const hasText = !!composer.value.trim()
+  const canAttach = stage.value === 'preview' && form.allow_attachments && hasReadyAttachments.value
+  return !hasText && !canAttach
+})
 
 function addSuggested() {
   if (form.suggested_prompts.length >= 6) return
@@ -530,6 +608,7 @@ function fillFromAgent(agent: Agent) {
   form.opening_message = agent.opening_message || ''
   form.suggested_prompts = [...(agent.suggested_prompts || [])]
   form.rag_kb_ids = [...(agent.rag_kb_ids || [])]
+  form.allow_attachments = !!agent.allow_attachments
   form.tools = [...(agent.tools || [])]
   form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
@@ -682,6 +761,7 @@ async function handleSave() {
         opening_message: form.opening_message,
         suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
         rag_kb_ids: [...form.rag_kb_ids],
+        allow_attachments: form.allow_attachments,
         tools: form.tools,
         skill_id: form.skill_id || '',
         status: statusEnabled.value ? 'active' : 'disabled',
@@ -708,6 +788,7 @@ async function handleSave() {
       opening_message: form.opening_message || undefined,
       suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
       rag_kb_ids: [...form.rag_kb_ids],
+      allow_attachments: form.allow_attachments,
       tools: form.tools,
       skill_id: form.skill_id || undefined,
     }
@@ -756,27 +837,128 @@ function buildAssistantSystemPrompt() {
 }
 
 async function sendComposer() {
+  if (chatBusy.value) return
   const text = composer.value.trim()
-  if (!text || chatBusy.value) return
+  const attachments = stage.value === 'preview' && form.allow_attachments
+    ? toSendAttachments(pendingAttachments.value)
+    : []
+  if (!text && !attachments.length) return
+  if (attachmentsUploading.value) {
+    toast.add({ title: t('play.docWaitUpload'), color: 'warning' })
+    return
+  }
   composer.value = ''
   if (stage.value === 'preview') {
-    await sendPreview(text)
+    pendingAttachments.value = []
+    await sendPreview(text, attachments)
   } else {
     await sendBuild(text)
   }
 }
 
-async function sendPreview(text: string) {
+function removePendingAttachment(localId: string) {
+  pendingAttachments.value = pendingAttachments.value.filter(a => a.localId !== localId)
+}
+
+async function ensureStudioUploadKB(): Promise<string | null> {
+  if (studioUploadKBId.value) return studioUploadKBId.value
+  const bound = form.rag_kb_ids.find(Boolean)
+  if (bound) {
+    studioUploadKBId.value = bound
+    return bound
+  }
+  const first = knowledgeBases.value.find(k => k.status === 'active') || knowledgeBases.value[0]
+  if (first?.id) {
+    studioUploadKBId.value = first.id
+    return first.id
+  }
+  const created = await createKB({ name: 'Agent Studio' })
+  if (created.error || !created.data?.id) {
+    toast.add({ title: created.error || t('play.docUploadFail'), color: 'error' })
+    return null
+  }
+  knowledgeBases.value = [...knowledgeBases.value, created.data]
+  studioUploadKBId.value = created.data.id
+  return created.data.id
+}
+
+async function uploadDocFiles(docs: File[]) {
+  if (!docs.length) return
+  try {
+    assertDocBatch(docs, pendingAttachments.value.length)
+  } catch (err) {
+    if (err instanceof ChatDocError) {
+      const map: Record<string, string> = {
+        tooMany: t('play.docTooMany'),
+        tooBig: t('play.docTooBig'),
+        badType: t('play.docBadType'),
+        uploadFail: t('play.docUploadFail'),
+      }
+      toast.add({ title: map[err.code] || t('play.docUploadFail'), color: 'error' })
+    } else {
+      toast.add({ title: t('play.docUploadFail'), color: 'error' })
+    }
+    return
+  }
+  const kbId = await ensureStudioUploadKB()
+  if (!kbId) return
+  for (const file of docs) {
+    const localId = crypto.randomUUID()
+    const fileType = guessChatDocType(file)
+    pendingAttachments.value = [
+      ...pendingAttachments.value,
+      {
+        localId,
+        name: file.name || `file.${fileType}`,
+        file_type: fileType,
+        status: 'uploading',
+      },
+    ]
+    const res = await uploadDoc(kbId, file)
+    pendingAttachments.value = pendingAttachments.value.map((a) => {
+      if (a.localId !== localId) return a
+      if (res.error || !res.data) {
+        return { ...a, status: 'failed', error: res.error || 'upload failed' }
+      }
+      return {
+        ...a,
+        id: res.data.id,
+        name: res.data.name || res.data.file_name || a.name,
+        file_type: res.data.file_type || fileType,
+        status: res.data.status || 'pending',
+        chunk_count: res.data.chunk_count,
+      }
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('play.docUploadFail'), color: 'error' })
+    }
+  }
+}
+
+async function onFileInputChange(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  const { docs, rejected } = partitionChatDocs(files)
+  if (docs.length) await uploadDocFiles(docs)
+  if (rejected.length) toast.add({ title: t('play.docBadType'), color: 'error' })
+}
+
+async function sendPreview(text: string, attachments: ReturnType<typeof toSendAttachments> = []) {
   if (!agentId.value) {
     toast.add({ title: t('agents.studioPreviewNeedSave'), color: 'warning' })
     return
   }
-  previewMessages.value.push({ role: 'user', content: text })
+  const userContent = text || (attachments.length ? t('agents.studioAttachOnly') : '')
+  previewMessages.value.push({ role: 'user', content: userContent })
   previewMessages.value.push({ role: 'assistant', content: '' })
   const idx = previewMessages.value.length - 1
   const history = previewMessages.value.slice(0, -1)
   await streamAgentChat(agentId.value, history, (content) => {
     previewMessages.value[idx] = { role: 'assistant', content }
+  }, {
+    attachments: attachments.length ? attachments : undefined,
   })
   if (agentChatError.value) {
     toast.add({ title: agentChatError.value, color: 'error' })
@@ -995,6 +1177,52 @@ onMounted(async () => {
   justify-content: center;
   gap: 8px;
   margin-top: 4px;
+}
+
+.stage-pending {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.stage-pending__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line);
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  background: color-mix(in oklab, var(--cf-accent) 6%, transparent);
+}
+
+.stage-pending__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+  color: var(--cf-ink);
+}
+
+.stage-pending__st {
+  opacity: 0.7;
+}
+
+.stage-pending__rm {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cf-ink-soft);
+  cursor: pointer;
+}
+
+.stage-pending__rm:hover {
+  color: var(--cf-ink);
 }
 
 .cfg-hint {
