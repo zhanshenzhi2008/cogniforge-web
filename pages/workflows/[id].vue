@@ -13,6 +13,15 @@
       </CfButton>
       <h3>{{ workflowName }}</h3>
       <UBadge
+        v-if="canvasDirty"
+        size="sm"
+        variant="subtle"
+        color="warning"
+        :title="t('editor.unsavedTip')"
+      >
+        {{ t('editor.unsaved') }}
+      </UBadge>
+      <UBadge
         v-if="currentWorkflow"
         size="sm"
         variant="subtle"
@@ -1184,6 +1193,15 @@
       :loading="rollingBackVersion != null"
       @confirm="doRollback"
     />
+    <CfConfirmModal
+      v-model:open="leaveDirtyOpen"
+      :title="t('editor.unsaved')"
+      :message="t('editor.unsavedLeaveConfirm')"
+      :confirm-text="t('editor.leaveWithoutSave')"
+      confirm-icon="i-lucide-log-out"
+      @confirm="confirmLeaveDirty"
+      @cancel="onLeaveDirtyCancel"
+    />
   </div>
 </template>
 
@@ -1787,6 +1805,92 @@ const execStatusColor = (status: string) => {
   }
 }
 
+function buildEditorSnapshot(): string {
+  return JSON.stringify({
+    name: workflowName.value,
+    description: workflowBasicInfo.description || '',
+    webhookUrl: workflowBasicInfo.webhookUrl || '',
+    nodes: nodes.value.map((n) => {
+      const raw = { ...(n.data || {}) } as Record<string, unknown>
+      // 调试进度等运行时字段不计入未保存
+      delete raw.streamProgress
+      return {
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: raw,
+      }
+    }),
+    edges: edges.value.map(e => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle || null,
+      targetHandle: e.targetHandle || null,
+    })),
+  })
+}
+
+const cleanEditorSnapshot = ref('')
+const canvasDirty = computed(() => {
+  if (isSmokeTest.value) return false
+  if (!cleanEditorSnapshot.value) return false
+  return buildEditorSnapshot() !== cleanEditorSnapshot.value
+})
+
+function markEditorClean() {
+  cleanEditorSnapshot.value = buildEditorSnapshot()
+}
+
+/** 只把基本信息标成已保存，画布改动仍算未保存 */
+function markEditorMetaClean() {
+  if (!cleanEditorSnapshot.value) {
+    markEditorClean()
+    return
+  }
+  try {
+    const snap = JSON.parse(cleanEditorSnapshot.value) as Record<string, unknown>
+    snap.name = workflowName.value
+    snap.description = workflowBasicInfo.description || ''
+    snap.webhookUrl = workflowBasicInfo.webhookUrl || ''
+    cleanEditorSnapshot.value = JSON.stringify(snap)
+  }
+  catch {
+    markEditorClean()
+  }
+}
+
+const leaveDirtyOpen = ref(false)
+let pendingLeaveAction: (() => void) | null = null
+let leaveGuardNext: ((val?: boolean | void) => void) | null = null
+
+function askLeaveIfDirty(action: () => void) {
+  if (!canvasDirty.value) {
+    action()
+    return
+  }
+  pendingLeaveAction = action
+  leaveDirtyOpen.value = true
+}
+
+function confirmLeaveDirty() {
+  const action = pendingLeaveAction
+  const guardNext = leaveGuardNext
+  pendingLeaveAction = null
+  leaveGuardNext = null
+  leaveDirtyOpen.value = false
+  markEditorClean()
+  action?.()
+  guardNext?.()
+}
+
+function onLeaveDirtyCancel() {
+  pendingLeaveAction = null
+  leaveDirtyOpen.value = false
+  leaveGuardNext?.(false)
+  leaveGuardNext = null
+}
+
 const loadWorkflow = async () => {
   if (!workflowId.value) {
     toast.add({ title: t('editor.missingId'), color: 'warning' })
@@ -1796,6 +1900,7 @@ const loadWorkflow = async () => {
   currentWorkflow.value = null
   nodes.value = []
   edges.value = []
+  cleanEditorSnapshot.value = ''
 
   if (isSmokeTest.value) {
     workflowName.value = t('editor.smokeName')
@@ -1810,6 +1915,8 @@ const loadWorkflow = async () => {
       },
     ]
     edges.value = []
+    await nextTick()
+    markEditorClean()
     return
   }
 
@@ -1880,6 +1987,8 @@ const loadWorkflow = async () => {
           id: e.id,
           source: e.source,
           target: e.target,
+          sourceHandle: e.sourceHandle || e.source_handle || undefined,
+          targetHandle: e.targetHandle || e.target_handle || undefined,
         })) || []
       } catch {
         nodes.value = []
@@ -1888,6 +1997,8 @@ const loadWorkflow = async () => {
       syncBindCaptions()
     }
   }
+  await nextTick()
+  markEditorClean()
 }
 
 watch(workflowId, async (newId, oldId) => {
@@ -1954,6 +2065,7 @@ const handleSaveBasic = async () => {
     }
     toast.add({ title: t('editor.infoSaved'), color: 'success' })
     editPopoverShow.value = false
+    markEditorMetaClean()
   } catch {
     toast.add({ title: t('common.saveFail'), color: 'error' })
   } finally {
@@ -2722,6 +2834,7 @@ watch(issueMenuOpen, (open) => {
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onIssueMenuPointerDown, true)
   document.removeEventListener('keydown', onIssueMenuKeydown, true)
+  window.removeEventListener('beforeunload', onBrowserBeforeUnload)
 })
 
 /** 顶栏芯片：打开第一个未绑定节点的配置侧栏 */
@@ -3041,6 +3154,7 @@ const handleSave = async () => {
     }
 
     toast.add({ title: t('editor.flowSaved'), color: 'success' })
+    markEditorClean()
   } catch {
     toast.add({ title: t('common.saveFail'), color: 'error' })
   } finally {
@@ -3181,7 +3295,24 @@ const handleReject = async () => {
 }
 
 const handleBack = () => {
-  navigateTo('/workflows')
+  askLeaveIfDirty(() => {
+    navigateTo('/workflows')
+  })
+}
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!canvasDirty.value) {
+    next()
+    return
+  }
+  leaveGuardNext = next
+  leaveDirtyOpen.value = true
+})
+
+function onBrowserBeforeUnload(ev: BeforeUnloadEvent) {
+  if (!canvasDirty.value) return
+  ev.preventDefault()
+  ev.returnValue = ''
 }
 
 const ACTIVE_EXEC_STATUSES = ['running', 'waiting', 'debugging', 'pending'] as const
@@ -3602,6 +3733,7 @@ const selectHistoryExecution = async (executionId: string) => {
 }
 
 onMounted(() => {
+  window.addEventListener('beforeunload', onBrowserBeforeUnload)
   void refreshModelOptions()
   void refreshTeamOptions()
   void refreshAgentOptions()

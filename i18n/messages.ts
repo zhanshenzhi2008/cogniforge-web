@@ -1371,6 +1371,16 @@ export const M = {
     'zh-CN': '点击展开，跳到对应问题节点',
     'en-US': 'Expand to jump to the related node',
   },
+  'editor.unsaved': { 'zh-CN': '未保存', 'en-US': 'Unsaved' },
+  'editor.unsavedTip': {
+    'zh-CN': '画布或基本信息有未保存的修改',
+    'en-US': 'Canvas or basic info has unsaved changes',
+  },
+  'editor.unsavedLeaveConfirm': {
+    'zh-CN': '有未保存的修改，确定离开并放弃吗？',
+    'en-US': 'Discard unsaved changes and leave?',
+  },
+  'editor.leaveWithoutSave': { 'zh-CN': '放弃并离开', 'en-US': 'Leave' },
   'editor.unreachableNode': {
     'zh-CN': '「{name}」从开始节点走不到，请连上边',
     'en-US': '“{name}” is unreachable from Start — connect an edge',
