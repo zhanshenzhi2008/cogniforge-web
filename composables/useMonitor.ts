@@ -84,6 +84,21 @@ export interface RealtimeStats {
   timestamp: number
 }
 
+/** 文档密级变更审计（GET /admin/security-audits） */
+export interface SecurityAuditLog {
+  id: string
+  actor_user_id: string
+  action: string
+  resource_type: string
+  resource_id: string
+  knowledge_base_id?: string
+  old_value?: string
+  new_value?: string
+  result: string
+  detail?: string
+  created_at: string
+}
+
 export const useMonitor = () => {
   const api = useApi()
 
@@ -150,10 +165,25 @@ export const useMonitor = () => {
     }
   }
 
+  const listSecurityAudits = async (
+    limit = 50,
+  ): Promise<{ data?: SecurityAuditLog[]; error?: string }> => {
+    try {
+      const res = await api.get<SecurityAuditLog[]>(
+        `/api/v1/admin/security-audits?limit=${limit}`,
+      )
+      if (res.error) return { error: res.error }
+      return { data: res.data || [] }
+    } catch (err: any) {
+      return { error: err.message || '获取密级审计失败' }
+    }
+  }
+
   return {
     listRequestLogs,
     getRequestLog,
     getUsageStats,
     getRealtimeStats,
+    listSecurityAudits,
   }
 }

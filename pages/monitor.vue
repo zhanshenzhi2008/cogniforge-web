@@ -26,7 +26,26 @@
       </div>
     </div>
 
-    <div class="cf-panel">
+    <div class="tab-row">
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'is-active': activeTab === 'requests' }"
+        @click="activeTab = 'requests'"
+      >
+        {{ t('monitor.logs') }}
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'is-active': activeTab === 'security' }"
+        @click="switchToSecurity"
+      >
+        {{ t('monitor.securityAudits') }}
+      </button>
+    </div>
+
+    <div v-if="activeTab === 'requests'" class="cf-panel">
       <div class="panel-header">
         <div>
           <h2 class="panel-title">{{ t('monitor.logs') }}</h2>
@@ -135,6 +154,70 @@
       </div>
     </div>
 
+    <div v-else class="cf-panel">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">{{ t('monitor.securityAudits') }}</h2>
+          <p class="list-hint">{{ t('monitor.securityAuditsHint') }}</p>
+        </div>
+        <CfButton
+          tone="secondary"
+          icon="i-lucide-refresh-cw"
+          :loading="auditLoading"
+          @click="loadSecurityAudits"
+        >
+          {{ t('common.refresh') }}
+        </CfButton>
+      </div>
+
+      <div v-if="auditLoading" class="cf-state">
+        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
+        <span>{{ t('common.loading') }}</span>
+      </div>
+
+      <div v-else-if="securityAudits.length === 0" class="cf-state">
+        <UIcon name="i-lucide-shield" class="size-8 opacity-50" />
+        <p>{{ t('monitor.securityAuditsEmpty') }}</p>
+      </div>
+
+      <div v-else class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('monitor.time') }}</th>
+              <th>{{ t('monitor.auditActor') }}</th>
+              <th>{{ t('monitor.auditResource') }}</th>
+              <th>{{ t('monitor.auditChange') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('monitor.auditDetail') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in securityAudits" :key="row.id" class="list-row">
+              <td class="cf-muted">{{ d(row.created_at) }}</td>
+              <td class="cf-muted" :title="row.actor_user_id">{{ shortId(row.actor_user_id) }}</td>
+              <td class="path-cell" :title="row.resource_id">{{ shortId(row.resource_id) }}</td>
+              <td>
+                {{ securityLabel(row.old_value) }}
+                <span class="cf-muted">→</span>
+                {{ securityLabel(row.new_value) }}
+              </td>
+              <td>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="row.result === 'success' ? 'success' : 'error'"
+                >
+                  {{ row.result === 'success' ? t('monitor.auditOk') : t('monitor.auditDenied') }}
+                </UBadge>
+              </td>
+              <td class="cf-muted path-cell" :title="row.detail || ''">{{ row.detail || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <CfModal
       v-model:open="showLogDetail"
       :title="t('monitor.logDetail')"
@@ -203,20 +286,24 @@
 </template>
 
 <script setup lang="ts">
-import type { RequestLog, UsageStats } from '@/composables/useMonitor'
+import type { RequestLog, SecurityAuditLog, UsageStats } from '@/composables/useMonitor'
 
 definePageMeta({
   layout: 'default',
 })
 
-const { listRequestLogs, getUsageStats } = useMonitor()
+const { listRequestLogs, getUsageStats, listSecurityAudits } = useMonitor()
 const { t, d } = useLocale()
 
+const activeTab = ref<'requests' | 'security'>('requests')
 const logs = ref<RequestLog[]>([])
 const stats = ref<UsageStats | null>(null)
 const loading = ref(false)
 const showLogDetail = ref(false)
 const selectedLog = ref<RequestLog | null>(null)
+const securityAudits = ref<SecurityAuditLog[]>([])
+const auditLoading = ref(false)
+const auditsLoaded = ref(false)
 
 /** USelect forbids empty-string item values. */
 const METHOD_ALL = 'all'
@@ -310,6 +397,38 @@ async function loadStats() {
   }
 }
 
+function shortId(id?: string) {
+  if (!id) return '—'
+  return id.length > 10 ? `${id.slice(0, 8)}…` : id
+}
+
+function securityLabel(level?: string) {
+  const lv = (level || '').toLowerCase()
+  const key = `kb.security.${lv}`
+  const label = t(key)
+  return label === key ? (level || '—') : label
+}
+
+async function loadSecurityAudits() {
+  auditLoading.value = true
+  try {
+    const res = await listSecurityAudits(100)
+    if (res.error) {
+      console.error(res.error)
+      return
+    }
+    securityAudits.value = res.data || []
+    auditsLoaded.value = true
+  } finally {
+    auditLoading.value = false
+  }
+}
+
+function switchToSecurity() {
+  activeTab.value = 'security'
+  if (!auditsLoaded.value) void loadSecurityAudits()
+}
+
 onMounted(() => {
   loadLogs()
   loadStats()
@@ -317,6 +436,26 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.tab-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.tab-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--cf-line, #e2e8f0);
+  background: var(--cf-surface, #fff);
+  font-size: 13px;
+  color: var(--cf-ink-muted, #64748b);
+  cursor: pointer;
+}
+.tab-btn.is-active {
+  color: var(--cf-ink, #0f172a);
+  border-color: color-mix(in oklab, #6366f1 45%, var(--cf-line, #e2e8f0));
+  background: color-mix(in oklab, #6366f1 10%, transparent);
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
