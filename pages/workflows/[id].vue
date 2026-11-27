@@ -1260,7 +1260,11 @@ import WorkflowCanvas from '~/components/WorkflowCanvas.vue'
 import { MarkerType } from '@vue-flow/core'
 import { layoutWorkflowNodes } from '@/utils/workflowLayout'
 import { conditionBranchKind, fromDefinitionEdge, toDefinitionEdge } from '@/utils/workflowEdge'
-import { formatNodeRunOutputPreview, isUntakenConditionSkip } from '@/utils/workflowDebugStep'
+import {
+  findLatestTimelineKeyForNode,
+  formatNodeRunOutputPreview,
+  isUntakenConditionSkip,
+} from '@/utils/workflowDebugStep'
 import { isActiveExecutionStatus, isStaleActiveExecution } from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 import { isWorkflowBindUnbound } from '@/utils/workflowBind'
@@ -2438,8 +2442,14 @@ async function refreshKbOptions() {
   syncBindCaptions()
 }
 
+/** 时间线选节点时避免与画布点击互相覆盖 */
+let syncingTimelineToCanvas = false
+
 const handleNodeClick = (event: any) => {
   selectedNode.value = event.node
+  if (!syncingTimelineToCanvas && execTimeline.value.length) {
+    selectedTimelineKey.value = findLatestTimelineKeyForNode(execTimeline.value, event.node.id)
+  }
   nodeConfig.name = event.node.data?.label || ''
   nodeConfig.model = event.node.data?.model || firstConfiguredModel()
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
@@ -2518,6 +2528,7 @@ const handleNodeClick = (event: any) => {
 
 const handlePaneClick = () => {
   selectedNode.value = null
+  selectedTimelineKey.value = null
   configDrawer.value = false
   issueMenuOpen.value = false
 }
@@ -3825,14 +3836,19 @@ watch(() => currentExecution.value?.id, () => {
 
 function selectTimelineStep(step: TimelineStep) {
   selectedTimelineKey.value = selectedTimelineKey.value === step.key ? null : step.key
-  if (!step.nodeId || step.nodeType === 'human_action') return
+  if (!selectedTimelineKey.value || !step.nodeId || step.nodeType === 'human_action') return
   const n = nodes.value.find((x: any) => x.id === step.nodeId)
   if (!n) return
-  selectedNode.value = n
-  nodes.value = nodes.value.map((x: any) => ({
-    ...x,
-    selected: x.id === step.nodeId,
-  }))
+  syncingTimelineToCanvas = true
+  try {
+    selectedNode.value = n
+    nodes.value = nodes.value.map((x: any) => ({
+      ...x,
+      selected: x.id === step.nodeId,
+    }))
+  } finally {
+    syncingTimelineToCanvas = false
+  }
 }
 
 /** 点历史记录：拉详情、高亮画布；若仍在跑则继续轮询 */

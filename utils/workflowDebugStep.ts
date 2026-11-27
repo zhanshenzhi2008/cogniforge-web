@@ -30,3 +30,18 @@ export function isUntakenConditionSkip(output: unknown): boolean {
   if (!output || typeof output !== 'object') return false
   return (output as Record<string, unknown>).reason === 'untaken_condition_branch'
 }
+
+/** 画布选中节点时，取时间线里该节点最近一步（跳过人工审批行） */
+export function findLatestTimelineKeyForNode(
+  steps: { key: string, nodeId?: string, nodeType?: string }[],
+  nodeId: string,
+): string | null {
+  if (!nodeId) return null
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const s = steps[i]
+    if (!s) continue
+    if (s.nodeType === 'human_action') continue
+    if (s.nodeId === nodeId) return s.key
+  }
+  return null
+}

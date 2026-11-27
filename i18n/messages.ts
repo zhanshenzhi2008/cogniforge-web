@@ -1074,8 +1074,8 @@ export const M = {
   'editor.debugStepNoOutput': { 'zh-CN': '这一步没有可展示的输出', 'en-US': 'No output to show for this step' },
   'editor.debugTimelineSkippedBranch': { 'zh-CN': '未选中的条件分支', 'en-US': 'Untaken condition branch' },
   'editor.debugTimelineHint': {
-    'zh-CN': '点一步可看摘要（状态/耗时/错误/输出）；等待审批会标在对应步骤下',
-    'en-US': 'Click a step for summary (status/duration/error/output); waiting/approval is noted on that step.',
+    'zh-CN': '点步骤或点画布节点可看摘要（状态/耗时/错误/输出）；等待审批会标在对应步骤下',
+    'en-US': 'Click a step or canvas node for summary (status/duration/error/output); waiting/approval is noted on that step.',
   },
   'editor.debugTimelineEmpty': { 'zh-CN': '还没有节点步骤（跑起来后会出现）', 'en-US': 'No node steps yet' },
   'editor.debugTimelineWaiting': { 'zh-CN': '等待你审批（通过/拒绝属于这一步）', 'en-US': 'Waiting for your approval on this step' },
