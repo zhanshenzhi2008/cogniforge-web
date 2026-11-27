@@ -193,6 +193,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         labelZh: '非 2xx 失败',
         note: 'data.failOnError / fail_on_error；≥400 时节点失败',
       },
+      {
+        key: '_httpResultVars',
+        labelZh: '结果变量',
+        note: '运行后写 last_http_status / last_http_body',
+      },
     ],
   },
   {

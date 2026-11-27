@@ -724,6 +724,7 @@
               </div>
               <USwitch v-model="nodeConfig.httpFailOnError" size="sm" />
             </div>
+            <p class="field__hint">{{ t('editor.httpResultVarsHint') }}</p>
           </template>
 
           <template v-if="selectedNode.type === 'delay'">

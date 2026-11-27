@@ -1242,6 +1242,10 @@ export const M = {
     'zh-CN': '开启后状态码 ≥400 会让本节点失败并中断（默认只记入输出，不中断）',
     'en-US': 'When on, status ≥400 fails this node; off (default) only records status in output',
   },
+  'editor.httpResultVarsHint': {
+    'zh-CN': '请求结束后写入 {{last_http_status}}、{{last_http_body}}，下游节点可直接引用',
+    'en-US': 'After the call, sets {{last_http_status}} and {{last_http_body}} for downstream nodes',
+  },
   'editor.delayDuration': { 'zh-CN': '等待时长', 'en-US': 'Duration' },
   'editor.delayDurationPh': { 'zh-CN': '数字', 'en-US': 'Number' },
   'editor.delayUnit': { 'zh-CN': '时间单位', 'en-US': 'Unit' },
