@@ -1252,6 +1252,12 @@ export const M = {
     'zh-CN': '表达式，或 print / console.log 脚本…',
     'en-US': 'Expression, or print / console.log script…',
   },
+  'editor.codeTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
+  'editor.codeTimeoutPh': { 'zh-CN': '默认 30，最长 60', 'en-US': 'Default 30, max 60' },
+  'editor.codeTimeoutHint': {
+    'zh-CN': '仅 Python / JavaScript 沙箱生效；表达式忽略。超过 60 秒会按 60 截断',
+    'en-US': 'Applies to Python/JS sandbox only; expression ignores it. Capped at 60s',
+  },
   'editor.query': { 'zh-CN': '搜索词', 'en-US': 'Query' },
   'editor.queryPh': { 'zh-CN': '搜索关键词...', 'en-US': 'Search keywords…' },
   'editor.variable': { 'zh-CN': '变量名', 'en-US': 'Variable' },

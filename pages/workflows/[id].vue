@@ -795,6 +795,16 @@
                 :placeholder="t('editor.codeSourcePh')"
               />
             </div>
+            <div class="field">
+              <label class="field__label">{{ t('editor.codeTimeout') }}</label>
+              <UInput
+                v-model.number="nodeConfig.codeTimeout"
+                type="number"
+                class="w-full"
+                :placeholder="t('editor.codeTimeoutPh')"
+              />
+              <p class="field__hint">{{ t('editor.codeTimeoutHint') }}</p>
+            </div>
           </template>
 
           <div v-if="selectedNode.type === 'wait'" class="field">
@@ -1681,6 +1691,7 @@ const nodeConfig = reactive({
   loopKeyVar: '',
   codeLanguage: 'expression',
   codeSource: '',
+  codeTimeout: 30,
   subflowWorkflowId: '',
   variables: [] as {
     name: string
@@ -2161,6 +2172,18 @@ const loadWorkflow = async () => {
                   hybridSemanticWeight: n.data?.hybridSemanticWeight ?? n.config?.hybrid_semantic_weight,
                 }
               : {}),
+            ...(n.type === 'code'
+              ? {
+                  codeLanguage: n.data?.codeLanguage || n.data?.language || n.config?.language || 'expression',
+                  codeSource: n.data?.codeSource || n.data?.code || n.config?.code || '',
+                  codeTimeout: Number(
+                    n.data?.codeTimeout ?? n.data?.timeout ?? n.config?.timeout ?? 30,
+                  ) || 30,
+                  timeout: Number(
+                    n.data?.codeTimeout ?? n.data?.timeout ?? n.config?.timeout ?? 30,
+                  ) || 30,
+                }
+              : {}),
             ...(n.type === 'start'
               ? {
                   variables: normalizeStartVars(n.data?.variables || n.config?.variables),
@@ -2389,7 +2412,12 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     if (!src) return ''
     const first = src.split('\n').find(l => l.trim()) || src
     const short = first.length > 28 ? `${first.slice(0, 26)}…` : first
-    return `${lang}: ${short}`
+    const base = `${lang}: ${short}`
+    const timeout = Number(d.codeTimeout ?? 0)
+    if (lang !== 'expression' && timeout > 0 && timeout !== 30) {
+      return `${base} · ${timeout}s`
+    }
+    return base
   }
   if (kind === 'condition') {
     const conds = Array.isArray(d.conditions) ? d.conditions : []
@@ -2640,6 +2668,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.loopKeyVar = event.node.data?.loopKeyVar || event.node.data?.key_var || ''
   nodeConfig.codeLanguage = event.node.data?.codeLanguage || event.node.data?.language || 'expression'
   nodeConfig.codeSource = event.node.data?.codeSource || event.node.data?.code || ''
+  nodeConfig.codeTimeout = Number(
+    event.node.data?.codeTimeout ?? event.node.data?.timeout ?? 30,
+  ) || 30
   nodeConfig.subflowWorkflowId =
     event.node.data?.subflowWorkflowId || event.node.data?.workflowId || event.node.data?.workflow_id || ''
   nodeConfig.subflowInput = formatJsonObject(
@@ -2686,6 +2717,7 @@ const saveNodeConfig = () => {
       language: nodeConfig.codeLanguage,
       codeSource: nodeConfig.codeSource,
       code: nodeConfig.codeSource,
+      codeTimeout: Number(nodeConfig.codeTimeout) > 0 ? Number(nodeConfig.codeTimeout) : 30,
       conditionField: nodeConfig.conditionField,
       conditionOperator: nodeConfig.conditionOperator,
       conditionValue: nodeConfig.conditionValue,
@@ -2726,6 +2758,8 @@ const saveNodeConfig = () => {
       subflowWorkflowId: nodeConfig.subflowWorkflowId,
       workflowId: nodeConfig.subflowWorkflowId,
       workflow_id: nodeConfig.subflowWorkflowId,
+      input: parseJsonObject(nodeConfig.subflowInput) || undefined,
+      subflowInput: parseJsonObject(nodeConfig.subflowInput) || undefined,
     }
     node.data = {
       ...node.data,
@@ -2816,12 +2850,17 @@ const saveNodeConfig = () => {
           }
         : {}),
       ...(selectedNode.value.type === 'code'
-        ? {
-            codeLanguage: nodeConfig.codeLanguage || 'expression',
-            codeSource: nodeConfig.codeSource,
-            language: nodeConfig.codeLanguage || 'expression',
-            code: nodeConfig.codeSource,
-          }
+        ? (() => {
+            const timeout = Number(nodeConfig.codeTimeout) > 0 ? Number(nodeConfig.codeTimeout) : 30
+            return {
+              codeLanguage: nodeConfig.codeLanguage || 'expression',
+              codeSource: nodeConfig.codeSource,
+              language: nodeConfig.codeLanguage || 'expression',
+              code: nodeConfig.codeSource,
+              codeTimeout: timeout,
+              timeout,
+            }
+          })()
         : {}),
       ...(selectedNode.value.type === 'subflow'
         ? (() => {

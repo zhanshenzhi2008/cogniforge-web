@@ -191,11 +191,16 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
   {
     kind: 'code',
     inPalette: true,
-    caption: '语言: 首行代码摘要',
+    caption: '语言: 首行；非默认超时带 · Ns（仅沙箱）',
     fields: [
       NAME_FIELD,
       { key: 'codeLanguage', labelZh: '语言', note: 'expression | python | javascript' },
       { key: 'codeSource', labelZh: '代码', required: true },
+      {
+        key: 'codeTimeout',
+        labelZh: '超时秒',
+        note: '默认 30，最长 60；仅 Python/JS 沙箱；data.timeout / codeTimeout',
+      },
     ],
   },
   {
