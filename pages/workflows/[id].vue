@@ -490,9 +490,15 @@
               v-model="nodeConfig.teamId"
               class="w-full"
               :items="teamOptions"
-              :placeholder="t('editor.teamPickPh')"
+              :placeholder="teamOptions.length ? t('editor.teamPickPh') : t('editor.teamPickEmpty')"
               value-key="value"
+              :disabled="!teamOptions.length"
             />
+            <p v-if="!teamOptions.length" class="field__hint">
+              {{ t('editor.teamPickEmptyHint') }}
+              <NuxtLink to="/teams" class="field__link" target="_blank">{{ t('editor.teamGoCreate') }}</NuxtLink>
+            </p>
+            <p v-else class="field__hint">{{ t('editor.teamPickHint') }}</p>
           </div>
           <div v-if="selectedNode.type === 'team'" class="field">
             <label class="field__label">{{ t('editor.teamTask') }}</label>
@@ -1848,6 +1854,17 @@ const addNode = (type: string) => {
   nodes.value.push(newNode)
 }
 
+async function refreshTeamOptions() {
+  const res = await listTeams()
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  teamOptions.value = (res.data || [])
+    .filter(t => t.id && (!t.status || t.status === 'active'))
+    .map(t => ({ label: t.name || t.id, value: t.id }))
+}
+
 const handleNodeClick = (event: any) => {
   selectedNode.value = event.node
   nodeConfig.name = event.node.data?.label || ''
@@ -1857,6 +1874,9 @@ const handleNodeClick = (event: any) => {
   nodeConfig.llmStream = !!(event.node.data?.llmStream ?? event.node.data?.stream)
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
+  if (event.node?.type === 'team') {
+    void refreshTeamOptions()
+  }
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
@@ -2680,11 +2700,7 @@ onMounted(() => {
       .filter(m => m.id)
       .map(m => ({ label: m.name || m.id, value: m.id }))
   })
-  listTeams().then((res) => {
-    teamOptions.value = (res.data || [])
-      .filter(t => t.id)
-      .map(t => ({ label: t.name || t.id, value: t.id }))
-  })
+  void refreshTeamOptions()
   listWorkflows().then((res) => {
     workflowPickOptions.value = (res.data || [])
       .filter(w => w.id)
@@ -2975,6 +2991,14 @@ onMounted(() => {
   line-height: 1.4;
   color: var(--cf-ink-soft, #64748b);
   opacity: 0.85;
+}
+.field__link {
+  color: var(--cf-accent, #0f9f8a);
+  text-decoration: none;
+  margin-left: 4px;
+}
+.field__link:hover {
+  text-decoration: underline;
 }
 
 .start-var-row {
