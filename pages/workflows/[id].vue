@@ -351,7 +351,7 @@
               size="sm"
               icon="i-lucide-undo-2"
               :loading="rollingBackVersion === v.version"
-              @click="confirmRollback(v.version)"
+              @click="askRollback(v.version)"
             >
               {{ t('editor.rollback') }}
             </CfButton>
@@ -1140,6 +1140,21 @@
         </div>
       </div>
     </aside>
+
+    <CfConfirmModal
+      v-model:open="scheduleDeleteOpen"
+      :message="t('editor.scheduleDeleteConfirm')"
+      :loading="scheduleDeleting"
+      @confirm="confirmRemoveSchedule"
+    />
+    <CfConfirmModal
+      v-model:open="rollbackOpen"
+      :title="t('editor.rollback')"
+      :message="t('editor.rollbackConfirm', { version: pendingRollbackVersion ?? '' })"
+      confirm-icon="i-lucide-undo-2"
+      :loading="rollingBackVersion != null"
+      @confirm="doRollback"
+    />
   </div>
 </template>
 
@@ -1209,11 +1224,21 @@ const openSchedules = async () => {
   }
 }
 
+/** 与后端一致：秒 分 时 日 月 周，共 6 段 */
+function isSixFieldCron(expr: string): boolean {
+  const parts = expr.trim().split(/\s+/)
+  return parts.length === 6 && parts.every(p => p.length > 0)
+}
+
 const addSchedule = async () => {
   if (!workflowId.value) return
   const cron = scheduleForm.cron.trim()
   if (!cron) {
     toast.add({ title: t('editor.cronRequired'), color: 'warning' })
+    return
+  }
+  if (!isSixFieldCron(cron)) {
+    toast.add({ title: t('editor.cronInvalid'), color: 'warning' })
     return
   }
   scheduleSaving.value = true
@@ -1235,15 +1260,32 @@ const addSchedule = async () => {
   }
 }
 
-const removeSchedule = async (scheduleId: string) => {
-  if (!workflowId.value || !confirm(t('editor.scheduleDeleteConfirm'))) return
-  const res = await deleteSchedule(workflowId.value, scheduleId)
-  if (res.error) {
-    toast.add({ title: res.error, color: 'error' })
-    return
+const scheduleDeleteOpen = ref(false)
+const scheduleDeleting = ref(false)
+const pendingScheduleId = ref<string | null>(null)
+
+const removeSchedule = (scheduleId: string) => {
+  if (!workflowId.value) return
+  pendingScheduleId.value = scheduleId
+  scheduleDeleteOpen.value = true
+}
+
+const confirmRemoveSchedule = async () => {
+  if (!workflowId.value || !pendingScheduleId.value) return
+  scheduleDeleting.value = true
+  try {
+    const res = await deleteSchedule(workflowId.value, pendingScheduleId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: t('common.deleteOk'), color: 'success' })
+    scheduleDeleteOpen.value = false
+    pendingScheduleId.value = null
+    await openSchedules()
+  } finally {
+    scheduleDeleting.value = false
   }
-  toast.add({ title: t('common.deleteOk'), color: 'success' })
-  await openSchedules()
 }
 
 const toggleSchedule = async (scheduleId: string, resume: boolean) => {
@@ -1309,8 +1351,18 @@ const openVersions = async () => {
   }
 }
 
-const confirmRollback = async (version: number) => {
-  if (!workflowId.value || !confirm(t('editor.rollbackConfirm', { version }))) return
+const rollbackOpen = ref(false)
+const pendingRollbackVersion = ref<number | null>(null)
+
+const askRollback = (version: number) => {
+  if (!workflowId.value) return
+  pendingRollbackVersion.value = version
+  rollbackOpen.value = true
+}
+
+const doRollback = async () => {
+  const version = pendingRollbackVersion.value
+  if (!workflowId.value || version == null) return
   rollingBackVersion.value = version
   try {
     const res = await rollbackVersion(workflowId.value, version)
@@ -1319,6 +1371,8 @@ const confirmRollback = async (version: number) => {
       return
     }
     toast.add({ title: t('editor.rollbackOk', { version }), color: 'success' })
+    rollbackOpen.value = false
+    pendingRollbackVersion.value = null
     versionsOpen.value = false
     await loadWorkflow()
   } finally {

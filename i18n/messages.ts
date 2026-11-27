@@ -1224,6 +1224,10 @@ export const M = {
   'editor.cronExpr': { 'zh-CN': 'Cron 表达式', 'en-US': 'Cron expression' },
   'editor.cronExprPh': { 'zh-CN': '0 0 9 * * *', 'en-US': '0 0 9 * * *' },
   'editor.cronRequired': { 'zh-CN': '请填写 Cron', 'en-US': 'Cron is required' },
+  'editor.cronInvalid': {
+    'zh-CN': 'Cron 须为 6 段：秒 分 时 日 月 周，例如 0 0 9 * * *',
+    'en-US': 'Cron needs 6 fields: sec min hour dom month dow, e.g. 0 0 9 * * *',
+  },
   'editor.scheduleNamePh': { 'zh-CN': '可选名称', 'en-US': 'Optional name' },
   'editor.scheduleAdd': { 'zh-CN': '添加调度', 'en-US': 'Add schedule' },
   'editor.scheduleAdded': { 'zh-CN': '调度已添加', 'en-US': 'Schedule added' },
