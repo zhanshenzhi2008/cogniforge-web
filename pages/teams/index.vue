@@ -48,15 +48,8 @@
           </UBadge>
         </template>
         <template #actions>
-          <UButton
-            size="sm"
-            :variant="isWorkerRetry(team) ? 'soft' : 'ghost'"
-            :color="isWorkerRetry(team) ? 'warning' : 'neutral'"
-            :loading="retryToggleId === team.id"
-            :title="t('teams.workerRetryHint')"
-            @click="toggleWorkerRetry(team)"
-          >
-            {{ isWorkerRetry(team) ? t('teams.workerRetryOn') : t('teams.workerRetryOff') }}
+          <UButton size="sm" variant="ghost" :title="t('teams.editLimits')" @click="openLimits(team)">
+            {{ t('teams.limits') }}
           </UButton>
           <UButton size="sm" variant="soft" @click="openPreview(team)">
             {{ t('teams.preview') }}
@@ -120,15 +113,8 @@
               <td class="cf-muted">{{ team.description || '—' }}</td>
               <td>
                 <div class="team-list-actions">
-                  <UButton
-                    size="sm"
-                    :variant="isWorkerRetry(team) ? 'soft' : 'ghost'"
-                    :color="isWorkerRetry(team) ? 'warning' : 'neutral'"
-                    :loading="retryToggleId === team.id"
-                    :title="t('teams.workerRetryHint')"
-                    @click="toggleWorkerRetry(team)"
-                  >
-                    {{ isWorkerRetry(team) ? t('teams.workerRetryOn') : t('teams.workerRetryOff') }}
+                  <UButton size="sm" variant="ghost" :title="t('teams.editLimits')" @click="openLimits(team)">
+                    {{ t('teams.limits') }}
                   </UButton>
                   <UButton size="sm" variant="soft" @click="openPreview(team)">
                     {{ t('teams.preview') }}
@@ -186,6 +172,15 @@
           <UFormField :label="t('common.description')">
             <UTextarea v-model="form.description" :rows="2" class="w-full" />
           </UFormField>
+          <div class="limits-row">
+            <UFormField :label="t('teams.maxDepth')">
+              <UInput v-model.number="form.max_depth" type="number" :min="1" :max="32" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('teams.maxSteps')">
+              <UInput v-model.number="form.max_steps" type="number" :min="1" :max="200" class="w-full" />
+            </UFormField>
+          </div>
+          <p class="text-xs opacity-65">{{ t('teams.limitsHint') }}</p>
           <UCheckbox
             v-model="form.worker_retry_once"
             :label="t('teams.workerRetry')"
@@ -194,6 +189,31 @@
           <div class="flex justify-end gap-2 pt-2">
             <UButton variant="ghost" @click="showCreate = false">{{ t('common.cancel') }}</UButton>
             <UButton color="primary" :loading="creating" @click="submitCreate">{{ t('common.create') }}</UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showLimits">
+      <template #content>
+        <div class="p-4 space-y-3 min-w-[320px]">
+          <h2 class="text-base font-semibold">{{ t('teams.editLimits') }} · {{ limitsEditing?.name }}</h2>
+          <div class="limits-row">
+            <UFormField :label="t('teams.maxDepth')">
+              <UInput v-model.number="limitsForm.max_depth" type="number" :min="1" :max="32" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('teams.maxSteps')">
+              <UInput v-model.number="limitsForm.max_steps" type="number" :min="1" :max="200" class="w-full" />
+            </UFormField>
+          </div>
+          <p class="text-xs opacity-65">{{ t('teams.limitsHint') }}</p>
+          <UCheckbox
+            v-model="limitsForm.worker_retry_once"
+            :label="t('teams.workerRetry')"
+          />
+          <div class="flex justify-end gap-2 pt-2">
+            <UButton variant="ghost" @click="showLimits = false">{{ t('common.cancel') }}</UButton>
+            <UButton color="primary" :loading="limitsSaving" @click="saveLimits">{{ t('common.save') }}</UButton>
           </div>
         </div>
       </template>
@@ -272,8 +292,15 @@ const { list: listAgents } = useAgents()
 const { list: listConversations, get: getConversation } = useConversations()
 const expandingId = ref('')
 const expandingParallelId = ref('')
-const retryToggleId = ref('')
 const viewMode = ref<ViewMode>('card')
+const showLimits = ref(false)
+const limitsSaving = ref(false)
+const limitsEditing = ref<AgentTeam | null>(null)
+const limitsForm = reactive({
+  max_depth: 8,
+  max_steps: 40,
+  worker_retry_once: false,
+})
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
 
@@ -315,6 +342,8 @@ const form = reactive({
   mode: 'supervisor' as TeamMode,
   supervisor_agent_id: '',
   member_agent_ids: [] as string[],
+  max_depth: 8,
+  max_steps: 40,
   worker_retry_once: false,
 })
 
@@ -334,11 +363,10 @@ function modeLabel(mode: string) {
   return t('teams.modeSupervisor')
 }
 
-function memberMeta(team: AgentTeam) {
-  const n = (team.member_agent_ids || []).length
-  const base = t('teams.members', { n })
-  if (team.supervisor_agent_id) return `${base} · ${t('teams.hasSupervisor')}`
-  return base
+function configInt(team: AgentTeam, key: string, fallback: number) {
+  const v = team.config?.[key]
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback
 }
 
 function isWorkerRetry(team: AgentTeam) {
@@ -346,14 +374,45 @@ function isWorkerRetry(team: AgentTeam) {
   return v === true || v === 'true' || v === 1 || v === '1'
 }
 
-async function toggleWorkerRetry(team: AgentTeam) {
-  const next = !isWorkerRetry(team)
-  retryToggleId.value = team.id
+function memberMeta(team: AgentTeam) {
+  const n = (team.member_agent_ids || []).length
+  const parts = [
+    t('teams.members', { n }),
+    t('teams.limitsMeta', {
+      depth: configInt(team, 'max_depth', 8),
+      steps: configInt(team, 'max_steps', 40),
+    }),
+  ]
+  if (team.supervisor_agent_id) parts.push(t('teams.hasSupervisor'))
+  return parts.join(' · ')
+}
+
+function clampLimit(n: number, min: number, max: number, fallback: number) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return fallback
+  return Math.min(max, Math.max(min, Math.floor(v)))
+}
+
+function openLimits(team: AgentTeam) {
+  limitsEditing.value = team
+  limitsForm.max_depth = configInt(team, 'max_depth', 8)
+  limitsForm.max_steps = configInt(team, 'max_steps', 40)
+  limitsForm.worker_retry_once = isWorkerRetry(team)
+  showLimits.value = true
+}
+
+async function saveLimits() {
+  if (!limitsEditing.value) return
+  const depth = clampLimit(limitsForm.max_depth, 1, 32, 8)
+  const steps = clampLimit(limitsForm.max_steps, 1, 200, 40)
+  limitsSaving.value = true
   try {
-    const res = await update(team.id, {
+    const res = await update(limitsEditing.value.id, {
       config: {
-        ...(team.config || {}),
-        worker_retry_once: next,
+        ...(limitsEditing.value.config || {}),
+        max_depth: depth,
+        max_steps: steps,
+        worker_retry_once: limitsForm.worker_retry_once,
       },
     })
     if (res.error) {
@@ -361,16 +420,14 @@ async function toggleWorkerRetry(team: AgentTeam) {
       return
     }
     if (res.data) {
-      const i = teams.value.findIndex(x => x.id === team.id)
+      const i = teams.value.findIndex(x => x.id === limitsEditing.value!.id)
       if (i >= 0) teams.value[i] = res.data
     }
-    toast.add({
-      title: next ? t('teams.workerRetryEnabled') : t('teams.workerRetryDisabled'),
-      color: 'success',
-    })
+    toast.add({ title: t('teams.limitsSaved'), color: 'success' })
+    showLimits.value = false
   }
   finally {
-    retryToggleId.value = ''
+    limitsSaving.value = false
   }
 }
 
@@ -400,7 +457,11 @@ async function submitCreate() {
       mode: form.mode,
       supervisor_agent_id: form.supervisor_agent_id || undefined,
       member_agent_ids: form.member_agent_ids,
-      config: { worker_retry_once: form.worker_retry_once },
+      config: {
+        max_depth: clampLimit(form.max_depth, 1, 32, 8),
+        max_steps: clampLimit(form.max_steps, 1, 200, 40),
+        worker_retry_once: form.worker_retry_once,
+      },
     })
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
@@ -411,6 +472,8 @@ async function submitCreate() {
     form.name = ''
     form.description = ''
     form.member_agent_ids = []
+    form.max_depth = 8
+    form.max_steps = 40
     form.worker_retry_once = false
     await fetchAll()
   }
@@ -594,6 +657,11 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+}
+.limits-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 .team-name-cell .name {
   font-weight: 600;
