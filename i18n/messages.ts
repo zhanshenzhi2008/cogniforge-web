@@ -1326,10 +1326,10 @@ export const M = {
     'en-US': 'Expression, or print / console.log script…',
   },
   'editor.codeTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
-  'editor.codeTimeoutPh': { 'zh-CN': '默认 30，最长 60', 'en-US': 'Default 30, max 60' },
+  'editor.codeTimeoutPh': { 'zh-CN': '如 30 或 {{ttl}}', 'en-US': 'e.g. 30 or {{ttl}}' },
   'editor.codeTimeoutHint': {
-    'zh-CN': '仅 Python / JavaScript 沙箱生效；表达式忽略。超过 60 秒会按 60 截断',
-    'en-US': 'Applies to Python/JS sandbox only; expression ignores it. Capped at 60s',
+    'zh-CN': '仅 Python / JS 沙箱；数字或 {{变量}}；空默认 30，超过 60 按 60 截断；表达式忽略',
+    'en-US': 'Python/JS sandbox only; number or {{var}}; empty→30, capped at 60s; expression ignores',
   },
   'editor.codeResultVarsHint': {
     'zh-CN': '跑完写入 {{last_code_output}}，下游节点可直接引用',

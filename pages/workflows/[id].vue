@@ -844,8 +844,7 @@
             <div class="field">
               <label class="field__label">{{ t('editor.codeTimeout') }}</label>
               <UInput
-                v-model.number="nodeConfig.codeTimeout"
-                type="number"
+                v-model="nodeConfig.codeTimeout"
                 class="w-full"
                 :placeholder="t('editor.codeTimeoutPh')"
               />
@@ -1744,7 +1743,7 @@ const nodeConfig = reactive({
   loopKeyVar: '',
   codeLanguage: 'expression',
   codeSource: '',
-  codeTimeout: 30,
+  codeTimeout: '30' as string | number,
   subflowWorkflowId: '',
   variables: [] as {
     name: string
@@ -2273,16 +2272,16 @@ const loadWorkflow = async () => {
                 })()
               : {}),
             ...(n.type === 'code'
-              ? {
-                  codeLanguage: n.data?.codeLanguage || n.data?.language || n.config?.language || 'expression',
-                  codeSource: n.data?.codeSource || n.data?.code || n.config?.code || '',
-                  codeTimeout: Number(
-                    n.data?.codeTimeout ?? n.data?.timeout ?? n.config?.timeout ?? 30,
-                  ) || 30,
-                  timeout: Number(
-                    n.data?.codeTimeout ?? n.data?.timeout ?? n.config?.timeout ?? 30,
-                  ) || 30,
-                }
+              ? (() => {
+                  const raw = n.data?.codeTimeout ?? n.data?.timeout ?? n.config?.timeout ?? '30'
+                  const timeout = typeof raw === 'string' ? raw : String(raw ?? '30')
+                  return {
+                    codeLanguage: n.data?.codeLanguage || n.data?.language || n.config?.language || 'expression',
+                    codeSource: n.data?.codeSource || n.data?.code || n.config?.code || '',
+                    codeTimeout: timeout,
+                    timeout,
+                  }
+                })()
               : {}),
             ...(n.type === 'start'
               ? {
@@ -2526,9 +2525,11 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const first = src.split('\n').find(l => l.trim()) || src
     const short = first.length > 28 ? `${first.slice(0, 26)}…` : first
     const base = `${lang}: ${short}`
-    const timeout = Number(d.codeTimeout ?? 0)
-    if (lang !== 'expression' && timeout > 0 && timeout !== 30) {
-      return `${base} · ${timeout}s`
+    const timeoutRaw = String(d.codeTimeout ?? d.timeout ?? '').trim()
+    if (lang !== 'expression') {
+      if (timeoutRaw.includes('{{')) return `${base} · ${timeoutRaw}s`
+      const timeout = Number(timeoutRaw)
+      if (timeout > 0 && timeout !== 30) return `${base} · ${timeout}s`
     }
     return base
   }
@@ -2817,9 +2818,10 @@ const handleNodeClick = (event: any) => {
   nodeConfig.loopKeyVar = event.node.data?.loopKeyVar || event.node.data?.key_var || ''
   nodeConfig.codeLanguage = event.node.data?.codeLanguage || event.node.data?.language || 'expression'
   nodeConfig.codeSource = event.node.data?.codeSource || event.node.data?.code || ''
-  nodeConfig.codeTimeout = Number(
-    event.node.data?.codeTimeout ?? event.node.data?.timeout ?? 30,
-  ) || 30
+  {
+    const raw = event.node.data?.codeTimeout ?? event.node.data?.timeout ?? '30'
+    nodeConfig.codeTimeout = typeof raw === 'string' ? raw : String(raw ?? '30')
+  }
   nodeConfig.subflowWorkflowId =
     event.node.data?.subflowWorkflowId || event.node.data?.workflowId || event.node.data?.workflow_id || ''
   nodeConfig.subflowInput = formatJsonObject(
@@ -2883,7 +2885,12 @@ const saveNodeConfig = () => {
       language: nodeConfig.codeLanguage,
       codeSource: nodeConfig.codeSource,
       code: nodeConfig.codeSource,
-      codeTimeout: Number(nodeConfig.codeTimeout) > 0 ? Number(nodeConfig.codeTimeout) : 30,
+      ...(() => {
+        const raw = String(nodeConfig.codeTimeout ?? '').trim()
+        const asNum = Number(raw)
+        const timeout = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 30)
+        return { codeTimeout: timeout, timeout }
+      })(),
       conditionField: nodeConfig.conditionField,
       conditionOperator: nodeConfig.conditionOperator,
       conditionValue: nodeConfig.conditionValue,
@@ -3070,7 +3077,9 @@ const saveNodeConfig = () => {
         : {}),
       ...(selectedNode.value.type === 'code'
         ? (() => {
-            const timeout = Number(nodeConfig.codeTimeout) > 0 ? Number(nodeConfig.codeTimeout) : 30
+            const raw = String(nodeConfig.codeTimeout ?? '').trim()
+            const asNum = Number(raw)
+            const timeout = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 30)
             return {
               codeLanguage: nodeConfig.codeLanguage || 'expression',
               codeSource: nodeConfig.codeSource,
