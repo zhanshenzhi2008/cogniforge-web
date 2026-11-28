@@ -675,11 +675,18 @@
             <div class="field">
               <label class="field__label">{{ t('editor.conditionOperator') }}</label>
               <USelect
-                v-model="nodeConfig.conditionOperator"
                 class="w-full"
+                :model-value="conditionOperatorSelectValue"
                 :items="conditionOperatorOptions"
                 value-key="value"
+                @update:model-value="(v: string) => { if (v) nodeConfig.conditionOperator = v }"
               />
+              <UInput
+                v-model="nodeConfig.conditionOperator"
+                class="w-full mt-2"
+                :placeholder="t('editor.conditionOperatorTemplatePh')"
+              />
+              <p class="field__hint">{{ t('editor.conditionOperatorHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.conditionValue') }}</label>
@@ -1855,6 +1862,12 @@ const conditionOperatorOptions = computed(() => [
   { label: t('editor.condOpContains'), value: 'contains' },
   { label: t('editor.condOpEmpty'), value: 'is_empty' },
 ])
+/** 下拉仅在当前值是已知运算符时高亮；模板/自定义时留空 */
+const conditionOperatorSelectValue = computed(() => {
+  const cur = String(nodeConfig.conditionOperator || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return conditionOperatorOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 
 const httpMethodOptions = [
   { label: 'GET', value: 'GET' },

@@ -1221,6 +1221,14 @@ export const M = {
     'en-US': 'Field name supports {{vars}} (must resolve to a key, e.g. status / last_http_status)',
   },
   'editor.conditionOperator': { 'zh-CN': '运算符', 'en-US': 'Operator' },
+  'editor.conditionOperatorTemplatePh': {
+    'zh-CN': '如 == / contains 或 {{op}}',
+    'en-US': 'e.g. == / contains or {{op}}',
+  },
+  'editor.conditionOperatorHint': {
+    'zh-CN': '可从上方点选，或手写 == / != / contains / is_empty 等或 {{变量}}；成功后写 {{last_condition_operator}}',
+    'en-US': 'Pick above, or type == / != / contains / is_empty / {{var}}; on success sets {{last_condition_operator}}',
+  },
   'editor.conditionValue': { 'zh-CN': '比较值', 'en-US': 'Value' },
   'editor.conditionValuePh': { 'zh-CN': '期望值，可用 {{变量}}', 'en-US': 'Expected value; supports {{vars}}' },
   'editor.conditionValueHint': {
@@ -1228,8 +1236,8 @@ export const M = {
     'en-US': 'Compare value supports {{vars}} from inputs or upstream',
   },
   'editor.conditionResultVarsHint': {
-    'zh-CN': '判定后写入 {{last_condition_result}}、{{last_condition_branch}}、{{last_condition_field}}',
-    'en-US': 'After eval, sets {{last_condition_result}}, {{last_condition_branch}}, {{last_condition_field}}',
+    'zh-CN': '判定后写入 {{last_condition_result}}、{{last_condition_branch}}、{{last_condition_field}}、{{last_condition_operator}}',
+    'en-US': 'After eval, sets {{last_condition_result}}, {{last_condition_branch}}, {{last_condition_field}}, {{last_condition_operator}}',
   },
   'editor.condOpEq': { 'zh-CN': '等于', 'en-US': 'Equals' },
   'editor.condOpNe': { 'zh-CN': '不等于', 'en-US': 'Not equals' },
@@ -2112,11 +2120,19 @@ export const M = {
   'kb.settingsRetrieve': { 'zh-CN': '默认检索', 'en-US': 'Default retrieval' },
   'kb.settingsRetrieveDesc': { 'zh-CN': '检索测试与未传参时的默认 Top-K / 最低分。', 'en-US': 'Defaults for search test and requests without overrides.' },
   'kb.settingsAccess': { 'zh-CN': '访问权限', 'en-US': 'Access' },
-  'kb.settingsAccessDesc': { 'zh-CN': '当前仅支持私有；组织共享后续开放。', 'en-US': 'Private only for now; org sharing comes later.' },
+  'kb.settingsAccessDesc': {
+    'zh-CN': '「组织内」= 本站全体登录用户可读；仅创建者可改设置与文档。不做部门表。',
+    'en-US': '“Organization” = all signed-in users on this site can read; only the owner can edit. No department table.',
+  },
   'kb.visibility': { 'zh-CN': '可见范围', 'en-US': 'Visibility' },
   'kb.visibilityPrivate': { 'zh-CN': '仅自己', 'en-US': 'Private' },
-  'kb.visibilityOrgSoon': { 'zh-CN': '组织内（即将支持）', 'en-US': 'Organization (coming soon)' },
-  'kb.visibilityNote': { 'zh-CN': '权限模型占位：库级 ACL 优先于文档级，后续再细做成员与角色。', 'en-US': 'Placeholder: KB-level ACL first; member roles come later.' },
+  'kb.visibilityOrg': { 'zh-CN': '组织内（本站可读）', 'en-US': 'Organization (site-wide read)' },
+  'kb.visibilityNote': {
+    'zh-CN': '库级可见范围优先；成员/角色细粒度后续再做。',
+    'en-US': 'KB-level visibility first; finer member roles come later.',
+  },
+  'kb.visibilitySharedBadge': { 'zh-CN': '共享', 'en-US': 'Shared' },
+  'kb.readOnlyHint': { 'zh-CN': '此库由他人共享，你只能查看与检索。', 'en-US': 'Shared by another user — view and search only.' },
   'kb.deleteDocText': { 'zh-CN': '确定要删除文档「{name}」吗？删除后无法恢复。', 'en-US': 'Delete document “{name}”? This cannot be undone.' },
   'kb.createTitle': { 'zh-CN': '创建知识库', 'en-US': 'Create knowledge base' },
   'kb.viewTitle': { 'zh-CN': '知识库详情', 'en-US': 'Knowledge base details' },

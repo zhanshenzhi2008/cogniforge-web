@@ -190,13 +190,13 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'conditionField', labelZh: '比较字段', required: true, note: '支持 {{变量}}（展开为字段名）' },
-      { key: 'conditionOperator', labelZh: '运算符' },
+      { key: 'conditionOperator', labelZh: '运算符', note: '== / contains…或 {{变量}}' },
       { key: 'conditionValue', labelZh: '比较值', note: '支持 {{变量}}' },
       { key: 'description', labelZh: '说明' },
       {
         key: '_conditionResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_condition_result / branch / field',
+        note: '运行后写 last_condition_result / branch / field / operator',
       },
     ],
   },
@@ -357,6 +357,7 @@ export const WORKFLOW_LAST_RESULT_VARS: WorkflowLastResultVar[] = [
   { name: 'last_condition_result', writers: ['condition'], noteZh: '比较结果 bool' },
   { name: 'last_condition_branch', writers: ['condition'], noteZh: 'true / false 分支名' },
   { name: 'last_condition_field', writers: ['condition'], noteZh: '展开后的字段名' },
+  { name: 'last_condition_operator', writers: ['condition'], noteZh: '展开后的运算符' },
   { name: 'last_loop_total', writers: ['loop'], noteZh: '实际迭代次数' },
   { name: 'last_loop_index', writers: ['loop'], noteZh: '末轮下标；无迭代为 -1' },
   { name: 'last_loop_type', writers: ['loop'], noteZh: 'times / while / for_each' },
