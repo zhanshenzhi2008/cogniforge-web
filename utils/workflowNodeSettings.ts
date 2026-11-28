@@ -106,7 +106,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '智能体名称',
     fields: [
       NAME_FIELD,
-      { key: 'agentId', labelZh: '智能体', required: true },
+      { key: 'agentId', labelZh: '智能体', required: true, note: 'ID 或 {{变量}}' },
       {
         key: 'prompt',
         labelZh: '用户提示',
@@ -115,7 +115,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_agentContentResultVars',
         labelZh: '结果变量',
-        note: '成功后写 last_agent_content',
+        note: '成功后写 last_agent_content / last_agent_id',
       },
     ],
   },

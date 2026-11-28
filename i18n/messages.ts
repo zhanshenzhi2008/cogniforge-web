@@ -1611,6 +1611,14 @@ export const M = {
   'editor.agentPickEmpty': { 'zh-CN': '暂无智能体', 'en-US': 'No agents yet' },
   'editor.agentPickEmptyHint': { 'zh-CN': '请先在工作室创建智能体，再回来选择。', 'en-US': 'Create an agent in the studio first, then pick it here.' },
   'editor.agentGoCreate': { 'zh-CN': '去创建 →', 'en-US': 'Create agent →' },
+  'editor.agentIdTemplatePh': {
+    'zh-CN': '智能体 ID，或 {{agent_id}}',
+    'en-US': 'Agent id, or {{agent_id}}',
+  },
+  'editor.agentIdHint': {
+    'zh-CN': '可从上方列表点选，或手写 ID / {{变量}}；成功后写 {{last_agent_id}}',
+    'en-US': 'Pick from the list, or type an id / {{var}}; on success sets {{last_agent_id}}',
+  },
   'editor.agentPromptPh': {
     'zh-CN': '留空接上游 last_agent_content / 执行输入；可写 回答 {{question}}',
     'en-US': 'Empty = last_agent_content / run input; e.g. Answer {{question}}',

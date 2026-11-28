@@ -552,13 +552,21 @@
           <div v-if="selectedNode.type === 'agent'" class="field">
             <label class="field__label">{{ t('editor.agentPick') }}</label>
             <USelect
+              v-if="agentOptions.length"
+              class="w-full"
+              :model-value="agentSelectValue"
+              :items="agentOptions"
+              :placeholder="t('editor.agentPickPh')"
+              value-key="value"
+              @update:model-value="(v: string) => { if (v) nodeConfig.agentId = v }"
+            />
+            <UInput
               v-model="nodeConfig.agentId"
               class="w-full"
-              :items="agentOptions"
-              :placeholder="agentOptions.length ? t('editor.agentPickPh') : t('editor.agentPickEmpty')"
-              value-key="value"
-              :disabled="!agentOptions.length"
+              :class="{ 'mt-2': agentOptions.length }"
+              :placeholder="t('editor.agentIdTemplatePh')"
             />
+            <p class="field__hint">{{ t('editor.agentIdHint') }}</p>
             <p v-if="!agentOptions.length" class="field__hint">
               {{ t('editor.agentPickEmptyHint') }}
               <NuxtLink to="/agents/new" class="field__link" target="_blank">{{ t('editor.agentGoCreate') }}</NuxtLink>
@@ -1899,6 +1907,12 @@ const subflowWorkflowOptions = computed(() =>
   workflowPickOptions.value.filter(w => w.value !== workflowId.value),
 )
 const agentOptions = ref<{ label: string, value: string }[]>([])
+/** 下拉仅在当前值是已有智能体时高亮；模板/手写 ID 时留空 */
+const agentSelectValue = computed(() => {
+  const cur = String(nodeConfig.agentId || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return agentOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 const kbList = ref<KnowledgeBase[]>([])
 const kbOptions = computed(() =>
   kbList.value.filter(k => k.id).map(k => ({ label: k.name || k.id, value: k.id })),
