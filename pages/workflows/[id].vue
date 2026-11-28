@@ -1428,7 +1428,6 @@ import {
   findStartsWithIncoming,
   findUnreachableNodes,
 } from '@/utils/workflowReachability'
-import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
 
 import { useRoute } from 'vue-router'
 import { useWorkflows, type WorkflowDefinition, type WorkflowVersionSnap, type WorkflowSchedule } from '@/composables/useWorkflows'
