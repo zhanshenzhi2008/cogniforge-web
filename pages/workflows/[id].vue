@@ -868,10 +868,16 @@
             <div class="field">
               <label class="field__label">{{ t('editor.codeLanguage') }}</label>
               <USelect
-                v-model="nodeConfig.codeLanguage"
                 class="w-full"
+                :model-value="codeLanguageSelectValue"
                 :items="codeLanguageOptions"
                 value-key="value"
+                @update:model-value="(v: string) => { if (v) nodeConfig.codeLanguage = v }"
+              />
+              <UInput
+                v-model="nodeConfig.codeLanguage"
+                class="w-full mt-2"
+                :placeholder="t('editor.codeLanguageTemplatePh')"
               />
               <p class="field__hint">{{ t('editor.codeLanguageHint') }}</p>
             </div>
@@ -1856,6 +1862,12 @@ const codeLanguageOptions = computed(() => [
   { label: t('editor.codeLangPython'), value: 'python' },
   { label: t('editor.codeLangJavascript'), value: 'javascript' },
 ])
+/** 下拉仅在当前值是已知语言时高亮；模板/自定义时留空 */
+const codeLanguageSelectValue = computed(() => {
+  const cur = String(nodeConfig.codeLanguage || '').trim().toLowerCase()
+  if (!cur || cur.includes('{{')) return undefined
+  return codeLanguageOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 
 function addStartVariable() {
   nodeConfig.variables.push({

@@ -1353,9 +1353,13 @@ export const M = {
   'editor.codeLangExpression': { 'zh-CN': '表达式', 'en-US': 'Expression' },
   'editor.codeLangPython': { 'zh-CN': 'Python（沙箱）', 'en-US': 'Python (sandbox)' },
   'editor.codeLangJavascript': { 'zh-CN': 'JavaScript（沙箱）', 'en-US': 'JavaScript (sandbox)' },
+  'editor.codeLanguageTemplatePh': {
+    'zh-CN': '如 expression 或 {{lang}}',
+    'en-US': 'e.g. expression or {{lang}}',
+  },
   'editor.codeLanguageHint': {
-    'zh-CN': '表达式做简单计算；Python/JS 走本地子进程沙箱（可用 variables / input；生产可设 CODE_EXECUTE_DISABLED=1）',
-    'en-US': 'Expression for simple calc; Python/JS run in local process sandbox (variables/input available; set CODE_EXECUTE_DISABLED=1 in prod to disable)',
+    'zh-CN': '可从上方点选，或手写 expression/python/javascript（及 js）或 {{变量}}；成功后写 {{last_code_language}}；表达式做简单计算，Python/JS 走沙箱（生产可设 CODE_EXECUTE_DISABLED=1）',
+    'en-US': 'Pick above, or type expression/python/javascript (or js) / {{var}}; on success sets {{last_code_language}}; expression for calc, Python/JS in sandbox (set CODE_EXECUTE_DISABLED=1 in prod)',
   },
   'editor.codeSource': { 'zh-CN': '代码', 'en-US': 'Code' },
   'editor.codeSourcePh': {
@@ -1369,8 +1373,8 @@ export const M = {
     'en-US': 'Python/JS sandbox only; number or {{var}}; empty→30, capped at 60s; expression ignores',
   },
   'editor.codeResultVarsHint': {
-    'zh-CN': '跑完写入 {{last_code_output}}，下游节点可直接引用',
-    'en-US': 'After run, sets {{last_code_output}} for downstream nodes',
+    'zh-CN': '跑完写入 {{last_code_output}}、{{last_code_language}}，下游节点可直接引用',
+    'en-US': 'After run, sets {{last_code_output}} and {{last_code_language}} for downstream nodes',
   },
   'editor.query': { 'zh-CN': '搜索词', 'en-US': 'Query' },
   'editor.queryPh': { 'zh-CN': '搜索关键词...', 'en-US': 'Search keywords…' },

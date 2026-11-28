@@ -249,7 +249,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '语言: 首行；非默认超时带 · Ns（仅沙箱）',
     fields: [
       NAME_FIELD,
-      { key: 'codeLanguage', labelZh: '语言', note: 'expression | python | javascript' },
+      { key: 'codeLanguage', labelZh: '语言', note: 'expression | python | javascript 或 {{变量}}' },
       { key: 'codeSource', labelZh: '代码', required: true },
       {
         key: 'codeTimeout',
@@ -259,7 +259,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_codeResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_code_output',
+        note: '运行后写 last_code_output / last_code_language',
       },
     ],
   },
