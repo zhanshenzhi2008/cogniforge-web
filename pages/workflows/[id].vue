@@ -736,11 +736,11 @@
             <div class="field">
               <label class="field__label">{{ t('editor.delayDuration') }}</label>
               <UInput
-                v-model.number="nodeConfig.delayDuration"
-                type="number"
+                v-model="nodeConfig.delayDuration"
                 class="w-full"
                 :placeholder="t('editor.delayDurationPh')"
               />
+              <p class="field__hint">{{ t('editor.delayDurationHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.delayUnit') }}</label>
@@ -1733,7 +1733,7 @@ const nodeConfig = reactive({
   httpTimeout: 30,
   httpFailOnError: false,
   subflowInput: '',
-  delayDuration: 1,
+  delayDuration: '1' as string | number,
   delayUnit: 'seconds',
   loopType: 'times',
   loopCount: 3,
@@ -2441,8 +2441,8 @@ const addNode = (type: string) => {
     label: getNodeLabel(type),
   }
   if (type === 'delay') {
-    data.delayDuration = 1
-    data.duration = 1
+    data.delayDuration = '1'
+    data.duration = '1'
     data.delayUnit = 'seconds'
     data.unit = 'seconds'
     data.bindCaption = resolveBindCaption('delay', data)
@@ -2561,14 +2561,17 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     return input ? `${name} · ${t('editor.subflowInputShort')}` : name
   }
   if (kind === 'delay') {
-    const n = Number(d.delayDuration ?? d.duration ?? 0)
-    if (!(n > 0)) return ''
+    const raw = String(d.delayDuration ?? d.duration ?? '').trim()
+    if (!raw) return ''
     const unit = String(d.delayUnit || d.unit || 'seconds')
     const unitLabel = unit === 'minutes'
       ? t('editor.delayUnitMinutes')
       : unit === 'hours'
         ? t('editor.delayUnitHours')
         : t('editor.delayUnitSeconds')
+    const n = Number(raw)
+    if (raw.includes('{{')) return `${raw} ${unitLabel}`
+    if (!(n > 0)) return ''
     return `${n} ${unitLabel}`
   }
   if (kind === 'wait') {
@@ -2770,9 +2773,10 @@ const handleNodeClick = (event: any) => {
     ?? event.node.data?.failOnError
     ?? event.node.data?.fail_on_error
   )
-  nodeConfig.delayDuration = Number(
-    event.node.data?.delayDuration ?? event.node.data?.duration ?? 1,
-  ) || 1
+  {
+    const raw = event.node.data?.delayDuration ?? event.node.data?.duration ?? '1'
+    nodeConfig.delayDuration = typeof raw === 'string' ? raw : String(raw ?? '1')
+  }
   nodeConfig.delayUnit = event.node.data?.delayUnit || event.node.data?.unit || 'seconds'
   nodeConfig.loopType = event.node.data?.loopType || event.node.data?.type || 'times'
   if (nodeConfig.loopType === 'count') nodeConfig.loopType = 'times'
@@ -2969,10 +2973,17 @@ const saveNodeConfig = () => {
         : {}),
       ...(selectedNode.value.type === 'delay'
         ? {
-            delayDuration: Number(nodeConfig.delayDuration) || 1,
-            delayUnit: nodeConfig.delayUnit || 'seconds',
-            duration: Number(nodeConfig.delayDuration) || 1,
-            unit: nodeConfig.delayUnit || 'seconds',
+            ...(() => {
+              const raw = String(nodeConfig.delayDuration ?? '').trim()
+              const asNum = Number(raw)
+              const duration = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 1)
+              return {
+                delayDuration: duration,
+                delayUnit: nodeConfig.delayUnit || 'seconds',
+                duration,
+                unit: nodeConfig.delayUnit || 'seconds',
+              }
+            })(),
           }
         : {}),
       ...(selectedNode.value.type === 'loop'

@@ -1259,7 +1259,11 @@ export const M = {
     'en-US': 'After the call, sets {{last_http_status}} and {{last_http_body}} for downstream nodes',
   },
   'editor.delayDuration': { 'zh-CN': '等待时长', 'en-US': 'Duration' },
-  'editor.delayDurationPh': { 'zh-CN': '数字', 'en-US': 'Number' },
+  'editor.delayDurationPh': { 'zh-CN': '如 3 或 {{wait_sec}}', 'en-US': 'e.g. 3 or {{wait_sec}}' },
+  'editor.delayDurationHint': {
+    'zh-CN': '数字，或 {{变量}}（展开后须为整数；上限 5 分钟）',
+    'en-US': 'Number or {{var}} (must resolve to an integer; capped at 5 minutes)',
+  },
   'editor.delayUnit': { 'zh-CN': '时间单位', 'en-US': 'Unit' },
   'editor.delayUnitSeconds': { 'zh-CN': '秒', 'en-US': 'Seconds' },
   'editor.delayUnitMinutes': { 'zh-CN': '分', 'en-US': 'Minutes' },
