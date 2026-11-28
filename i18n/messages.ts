@@ -1170,6 +1170,14 @@ export const M = {
     'zh-CN': '可用 {{变量}}；留空则接上游 last_agent_content（LLM/智能体输出）',
     'en-US': 'Supports {{vars}}; empty uses upstream last_agent_content (LLM/agent output)',
   },
+  'editor.llmSystemPromptHint': {
+    'zh-CN': '可用 {{变量}}',
+    'en-US': 'Supports {{vars}}',
+  },
+  'editor.agentContentResultVarsHint': {
+    'zh-CN': '成功后写入 {{last_agent_content}}，供下游节点留空提示词时接力',
+    'en-US': 'On success, sets {{last_agent_content}} for downstream empty prompts',
+  },
   'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
   'editor.llmStreamShort': { 'zh-CN': '流式', 'en-US': 'stream' },
   'editor.llmStreamHint': {
@@ -1572,8 +1580,8 @@ export const M = {
   'editor.agentPickEmptyHint': { 'zh-CN': '请先在工作室创建智能体，再回来选择。', 'en-US': 'Create an agent in the studio first, then pick it here.' },
   'editor.agentGoCreate': { 'zh-CN': '去创建 →', 'en-US': 'Create agent →' },
   'editor.agentPromptPh': {
-    'zh-CN': '留空则用执行输入；可写 回答 {{question}}',
-    'en-US': 'Empty = run input; e.g. Answer {{question}}',
+    'zh-CN': '留空接上游 last_agent_content / 执行输入；可写 回答 {{question}}',
+    'en-US': 'Empty = last_agent_content / run input; e.g. Answer {{question}}',
   },
   'editor.node.condition': { 'zh-CN': '条件分支', 'en-US': 'Condition' },
   'editor.node.loop': { 'zh-CN': '循环节点', 'en-US': 'Loop' },

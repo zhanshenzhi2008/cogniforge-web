@@ -93,6 +93,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'llmStream', labelZh: '流式收集', note: 'data.stream / llmStream' },
       { key: 'llmTemperature', labelZh: '温度', note: '0=默认；data.temperature' },
       { key: 'llmMaxTokens', labelZh: '最大生成长度', note: '0=默认；data.maxTokens / max_tokens' },
+      {
+        key: '_agentContentResultVars',
+        labelZh: '结果变量',
+        note: '成功后写 last_agent_content',
+      },
     ],
   },
   {
@@ -102,7 +107,16 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'agentId', labelZh: '智能体', required: true },
-      { key: 'prompt', labelZh: '用户提示', note: '支持 {{变量}}；空则用执行输入' },
+      {
+        key: 'prompt',
+        labelZh: '用户提示',
+        note: '支持 {{变量}}；空则接 last_agent_content / 流程输入',
+      },
+      {
+        key: '_agentContentResultVars',
+        labelZh: '结果变量',
+        note: '成功后写 last_agent_content',
+      },
     ],
   },
   {
@@ -113,6 +127,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       NAME_FIELD,
       { key: 'teamId', labelZh: '小队', required: true },
       { key: 'prompt', labelZh: '任务说明', note: '支持 {{变量}}；空则接 last_agent_content' },
+      {
+        key: '_agentContentResultVars',
+        labelZh: '结果变量',
+        note: '成功后写 last_agent_content',
+      },
     ],
   },
   {

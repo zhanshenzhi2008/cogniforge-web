@@ -498,7 +498,7 @@
               :rows="5"
               :placeholder="t('editor.llmSystemPh')"
             />
-            <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
+            <p class="field__hint">{{ t('editor.llmSystemPromptHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field">
@@ -510,6 +510,7 @@
               :placeholder="t('editor.userPromptPh')"
             />
             <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
+            <p class="field__hint">{{ t('editor.agentContentResultVarsHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field field--row">
@@ -570,6 +571,7 @@
               :placeholder="t('editor.agentPromptPh')"
             />
             <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
+            <p class="field__hint">{{ t('editor.agentContentResultVarsHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'team'" class="field">
@@ -597,6 +599,7 @@
               :placeholder="t('editor.teamTaskPh')"
             />
             <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
+            <p class="field__hint">{{ t('editor.agentContentResultVarsHint') }}</p>
           </div>
 
           <template v-if="selectedNode.type === 'subflow'">
