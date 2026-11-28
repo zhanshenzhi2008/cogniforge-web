@@ -1643,6 +1643,14 @@ export const M = {
   'editor.subflowPickPh': { 'zh-CN': '选择要嵌套的工作流', 'en-US': 'Pick a nested workflow' },
   'editor.subflowPickEmpty': { 'zh-CN': '暂无其它工作流', 'en-US': 'No other workflows' },
   'editor.subflowPickEmptyHint': { 'zh-CN': '需要另建一份工作流才能嵌套；当前这份不会出现在列表里。', 'en-US': 'Create another workflow to nest; the current one is excluded.' },
+  'editor.subflowIdTemplatePh': {
+    'zh-CN': '工作流 ID，或 {{workflow_id}}',
+    'en-US': 'Workflow id, or {{workflow_id}}',
+  },
+  'editor.subflowIdHint': {
+    'zh-CN': '可从上方列表点选，或手写 ID / {{变量}}；成功后写 {{last_subflow_workflow_id}}；不可指向自身',
+    'en-US': 'Pick from the list, or type an id / {{var}}; on success sets {{last_subflow_workflow_id}}; cannot call self',
+  },
   'editor.subflowGoCreate': { 'zh-CN': '去工作流列表 →', 'en-US': 'Go to workflows →' },
   'editor.subflowHint': {
     'zh-CN': '同步跑完子流程再继续；暂不支持子流程内等待/审批；最多嵌套 3 层，且不能调用自己。',
@@ -1658,8 +1666,8 @@ export const M = {
     'en-US': 'Leave empty to pass current vars/input; string values support {{vars}}',
   },
   'editor.subflowResultVarsHint': {
-    'zh-CN': '跑完写入 {{last_subflow_output}}（JSON）；若有 content 还会写 last_agent_content',
-    'en-US': 'After run, sets {{last_subflow_output}} (JSON); content also updates last_agent_content',
+    'zh-CN': '跑完写入 {{last_subflow_output}}、{{last_subflow_workflow_id}}；若有 content 还会写 last_agent_content',
+    'en-US': 'After run, sets {{last_subflow_output}}, {{last_subflow_workflow_id}}; content also updates last_agent_content',
   },
   'editor.subflowInputInvalid': {
     'zh-CN': '子流程入参不是合法 JSON 对象，已忽略',

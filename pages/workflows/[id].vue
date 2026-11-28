@@ -624,13 +624,21 @@
             <div class="field">
               <label class="field__label">{{ t('editor.subflowPick') }}</label>
               <USelect
+                v-if="subflowWorkflowOptions.length"
+                class="w-full"
+                :model-value="subflowSelectValue"
+                :items="subflowWorkflowOptions"
+                :placeholder="t('editor.subflowPickPh')"
+                value-key="value"
+                @update:model-value="(v: string) => { if (v) nodeConfig.subflowWorkflowId = v }"
+              />
+              <UInput
                 v-model="nodeConfig.subflowWorkflowId"
                 class="w-full"
-                :items="subflowWorkflowOptions"
-                :placeholder="subflowWorkflowOptions.length ? t('editor.subflowPickPh') : t('editor.subflowPickEmpty')"
-                value-key="value"
-                :disabled="!subflowWorkflowOptions.length"
+                :class="{ 'mt-2': subflowWorkflowOptions.length }"
+                :placeholder="t('editor.subflowIdTemplatePh')"
               />
+              <p class="field__hint">{{ t('editor.subflowIdHint') }}</p>
               <p v-if="!subflowWorkflowOptions.length" class="field__hint">
                 {{ t('editor.subflowPickEmptyHint') }}
                 <NuxtLink to="/workflows" class="field__link" target="_blank">{{ t('editor.subflowGoCreate') }}</NuxtLink>
@@ -1928,6 +1936,12 @@ const workflowPickOptions = ref<{ label: string, value: string }[]>([])
 const subflowWorkflowOptions = computed(() =>
   workflowPickOptions.value.filter(w => w.value !== workflowId.value),
 )
+/** 下拉仅在当前值是已有工作流时高亮；模板/手写 ID 时留空 */
+const subflowSelectValue = computed(() => {
+  const cur = String(nodeConfig.subflowWorkflowId || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return subflowWorkflowOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 const agentOptions = ref<{ label: string, value: string }[]>([])
 /** 下拉仅在当前值是已有智能体时高亮；模板/手写 ID 时留空 */
 const agentSelectValue = computed(() => {

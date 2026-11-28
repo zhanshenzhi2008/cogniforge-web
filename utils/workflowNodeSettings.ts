@@ -169,7 +169,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         key: 'subflowWorkflowId',
         labelZh: '调用工作流',
         required: true,
-        note: '同步嵌套；最多 3 层；不可选当前工作流',
+        note: 'ID 或 {{变量}}；同步嵌套；最多 3 层；不可指向自身',
       },
       {
         key: 'subflowInput',
@@ -179,7 +179,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_subflowResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_subflow_output；有 content 时写 last_agent_content',
+        note: '运行后写 last_subflow_output / last_subflow_workflow_id；有 content 时写 last_agent_content',
       },
     ],
   },

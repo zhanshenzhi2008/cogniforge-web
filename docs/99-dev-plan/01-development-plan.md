@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-28 | v1.270 | 子流程 workflow ID 支持 {{变量}}；标明 last_subflow_workflow_id | orjrs |
 | 2026-11-28 | v1.269 | 修复 prompts 回滚 E2E toast 严格模式重复匹配 | orjrs |
 | 2026-11-28 | v1.268 | 检索知识库 ID 支持 {{变量}}；标明 last_search_kb_id | orjrs |
 | 2026-11-28 | v1.267 | Team ID 支持 {{变量}}；标明 last_team_id | orjrs |
@@ -351,6 +352,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] 子流程 workflow ID {{变量}} / last_subflow_workflow_id（2026-11-28）
+
+- **原因**：嵌套工作流只能下拉选死 ID
+- **落地**：列表点选 + 手写 ID/`{{workflow_id}}`；成功写 last_subflow_workflow_id
+- **主仓**：`nodes/subflow.go`；前端设计 v1.231；开发计划 v1.361
 
 ## [变更] 修复 prompts 回滚 E2E toast 严格模式（2026-11-28）
 
