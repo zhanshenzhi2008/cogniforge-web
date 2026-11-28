@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-28 | v1.273 | 循环 for_each 元素/下标变量名支持 {{变量}} | orjrs |
 | 2026-11-28 | v1.272 | 检索 Rerank 模型 ID 支持 {{变量}}；标明 last_search_rerank_provider_id | orjrs |
 | 2026-11-28 | v1.271 | HTTP method 支持 {{变量}}；标明 last_http_method | orjrs |
 | 2026-11-28 | v1.270 | 子流程 workflow ID 支持 {{变量}}；标明 last_subflow_workflow_id | orjrs |
@@ -354,6 +355,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] 循环 for_each 元素/下标变量名 {{变量}}（2026-11-28）
+
+- **原因**：元素/下标变量名只能写死
+- **落地**：抽屉 hint；支持 `{{item_name}}` / `{{idx_name}}`；成功写 last_loop_item_var / last_loop_key_var
+- **主仓**：`nodes/loop.go`；前端设计 v1.234；开发计划 v1.364
 
 ## [变更] 检索 Rerank 模型 ID {{变量}} / last_search_rerank_provider_id（2026-11-28）
 

@@ -1320,9 +1320,17 @@ export const M = {
     'en-US': 'Name supports {{vars}} (must resolve to an array key); items go to the item variable',
   },
   'editor.loopItemVar': { 'zh-CN': '元素变量', 'en-US': 'Item variable' },
-  'editor.loopItemVarPh': { 'zh-CN': '默认 item', 'en-US': 'default item' },
+  'editor.loopItemVarPh': { 'zh-CN': '如 item 或 {{item_name}}', 'en-US': 'e.g. item or {{item_name}}' },
+  'editor.loopItemVarHint': {
+    'zh-CN': '每轮元素写入的变量名，可用 {{变量}}；成功后写 {{last_loop_item_var}}',
+    'en-US': 'Variable name for each item; supports {{vars}}; on success sets {{last_loop_item_var}}',
+  },
   'editor.loopKeyVar': { 'zh-CN': '下标变量（可选）', 'en-US': 'Index variable (optional)' },
-  'editor.loopKeyVarPh': { 'zh-CN': '如 index', 'en-US': 'e.g. index' },
+  'editor.loopKeyVarPh': { 'zh-CN': '如 index 或 {{idx_name}}', 'en-US': 'e.g. index or {{idx_name}}' },
+  'editor.loopKeyVarHint': {
+    'zh-CN': '可选；下标变量名可用 {{变量}}；成功后写 {{last_loop_key_var}}',
+    'en-US': 'Optional; index var name supports {{vars}}; on success sets {{last_loop_key_var}}',
+  },
   'editor.loopMaxIter': { 'zh-CN': '最大次数', 'en-US': 'Max iterations' },
   'editor.loopMaxIterPh': { 'zh-CN': '如 100 或 {{cap}}', 'en-US': 'e.g. 100 or {{cap}}' },
   'editor.loopMaxIterHint': {
@@ -1330,8 +1338,8 @@ export const M = {
     'en-US': 'Safety cap; number or {{var}}, empty defaults to 100',
   },
   'editor.loopResultVarsHint': {
-    'zh-CN': '结束后写入 {{last_loop_total}}、{{last_loop_index}}、{{last_loop_type}}',
-    'en-US': 'After loop, sets {{last_loop_total}}, {{last_loop_index}}, {{last_loop_type}}',
+    'zh-CN': '结束后写入 {{last_loop_total}}、{{last_loop_index}}、{{last_loop_type}}；for_each 另写 {{last_loop_item_var}}、{{last_loop_key_var}}',
+    'en-US': 'After loop, sets {{last_loop_total}}, {{last_loop_index}}, {{last_loop_type}}; for_each also sets {{last_loop_item_var}}, {{last_loop_key_var}}',
   },
   'editor.codeLanguage': { 'zh-CN': '语言', 'en-US': 'Language' },
   'editor.codeLangExpression': { 'zh-CN': '表达式', 'en-US': 'Expression' },

@@ -833,6 +833,7 @@
                   class="w-full"
                   :placeholder="t('editor.loopItemVarPh')"
                 />
+                <p class="field__hint">{{ t('editor.loopItemVarHint') }}</p>
               </div>
               <div class="field">
                 <label class="field__label">{{ t('editor.loopKeyVar') }}</label>
@@ -841,6 +842,7 @@
                   class="w-full"
                   :placeholder="t('editor.loopKeyVarPh')"
                 />
+                <p class="field__hint">{{ t('editor.loopKeyVarHint') }}</p>
               </div>
             </template>
             <div class="field">
