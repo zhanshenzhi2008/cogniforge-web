@@ -1280,6 +1280,10 @@ export const M = {
   'editor.loopKeyVarPh': { 'zh-CN': '如 index', 'en-US': 'e.g. index' },
   'editor.loopMaxIter': { 'zh-CN': '最大次数', 'en-US': 'Max iterations' },
   'editor.loopMaxIterPh': { 'zh-CN': '防止死循环，默认 100', 'en-US': 'Safety cap, default 100' },
+  'editor.loopResultVarsHint': {
+    'zh-CN': '结束后写入 {{last_loop_total}}、{{last_loop_index}}、{{last_loop_type}}',
+    'en-US': 'After loop, sets {{last_loop_total}}, {{last_loop_index}}, {{last_loop_type}}',
+  },
   'editor.codeLanguage': { 'zh-CN': '语言', 'en-US': 'Language' },
   'editor.codeLangExpression': { 'zh-CN': '表达式', 'en-US': 'Expression' },
   'editor.codeLangPython': { 'zh-CN': 'Python（沙箱）', 'en-US': 'Python (sandbox)' },

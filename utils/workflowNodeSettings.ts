@@ -194,6 +194,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'loopItemVar', labelZh: '元素变量', note: 'for_each' },
       { key: 'loopKeyVar', labelZh: '下标变量', note: 'for_each' },
       { key: 'loopMaxIter', labelZh: '最大迭代' },
+      {
+        key: '_loopResultVars',
+        labelZh: '结果变量',
+        note: '运行后写 last_loop_total / index / type',
+      },
     ],
   },
   {

@@ -813,6 +813,7 @@
                 class="w-full"
                 :placeholder="t('editor.loopMaxIterPh')"
               />
+              <p class="field__hint">{{ t('editor.loopResultVarsHint') }}</p>
             </div>
           </template>
 
