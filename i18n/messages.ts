@@ -1702,6 +1702,10 @@ export const M = {
     'en-US': 'Hint for the operator; supports {{vars}}',
   },
   'editor.waitTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
+  'editor.waitResultVarsHint': {
+    'zh-CN': '挂起时写入 {{last_wait_reason}}、{{last_wait_message}}、{{last_wait_timeout_sec}}；审批通过后还有 approval_decision',
+    'en-US': 'On pause, sets {{last_wait_reason}}, {{last_wait_message}}, {{last_wait_timeout_sec}}; after approve also approval_decision',
+  },
   'editor.waitTimeoutPh': { 'zh-CN': '0 表示不超时', 'en-US': '0 = no timeout' },
   'editor.resume': { 'zh-CN': '继续', 'en-US': 'Resume' },
   'editor.approve': { 'zh-CN': '审批通过', 'en-US': 'Approve' },

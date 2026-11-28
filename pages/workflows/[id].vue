@@ -878,6 +878,7 @@
               class="w-full"
               :placeholder="t('editor.waitTimeoutPh')"
             />
+            <p class="field__hint">{{ t('editor.waitResultVarsHint') }}</p>
           </div>
 
           <template v-if="selectedNode.type === 'search'">

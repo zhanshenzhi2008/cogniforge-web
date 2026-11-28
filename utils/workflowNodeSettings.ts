@@ -268,6 +268,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'waitReason', labelZh: '等待原因', note: '默认 approval；支持 {{变量}}' },
       { key: 'waitMessage', labelZh: '提示文案', note: '支持 {{变量}}' },
       { key: 'timeoutSec', labelZh: '超时秒' },
+      {
+        key: '_waitResultVars',
+        labelZh: '结果变量',
+        note: '挂起写 last_wait_*；审批后有 approval_decision',
+      },
     ],
   },
   {
