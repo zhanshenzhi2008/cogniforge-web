@@ -54,6 +54,14 @@
           >
             {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
           </UBadge>
+          <UBadge
+            v-if="kb.visibility === 'org'"
+            size="sm"
+            variant="subtle"
+            color="info"
+          >
+            {{ t('kb.visibilitySharedBadge') }}
+          </UBadge>
         </template>
         <template #actions>
           <CfButton
@@ -63,12 +71,14 @@
             @click="openKnowledge(kb)"
           />
           <CfButton
+            v-if="isOwnedKB(kb)"
             tone="icon-accent"
             icon="i-lucide-pencil"
             :tip="t('common.edit')"
             @click="handleEdit(kb)"
           />
           <CfButton
+            v-if="isOwnedKB(kb)"
             tone="icon-danger"
             icon="i-lucide-trash-2"
             :tip="t('common.delete')"
@@ -122,6 +132,14 @@
                   >
                     {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
                   </UBadge>
+                  <UBadge
+                    v-if="kb.visibility === 'org'"
+                    size="sm"
+                    variant="subtle"
+                    color="info"
+                  >
+                    {{ t('kb.visibilitySharedBadge') }}
+                  </UBadge>
                 </div>
               </td>
               <td class="cf-muted">{{ kb.description || '—' }}</td>
@@ -137,12 +155,14 @@
                     @click="openKnowledge(kb)"
                   />
                   <CfButton
+                    v-if="isOwnedKB(kb)"
                     tone="icon-accent"
                     icon="i-lucide-pencil"
                     :tip="t('common.edit')"
                     @click="handleEdit(kb)"
                   />
                   <CfButton
+                    v-if="isOwnedKB(kb)"
                     tone="icon-danger"
                     icon="i-lucide-trash-2"
                     :tip="t('common.delete')"
@@ -337,12 +357,18 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { currentUser } = useAuth()
 const {
   listKBs,
   createKB,
   updateKB,
   deleteKB,
 } = useKnowledgeBases()
+
+function isOwnedKB(kb: KnowledgeBase) {
+  const uid = currentUser.value?.id
+  return !!uid && kb.user_id === uid
+}
 
 const loading = ref(false)
 const submitting = ref(false)

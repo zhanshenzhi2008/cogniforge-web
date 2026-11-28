@@ -35,8 +35,14 @@
           <div class="docs-toolbar">
             <div class="docs-toolbar__left">
               <span class="cf-muted">{{ t('kb.docs', { n: documents.length }) }}</span>
+              <span v-if="!isKBOwner" class="cf-muted kb-readonly-hint">{{ t('kb.readOnlyHint') }}</span>
             </div>
-            <CfButton tone="primary" icon="i-lucide-plus" @click="openUploadModal">
+            <CfButton
+              v-if="isKBOwner"
+              tone="primary"
+              icon="i-lucide-plus"
+              @click="openUploadModal"
+            >
               {{ t('kb.addFile') }}
             </CfButton>
           </div>
@@ -106,7 +112,7 @@
                         <td v-if="!previewDoc" class="cf-muted">{{ formatFileSize(doc.file_size) }}</td>
                         <td v-if="!previewDoc" class="cf-muted">{{ d(doc.created_at) }}</td>
                         <td @click.stop>
-                          <div class="action-btns">
+                          <div v-if="isKBOwner" class="action-btns">
                             <CfButton
                               tone="icon"
                               icon="i-lucide-scan-text"
@@ -164,6 +170,7 @@
                         {{ t('kb.modePreview') }}
                       </button>
                       <button
+                        v-if="isKBOwner && previewDoc.editable"
                         type="button"
                         role="tab"
                         class="preview-mode-btn"
@@ -198,7 +205,7 @@
                     size="sm"
                     :items="lifecycleOptions"
                     value-key="value"
-                    :disabled="lifecycleSaving"
+                    :disabled="lifecycleSaving || !isKBOwner"
                     @update:model-value="savePreviewLifecycle"
                   />
                   <USelect
@@ -208,14 +215,14 @@
                     size="sm"
                     :items="securityOptions"
                     value-key="value"
-                    :disabled="lifecycleSaving"
+                    :disabled="lifecycleSaving || !isKBOwner"
                     @update:model-value="savePreviewSecurity"
                   />
                   <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
                   <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
                   <span v-if="previewDirty" class="preview-dirty">{{ t('kb.unsaved') }}</span>
                 </div>
-                <div class="preview-validity">
+                <div v-if="isKBOwner" class="preview-validity">
                   <div class="field field--compact">
                     <label class="field__label">{{ t('kb.effectiveAt') }}</label>
                     <UInput
@@ -366,8 +373,8 @@
           </template>
 
           <template #settings>
-            <div class="settings-panel">
-              <section class="settings-section">
+            <div class="settings-panel" :class="{ 'settings-panel--readonly': !isKBOwner }">
+              <section class="settings-section" :inert="!isKBOwner || undefined">
                 <h3 class="settings-section__title">{{ t('kb.settingsSearchMode') }}</h3>
                 <p class="settings-section__desc">{{ t('kb.settingsSearchModeDesc') }}</p>
                 <div class="search-mode-list" role="radiogroup" :aria-label="t('kb.settingsSearchMode')">
@@ -566,7 +573,48 @@
                 </div>
               </section>
 
-              <div class="settings-actions">
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsAccess') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsAccessDesc') }}</p>
+                <p v-if="!isKBOwner" class="settings-section__desc">{{ t('kb.readOnlyHint') }}</p>
+                <div class="search-mode-list" role="radiogroup" :aria-label="t('kb.visibility')">
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.visibility === 'private' }"
+                  >
+                    <input
+                      v-model="settingsForm.visibility"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-visibility"
+                      value="private"
+                      :disabled="!isKBOwner"
+                    >
+                    <div class="search-mode-card__body">
+                      <span class="search-mode-card__title">{{ t('kb.visibilityPrivate') }}</span>
+                    </div>
+                  </label>
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.visibility === 'org' }"
+                  >
+                    <input
+                      v-model="settingsForm.visibility"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-visibility"
+                      value="org"
+                      :disabled="!isKBOwner"
+                    >
+                    <div class="search-mode-card__body">
+                      <span class="search-mode-card__title">{{ t('kb.visibilityOrg') }}</span>
+                      <p class="search-mode-card__desc">{{ t('kb.visibilityNote') }}</p>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <div v-if="isKBOwner" class="settings-actions">
                 <CfButton
                   tone="primary"
                   icon="i-lucide-save"
@@ -1238,6 +1286,7 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { currentUser } = useAuth()
 const { showSecurityLevel } = useSecurityFeatures()
 const route = useRoute()
 const {
@@ -1294,6 +1343,11 @@ interface UploadItem {
 
 const pageLoading = ref(true)
 const selectedKB = ref<KnowledgeBase | null>(null)
+const isKBOwner = computed(() => {
+  const uid = currentUser.value?.id
+  const owner = selectedKB.value?.user_id
+  return !!uid && !!owner && uid === owner
+})
 const uploadModalVisible = ref(false)
 
 // Documents
@@ -2083,6 +2137,7 @@ watch(
 const settingsSaving = ref(false)
 const settingsForm = reactive({
   search_mode: 'semantic',
+  visibility: 'private' as 'private' | 'org',
   rerank_semantic: false,
   rerank_keyword: false,
   rerank_hybrid: false,
@@ -2105,6 +2160,7 @@ function normalizeSearchMode(mode?: string) {
 
 function syncSettingsFromKB(kb: KnowledgeBase | null) {
   settingsForm.search_mode = normalizeSearchMode(kb?.search_mode)
+  settingsForm.visibility = kb?.visibility === 'org' ? 'org' : 'private'
   settingsForm.rerank_semantic = !!kb?.rerank_semantic
   settingsForm.rerank_keyword = !!kb?.rerank_keyword
   settingsForm.rerank_hybrid = !!kb?.rerank_hybrid
@@ -2134,6 +2190,7 @@ async function saveKBSettings() {
   try {
     const input: UpdateKBInput = {
       search_mode: normalizeSearchMode(settingsForm.search_mode),
+      visibility: settingsForm.visibility === 'org' ? 'org' : 'private',
       rerank_semantic: !!settingsForm.rerank_semantic,
       rerank_keyword: !!settingsForm.rerank_keyword,
       rerank_hybrid: !!settingsForm.rerank_hybrid,
@@ -3686,6 +3743,16 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 20px;
   padding-top: 4px;
+}
+
+.settings-panel--readonly .settings-section[inert] {
+  opacity: 0.72;
+}
+
+.kb-readonly-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.85rem;
 }
 
 .settings-section {
