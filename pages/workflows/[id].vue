@@ -1066,7 +1066,15 @@
             <p class="field__hint field__hint--block">{{ t('editor.resultVarsIntro') }}</p>
             <ul class="result-vars__list">
               <li v-for="v in selectedNodeLastResultVars" :key="v.name" class="result-vars__item">
-                <code class="result-vars__name">{{ '{{' + v.name + '}}' }}</code>
+                <button
+                  type="button"
+                  class="result-vars__copy"
+                  :title="t('editor.resultVarsCopyTip')"
+                  @click="copyResultVarTemplate(v.name)"
+                >
+                  <code class="result-vars__name">{{ resultVarTemplate(v.name) }}</code>
+                  <UIcon name="i-lucide-copy" class="result-vars__icon size-3.5" />
+                </button>
                 <span class="result-vars__note">{{ v.noteZh }}</span>
               </li>
             </ul>
@@ -4620,6 +4628,14 @@ async function copyDebugText(text: string) {
   }
 }
 
+function resultVarTemplate(name: string) {
+  return `{{${String(name || '').trim()}}}`
+}
+
+function copyResultVarTemplate(name: string) {
+  return copyDebugText(resultVarTemplate(name))
+}
+
 function selectTimelineStep(step: TimelineStep) {
   selectedTimelineKey.value = selectedTimelineKey.value === step.key ? null : step.key
   if (!selectedTimelineKey.value || !step.nodeId || step.nodeType === 'human_action') return
@@ -5125,9 +5141,34 @@ onMounted(() => {
   flex-direction: column;
   gap: 2px;
 }
+.result-vars__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.result-vars__copy:hover {
+  background: color-mix(in srgb, var(--cf-accent, #0f9f8a) 12%, transparent);
+}
 .result-vars__name {
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--cf-accent, #0f9f8a);
+}
+.result-vars__icon {
+  flex-shrink: 0;
+  color: var(--cf-ink-soft, #64748b);
+  opacity: 0.7;
+}
+.result-vars__copy:hover .result-vars__icon {
+  opacity: 1;
   color: var(--cf-accent, #0f9f8a);
 }
 .result-vars__note {

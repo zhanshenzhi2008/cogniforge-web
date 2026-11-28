@@ -1244,8 +1244,12 @@ export const M = {
     'en-US': 'Result variables this node sets',
   },
   'editor.resultVarsIntro': {
-    'zh-CN': '下游可用 {{变量名}} 引用；同名会被后执行的节点覆盖。',
-    'en-US': 'Downstream nodes can use {{name}}; later nodes overwrite the same key.',
+    'zh-CN': '点变量名可复制 {{变量}}，粘贴到下游字段；同名会被后执行的节点覆盖。',
+    'en-US': 'Click a name to copy {{var}} for pasting downstream; later nodes overwrite the same key.',
+  },
+  'editor.resultVarsCopyTip': {
+    'zh-CN': '复制到剪贴板',
+    'en-US': 'Copy to clipboard',
   },
   'editor.httpMethod': { 'zh-CN': '请求方法', 'en-US': 'Method' },
   'editor.httpMethodTemplatePh': { 'zh-CN': '如 POST 或 {{method}}', 'en-US': 'e.g. POST or {{method}}' },
