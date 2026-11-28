@@ -524,11 +524,7 @@
           <div v-if="selectedNode.type === 'llm'" class="field">
             <label class="field__label">{{ t('editor.llmTemperature') }}</label>
             <UInput
-              v-model.number="nodeConfig.llmTemperature"
-              type="number"
-              step="0.1"
-              min="0"
-              max="2"
+              v-model="nodeConfig.llmTemperature"
               class="w-full"
               :placeholder="t('editor.llmTemperaturePh')"
             />
@@ -538,9 +534,7 @@
           <div v-if="selectedNode.type === 'llm'" class="field">
             <label class="field__label">{{ t('editor.llmMaxTokens') }}</label>
             <UInput
-              v-model.number="nodeConfig.llmMaxTokens"
-              type="number"
-              min="0"
+              v-model="nodeConfig.llmMaxTokens"
               class="w-full"
               :placeholder="t('editor.llmMaxTokensPh')"
             />
@@ -1698,8 +1692,8 @@ const nodeConfig = reactive({
   systemPrompt: '',
   prompt: '',
   llmStream: false,
-  llmTemperature: 0,
-  llmMaxTokens: 0,
+  llmTemperature: '' as string | number,
+  llmMaxTokens: '' as string | number,
   teamId: '',
   agentId: '',
   knowledgeBaseId: '',
@@ -2206,28 +2200,39 @@ const loadWorkflow = async () => {
                 }
               : {}),
             ...(n.type === 'llm'
-              ? {
-                  model: n.data?.model || n.config?.model || '',
-                  systemPrompt: n.data?.systemPrompt || n.config?.system_prompt || '',
-                  prompt: n.data?.prompt || n.config?.prompt || '',
-                  llmStream: !!(n.data?.llmStream ?? n.data?.stream ?? n.config?.stream),
-                  stream: !!(n.data?.llmStream ?? n.data?.stream ?? n.config?.stream),
-                  temperature: Number(
-                    n.data?.temperature ?? n.data?.llmTemperature ?? n.config?.temperature ?? 0,
-                  ) || undefined,
-                  llmTemperature: Number(
-                    n.data?.llmTemperature ?? n.data?.temperature ?? n.config?.temperature ?? 0,
-                  ) || undefined,
-                  maxTokens: Number(
-                    n.data?.maxTokens ?? n.data?.llmMaxTokens ?? n.data?.max_tokens ?? n.config?.max_tokens ?? 0,
-                  ) || undefined,
-                  llmMaxTokens: Number(
-                    n.data?.llmMaxTokens ?? n.data?.maxTokens ?? n.data?.max_tokens ?? n.config?.max_tokens ?? 0,
-                  ) || undefined,
-                  max_tokens: Number(
-                    n.data?.max_tokens ?? n.data?.maxTokens ?? n.data?.llmMaxTokens ?? n.config?.max_tokens ?? 0,
-                  ) || undefined,
-                }
+              ? (() => {
+                  const tempRaw = n.data?.temperature ?? n.data?.llmTemperature ?? n.config?.temperature ?? ''
+                  const maxRaw =
+                    n.data?.maxTokens ??
+                    n.data?.llmMaxTokens ??
+                    n.data?.max_tokens ??
+                    n.config?.max_tokens ??
+                    ''
+                  const temperature =
+                    tempRaw === 0 || tempRaw === '0' || tempRaw == null || tempRaw === ''
+                      ? ''
+                      : typeof tempRaw === 'string'
+                        ? tempRaw
+                        : String(tempRaw)
+                  const maxTokens =
+                    maxRaw === 0 || maxRaw === '0' || maxRaw == null || maxRaw === ''
+                      ? ''
+                      : typeof maxRaw === 'string'
+                        ? maxRaw
+                        : String(maxRaw)
+                  return {
+                    model: n.data?.model || n.config?.model || '',
+                    systemPrompt: n.data?.systemPrompt || n.config?.system_prompt || '',
+                    prompt: n.data?.prompt || n.config?.prompt || '',
+                    llmStream: !!(n.data?.llmStream ?? n.data?.stream ?? n.config?.stream),
+                    stream: !!(n.data?.llmStream ?? n.data?.stream ?? n.config?.stream),
+                    temperature: temperature || undefined,
+                    llmTemperature: temperature || undefined,
+                    maxTokens: maxTokens || undefined,
+                    llmMaxTokens: maxTokens || undefined,
+                    max_tokens: maxTokens || undefined,
+                  }
+                })()
               : {}),
             ...(n.type === 'search'
               ? {
@@ -2493,10 +2498,18 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     if (!name) return ''
     const stream = !!(d.llmStream ?? d.stream)
     let base = stream ? `${name} · ${t('editor.llmStreamShort')}` : name
-    const temp = Number(d.temperature ?? d.llmTemperature ?? 0)
-    const maxTok = Number(d.maxTokens ?? d.max_tokens ?? d.llmMaxTokens ?? 0)
-    if (temp > 0) base = `${base} · t=${temp}`
-    if (maxTok > 0) base = `${base} · max${maxTok}`
+    const tempRaw = String(d.temperature ?? d.llmTemperature ?? '').trim()
+    const maxRaw = String(d.maxTokens ?? d.max_tokens ?? d.llmMaxTokens ?? '').trim()
+    if (tempRaw.includes('{{')) base = `${base} · t=${tempRaw}`
+    else {
+      const temp = Number(tempRaw)
+      if (temp > 0) base = `${base} · t=${temp}`
+    }
+    if (maxRaw.includes('{{')) base = `${base} · max${maxRaw}`
+    else {
+      const maxTok = Number(maxRaw)
+      if (maxTok > 0) base = `${base} · max${maxTok}`
+    }
     return base
   }
   if (kind === 'http') {
@@ -2736,12 +2749,17 @@ const handleNodeClick = (event: any) => {
   nodeConfig.systemPrompt = event.node.data?.systemPrompt || ''
   nodeConfig.prompt = event.node.data?.prompt || event.node.data?.task || ''
   nodeConfig.llmStream = !!(event.node.data?.llmStream ?? event.node.data?.stream)
-  nodeConfig.llmTemperature = Number(
-    event.node.data?.llmTemperature ?? event.node.data?.temperature ?? 0,
-  ) || 0
-  nodeConfig.llmMaxTokens = Number(
-    event.node.data?.llmMaxTokens ?? event.node.data?.maxTokens ?? event.node.data?.max_tokens ?? 0,
-  ) || 0
+  nodeConfig.llmTemperature = (() => {
+    const raw = event.node.data?.llmTemperature ?? event.node.data?.temperature ?? ''
+    if (raw === 0 || raw === '0' || raw == null || raw === '') return ''
+    return typeof raw === 'string' ? raw : String(raw)
+  })()
+  nodeConfig.llmMaxTokens = (() => {
+    const raw =
+      event.node.data?.llmMaxTokens ?? event.node.data?.maxTokens ?? event.node.data?.max_tokens ?? ''
+    if (raw === 0 || raw === '0' || raw == null || raw === '') return ''
+    return typeof raw === 'string' ? raw : String(raw)
+  })()
   nodeConfig.teamId = event.node.data?.teamId || event.node.data?.team_id || ''
   nodeConfig.agentId = event.node.data?.agentId || event.node.data?.agent_id || ''
   if (event.node?.type === 'llm') {
@@ -2867,11 +2885,20 @@ const saveNodeConfig = () => {
       model: nodeConfig.model,
       llmStream: !!nodeConfig.llmStream,
       stream: !!nodeConfig.llmStream,
-      llmTemperature: Number(nodeConfig.llmTemperature) > 0 ? Number(nodeConfig.llmTemperature) : 0,
-      temperature: Number(nodeConfig.llmTemperature) > 0 ? Number(nodeConfig.llmTemperature) : 0,
-      llmMaxTokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
-      maxTokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
-      max_tokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
+      ...(() => {
+        const raw = String(nodeConfig.llmTemperature ?? '').trim()
+        if (!raw) return { llmTemperature: 0, temperature: 0 }
+        const asNum = Number(raw)
+        const temperature = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
+        return { llmTemperature: temperature, temperature }
+      })(),
+      ...(() => {
+        const raw = String(nodeConfig.llmMaxTokens ?? '').trim()
+        if (!raw) return { llmMaxTokens: 0, maxTokens: 0, max_tokens: 0 }
+        const asNum = Number(raw)
+        const maxTokens = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
+        return { llmMaxTokens: maxTokens, maxTokens, max_tokens: maxTokens }
+      })(),
       ...(() => {
         const raw = String(nodeConfig.topK ?? '').trim()
         if (!raw) return { topK: 0, top_k: 0 }
@@ -2964,12 +2991,18 @@ const saveNodeConfig = () => {
       stream: !!nodeConfig.llmStream,
       ...(selectedNode.value.type === 'llm'
         ? (() => {
-            const temperature = Number(nodeConfig.llmTemperature) > 0
-              ? Number(nodeConfig.llmTemperature)
-              : undefined
-            const maxTokens = Number(nodeConfig.llmMaxTokens) > 0
-              ? Number(nodeConfig.llmMaxTokens)
-              : undefined
+            const tempRaw = String(nodeConfig.llmTemperature ?? '').trim()
+            const maxRaw = String(nodeConfig.llmMaxTokens ?? '').trim()
+            const temperature = !tempRaw
+              ? undefined
+              : tempRaw.includes('{{')
+                ? tempRaw
+                : (Number(tempRaw) > 0 ? Number(tempRaw) : undefined)
+            const maxTokens = !maxRaw
+              ? undefined
+              : maxRaw.includes('{{')
+                ? maxRaw
+                : (Number(maxRaw) > 0 ? Number(maxRaw) : undefined)
             return {
               llmTemperature: temperature,
               temperature,

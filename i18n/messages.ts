@@ -1185,16 +1185,16 @@ export const M = {
     'en-US': 'Collects tokens as they arrive; debug canvas and sidebar show a live progress preview.',
   },
   'editor.llmTemperature': { 'zh-CN': '温度', 'en-US': 'Temperature' },
-  'editor.llmTemperaturePh': { 'zh-CN': '0 = 跟模型默认', 'en-US': '0 = model default' },
+  'editor.llmTemperaturePh': { 'zh-CN': '空=默认，或 {{temp}}', 'en-US': 'empty=default, or {{temp}}' },
   'editor.llmTemperatureHint': {
-    'zh-CN': '大于 0 时覆盖本次调用；常见 0.2–1.0',
-    'en-US': 'When > 0, overrides this call; typical 0.2–1.0',
+    'zh-CN': '数字或 {{变量}}；大于 0 时覆盖本次调用（常见 0.2–1.0）',
+    'en-US': 'Number or {{var}}; when > 0 overrides this call (typical 0.2–1.0)',
   },
   'editor.llmMaxTokens': { 'zh-CN': '最大生成长度', 'en-US': 'Max tokens' },
-  'editor.llmMaxTokensPh': { 'zh-CN': '0 = 跟模型默认', 'en-US': '0 = model default' },
+  'editor.llmMaxTokensPh': { 'zh-CN': '空=默认，或 {{cap}}', 'en-US': 'empty=default, or {{cap}}' },
   'editor.llmMaxTokensHint': {
-    'zh-CN': '大于 0 时限制本次回复长度（tokens）',
-    'en-US': 'When > 0, caps completion length for this call',
+    'zh-CN': '数字或 {{变量}}；大于 0 时限制本次回复长度（tokens）',
+    'en-US': 'Number or {{var}}; when > 0 caps completion length for this call',
   },
   'editor.debugStreamLive': { 'zh-CN': '流式进度', 'en-US': 'Live stream' },
   'editor.debugStreamLiveHint': {
