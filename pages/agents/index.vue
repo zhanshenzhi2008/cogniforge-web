@@ -19,73 +19,63 @@
     </div>
 
     <div v-if="loading" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+      <CfLoadingState />
     </div>
 
     <div v-else-if="agents.length === 0" class="cf-panel">
-      <div class="cf-state">
-        <UIcon :name="CF_ICONS.agent" class="size-8 opacity-50" />
-        <p>{{ t('agents.empty') }}</p>
-        <CfButton tone="primary" icon="i-lucide-plus" @click="goCreate">
-          {{ t('agents.new') }}
-        </CfButton>
-      </div>
+      <CfEmptyState :icon="CF_ICONS.agent" :message="t('agents.empty')">
+        <template #action>
+          <CfButton tone="primary" icon="i-lucide-plus" @click="goCreate">
+            {{ t('agents.new') }}
+          </CfButton>
+        </template>
+      </CfEmptyState>
     </div>
 
     <!-- Card view -->
     <div v-else-if="viewMode === 'card'" class="agent-grid">
-      <div
+      <CfResourceCard
         v-for="agent in agents"
         :key="agent.id"
-        class="agent-card cf-surface"
+        :icon="CF_ICONS.agent"
+        :title="agent.name"
+        :description="agent.description || t('common.noDesc')"
+        :meta="d(agent.created_at)"
         @click="goEdit(agent)"
       >
-        <div class="agent-card__head">
-          <div class="agent-card__identity">
-            <span class="agent-card__icon">
-              <UIcon :name="CF_ICONS.agent" class="size-5" />
-            </span>
-            <div class="agent-card__titles">
-              <div class="agent-card__name-row">
-                <span class="agent-card__name">{{ agent.name }}</span>
-                <UBadge
-                  size="sm"
-                  variant="subtle"
-                  :color="agent.status === 'active' ? 'success' : 'neutral'"
-                >
-                  {{ agent.status === 'active' ? t('common.enabled') : t('common.disabled') }}
-                </UBadge>
-              </div>
-              <UBadge size="sm" variant="subtle" color="primary">{{ agent.model }}</UBadge>
-            </div>
-          </div>
-          <div class="action-btns" @click.stop>
-            <CfButton
-              tone="icon-accent"
-              icon="i-lucide-pencil"
-              :tip="t('common.edit')"
-              @click="goEdit(agent)"
-            />
-            <CfButton
-              tone="icon"
-              icon="i-lucide-message-square"
-              :tip="t('agents.chat')"
-              @click="handleChat(agent)"
-            />
-            <CfButton
-              tone="icon-danger"
-              icon="i-lucide-trash-2"
-              :tip="t('common.delete')"
-              @click="askDelete(agent)"
-            />
-          </div>
-        </div>
-        <p class="agent-card__desc">{{ agent.description || t('common.noDesc') }}</p>
-        <div class="agent-card__meta">{{ d(agent.created_at) }}</div>
-      </div>
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="agent.status === 'active' ? 'success' : 'neutral'"
+          >
+            {{ agent.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+          </UBadge>
+        </template>
+        <template #sub>
+          <UBadge size="sm" variant="subtle" color="primary">{{ agent.model }}</UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="goEdit(agent)"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-message-square"
+            :tip="t('agents.chat')"
+            @click="handleChat(agent)"
+          />
+          <CfButton
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(agent)"
+          />
+        </template>
+      </CfResourceCard>
     </div>
 
     <!-- List view -->
@@ -153,29 +143,12 @@
       </div>
     </div>
 
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('agents.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('agents.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
@@ -280,84 +253,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 14px;
-}
-
-.agent-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid var(--cf-line);
-  cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.agent-card:hover {
-  border-color: color-mix(in srgb, var(--cf-accent, #0f9f8a) 45%, var(--cf-line));
-  box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
-}
-
-.agent-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.agent-card__identity {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-}
-
-.agent-card__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--cf-accent);
-  background: color-mix(in oklab, var(--cf-accent) 12%, transparent);
-}
-
-.agent-card__titles {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.agent-card__name-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.agent-card__name {
-  font-weight: 600;
-  color: var(--cf-ink);
-  line-height: 1.3;
-}
-
-.agent-card__desc {
-  margin: 0;
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--cf-ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.agent-card__meta {
-  font-size: 0.75rem;
-  color: var(--cf-muted, #64748b);
 }
 
 .list-row {

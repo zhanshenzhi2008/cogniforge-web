@@ -151,6 +151,10 @@ export interface Document {
   file_type: string
   file_path: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
+  lifecycle_status?: 'draft' | 'review' | 'published' | 'abolished' | string
+  security_level?: 'public' | 'internal' | 'confidential' | 'secret' | string
+  effective_at?: string | null
+  expire_at?: string | null
   error: string
   chunk_count: number
   vector_count: number
@@ -195,6 +199,10 @@ export interface SearchInput {
   rerank?: boolean
   rerank_provider_id?: string
   hybrid_semantic_weight?: number
+  /** 管理排查：含草稿/审核等非发布文档 */
+  include_drafts?: boolean
+  /** 管理排查：忽略生效/失效时间窗 */
+  ignore_validity?: boolean
 }
 
 export const useKnowledgeBases = () => {
@@ -397,6 +405,27 @@ export const useKnowledgeBases = () => {
     }
   }
 
+  const updateDocLifecycle = async (
+    kbId: string,
+    docId: string,
+    input: {
+      lifecycle_status?: string
+      security_level?: string
+      effective_at?: string | null
+      expire_at?: string | null
+      clear_effective?: boolean
+      clear_expire?: boolean
+    },
+  ): Promise<{ data?: Document; error?: string }> => {
+    try {
+      const res = await api.put<Document>(`/api/v1/knowledge/${kbId}/documents/${docId}/lifecycle`, input)
+      if (res.error) return { error: res.error }
+      return { data: res.data }
+    } catch (err: any) {
+      return { error: err.message || '更新文档状态失败' }
+    }
+  }
+
   const searchKB = async (kbId: string, input: SearchInput): Promise<{ data?: SearchResponse; error?: string }> => {
     try {
       const res = await api.post<SearchResponse>(`/api/v1/knowledge/${kbId}/search`, input)
@@ -424,6 +453,7 @@ export const useKnowledgeBases = () => {
     createURLDoc,
     deleteDoc,
     reparseDoc,
+    updateDocLifecycle,
     searchKB,
   }
 }

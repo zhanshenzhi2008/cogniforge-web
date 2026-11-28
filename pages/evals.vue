@@ -14,6 +14,7 @@
         >
           {{ t('evals.back') }}
         </CfButton>
+        <CfViewModeToggle v-if="!activeSuite" v-model="viewMode" storage-key="cf-evals-view" />
         <CfButton v-if="!activeSuite" tone="primary" icon="i-lucide-plus" @click="showCreate = true">
           {{ t('evals.new') }}
         </CfButton>
@@ -25,41 +26,58 @@
       <div class="list-toolbar">
         <span class="list-count">{{ t('evals.count', { n: suites.length }) }}</span>
       </div>
-      <div class="cf-panel">
-        <div v-if="loading" class="cf-state">
-          <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        </div>
-        <div v-else-if="suites.length === 0" class="cf-state">
-          <UIcon name="i-lucide-clipboard-check" class="size-8 opacity-50" />
-          <p>{{ t('evals.empty') }}</p>
-        </div>
-        <div v-else class="cf-table-wrap">
-          <table class="cf-data-table">
-            <thead>
-              <tr>
-                <th>{{ t('common.name') }}</th>
-                <th>{{ t('common.description') }}</th>
-                <th>{{ t('common.updatedAt') }}</th>
-                <th class="cf-col-actions">{{ t('common.actions') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="s in suites" :key="s.id" class="row-click" @click="openSuite(s)">
-                <td class="name">{{ s.name }}</td>
-                <td class="cf-muted">{{ s.description || '—' }}</td>
-                <td class="cf-muted">{{ d(s.updated_at) }}</td>
-                <td @click.stop>
-                  <CfButton
-                    tone="icon-danger"
-                    icon="i-lucide-trash-2"
-                    :tip="t('common.delete')"
-                    @click="askDelete(s)"
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <CfLoadingState v-if="loading" />
+      <CfEmptyState
+        v-else-if="suites.length === 0"
+        icon="i-lucide-clipboard-check"
+        :message="t('evals.empty')"
+      />
+      <div v-else-if="viewMode === 'card'" class="eval-grid">
+        <CfResourceCard
+          v-for="s in suites"
+          :key="s.id"
+          icon="i-lucide-clipboard-check"
+          :title="s.name"
+          :description="s.description || t('common.noDesc')"
+          :meta="d(s.updated_at)"
+          @click="openSuite(s)"
+        >
+          <template #actions>
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(s)"
+            />
+          </template>
+        </CfResourceCard>
+      </div>
+      <div v-else class="cf-panel">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('common.updatedAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in suites" :key="s.id" class="row-click" @click="openSuite(s)">
+              <td class="name">{{ s.name }}</td>
+              <td class="cf-muted">{{ s.description || '—' }}</td>
+              <td class="cf-muted">{{ d(s.updated_at) }}</td>
+              <td @click.stop>
+                <CfButton
+                  tone="icon-danger"
+                  icon="i-lucide-trash-2"
+                  :tip="t('common.delete')"
+                  @click="askDelete(s)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </template>
 
@@ -258,12 +276,26 @@
         </div>
       </template>
     </CfModal>
+
+    <CfConfirmModal
+      v-model:open="deleteSuiteOpen"
+      :message="t('evals.deleteText', { name: pendingSuite?.name ?? '' })"
+      :loading="deletingSuite"
+      @confirm="confirmDeleteSuite"
+    />
+    <CfConfirmModal
+      v-model:open="deleteCaseOpen"
+      :message="t('evals.deleteCaseText')"
+      :loading="deletingCase"
+      @confirm="confirmDeleteCase"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { EvalCase, EvalResult, EvalRun, EvalSuite } from '@/composables/useEvals'
 import type { PromptVarDef } from '@/composables/usePrompts'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
 
 const { t, d } = useLocale()
@@ -271,6 +303,7 @@ const toast = useToast()
 const api = useEvals()
 
 const loading = ref(true)
+const viewMode = ref<ViewMode>('card')
 const saving = ref(false)
 const running = ref(false)
 const suites = ref<EvalSuite[]>([])
@@ -439,14 +472,32 @@ const createSuite = async () => {
   if (res.data) await openSuite(res.data)
 }
 
-const askDelete = async (s: EvalSuite) => {
-  if (!confirm(t('evals.deleteText', { name: s.name }))) return
-  const res = await api.deleteSuite(s.id)
-  if (res.error) {
-    toast.add({ title: res.error, color: 'error' })
-    return
+const deleteSuiteOpen = ref(false)
+const deletingSuite = ref(false)
+const pendingSuite = ref<EvalSuite | null>(null)
+
+const askDelete = (s: EvalSuite) => {
+  pendingSuite.value = s
+  deleteSuiteOpen.value = true
+}
+
+const confirmDeleteSuite = async () => {
+  if (!pendingSuite.value) return
+  deletingSuite.value = true
+  try {
+    const res = await api.deleteSuite(pendingSuite.value.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    deleteSuiteOpen.value = false
+    const id = pendingSuite.value.id
+    pendingSuite.value = null
+    if (activeSuite.value?.id === id) closeSuite()
+    await loadSuites()
+  } finally {
+    deletingSuite.value = false
   }
-  await loadSuites()
 }
 
 const addCase = async () => {
@@ -470,15 +521,32 @@ const addCase = async () => {
   cases.value = list.data || []
 }
 
-const removeCase = async (id: string) => {
-  const res = await api.deleteCase(id)
-  if (res.error) {
-    toast.add({ title: res.error, color: 'error' })
-    return
-  }
-  if (activeSuite.value) {
-    const list = await api.listCases(activeSuite.value.id)
-    cases.value = list.data || []
+const deleteCaseOpen = ref(false)
+const deletingCase = ref(false)
+const pendingCaseId = ref<string | null>(null)
+
+const removeCase = (id: string) => {
+  pendingCaseId.value = id
+  deleteCaseOpen.value = true
+}
+
+const confirmDeleteCase = async () => {
+  if (!pendingCaseId.value) return
+  deletingCase.value = true
+  try {
+    const res = await api.deleteCase(pendingCaseId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    deleteCaseOpen.value = false
+    pendingCaseId.value = null
+    if (activeSuite.value) {
+      const list = await api.listCases(activeSuite.value.id)
+      cases.value = list.data || []
+    }
+  } finally {
+    deletingCase.value = false
   }
 }
 
@@ -536,7 +604,12 @@ onMounted(loadSuites)
 </script>
 
 <style scoped>
-.header-actions { display: flex; gap: 8px; align-items: center; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.eval-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
 .list-toolbar { margin-bottom: 10px; }
 .list-count { font-size: 13px; color: var(--cf-ink-soft); }
 .row-click { cursor: pointer; }

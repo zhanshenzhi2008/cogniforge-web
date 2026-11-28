@@ -61,9 +61,12 @@ export interface UpsertConversationInput {
 export const useConversations = () => {
   const api = useApi()
 
-  const list = async (opts?: { team_id?: string }): Promise<{ data?: ConversationSummary[]; error?: string }> => {
+  const list = async (opts?: { team_id?: string; agent_id?: string }): Promise<{ data?: ConversationSummary[]; error?: string }> => {
     try {
-      const q = opts?.team_id ? `?team_id=${encodeURIComponent(opts.team_id)}` : ''
+      const params = new URLSearchParams()
+      if (opts?.team_id) params.set('team_id', opts.team_id)
+      if (opts?.agent_id) params.set('agent_id', opts.agent_id)
+      const q = params.toString() ? `?${params.toString()}` : ''
       const res = await api.get<ConversationSummary[]>(`/api/v1/conversations${q}`)
       if (res.error) return { error: res.error }
       return { data: res.data || [] }

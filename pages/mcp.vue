@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('mcp.title') }}</h1>
         <p class="cf-page-sub">{{ t('mcp.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
-        {{ t('mcp.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-mcp-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('mcp.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -33,89 +36,153 @@
     </div>
 
     <div v-if="loading" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+      <CfLoadingState />
     </div>
 
     <div v-else-if="filteredServers.length === 0" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-plug" class="size-8 opacity-50" />
-        <p>{{ servers.length === 0 ? t('mcp.empty') : t('mcp.filterEmpty') }}</p>
-      </div>
+      <CfEmptyState
+        icon="i-lucide-plug"
+        :message="servers.length === 0 ? t('mcp.empty') : t('mcp.filterEmpty')"
+      />
     </div>
 
-    <div v-else class="mcp-grid">
-      <article
+    <div v-else-if="viewMode === 'card'" class="mcp-grid">
+      <CfResourceCard
         v-for="srv in filteredServers"
         :key="srv.id"
-        class="mcp-card"
+        :icon="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'"
+        :title="srv.name"
+        :description="srvDesc(srv) || t('mcp.noDesc')"
         :class="{ 'mcp-card--off': !srv.enabled }"
         @click="openDetail(srv)"
       >
-        <div class="mcp-card__top">
-          <div class="mcp-card__icon" :class="srv.type === 'built-in' ? 'is-builtin' : 'is-http'">
-            <UIcon :name="srv.type === 'built-in' ? 'i-lucide-cpu' : 'i-lucide-globe'" class="size-5" />
-          </div>
-          <div class="mcp-card__titles">
-            <h3 class="mcp-card__name">{{ srv.name }}</h3>
-            <div class="mcp-card__tags">
-              <UBadge
-                size="sm"
-                variant="subtle"
-                :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
-              >
-                {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
-              </UBadge>
-              <span class="tool-pill" @click.stop="openDetail(srv)">
-                {{ t('mcp.toolsEnabled', { n: srv.tool_count ?? 0 }) }}
-              </span>
-            </div>
-          </div>
-          <div class="mcp-card__switch" @click.stop>
-            <USwitch
-              v-if="srv.type !== 'built-in'"
-              :model-value="srv.enabled"
-              :disabled="togglingId === srv.id"
-              @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
-            />
-            <UBadge v-else size="sm" variant="subtle" color="success">
-              {{ t('common.enabled') }}
-            </UBadge>
-          </div>
-        </div>
-
-        <p class="mcp-card__desc">{{ srvDesc(srv) || t('mcp.noDesc') }}</p>
-
-        <div class="mcp-card__foot">
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
+          >
+            {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
+          </UBadge>
+          <span class="tool-pill" @click.stop="openDetail(srv)">
+            {{ t('mcp.toolsEnabled', { n: srv.tool_count ?? 0 }) }}
+          </span>
+        </template>
+        <template #actions>
+          <USwitch
+            v-if="srv.type !== 'built-in'"
+            :model-value="srv.enabled"
+            :disabled="togglingId === srv.id"
+            @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
+          />
+          <UBadge v-else size="sm" variant="subtle" color="success">
+            {{ t('common.enabled') }}
+          </UBadge>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-eye"
+            :tip="t('mcp.viewDetail')"
+            @click="openDetail(srv)"
+          />
+          <CfButton
+            v-if="srv.type !== 'built-in'"
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(srv)"
+          />
+          <CfButton
+            v-if="srv.type !== 'built-in'"
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(srv)"
+          />
+        </template>
+        <template #meta>
           <span class="cf-muted mono url-snip" :title="srv.url || ''">
             {{ srv.type === 'built-in' ? t('mcp.builtinShort') : (srv.url || '—') }}
           </span>
-          <div class="action-btns" @click.stop>
-            <CfButton
-              tone="icon-accent"
-              icon="i-lucide-eye"
-              :tip="t('mcp.viewDetail')"
-              @click="openDetail(srv)"
-            />
-            <CfButton
-              v-if="srv.type !== 'built-in'"
-              tone="icon-accent"
-              icon="i-lucide-pencil"
-              :tip="t('common.edit')"
-              @click="handleEdit(srv)"
-            />
-            <CfButton
-              v-if="srv.type !== 'built-in'"
-              tone="icon-danger"
-              icon="i-lucide-trash-2"
-              :tip="t('common.delete')"
-              @click="askDelete(srv)"
-            />
-          </div>
-        </div>
-      </article>
+        </template>
+      </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('mcp.typeCol') }}</th>
+              <th>{{ t('mcp.tools') }}</th>
+              <th>{{ t('common.status') }}</th>
+              <th>{{ t('mcp.endpoint') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="srv in filteredServers"
+              :key="srv.id"
+              class="list-row"
+              :class="{ 'list-row--off': !srv.enabled }"
+              @dblclick="openDetail(srv)"
+            >
+              <td>
+                <span class="mcp-list-name">{{ srv.name }}</span>
+              </td>
+              <td>
+                <UBadge
+                  size="sm"
+                  variant="subtle"
+                  :color="srv.type === 'built-in' ? 'primary' : 'neutral'"
+                >
+                  {{ srv.type === 'built-in' ? t('mcp.typeBuiltin') : t('mcp.typeHttp') }}
+                </UBadge>
+              </td>
+              <td class="cf-muted">{{ srv.tool_count ?? 0 }}</td>
+              <td @dblclick.stop>
+                <USwitch
+                  v-if="srv.type !== 'built-in'"
+                  :model-value="srv.enabled"
+                  :disabled="togglingId === srv.id"
+                  @update:model-value="(v: boolean) => toggleEnabled(srv, v)"
+                />
+                <UBadge v-else size="sm" variant="subtle" color="success">
+                  {{ t('common.enabled') }}
+                </UBadge>
+              </td>
+              <td class="cf-muted mono url-snip" :title="srv.url || ''">
+                {{ srv.type === 'built-in' ? t('mcp.builtinShort') : (srv.url || '—') }}
+              </td>
+              <td @dblclick.stop>
+                <div class="action-btns">
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-eye"
+                    :tip="t('mcp.viewDetail')"
+                    @click="openDetail(srv)"
+                  />
+                  <CfButton
+                    v-if="srv.type !== 'built-in'"
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(srv)"
+                  />
+                  <CfButton
+                    v-if="srv.type !== 'built-in'"
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="askDelete(srv)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Detail: tools + config -->
@@ -255,37 +322,18 @@
       </template>
     </CfModal>
 
-    <!-- Delete Confirm -->
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('mcp.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">
-              {{ t('common.cancel') }}
-            </CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('mcp.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { McpServer, McpTool } from '@/composables/useMcpServers'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -300,6 +348,7 @@ const submitting = ref(false)
 const servers = ref<McpServer[]>([])
 const filter = ref<FilterId>('all')
 const query = ref('')
+const viewMode = ref<ViewMode>('card')
 const togglingId = ref('')
 const dialogVisible = ref(false)
 const dialogMode = ref<'create' | 'edit'>('create')
@@ -525,6 +574,12 @@ onMounted(() => { fetchServers() })
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -532,6 +587,18 @@ onMounted(() => { fetchServers() })
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.85rem;
+}
+
+.list-row {
+  cursor: pointer;
+}
+
+.list-row--off {
+  opacity: 0.72;
+}
+
+.mcp-list-name {
+  font-weight: 600;
 }
 
 .filter-row {
@@ -575,72 +642,8 @@ onMounted(() => { fetchServers() })
   gap: 0.85rem;
 }
 
-.mcp-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 1rem 1.05rem;
-  border-radius: 0.85rem;
-  border: 1px solid color-mix(in oklab, var(--cf-line) 90%, transparent);
-  background: color-mix(in oklab, var(--cf-nav-surface, var(--ui-bg)) 70%, transparent);
-  cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.mcp-card:hover {
-  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
-  box-shadow: 0 8px 24px color-mix(in oklab, var(--cf-accent) 8%, transparent);
-  transform: translateY(-1px);
-}
-
 .mcp-card--off {
   opacity: 0.72;
-}
-
-.mcp-card__top {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-}
-
-.mcp-card__icon {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.6rem;
-  flex-shrink: 0;
-}
-
-.mcp-card__icon.is-builtin {
-  background: color-mix(in oklab, var(--cf-accent) 16%, transparent);
-  color: var(--cf-accent);
-}
-
-.mcp-card__icon.is-http {
-  background: color-mix(in oklab, var(--cf-ink) 8%, transparent);
-  color: var(--cf-ink-soft);
-}
-
-.mcp-card__titles {
-  flex: 1;
-  min-width: 0;
-}
-
-.mcp-card__name {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 650;
-  color: var(--cf-ink);
-  line-height: 1.3;
-}
-
-.mcp-card__tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.35rem;
 }
 
 .tool-pill {
@@ -651,38 +654,12 @@ onMounted(() => { fetchServers() })
   background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
 }
 
-.mcp-card__switch {
-  flex-shrink: 0;
-  padding-top: 0.15rem;
-}
-
-.mcp-card__desc {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--cf-ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 2.25em;
-}
-
-.mcp-card__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid color-mix(in oklab, var(--cf-line) 70%, transparent);
-}
-
 .url-snip {
   font-size: 0.7rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 60%;
+  max-width: 100%;
 }
 
 .action-btns {

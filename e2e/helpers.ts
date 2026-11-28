@@ -89,7 +89,7 @@ export async function mockBackend(page: Page, opts: { quota?: 'ok' | 'gone' | 'a
       return
     }
 
-    if (method === 'GET' && /\/api\/v1\/(agents|conversations|workflows|knowledge|keys)$/.test(path)) {
+    if (method === 'GET' && /\/api\/v1\/(agents|conversations|workflows|knowledge|keys|skills)$/.test(path)) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

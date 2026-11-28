@@ -5,32 +5,52 @@
         <h1 class="cf-page-title">{{ t('teams.title') }}</h1>
         <p class="cf-page-sub">{{ t('teams.sub') }}</p>
       </div>
-      <UButton color="primary" @click="showCreate = true">
-        {{ t('teams.new') }}
-      </UButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-teams-view" />
+        <UButton color="primary" @click="showCreate = true">
+          {{ t('teams.new') }}
+        </UButton>
+      </div>
     </div>
 
-    <div v-if="loading" class="cf-panel p-6 text-sm opacity-70">
-      {{ t('common.loading') }}
+    <div v-if="loading" class="cf-panel">
+      <CfLoadingState />
     </div>
-    <div v-else-if="teams.length === 0" class="cf-panel p-8 text-center">
-      <p class="mb-4">{{ t('teams.empty') }}</p>
-      <UButton color="primary" @click="showCreate = true">
-        {{ t('teams.new') }}
-      </UButton>
+    <div v-else-if="teams.length === 0" class="cf-panel">
+      <CfEmptyState :icon="CF_ICONS.team" :message="t('teams.empty')">
+        <template #action>
+          <UButton color="primary" @click="showCreate = true">
+            {{ t('teams.new') }}
+          </UButton>
+        </template>
+      </CfEmptyState>
     </div>
-    <div v-else class="team-grid">
-      <div v-for="team in teams" :key="team.id" class="cf-panel team-card">
-        <div class="team-card__head">
-          <strong>{{ team.name }}</strong>
-          <UBadge variant="subtle" color="neutral">{{ modeLabel(team.mode) }}</UBadge>
-        </div>
-        <p class="team-card__desc">{{ team.description || t('teams.noDesc') }}</p>
-        <p class="team-card__meta">
-          {{ t('teams.members', { n: (team.member_agent_ids || []).length }) }}
-          <span v-if="team.supervisor_agent_id"> · {{ t('teams.hasSupervisor') }}</span>
-        </p>
-        <div class="team-card__actions">
+    <div v-else-if="viewMode === 'card'" class="team-grid">
+      <CfResourceCard
+        v-for="team in teams"
+        :key="team.id"
+        :icon="CF_ICONS.team"
+        :title="team.name"
+        :description="team.description || t('teams.noDesc')"
+        :meta="memberMeta(team)"
+        @click="openPreview(team)"
+      >
+        <template #badges>
+          <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+          <UBadge
+            v-if="isWorkerRetry(team)"
+            variant="subtle"
+            color="warning"
+            size="sm"
+            :title="t('teams.workerRetryHint')"
+          >
+            {{ t('teams.workerRetryBadge') }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <UButton size="sm" variant="ghost" :title="t('teams.editLimits')" @click="openLimits(team)">
+            {{ t('teams.limits') }}
+          </UButton>
           <UButton size="sm" variant="soft" @click="openPreview(team)">
             {{ t('teams.preview') }}
           </UButton>
@@ -42,10 +62,111 @@
           >
             {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
           </UButton>
+          <UButton
+            v-if="team.workflow_id"
+            size="sm"
+            variant="ghost"
+            icon="i-lucide-refresh-cw"
+            :loading="expandingId === team.id"
+            :title="t('teams.regenPipelineTip')"
+            @click="askRegenPipeline(team, 'linear')"
+          >
+            {{ t('teams.regenPipeline') }}
+          </UButton>
+          <UButton
+            size="sm"
+            variant="outline"
+            :loading="expandingParallelId === team.id"
+            :disabled="!(team.member_agent_ids || []).length"
+            :title="t('teams.genParallelHint')"
+            @click="expandParallel(team)"
+          >
+            {{ t('teams.genParallel') }}
+          </UButton>
           <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
             {{ t('common.delete') }}
           </UButton>
-        </div>
+        </template>
+      </CfResourceCard>
+    </div>
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('teams.mode') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="team in teams" :key="team.id">
+              <td>
+                <div class="team-name-cell">
+                  <span class="name">{{ team.name }}</span>
+                  <span class="cf-muted text-xs">{{ memberMeta(team) }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="team-mode-cell">
+                  <UBadge variant="subtle" color="neutral" size="sm">{{ modeLabel(team.mode) }}</UBadge>
+                  <UBadge
+                    v-if="isWorkerRetry(team)"
+                    variant="subtle"
+                    color="warning"
+                    size="sm"
+                  >
+                    {{ t('teams.workerRetryBadge') }}
+                  </UBadge>
+                </div>
+              </td>
+              <td class="cf-muted">{{ team.description || '—' }}</td>
+              <td>
+                <div class="team-list-actions">
+                  <UButton size="sm" variant="ghost" :title="t('teams.editLimits')" @click="openLimits(team)">
+                    {{ t('teams.limits') }}
+                  </UButton>
+                  <UButton size="sm" variant="soft" @click="openPreview(team)">
+                    {{ t('teams.preview') }}
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    variant="outline"
+                    :loading="expandingId === team.id"
+                    @click="expandPipeline(team)"
+                  >
+                    {{ team.workflow_id ? t('teams.openPipeline') : t('teams.genPipeline') }}
+                  </UButton>
+                  <UButton
+                    v-if="team.workflow_id"
+                    size="sm"
+                    variant="ghost"
+                    icon="i-lucide-refresh-cw"
+                    :loading="expandingId === team.id"
+                    :title="t('teams.regenPipelineTip')"
+                    @click="askRegenPipeline(team, 'linear')"
+                  >
+                    {{ t('teams.regenPipeline') }}
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    variant="outline"
+                    :loading="expandingParallelId === team.id"
+                    :disabled="!(team.member_agent_ids || []).length"
+                    :title="t('teams.genParallelHint')"
+                    @click="expandParallel(team)"
+                  >
+                    {{ t('teams.genParallel') }}
+                  </UButton>
+                  <UButton size="sm" color="error" variant="ghost" @click="askDelete(team)">
+                    {{ t('common.delete') }}
+                  </UButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -73,9 +194,48 @@
           <UFormField :label="t('common.description')">
             <UTextarea v-model="form.description" :rows="2" class="w-full" />
           </UFormField>
+          <div class="limits-row">
+            <UFormField :label="t('teams.maxDepth')">
+              <UInput v-model.number="form.max_depth" type="number" :min="1" :max="32" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('teams.maxSteps')">
+              <UInput v-model.number="form.max_steps" type="number" :min="1" :max="200" class="w-full" />
+            </UFormField>
+          </div>
+          <p class="text-xs opacity-65">{{ t('teams.limitsHint') }}</p>
+          <UCheckbox
+            v-model="form.worker_retry_once"
+            :label="t('teams.workerRetry')"
+          />
+          <p class="text-xs opacity-65">{{ t('teams.workerRetryHint') }}</p>
           <div class="flex justify-end gap-2 pt-2">
             <UButton variant="ghost" @click="showCreate = false">{{ t('common.cancel') }}</UButton>
             <UButton color="primary" :loading="creating" @click="submitCreate">{{ t('common.create') }}</UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showLimits">
+      <template #content>
+        <div class="p-4 space-y-3 min-w-[320px]">
+          <h2 class="text-base font-semibold">{{ t('teams.editLimits') }} · {{ limitsEditing?.name }}</h2>
+          <div class="limits-row">
+            <UFormField :label="t('teams.maxDepth')">
+              <UInput v-model.number="limitsForm.max_depth" type="number" :min="1" :max="32" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('teams.maxSteps')">
+              <UInput v-model.number="limitsForm.max_steps" type="number" :min="1" :max="200" class="w-full" />
+            </UFormField>
+          </div>
+          <p class="text-xs opacity-65">{{ t('teams.limitsHint') }}</p>
+          <UCheckbox
+            v-model="limitsForm.worker_retry_once"
+            :label="t('teams.workerRetry')"
+          />
+          <div class="flex justify-end gap-2 pt-2">
+            <UButton variant="ghost" @click="showLimits = false">{{ t('common.cancel') }}</UButton>
+            <UButton color="primary" :loading="limitsSaving" @click="saveLimits">{{ t('common.save') }}</UButton>
           </div>
         </div>
       </template>
@@ -129,35 +289,49 @@
       </template>
     </UModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p>{{ t('teams.deleteText', { name: deleting?.name ?? '' }) }}</p>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <CfButton tone="secondary" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-          <CfButton tone="danger" strong :loading="deletingLoading" @click="confirmDelete">
-            {{ t('common.delete') }}
-          </CfButton>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('teams.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
+    <CfConfirmModal
+      v-model:open="regenVisible"
+      :title="t('teams.regenPipeline')"
+      :message="regenConfirmMessage"
+      :confirm-text="t('teams.regenConfirmBtn')"
+      confirm-icon="i-lucide-refresh-cw"
+      :loading="regenLoading"
+      @confirm="confirmRegenPipeline"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Agent } from '@/composables/useAgents'
 import type { AgentTeam, TeamMode, TeamRunState } from '@/composables/useTeams'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
+import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({ layout: 'default' })
 
 const toast = useToast()
 const { t } = useLocale()
 const router = useRouter()
-const { list, create, remove, chat, expandPipeline: apiExpandPipeline } = useTeams()
+const { list, create, update, remove, chat, expandPipeline: apiExpandPipeline } = useTeams()
 const { list: listAgents } = useAgents()
 const { list: listConversations, get: getConversation } = useConversations()
 const expandingId = ref('')
+const expandingParallelId = ref('')
+const viewMode = ref<ViewMode>('card')
+const showLimits = ref(false)
+const limitsSaving = ref(false)
+const limitsEditing = ref<AgentTeam | null>(null)
+const limitsForm = reactive({
+  max_depth: 8,
+  max_steps: 40,
+  worker_retry_once: false,
+})
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
 
@@ -178,6 +352,16 @@ const lastFailHint = ref('')
 const deleteVisible = ref(false)
 const deletingLoading = ref(false)
 const deleting = ref<AgentTeam | null>(null)
+const regenVisible = ref(false)
+const regenLoading = ref(false)
+const regenTeam = ref<AgentTeam | null>(null)
+const regenLayout = ref<'linear' | 'parallel'>('linear')
+const regenConfirmMessage = computed(() => {
+  const name = regenTeam.value?.name ?? ''
+  return regenLayout.value === 'parallel'
+    ? t('teams.regenParallelConfirm', { name })
+    : t('teams.regenPipelineConfirm', { name })
+})
 
 function failHintFromRunState(rs: TeamRunState | null | undefined): string {
   if (!rs) return ''
@@ -199,6 +383,9 @@ const form = reactive({
   mode: 'supervisor' as TeamMode,
   supervisor_agent_id: '',
   member_agent_ids: [] as string[],
+  max_depth: 8,
+  max_steps: 40,
+  worker_retry_once: false,
 })
 
 const modeItems = computed(() => [
@@ -215,6 +402,74 @@ function modeLabel(mode: string) {
   if (mode === 'pipeline') return t('teams.modePipeline')
   if (mode === 'handoff') return t('teams.modeHandoff')
   return t('teams.modeSupervisor')
+}
+
+function configInt(team: AgentTeam, key: string, fallback: number) {
+  const v = team.config?.[key]
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback
+}
+
+function isWorkerRetry(team: AgentTeam) {
+  const v = team.config?.worker_retry_once
+  return v === true || v === 'true' || v === 1 || v === '1'
+}
+
+function memberMeta(team: AgentTeam) {
+  const n = (team.member_agent_ids || []).length
+  const parts = [
+    t('teams.members', { n }),
+    t('teams.limitsMeta', {
+      depth: configInt(team, 'max_depth', 8),
+      steps: configInt(team, 'max_steps', 40),
+    }),
+  ]
+  if (team.supervisor_agent_id) parts.push(t('teams.hasSupervisor'))
+  return parts.join(' · ')
+}
+
+function clampLimit(n: number, min: number, max: number, fallback: number) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return fallback
+  return Math.min(max, Math.max(min, Math.floor(v)))
+}
+
+function openLimits(team: AgentTeam) {
+  limitsEditing.value = team
+  limitsForm.max_depth = configInt(team, 'max_depth', 8)
+  limitsForm.max_steps = configInt(team, 'max_steps', 40)
+  limitsForm.worker_retry_once = isWorkerRetry(team)
+  showLimits.value = true
+}
+
+async function saveLimits() {
+  if (!limitsEditing.value) return
+  const depth = clampLimit(limitsForm.max_depth, 1, 32, 8)
+  const steps = clampLimit(limitsForm.max_steps, 1, 200, 40)
+  limitsSaving.value = true
+  try {
+    const res = await update(limitsEditing.value.id, {
+      config: {
+        ...(limitsEditing.value.config || {}),
+        max_depth: depth,
+        max_steps: steps,
+        worker_retry_once: limitsForm.worker_retry_once,
+      },
+    })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    if (res.data) {
+      const i = teams.value.findIndex(x => x.id === limitsEditing.value!.id)
+      if (i >= 0) teams.value[i] = res.data
+    }
+    toast.add({ title: t('teams.limitsSaved'), color: 'success' })
+    showLimits.value = false
+  }
+  finally {
+    limitsSaving.value = false
+  }
 }
 
 async function fetchAll() {
@@ -243,6 +498,11 @@ async function submitCreate() {
       mode: form.mode,
       supervisor_agent_id: form.supervisor_agent_id || undefined,
       member_agent_ids: form.member_agent_ids,
+      config: {
+        max_depth: clampLimit(form.max_depth, 1, 32, 8),
+        max_steps: clampLimit(form.max_steps, 1, 200, 40),
+        worker_retry_once: form.worker_retry_once,
+      },
     })
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
@@ -253,6 +513,9 @@ async function submitCreate() {
     form.name = ''
     form.description = ''
     form.member_agent_ids = []
+    form.max_depth = 8
+    form.max_steps = 40
+    form.worker_retry_once = false
     await fetchAll()
   }
   finally {
@@ -339,27 +602,74 @@ async function sendPreview() {
   }
 }
 
+/** 已有绑定则只打开；没有则首次生成串行流水线 */
 async function expandPipeline(team: AgentTeam) {
-  if (expandingId.value) return
-  // 已绑定且用户点「打开」：直接进画布；若要重生成仍走 API（同按钮 regenerates then open）
-  expandingId.value = team.id
+  if (team.workflow_id) {
+    await router.push(`/workflows/${team.workflow_id}`)
+    return
+  }
+  await runExpandPipeline(team, 'linear')
+}
+
+/** 并行图：已有工作流时先确认覆盖 */
+function expandParallel(team: AgentTeam) {
+  if (team.workflow_id) {
+    askRegenPipeline(team, 'parallel')
+    return
+  }
+  void runExpandPipeline(team, 'parallel')
+}
+
+function askRegenPipeline(team: AgentTeam, layout: 'linear' | 'parallel') {
+  if (expandingId.value || expandingParallelId.value || regenLoading.value) return
+  regenTeam.value = team
+  regenLayout.value = layout
+  regenVisible.value = true
+}
+
+async function confirmRegenPipeline() {
+  if (!regenTeam.value) return
+  regenLoading.value = true
   try {
-    const res = await apiExpandPipeline(team.id)
+    await runExpandPipeline(regenTeam.value, regenLayout.value)
+    regenVisible.value = false
+    regenTeam.value = null
+  }
+  finally {
+    regenLoading.value = false
+  }
+}
+
+async function runExpandPipeline(team: AgentTeam, layout: 'linear' | 'parallel') {
+  if (expandingId.value || expandingParallelId.value) return
+  const loadingRef = layout === 'parallel' ? expandingParallelId : expandingId
+  loadingRef.value = team.id
+  try {
+    const res = await apiExpandPipeline(
+      team.id,
+      layout === 'parallel' ? { layout: 'parallel' } : undefined,
+    )
     if (res.error) {
       toast.add({ title: res.error, color: 'error' })
       return
     }
     const wfId = res.data?.workflow?.id || res.data?.team?.workflow_id
     if (!wfId) {
-      toast.add({ title: t('teams.genPipelineFail'), color: 'error' })
+      toast.add({
+        title: layout === 'parallel' ? t('teams.genParallelFail') : t('teams.genPipelineFail'),
+        color: 'error',
+      })
       return
     }
-    toast.add({ title: t('teams.genPipelineOk'), color: 'success' })
+    toast.add({
+      title: layout === 'parallel' ? t('teams.genParallelOk') : t('teams.genPipelineOk'),
+      color: 'success',
+    })
     await fetchAll()
     await router.push(`/workflows/${wfId}`)
   }
   finally {
-    expandingId.value = ''
+    loadingRef.value = ''
   }
 }
 
@@ -392,36 +702,39 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.team-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-}
-.team-card {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.team-card__head {
+.header-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
-.team-card__desc {
-  font-size: 13px;
-  opacity: 0.75;
-  min-height: 2.5em;
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
-.team-card__meta {
-  font-size: 12px;
-  opacity: 0.65;
-}
-.team-card__actions {
+.team-name-cell {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  flex-direction: column;
+  gap: 2px;
+}
+.team-mode-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.limits-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.team-name-cell .name {
+  font-weight: 600;
+}
+.team-list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .preview-log {
   max-height: 280px;

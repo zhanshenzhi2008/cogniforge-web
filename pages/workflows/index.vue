@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('flows.title') }}</h1>
         <p class="cf-page-sub">{{ t('flows.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
-        {{ t('flows.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-workflows-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('flows.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -15,18 +18,65 @@
       <span class="list-hint">{{ t('flows.hint') }}</span>
     </div>
 
-    <div class="cf-panel">
-      <div v-if="loading" class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState
+      v-else-if="workflows.length === 0"
+      :icon="CF_ICONS.workflow"
+      :message="t('flows.empty')"
+    />
 
-      <div v-else-if="workflows.length === 0" class="cf-state">
-        <UIcon :name="CF_ICONS.workflow" class="size-8 opacity-50" />
-        <p>{{ t('flows.empty') }}</p>
-      </div>
+    <div v-else-if="viewMode === 'card'" class="flow-grid">
+      <CfResourceCard
+        v-for="workflow in workflows"
+        :key="workflow.id"
+        :icon="CF_ICONS.workflow"
+        :title="workflow.name"
+        :description="workflow.description || t('common.noDesc')"
+        :meta="`v${workflow.version} · ${d(workflow.created_at)}`"
+        :tip="t('flows.hint')"
+        @click="openCanvas(workflow)"
+      >
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="statusColor(workflow.status)"
+          >
+            {{ statusText(workflow.status) }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon"
+            icon="i-lucide-external-link"
+            :tip="t('flows.canvas')"
+            @click="openCanvas(workflow)"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-rocket"
+            :tip="t('flows.run')"
+            @click="handleExecute(workflow)"
+          />
+          <CfButton
+            tone="icon"
+            icon="i-lucide-copy"
+            :tip="t('flows.clone')"
+            :loading="cloningId === workflow.id"
+            @click="handleClone(workflow)"
+          />
+          <CfButton
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(workflow)"
+          />
+        </template>
+      </CfResourceCard>
+    </div>
 
-      <div v-else class="cf-table-wrap">
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
@@ -78,6 +128,13 @@
                     icon="i-lucide-rocket"
                     :tip="t('flows.run')"
                     @click="handleExecute(workflow)"
+                  />
+                  <CfButton
+                    tone="icon"
+                    icon="i-lucide-copy"
+                    :tip="t('flows.clone')"
+                    :loading="cloningId === workflow.id"
+                    @click="handleClone(workflow)"
                   />
                   <CfButton
                     tone="icon-danger"
@@ -136,34 +193,18 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('flows.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('flows.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Workflow } from '@/composables/useWorkflows'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
@@ -175,7 +216,9 @@ const CANVAS_SMOKE_ID = '__canvas_smoke__'
 
 const toast = useToast()
 const { t, d } = useLocale()
-const { list, create, remove, execute } = useWorkflows()
+const { list, create, remove, clone, execute } = useWorkflows()
+const cloningId = ref('')
+const viewMode = ref<ViewMode>('card')
 
 const openSmokeTest = () => {
   navigateTo(`/workflows/${CANVAS_SMOKE_ID}`)
@@ -262,6 +305,21 @@ const handleExecute = async (workflow: Workflow) => {
   toast.add({ title: t('flows.started', { id: res.executionId }), color: 'success' })
 }
 
+const handleClone = async (workflow: Workflow) => {
+  cloningId.value = workflow.id
+  try {
+    const res = await clone(workflow.id)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      return
+    }
+    toast.add({ title: t('flows.cloneOk', { name: res.data?.name || '' }), color: 'success' })
+    await fetchWorkflows()
+  } finally {
+    cloningId.value = ''
+  }
+}
+
 const askDelete = (workflow: Workflow) => {
   deleting.value = workflow
   deleteVisible.value = true
@@ -312,6 +370,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
 
 .list-count {
   font-size: 0.75rem;

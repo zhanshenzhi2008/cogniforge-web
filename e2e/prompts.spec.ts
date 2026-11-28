@@ -1,11 +1,20 @@
 import { test, expect, type Page, type Route } from '@playwright/test'
 import { mockBackend, ok, seedLoggedIn } from './helpers'
 
+type PromptVarDef = {
+  name: string
+  default?: string
+  required?: boolean
+  description?: string
+}
+
 type Prompt = {
   id: string
   name: string
   description?: string
   current_version_id?: string
+  variables?: PromptVarDef[]
+  tags?: string[]
   created_at: string
   updated_at: string
 }
@@ -45,6 +54,58 @@ async function mockPromptAPI(page: Page) {
       return
     }
 
+    if (method === 'POST' && path.endsWith('/api/v1/prompts/import')) {
+      const body = req.postDataJSON() as {
+        agent_id?: string
+        skill_id?: string
+        name?: string
+      }
+      const name = body.name?.trim()
+        || (body.agent_id === 'a-e2e' ? '客服 Agent' : body.skill_id ? 'Skill 提示词' : '导入提示词')
+      const content = body.agent_id
+        ? '你是从 Agent 导入的助手'
+        : '你是从 Skill 导入的助手'
+      const existing = items.find(p => p.name === name)
+      if (existing) {
+        const list = versions.get(existing.id) || []
+        const v: PromptVersion = {
+          id: `pv-${existing.id}-${list.length + 1}`,
+          prompt_id: existing.id,
+          version: list.length + 1,
+          status: 'published',
+          content,
+          created_at: now(),
+        }
+        list.unshift(v)
+        versions.set(existing.id, list)
+        existing.current_version_id = v.id
+        existing.updated_at = now()
+        await json({ prompt: existing, current_version: v })
+        return
+      }
+      const id = `p-imp-${items.length + 1}`
+      const vid = `pv-${id}-1`
+      const p: Prompt = {
+        id,
+        name,
+        current_version_id: vid,
+        created_at: now(),
+        updated_at: now(),
+      }
+      const v: PromptVersion = {
+        id: vid,
+        prompt_id: id,
+        version: 1,
+        status: 'published',
+        content,
+        created_at: now(),
+      }
+      items.push(p)
+      versions.set(id, [v])
+      await json({ prompt: p, current_version: v })
+      return
+    }
+
     if (method === 'POST' && path.endsWith('/api/v1/prompts')) {
       const body = req.postDataJSON() as {
         name?: string
@@ -73,6 +134,82 @@ async function mockPromptAPI(page: Page) {
       versions.set(id, [v])
       await json({ prompt: p, current_version: v })
       return
+    }
+
+    const verAction = path.match(/\/api\/v1\/prompts\/versions\/([^/]+)\/(archive|rollback|publish)$/)
+    if (verAction && method === 'POST') {
+      const vid = verAction[1]!
+      const action = verAction[2]!
+      for (const [pid, list] of versions) {
+        const src = list.find(v => v.id === vid)
+        if (!src) continue
+        const p = items.find(x => x.id === pid)
+        if (!p) continue
+
+        if (action === 'archive') {
+          if (p.current_version_id === vid) {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '不能归档当前版本', data: null }),
+            })
+            return
+          }
+          if (src.status !== 'published') {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '只能归档已发布版本', data: null }),
+            })
+            return
+          }
+          src.status = 'archived'
+          await json(src)
+          return
+        }
+
+        if (action === 'publish') {
+          if (src.status !== 'draft') {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '只能发布草稿', data: null }),
+            })
+            return
+          }
+          src.status = 'published'
+          p.current_version_id = src.id
+          p.updated_at = now()
+          await json({ prompt: p, current_version: src })
+          return
+        }
+
+        if (action === 'rollback') {
+          if (src.status === 'draft') {
+            await route.fulfill({
+              status: 400,
+              contentType: 'application/json',
+              body: JSON.stringify({ code: 400, message: '草稿不能回滚', data: null }),
+            })
+            return
+          }
+          const next: PromptVersion = {
+            id: `pv-${pid}-rb-${list.length + 1}`,
+            prompt_id: pid,
+            version: Math.max(...list.map(v => v.version), 0) + 1,
+            status: 'published',
+            content: src.content,
+            changelog: `回滚自 v${src.version}`,
+            created_at: now(),
+          }
+          list.unshift(next)
+          versions.set(pid, list)
+          p.current_version_id = next.id
+          p.updated_at = now()
+          await json({ prompt: p, current_version: next })
+          return
+        }
+      }
     }
 
     const verOne = path.match(/\/api\/v1\/prompts\/versions\/([^/]+)$/)
@@ -114,6 +251,23 @@ async function mockPromptAPI(page: Page) {
       }
     }
 
+    const usageList = path.match(/\/api\/v1\/prompts\/([^/]+)\/usages$/)
+    if (usageList && method === 'GET') {
+      await json([])
+      return
+    }
+
+    const onePrompt = path.match(/\/api\/v1\/prompts\/([^/]+)$/)
+    if (onePrompt && method === 'GET' && !path.endsWith('/prompts')) {
+      const p = items.find(x => x.id === onePrompt[1])
+      if (p) {
+        const list = versions.get(p.id) || []
+        const current = list.find(v => v.id === p.current_version_id) || list[0] || null
+        await json({ prompt: p, current_version: current })
+        return
+      }
+    }
+
     const verList = path.match(/\/api\/v1\/prompts\/([^/]+)\/versions$/)
     if (verList) {
       const pid = verList[1]
@@ -144,6 +298,64 @@ async function mockPromptAPI(page: Page) {
         await json(v)
         return
       }
+    }
+
+    const renderPath = path.match(/\/api\/v1\/prompts\/([^/]+)\/render$/)
+    if (renderPath && method === 'POST') {
+      const pid = renderPath[1]!
+      const p = items.find(x => x.id === pid)
+      const body = req.postDataJSON() as {
+        version_id?: string
+        variables?: Record<string, string>
+      }
+      const list = versions.get(pid) || []
+      const ver = list.find(v => v.id === body.version_id) || list[0]
+      if (!p || !ver) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 404, message: 'not found', data: null }),
+        })
+        return
+      }
+      let content = ver.content
+      const vars = body.variables || {}
+      for (const [k, v] of Object.entries(vars)) {
+        content = content.split(`{{${k}}}`).join(v)
+      }
+      await json({
+        content,
+        var_names: Object.keys(vars),
+        version_id: ver.id,
+        version: ver.version,
+      })
+      return
+    }
+
+    if (method === 'PUT' && path.match(/\/api\/v1\/prompts\/[^/]+$/)) {
+      const id = path.split('/').pop()!
+      const p = items.find(x => x.id === id)
+      if (!p) {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 404, message: 'not found', data: null }),
+        })
+        return
+      }
+      const body = req.postDataJSON() as {
+        name?: string
+        description?: string
+        variables?: PromptVarDef[]
+        tags?: string[]
+      }
+      if (body.name != null) p.name = body.name
+      if (body.description != null) p.description = body.description
+      if (body.variables) p.variables = body.variables
+      if (body.tags) p.tags = body.tags
+      p.updated_at = now()
+      await json(p)
+      return
     }
 
     if (method === 'DELETE' && path.match(/\/api\/v1\/prompts\/[^/]+$/)) {
@@ -198,5 +410,174 @@ test.describe('prompts e2e', () => {
     await verCards.nth(1).locator('button').last().click()
     await page.locator('[role="dialog"]').getByRole('button', { name: '删除' }).click()
     await expect(verCards).toHaveCount(1)
+  })
+
+  test('save draft then publish as current', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('草稿发布')
+    await page.getByPlaceholder('System prompt 正文').fill('正文-v1')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '草稿发布' })).toBeVisible()
+
+    await page.getByRole('button', { name: '发布新版本' }).click()
+    await page.getByPlaceholder('System prompt 正文').fill('正文-草稿')
+    await page.getByPlaceholder('本版改了什么').fill('先存草稿')
+    await page.getByLabel('立即发布并设为当前').uncheck()
+    await page.getByRole('button', { name: '创建' }).click()
+
+    const verCards = page.locator('.ver-card')
+    await expect(verCards).toHaveCount(2)
+    await expect(verCards.first().getByText('草稿', { exact: true })).toBeVisible()
+    await expect(verCards.first().getByText('正文-草稿', { exact: true })).toBeVisible()
+
+    await verCards.first().getByRole('button', { name: '发布' }).click()
+    await expect(verCards.first().getByText('已发布', { exact: true })).toBeVisible()
+    await expect(verCards.first().getByText('当前', { exact: true })).toBeVisible()
+    await expect(page.getByText('正文-草稿', { exact: true })).toBeVisible()
+  })
+
+  test('try run with required variables', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+    await page.route(/\/api\/v1\/chat\/stream$/, async (route) => {
+      const chunk = JSON.stringify({ choices: [{ delta: { content: '试跑回答：你好，小明' } }] })
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        headers: { 'Cache-Control': 'no-cache' },
+        body: `data: ${chunk}\n\ndata: [DONE]\n\n`,
+      })
+    })
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('变量试跑')
+    await page.getByPlaceholder('System prompt 正文').fill('你好，{{name}}')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '变量试跑' })).toBeVisible()
+
+    await page.getByRole('button', { name: '加变量' }).click()
+    await page.getByPlaceholder('变量名').fill('name')
+    await page.getByLabel('必填').check()
+    await page.getByRole('button', { name: '保存变量' }).click()
+    await expect(page.getByText('保存成功', { exact: true })).toBeVisible()
+
+    await page.getByPlaceholder('用户要说的话，例如：你好，介绍一下你自己').fill('介绍一下')
+    await page.getByRole('button', { name: '试跑', exact: true }).click()
+    await expect(page.getByText('缺少必填变量：name', { exact: true })).toBeVisible()
+
+    await page.locator('.pvf-input input').fill('小明')
+    await page.getByRole('button', { name: '试跑', exact: true }).click()
+    await expect(page.getByText('试跑回答：你好，小明', { exact: true })).toBeVisible()
+  })
+
+  test('show bound agents in prompt usages', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('绑定展示')
+    await page.getByPlaceholder('System prompt 正文').fill('绑定正文')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '绑定展示' })).toBeVisible()
+    await expect(page.getByText('还没有 Agent 绑定这条提示词')).toBeVisible()
+
+    await page.getByRole('button', { name: '返回列表' }).click()
+    await expect(page.getByText('还没有提示词')).toBeHidden()
+
+    await page.route(/\/api\/v1\/prompts\/[^/]+\/usages$/, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue()
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(ok([
+          { agent_id: 'a-bound', agent_name: '客服 Agent' },
+        ])),
+      })
+    })
+
+    await page.getByText('绑定展示', { exact: true }).click()
+    await expect(page.getByRole('heading', { name: '绑定展示' })).toBeVisible()
+    await expect(page.getByText('被哪些 Agent 使用')).toBeVisible()
+    await expect(page.getByText('客服 Agent')).toBeVisible()
+    await expect(page.getByText('还没有 Agent 绑定这条提示词')).toBeHidden()
+  })
+
+  test('import prompt from agent', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+    // LIFO：覆盖 helpers 里空 agents 列表
+    await page.route(/\/api\/v1\/agents$/, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue()
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(ok([
+          { id: 'a-e2e', name: '客服 Agent', description: '', model: 'deepseek-chat' },
+        ])),
+      })
+    })
+
+    await page.goto('/prompts')
+    await expect(page.getByText('还没有提示词')).toBeVisible()
+    await page.getByRole('button', { name: '导入提示词' }).click()
+    await expect(page.getByRole('heading', { name: '导入提示词' })).toBeVisible()
+
+    await page.getByRole('combobox').filter({ hasText: '选择 Agent' }).click()
+    await page.getByRole('option', { name: '客服 Agent' }).click()
+    await page.getByRole('button', { name: '创建' }).click()
+
+    await expect(page.getByText('已导入为新提示词')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '客服 Agent' })).toBeVisible()
+    await expect(page.getByText('你是从 Agent 导入的助手')).toBeVisible()
+    await expect(page.getByText('v1', { exact: true })).toBeVisible()
+  })
+
+  test('archive old version then rollback publish', async ({ page }) => {
+    await seedLoggedIn(page)
+    await mockBackend(page)
+    await mockPromptAPI(page)
+
+    await page.goto('/prompts')
+    await page.getByRole('button', { name: '新建提示词' }).click()
+    await page.getByPlaceholder('例如：客服人设').fill('归档回滚')
+    await page.getByPlaceholder('System prompt 正文').fill('正文-v1')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByRole('heading', { name: '归档回滚' })).toBeVisible()
+
+    await page.getByRole('button', { name: '发布新版本' }).click()
+    await page.getByPlaceholder('System prompt 正文').fill('正文-v2')
+    await page.getByPlaceholder('本版改了什么').fill('第二版')
+    await page.getByRole('button', { name: '创建' }).click()
+    await expect(page.getByText('正文-v2')).toBeVisible()
+
+    const verCards = page.locator('.ver-card')
+    await expect(verCards).toHaveCount(2)
+    // v1 在下方；点「归档」
+    await verCards.nth(1).getByRole('button', { name: '归档' }).click()
+    await expect(verCards.nth(1).getByText('已归档')).toBeVisible()
+
+    await verCards.nth(1).getByRole('button', { name: '回滚发版' }).click()
+    // exact：避免与 toast 的 aria-live「Notification …」重复匹配触发 strict mode
+    await expect(page.getByText('已回滚发版为 v3', { exact: true })).toBeVisible()
+    await expect(verCards).toHaveCount(3)
+    await expect(verCards.first().getByText('v3', { exact: true })).toBeVisible()
+    await expect(verCards.first().getByText('当前')).toBeVisible()
+    await expect(page.getByText('回滚自 v1')).toBeVisible()
   })
 })

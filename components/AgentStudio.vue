@@ -21,6 +21,34 @@
         </button>
       </div>
       <div class="studio-top__right">
+        <CfButton
+          v-if="agentId"
+          tone="secondary"
+          icon="i-lucide-history"
+          :tip="t('agents.studioVersions')"
+          @click="openVersions"
+        >
+          {{ t('agents.studioVersions') }}
+          <span v-if="currentVersion" class="studio-ver-badge">v{{ currentVersion }}</span>
+        </CfButton>
+        <CfButton
+          v-if="agentId"
+          tone="secondary"
+          icon="i-lucide-share-2"
+          :tip="t('agents.studioPublish')"
+          @click="openPublish"
+        >
+          {{ t('agents.studioPublish') }}
+        </CfButton>
+        <CfButton
+          v-if="agentId"
+          tone="secondary"
+          icon="i-lucide-scroll-text"
+          :tip="t('agents.studioChatLogs')"
+          @click="openChatLogs"
+        >
+          {{ t('agents.studioChatLogs') }}
+        </CfButton>
         <span class="studio-save-state" :class="{ 'studio-save-state--ok': !dirty }">
           ● {{ dirty ? t('agents.studioUnsaved') : t('agents.studioSaved') }}
         </span>
@@ -34,6 +62,136 @@
         </CfButton>
       </div>
     </header>
+
+    <USlideover v-model:open="chatLogsOpen" :title="t('agents.studioChatLogs')" :ui="{ content: 'max-w-sm w-full' }">
+      <template #body>
+        <div class="chat-logs">
+          <p class="chat-logs__hint">{{ t('agents.studioChatLogsHint') }}</p>
+          <CfLoadingState v-if="chatLogsLoading" />
+          <CfEmptyState
+            v-else-if="!chatLogs.length"
+            icon="i-lucide-scroll-text"
+            :message="t('agents.studioChatLogsEmpty')"
+          >
+            <template #action>
+              <CfButton tone="primary" icon="i-lucide-messages-square" @click="goPlaygroundNew">
+                {{ t('agents.studioOpenPlayground') }}
+              </CfButton>
+            </template>
+          </CfEmptyState>
+          <ul v-else class="chat-logs__list">
+            <li v-for="item in chatLogs" :key="item.id">
+              <button type="button" class="chat-logs__item" @click="openConversation(item.id)">
+                <span class="chat-logs__title">{{ item.title || t('play.newChat') }}</span>
+                <span class="chat-logs__time">{{ formatChatLogTime(item.updated_at) }}</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </template>
+    </USlideover>
+
+    <USlideover v-model:open="publishOpen" :title="t('agents.studioPublishTitle')" :ui="{ content: 'max-w-md w-full' }">
+      <template #body>
+        <div class="publish-panel">
+          <p class="chat-logs__hint">{{ t('agents.studioPublishHint') }}</p>
+
+          <section class="publish-block">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-globe" class="size-3.5" />
+              {{ t('agents.studioPublishWeb') }}
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishWebDesc') }}</p>
+            <pre class="publish-code">{{ publishWebLink }}</pre>
+            <div class="publish-actions">
+              <CfButton tone="secondary" icon="i-lucide-copy" @click="copyText(publishWebLink, 'web')">
+                {{ t('common.copy') }}
+              </CfButton>
+              <CfButton tone="secondary" icon="i-lucide-external-link" @click="openPublishWeb">
+                {{ t('agents.studioPublishOpen') }}
+              </CfButton>
+            </div>
+          </section>
+
+          <section class="publish-block">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-code-xml" class="size-3.5" />
+              {{ t('agents.studioPublishApi') }}
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishApiDesc') }}</p>
+            <pre class="publish-code">{{ publishApiCurl }}</pre>
+            <div class="publish-actions">
+              <CfButton tone="secondary" icon="i-lucide-copy" @click="copyText(publishApiCurl, 'api')">
+                {{ t('common.copy') }}
+              </CfButton>
+            </div>
+          </section>
+
+          <section class="publish-block">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-app-window" class="size-3.5" />
+              {{ t('agents.studioPublishEmbed') }}
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishEmbedDesc') }}</p>
+            <pre class="publish-code">{{ publishEmbedHtml }}</pre>
+            <div class="publish-actions">
+              <CfButton tone="secondary" icon="i-lucide-copy" @click="copyText(publishEmbedHtml, 'embed')">
+                {{ t('common.copy') }}
+              </CfButton>
+            </div>
+          </section>
+
+          <section class="publish-block publish-block--soon">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-messages-square" class="size-3.5" />
+              {{ t('agents.studioPublishIm') }}
+              <UBadge size="sm" variant="subtle" color="neutral">{{ t('common.comingSoon') }}</UBadge>
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioPublishImDesc') }}</p>
+          </section>
+
+          <section class="publish-block publish-block--soon">
+            <h3 class="publish-block__title">
+              <UIcon name="i-lucide-monitor" class="size-3.5" />
+              {{ t('agents.studioVm') }}
+              <UBadge size="sm" variant="subtle" color="neutral">{{ t('common.comingSoon') }}</UBadge>
+            </h3>
+            <p class="publish-block__desc">{{ t('agents.studioVmDesc') }}</p>
+          </section>
+        </div>
+      </template>
+    </USlideover>
+
+    <USlideover v-model:open="versionsOpen" :title="t('agents.studioVersionsTitle')" :ui="{ content: 'max-w-sm w-full' }">
+      <template #body>
+        <div class="chat-logs">
+          <p class="chat-logs__hint">{{ t('agents.studioVersionsHint') }}</p>
+          <CfLoadingState v-if="versionsLoading" />
+          <CfEmptyState
+            v-else-if="!versionList.length"
+            icon="i-lucide-history"
+            :message="t('agents.studioVersionsEmpty')"
+          />
+          <ul v-else class="chat-logs__list">
+            <li v-for="v in versionList" :key="v.id" class="version-row">
+              <div class="version-row__meta">
+                <strong>v{{ v.version }}</strong>
+                <span class="chat-logs__time">{{ formatChatLogTime(v.created_at) }}</span>
+                <span v-if="v.note" class="version-row__note">{{ v.note }}</span>
+              </div>
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-undo-2"
+                :loading="rollingBackVersion === v.version"
+                @click="askRollback(v.version)"
+              >
+                {{ t('agents.studioRollback') }}
+              </CfButton>
+            </li>
+          </ul>
+        </div>
+      </template>
+    </USlideover>
 
     <div class="studio-body">
       <!-- Left: configuration -->
@@ -75,14 +233,83 @@
 
         <section class="cfg-block">
           <label class="cfg-label">{{ t('agents.systemPrompt') }}</label>
+          <div class="cfg-prompt-wrap">
+            <UTextarea
+              ref="promptTextareaRef"
+              v-model="form.system_prompt"
+              class="w-full cfg-prompt"
+              :rows="8"
+              :placeholder="form.prompt_id ? t('agents.studioPromptPh') : t('agents.studioPromptMentionPh')"
+              :disabled="!!form.prompt_id"
+              @update:model-value="onPromptInput"
+              @keydown="onPromptKeydown"
+            />
+            <PromptMentionMenu
+              ref="mentionMenuRef"
+              :open="mentionOpen"
+              :items="mentionItems"
+              :hint="mentionHint"
+              :aria-label="t('agents.studioPromptMentionAria')"
+              @pick="pickMention"
+              @close="closeMention"
+            />
+          </div>
+          <p v-if="!form.prompt_id" class="cfg-hint">{{ t('agents.studioPromptMentionHint') }}</p>
+        </section>
+
+        <section class="cfg-block">
+          <label class="cfg-label">{{ t('agents.openingMessage') }}</label>
           <UTextarea
-            v-model="form.system_prompt"
-            class="w-full cfg-prompt"
-            :rows="8"
-            :placeholder="t('agents.studioPromptPh')"
-            :disabled="!!form.prompt_id"
+            v-model="form.opening_message"
+            class="w-full"
+            :rows="2"
+            :placeholder="t('agents.openingMessagePh')"
             @update:model-value="markDirty"
           />
+          <p class="cfg-hint">{{ t('agents.openingMessageHint') }}</p>
+        </section>
+
+        <section class="cfg-block">
+          <label class="cfg-label">{{ t('agents.suggestedPrompts') }}</label>
+          <div class="suggested-list">
+            <div
+              v-for="(_item, idx) in form.suggested_prompts"
+              :key="idx"
+              class="suggested-row"
+            >
+              <UInput
+                v-model="form.suggested_prompts[idx]"
+                class="w-full"
+                :placeholder="t('agents.suggestedPromptPh', { n: idx + 1 })"
+                @update:model-value="markDirty"
+              />
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-x"
+                :aria-label="t('common.delete')"
+                @click="removeSuggested(idx)"
+              />
+            </div>
+            <div class="suggested-actions">
+              <CfButton
+                v-if="form.suggested_prompts.length < 6"
+                tone="secondary"
+                icon="i-lucide-plus"
+                @click="addSuggested"
+              >
+                {{ t('agents.addSuggestedPrompt') }}
+              </CfButton>
+              <CfButton
+                tone="secondary"
+                icon="i-lucide-sparkles"
+                :disabled="form.suggested_prompts.filter(s => s.trim()).length >= 6"
+                @click="fillGuessedSuggested"
+              >
+                {{ t('agents.fillGuessedPrompts') }}
+              </CfButton>
+            </div>
+          </div>
+          <p class="cfg-hint">{{ t('agents.suggestedPromptsHint') }}</p>
         </section>
 
         <section class="cfg-row">
@@ -114,6 +341,50 @@
               @update:model-value="(checked: boolean) => toggleTool(tool.value, checked)"
             />
           </div>
+        </section>
+
+        <section class="cfg-row cfg-row--stack">
+          <div class="cfg-row__main">
+            <UIcon :name="CF_ICONS.knowledge" class="size-4" />
+            <span>{{ t('agents.boundKnowledge') }}</span>
+          </div>
+          <div class="tools">
+            <p v-if="!kbOptions.length" class="cfg-hint">{{ t('agents.boundKnowledgeEmpty') }}</p>
+            <UCheckbox
+              v-for="kb in kbOptions"
+              :key="kb.value"
+              :model-value="form.rag_kb_ids.includes(kb.value)"
+              :label="kb.label"
+              :ui="toolCheckboxUi"
+              @update:model-value="(checked: boolean) => toggleKnowledge(kb.value, checked)"
+            />
+          </div>
+          <p class="cfg-hint">{{ t('agents.boundKnowledgeHint') }}</p>
+        </section>
+
+        <section class="cfg-row">
+          <div class="cfg-row__main">
+            <UIcon name="i-lucide-paperclip" class="size-4" />
+            <span>{{ t('agents.allowAttachments') }}</span>
+          </div>
+          <div class="status-row">
+            <USwitch v-model="form.allow_attachments" @update:model-value="markDirty" />
+            <span>{{ form.allow_attachments ? t('common.enabled') : t('common.disabled') }}</span>
+          </div>
+          <p class="cfg-hint">{{ t('agents.allowAttachmentsHint') }}</p>
+        </section>
+
+        <section class="cfg-row cfg-row--soon">
+          <div class="cfg-row__main">
+            <UIcon name="i-lucide-monitor" class="size-4" />
+            <span>{{ t('agents.studioVm') }}</span>
+            <UBadge size="sm" variant="subtle" color="neutral">{{ t('common.comingSoon') }}</UBadge>
+          </div>
+          <div class="status-row">
+            <USwitch :model-value="false" disabled />
+            <span>{{ t('common.disabled') }}</span>
+          </div>
+          <p class="cfg-hint">{{ t('agents.studioVmHint') }}</p>
         </section>
 
         <section class="cfg-row">
@@ -158,7 +429,13 @@
                 <div class="flex flex-col gap-1.5 text-left">
                   <strong class="text-sm">{{ t('agents.studioBuild') }}</strong>
                   <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioBuildTip') }}</p>
-                  <span class="text-xs font-medium underline underline-offset-2 opacity-95">{{ t('agents.studioLearnMore') }}</span>
+                  <NuxtLink
+                    to="/help/agent-studio"
+                    class="text-xs font-medium underline underline-offset-2 opacity-95 hover:opacity-100"
+                    @click.stop
+                  >
+                    {{ t('agents.studioLearnMore') }}
+                  </NuxtLink>
                 </div>
               </template>
             </UTooltip>
@@ -188,6 +465,13 @@
                 <div class="flex flex-col gap-1.5 text-left">
                   <strong class="text-sm">{{ t('agents.studioPreview') }}</strong>
                   <p class="text-xs leading-relaxed opacity-90">{{ t('agents.studioPreviewTip') }}</p>
+                  <NuxtLink
+                    to="/help/agent-studio"
+                    class="text-xs font-medium underline underline-offset-2 opacity-95 hover:opacity-100"
+                    @click.stop
+                  >
+                    {{ t('agents.studioLearnMore') }}
+                  </NuxtLink>
                 </div>
               </template>
             </UTooltip>
@@ -201,13 +485,51 @@
           :status="chatStatus"
           :placeholder="stagePlaceholder"
           :submit-label="stageSubmitLabel"
-          :submit-disabled="chatBusy || !composer.trim() || (stage === 'preview' && !agentId)"
+          :submit-disabled="composerSubmitDisabled"
           :markdown="true"
           composer-wrap-class="stage-composer-wrap"
           prompt-class="stage-prompt"
           @submit="sendComposer"
           @stop="stopActiveStream"
         >
+          <template v-if="stage === 'preview' && form.allow_attachments" #before-composer>
+            <div v-if="pendingAttachments.length" class="stage-pending">
+              <div
+                v-for="att in pendingAttachments"
+                :key="att.localId"
+                class="stage-pending__chip"
+              >
+                <UIcon name="i-lucide-file-text" class="size-3.5 shrink-0" />
+                <span class="stage-pending__name">{{ att.name }}</span>
+                <span class="stage-pending__st">{{ att.status }}</span>
+                <button
+                  type="button"
+                  class="stage-pending__rm"
+                  :aria-label="t('common.delete')"
+                  @click="removePendingAttachment(att.localId)"
+                >
+                  <UIcon name="i-lucide-x" class="size-3.5" />
+                </button>
+              </div>
+            </div>
+          </template>
+          <template v-if="stage === 'preview' && form.allow_attachments" #composer-actions>
+            <input
+              ref="fileInput"
+              type="file"
+              class="sr-only"
+              :accept="CHAT_DOC_ACCEPT"
+              multiple
+              @change="onFileInputChange"
+            >
+            <CfButton
+              tone="secondary"
+              icon="i-lucide-paperclip"
+              :tip="t('play.attachFile')"
+              :disabled="chatBusy || !agentId || pendingAttachments.length >= CHAT_DOC_MAX_COUNT"
+              @click="fileInput?.click()"
+            />
+          </template>
           <template #empty>
             <div class="stage-hero">
               <div class="stage-hero__mark" aria-hidden="true">
@@ -217,8 +539,29 @@
                 {{ stage === 'build' ? t('agents.studioBuildHeroTitle') : t('agents.studioPreviewHeroTitle') }}
               </h2>
               <p class="stage-hero__sub">
-                {{ stage === 'build' ? t('agents.studioBuildHeroSub') : t('agents.studioPreviewHeroSub') }}
+                {{
+                  stage === 'build'
+                    ? t('agents.studioBuildHeroSub')
+                    : (form.opening_message.trim() || t('agents.studioPreviewHeroSub'))
+                }}
               </p>
+              <div
+                v-if="stage === 'preview' && previewChips.length"
+                class="stage-suggested"
+              >
+                <p v-if="previewChipsAreGuessed" class="stage-suggested__label">
+                  {{ t('agents.guessYouWant') }}
+                </p>
+                <CfButton
+                  v-for="chip in previewChips"
+                  :key="chip"
+                  tone="secondary"
+                  icon="i-lucide-sparkles"
+                  @click="sendSuggestion(chip)"
+                >
+                  {{ chip }}
+                </CfButton>
+              </div>
               <p
                 v-if="stage === 'build' && !agentId"
                 class="stage-hero__warn"
@@ -261,14 +604,28 @@
         </CfChatPanel>
       </section>
     </div>
+
+    <CfConfirmModal
+      v-model:open="rollbackOpen"
+      :title="t('agents.studioRollback')"
+      :message="t('agents.studioRollbackConfirm', { v: pendingRollbackVersion ?? '' })"
+      confirm-icon="i-lucide-undo-2"
+      :loading="rollingBackVersion != null"
+      @confirm="doRollback"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Agent, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
+import type { Agent, AgentVersionSnap, CreateAgentInput, UpdateAgentInput } from '@/composables/useAgents'
 import type { ChatMessage } from '@/composables/useAgentChat'
+import type { ConversationSummary } from '@/composables/useConversations'
+import type { KnowledgeBase } from '@/composables/useKnowledgeBases'
 import type { McpServer } from '@/composables/useMcpServers'
 import type { Skill } from '@/composables/useSkills'
+import PromptMentionMenu from '@/components/PromptMentionMenu.vue'
+import type { PromptMentionItem } from '@/components/PromptMentionMenu.vue'
+import { CF_ICONS } from '~/constants/icons'
 import {
   detectUnsupportedBuildIntents,
   extractAgentBuildConfig,
@@ -277,9 +634,28 @@ import {
   stripAgentBuildFence,
   type UnsupportedBuildKind,
 } from '~/utils/agentBuildConfig'
+import {
+  assertDocBatch,
+  CHAT_DOC_ACCEPT,
+  CHAT_DOC_MAX_COUNT,
+  ChatDocError,
+  guessChatDocType,
+  partitionChatDocs,
+  toSendAttachments,
+  type PendingAttachment,
+} from '~/utils/chatAttachments'
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
 import type { CfChatStatus } from '~/utils/chatUi'
-import { CF_ICONS } from '~/constants/icons'
+import { resolveApiBase } from '~/utils/apiBase'
+import { guessSuggestedPrompts } from '~/utils/guessSuggestedPrompts'
+import {
+  DEFAULT_PROMPT_VAR_SUGGESTIONS,
+  detectMentionTrigger,
+  extractVarNames,
+  formatVarInsert,
+  replaceRange,
+  type MentionTrigger,
+} from '~/utils/promptInsert'
 
 const props = defineProps<{
   mode: 'create' | 'edit'
@@ -292,19 +668,70 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
-const { t } = useLocale()
-const { create, update } = useAgents()
+const { t, d, locale } = useLocale()
+const { create, update, listVersions, rollbackVersion } = useAgents()
 const { streamChat: streamAgentChat, streaming: agentStreaming, stopStream: stopAgentStream, error: agentChatError } = useAgentChat()
 const { streamChat: streamModelChat, streaming: buildStreaming, stopStream: stopBuildStream, error: buildChatError } = useChatStream()
 const { list: listMcpServers } = useMcpServers()
 const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 const { list: listPrompts } = usePrompts()
+const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
+const { list: listConversations } = useConversations()
+
+const promptTextareaRef = ref<{ $el?: HTMLElement } | null>(null)
+const mentionMenuRef = ref<{ onKey: (e: KeyboardEvent) => boolean } | null>(null)
+const mentionOpen = ref(false)
+const mentionTrigger = ref<MentionTrigger | null>(null)
+const mentionItems = ref<PromptMentionItem[]>([])
 
 const saving = ref(false)
 const dirty = ref(false)
 const stage = ref<'build' | 'preview'>('build')
 const composer = ref('')
+const pendingAttachments = ref<PendingAttachment[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
+const studioUploadKBId = ref('')
+const chatLogsOpen = ref(false)
+const chatLogsLoading = ref(false)
+const chatLogs = ref<ConversationSummary[]>([])
+const versionsOpen = ref(false)
+const versionsLoading = ref(false)
+const versionList = ref<AgentVersionSnap[]>([])
+const rollingBackVersion = ref<number | null>(null)
+const currentVersion = ref<number | null>(null)
+const publishOpen = ref(false)
+const copiedKey = ref<'web' | 'api' | 'embed' | ''>('')
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+const runtimeConfig = useRuntimeConfig()
+const siteOrigin = computed(() => {
+  if (import.meta.client) return window.location.origin
+  return ''
+})
+const publishWebLink = computed(() => {
+  if (!agentId.value) return ''
+  return `${siteOrigin.value}/playground?agent=${encodeURIComponent(agentId.value)}`
+})
+const publishApiBase = computed(() => {
+  const base = resolveApiBase(String(runtimeConfig.public?.apiBase ?? ''))
+  if (base) return base
+  return siteOrigin.value || 'https://cogniforge.example.com'
+})
+const publishApiCurl = computed(() => {
+  if (!agentId.value) return ''
+  const url = `${publishApiBase.value}/api/v1/agents/${agentId.value}/chat`
+  return [
+    `curl -N -X POST '${url}' \\`,
+    `  -H 'Authorization: Bearer <API_KEY_OR_JWT>' \\`,
+    `  -H 'Content-Type: application/json' \\`,
+    `  -d '{"messages":[{"role":"user","content":"你好"}],"stream":true}'`,
+  ].join('\n')
+})
+const publishEmbedHtml = computed(() => {
+  if (!publishWebLink.value) return ''
+  return `<iframe\n  src="${publishWebLink.value}"\n  title="CogniForge Agent"\n  style="width:100%;height:640px;border:0;border-radius:12px"\n  allow="clipboard-write"\n></iframe>`
+})
 const stageTipContent = {
   side: 'bottom' as const,
   align: 'start' as const,
@@ -317,6 +744,7 @@ const toolCheckboxUi = {
   base: 'rounded-sm ring-1 ring-inset ring-[color-mix(in_oklab,var(--cf-ink)_45%,transparent)] bg-[var(--cf-bg-elevated,#fff)]',
 }
 const mcpServers = ref<McpServer[]>([])
+const knowledgeBases = ref<KnowledgeBase[]>([])
 const skills = ref<Skill[]>([])
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const promptOptions = ref<{ label: string; value: string }[]>([{ label: '—', value: '' }])
@@ -331,6 +759,10 @@ const form = reactive({
   model: '',
   system_prompt: '',
   prompt_id: '',
+  opening_message: '',
+  suggested_prompts: [] as string[],
+  rag_kb_ids: [] as string[],
+  allow_attachments: false,
   tools: [] as string[],
   skill_id: '',
 })
@@ -343,6 +775,69 @@ const chatStatus = computed<CfChatStatus>(() => (chatBusy.value ? 'streaming' : 
 const activeMessages = computed(() =>
   stage.value === 'build' ? buildMessages.value : previewMessages.value,
 )
+const previewSuggested = computed(() =>
+  form.suggested_prompts.map(s => s.trim()).filter(Boolean).slice(0, 6),
+)
+const previewChipsAreGuessed = computed(() => previewSuggested.value.length === 0)
+const previewChips = computed(() => {
+  if (previewSuggested.value.length) return previewSuggested.value
+  return guessSuggestedPrompts({
+    name: form.name,
+    description: form.description,
+    locale: locale.value,
+    max: 3,
+  })
+})
+const hasReadyAttachments = computed(() =>
+  pendingAttachments.value.some(a => a.id && a.status !== 'failed' && a.status !== 'uploading'),
+)
+const attachmentsUploading = computed(() =>
+  pendingAttachments.value.some(a => a.status === 'uploading'),
+)
+const composerSubmitDisabled = computed(() => {
+  if (chatBusy.value) return true
+  if (stage.value === 'preview' && !agentId.value) return true
+  if (attachmentsUploading.value) return true
+  const hasText = !!composer.value.trim()
+  const canAttach = stage.value === 'preview' && form.allow_attachments && hasReadyAttachments.value
+  return !hasText && !canAttach
+})
+
+function addSuggested() {
+  if (form.suggested_prompts.length >= 6) return
+  form.suggested_prompts.push('')
+  markDirty()
+}
+
+function removeSuggested(idx: number) {
+  form.suggested_prompts.splice(idx, 1)
+  markDirty()
+}
+
+function fillGuessedSuggested() {
+  const existing = form.suggested_prompts.map(s => s.trim()).filter(Boolean)
+  const room = 6 - existing.length
+  if (room <= 0) return
+  const guessed = guessSuggestedPrompts({
+    name: form.name,
+    description: form.description,
+    locale: locale.value,
+    max: room,
+  }).filter(g => !existing.includes(g))
+  if (!guessed.length) {
+    toast.add({ title: t('agents.fillGuessedEmpty'), color: 'warning' })
+    return
+  }
+  form.suggested_prompts = [...existing, ...guessed].slice(0, 6)
+  markDirty()
+  toast.add({ title: t('agents.fillGuessedOk', { n: guessed.length }), color: 'success' })
+}
+
+function sendSuggestion(text: string) {
+  if (!text.trim() || chatBusy.value) return
+  composer.value = text
+  void sendComposer()
+}
 
 const stagePlaceholder = computed(() =>
   stage.value === 'build'
@@ -390,13 +885,281 @@ const toolOptions = computed(() =>
   })),
 )
 
+const kbOptions = computed(() =>
+  knowledgeBases.value
+    .filter(kb => kb.status === 'active')
+    .map(kb => ({ label: kb.name, value: kb.id })),
+)
+
 const skillOptions = computed(() => [
   { label: t('agents.clearSkill'), value: '' },
   ...skills.value.map((s) => ({ label: `${s.icon || ''} ${s.name}`.trim(), value: s.id })),
 ])
 
+const mentionHint = computed(() =>
+  mentionTrigger.value?.kind === '@'
+    ? t('agents.studioPromptAtHint')
+    : t('agents.studioPromptSlashHint'),
+)
+
+function getPromptNativeTextarea(): HTMLTextAreaElement | null {
+  const root = promptTextareaRef.value?.$el
+  if (!root) return null
+  if (root instanceof HTMLTextAreaElement) return root
+  return root.querySelector?.('textarea') ?? null
+}
+
+function closeMention() {
+  mentionOpen.value = false
+  mentionTrigger.value = null
+  mentionItems.value = []
+}
+
+function buildSlashItems(query: string): PromptMentionItem[] {
+  const q = query.trim().toLowerCase()
+  const fromText = extractVarNames(form.system_prompt)
+  const names = [...new Set([...fromText, ...DEFAULT_PROMPT_VAR_SUGGESTIONS])]
+  const filtered = names.filter(n => !q || n.toLowerCase().includes(q))
+  const items: PromptMentionItem[] = filtered.slice(0, 12).map(name => ({
+    id: `var:${name}`,
+    label: `{{${name}}}`,
+    group: t('agents.studioPromptVarGroup'),
+    icon: 'i-lucide-braces',
+    insert: `${formatVarInsert(name)} `,
+    kind: 'var',
+  }))
+  if (q && /^[a-zA-Z_][\w]*$/.test(q) && !names.some(n => n.toLowerCase() === q)) {
+    items.unshift({
+      id: `var-new:${q}`,
+      label: formatVarInsert(q),
+      group: t('agents.studioPromptVarNew'),
+      icon: 'i-lucide-plus',
+      insert: `${formatVarInsert(q)} `,
+      kind: 'var',
+    })
+  }
+  return items
+}
+
+function buildAtItems(query: string): PromptMentionItem[] {
+  const q = query.trim().toLowerCase()
+  const match = (label: string) => !q || label.toLowerCase().includes(q)
+  const items: PromptMentionItem[] = []
+  for (const s of skills.value) {
+    if (!match(s.name)) continue
+    items.push({
+      id: `skill:${s.id}`,
+      label: s.name,
+      group: t('agents.skill'),
+      icon: 'i-lucide-sparkles',
+      insert: `[@${t('agents.skill')}: ${s.name}] `,
+      kind: 'skill',
+      resourceId: s.id,
+    })
+  }
+  for (const srv of mcpServers.value) {
+    if (!match(srv.name)) continue
+    items.push({
+      id: `tool:${srv.id}`,
+      label: srv.name,
+      group: t('agents.tools'),
+      icon: 'i-lucide-wrench',
+      insert: `[@${t('agents.tools')}: ${srv.name}] `,
+      kind: 'tool',
+      resourceId: srv.id,
+    })
+  }
+  for (const kb of knowledgeBases.value.filter(k => k.status === 'active')) {
+    if (!match(kb.name)) continue
+    items.push({
+      id: `kb:${kb.id}`,
+      label: kb.name,
+      group: t('agents.boundKnowledge'),
+      icon: CF_ICONS.knowledge,
+      insert: `[@${t('agents.boundKnowledge')}: ${kb.name}] `,
+      kind: 'kb',
+      resourceId: kb.id,
+    })
+  }
+  return items.slice(0, 16)
+}
+
+function refreshMentionFromCaret() {
+  if (form.prompt_id) {
+    closeMention()
+    return
+  }
+  const el = getPromptNativeTextarea()
+  if (!el) {
+    closeMention()
+    return
+  }
+  const trigger = detectMentionTrigger(el.value, el.selectionStart)
+  mentionTrigger.value = trigger
+  if (!trigger) {
+    closeMention()
+    return
+  }
+  mentionItems.value = trigger.kind === '/'
+    ? buildSlashItems(trigger.query)
+    : buildAtItems(trigger.query)
+  mentionOpen.value = mentionItems.value.length > 0
+}
+
+function onPromptInput() {
+  markDirty()
+  nextTick(() => refreshMentionFromCaret())
+}
+
+function onPromptKeydown(e: KeyboardEvent) {
+  if (mentionOpen.value && mentionMenuRef.value?.onKey(e)) return
+  if (e.key === 'Escape' && mentionOpen.value) {
+    closeMention()
+    return
+  }
+  nextTick(() => refreshMentionFromCaret())
+}
+
+function applyPromptText(value: string, caret: number) {
+  form.system_prompt = value
+  markDirty()
+  nextTick(() => {
+    const el = getPromptNativeTextarea()
+    if (!el) return
+    el.focus()
+    el.setSelectionRange(caret, caret)
+  })
+}
+
+function pickMention(item: PromptMentionItem) {
+  const trigger = mentionTrigger.value
+  const el = getPromptNativeTextarea()
+  if (!trigger || !el) {
+    closeMention()
+    return
+  }
+  if (item.kind === 'skill' && item.resourceId) {
+    form.skill_id = item.resourceId
+  } else if (item.kind === 'tool' && item.resourceId) {
+    toggleTool(item.resourceId, true)
+  } else if (item.kind === 'kb' && item.resourceId) {
+    toggleKnowledge(item.resourceId, true)
+  }
+  const { value, caret } = replaceRange(el.value, trigger.start, trigger.end, item.insert)
+  closeMention()
+  applyPromptText(value, caret)
+}
+
 function goBack() {
   navigateTo('/agents')
+}
+
+function formatChatLogTime(iso: string) {
+  return d(iso)
+}
+
+function openPublish() {
+  if (!agentId.value) return
+  publishOpen.value = true
+  copiedKey.value = ''
+}
+
+function openPublishWeb() {
+  if (!publishWebLink.value) return
+  if (import.meta.client) {
+    window.open(publishWebLink.value, '_blank', 'noopener,noreferrer')
+  }
+}
+
+async function copyText(text: string, key: 'web' | 'api' | 'embed') {
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedKey.value = key
+    if (copiedTimer) clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copiedKey.value = ''
+    }, 1600)
+    toast.add({ title: t('common.copied'), color: 'success' })
+  } catch {
+    toast.add({ title: t('common.copyFail'), color: 'error' })
+  }
+}
+
+async function openVersions() {
+  if (!agentId.value) return
+  versionsOpen.value = true
+  versionsLoading.value = true
+  try {
+    const res = await listVersions(agentId.value)
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      versionList.value = []
+      return
+    }
+    versionList.value = res.data || []
+  } finally {
+    versionsLoading.value = false
+  }
+}
+
+const rollbackOpen = ref(false)
+const pendingRollbackVersion = ref<number | null>(null)
+
+function askRollback(version: number) {
+  if (!agentId.value || rollingBackVersion.value != null) return
+  pendingRollbackVersion.value = version
+  rollbackOpen.value = true
+}
+
+async function doRollback() {
+  const version = pendingRollbackVersion.value
+  if (!agentId.value || version == null || rollingBackVersion.value != null) return
+  rollingBackVersion.value = version
+  try {
+    const res = await rollbackVersion(agentId.value, version)
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('agents.studioRollbackFail'), color: 'error' })
+      return
+    }
+    fillFromAgent(res.data)
+    emit('saved', res.data)
+    toast.add({ title: t('agents.studioRollbackOk', { v: version }), color: 'success' })
+    rollbackOpen.value = false
+    pendingRollbackVersion.value = null
+    versionsOpen.value = false
+  } finally {
+    rollingBackVersion.value = null
+  }
+}
+
+async function openChatLogs() {
+  if (!agentId.value) return
+  chatLogsOpen.value = true
+  chatLogsLoading.value = true
+  try {
+    const res = await listConversations({ agent_id: agentId.value })
+    if (res.error) {
+      toast.add({ title: res.error, color: 'error' })
+      chatLogs.value = []
+      return
+    }
+    chatLogs.value = res.data || []
+  } finally {
+    chatLogsLoading.value = false
+  }
+}
+
+function openConversation(id: string) {
+  if (!agentId.value || !id) return
+  chatLogsOpen.value = false
+  void navigateTo(`/playground?agent=${encodeURIComponent(agentId.value)}&c=${encodeURIComponent(id)}`)
+}
+
+function goPlaygroundNew() {
+  if (!agentId.value) return
+  chatLogsOpen.value = false
+  void navigateTo(`/playground?agent=${encodeURIComponent(agentId.value)}`)
 }
 
 function markDirty() {
@@ -413,9 +1176,14 @@ function fillFromAgent(agent: Agent) {
   form.model = agent.model
   form.system_prompt = agent.system_prompt || ''
   form.prompt_id = agent.prompt_id || ''
+  form.opening_message = agent.opening_message || ''
+  form.suggested_prompts = [...(agent.suggested_prompts || [])]
+  form.rag_kb_ids = [...(agent.rag_kb_ids || [])]
+  form.allow_attachments = !!agent.allow_attachments
   form.tools = [...(agent.tools || [])]
   form.skill_id = agent.skill_id || ''
   statusEnabled.value = agent.status === 'active'
+  currentVersion.value = agent.version ?? null
   dirty.value = false
   errors.name = ''
   errors.model = ''
@@ -450,6 +1218,20 @@ function toggleTool(value: string, checked: boolean | string) {
     if (!form.tools.includes(value)) form.tools.push(value)
   } else {
     form.tools = form.tools.filter((t) => t !== value)
+  }
+}
+
+function toggleKnowledge(value: string, checked: boolean | string) {
+  markDirty()
+  const on = Boolean(checked)
+  if (on) {
+    if (form.rag_kb_ids.length >= 8) {
+      toast.add({ title: t('agents.boundKnowledgeMax'), color: 'warning' })
+      return
+    }
+    if (!form.rag_kb_ids.includes(value)) form.rag_kb_ids.push(value)
+  } else {
+    form.rag_kb_ids = form.rag_kb_ids.filter((id) => id !== value)
   }
 }
 
@@ -548,8 +1330,12 @@ async function handleSave() {
         model: form.model,
         system_prompt: form.system_prompt,
         prompt_id: form.prompt_id || '',
+        opening_message: form.opening_message,
+        suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
+        rag_kb_ids: [...form.rag_kb_ids],
+        allow_attachments: form.allow_attachments,
         tools: form.tools,
-        skill_id: form.skill_id || undefined,
+        skill_id: form.skill_id || '',
         status: statusEnabled.value ? 'active' : 'disabled',
       }
       const res = await update(agentId.value, input)
@@ -558,7 +1344,7 @@ async function handleSave() {
         return
       }
       if (res.data) {
-        dirty.value = false
+        fillFromAgent(res.data)
         emit('saved', res.data)
         toast.add({ title: t('common.saveOk'), color: 'success' })
       }
@@ -571,6 +1357,10 @@ async function handleSave() {
       model: form.model,
       system_prompt: form.system_prompt,
       prompt_id: form.prompt_id || undefined,
+      opening_message: form.opening_message || undefined,
+      suggested_prompts: form.suggested_prompts.map(s => s.trim()).filter(Boolean),
+      rag_kb_ids: [...form.rag_kb_ids],
+      allow_attachments: form.allow_attachments,
       tools: form.tools,
       skill_id: form.skill_id || undefined,
     }
@@ -619,27 +1409,128 @@ function buildAssistantSystemPrompt() {
 }
 
 async function sendComposer() {
+  if (chatBusy.value) return
   const text = composer.value.trim()
-  if (!text || chatBusy.value) return
+  const attachments = stage.value === 'preview' && form.allow_attachments
+    ? toSendAttachments(pendingAttachments.value)
+    : []
+  if (!text && !attachments.length) return
+  if (attachmentsUploading.value) {
+    toast.add({ title: t('play.docWaitUpload'), color: 'warning' })
+    return
+  }
   composer.value = ''
   if (stage.value === 'preview') {
-    await sendPreview(text)
+    pendingAttachments.value = []
+    await sendPreview(text, attachments)
   } else {
     await sendBuild(text)
   }
 }
 
-async function sendPreview(text: string) {
+function removePendingAttachment(localId: string) {
+  pendingAttachments.value = pendingAttachments.value.filter(a => a.localId !== localId)
+}
+
+async function ensureStudioUploadKB(): Promise<string | null> {
+  if (studioUploadKBId.value) return studioUploadKBId.value
+  const bound = form.rag_kb_ids.find(Boolean)
+  if (bound) {
+    studioUploadKBId.value = bound
+    return bound
+  }
+  const first = knowledgeBases.value.find(k => k.status === 'active') || knowledgeBases.value[0]
+  if (first?.id) {
+    studioUploadKBId.value = first.id
+    return first.id
+  }
+  const created = await createKB({ name: 'Agent Studio' })
+  if (created.error || !created.data?.id) {
+    toast.add({ title: created.error || t('play.docUploadFail'), color: 'error' })
+    return null
+  }
+  knowledgeBases.value = [...knowledgeBases.value, created.data]
+  studioUploadKBId.value = created.data.id
+  return created.data.id
+}
+
+async function uploadDocFiles(docs: File[]) {
+  if (!docs.length) return
+  try {
+    assertDocBatch(docs, pendingAttachments.value.length)
+  } catch (err) {
+    if (err instanceof ChatDocError) {
+      const map: Record<string, string> = {
+        tooMany: t('play.docTooMany'),
+        tooBig: t('play.docTooBig'),
+        badType: t('play.docBadType'),
+        uploadFail: t('play.docUploadFail'),
+      }
+      toast.add({ title: map[err.code] || t('play.docUploadFail'), color: 'error' })
+    } else {
+      toast.add({ title: t('play.docUploadFail'), color: 'error' })
+    }
+    return
+  }
+  const kbId = await ensureStudioUploadKB()
+  if (!kbId) return
+  for (const file of docs) {
+    const localId = crypto.randomUUID()
+    const fileType = guessChatDocType(file)
+    pendingAttachments.value = [
+      ...pendingAttachments.value,
+      {
+        localId,
+        name: file.name || `file.${fileType}`,
+        file_type: fileType,
+        status: 'uploading',
+      },
+    ]
+    const res = await uploadDoc(kbId, file)
+    pendingAttachments.value = pendingAttachments.value.map((a) => {
+      if (a.localId !== localId) return a
+      if (res.error || !res.data) {
+        return { ...a, status: 'failed', error: res.error || 'upload failed' }
+      }
+      return {
+        ...a,
+        id: res.data.id,
+        name: res.data.name || res.data.file_name || a.name,
+        file_type: res.data.file_type || fileType,
+        status: res.data.status || 'pending',
+        chunk_count: res.data.chunk_count,
+      }
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('play.docUploadFail'), color: 'error' })
+    }
+  }
+}
+
+async function onFileInputChange(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  const { docs, rejected } = partitionChatDocs(files)
+  if (docs.length) await uploadDocFiles(docs)
+  if (rejected.length) toast.add({ title: t('play.docBadType'), color: 'error' })
+}
+
+async function sendPreview(text: string, attachments: ReturnType<typeof toSendAttachments> = []) {
   if (!agentId.value) {
     toast.add({ title: t('agents.studioPreviewNeedSave'), color: 'warning' })
     return
   }
-  previewMessages.value.push({ role: 'user', content: text })
+  const userContent = text || (attachments.length ? t('agents.studioAttachOnly') : '')
+  previewMessages.value.push({ role: 'user', content: userContent })
   previewMessages.value.push({ role: 'assistant', content: '' })
   const idx = previewMessages.value.length - 1
   const history = previewMessages.value.slice(0, -1)
   await streamAgentChat(agentId.value, history, (content) => {
     previewMessages.value[idx] = { role: 'assistant', content }
+  }, {
+    attachments: attachments.length ? attachments : undefined,
   })
   if (agentChatError.value) {
     toast.add({ title: agentChatError.value, color: 'error' })
@@ -703,11 +1594,12 @@ watch(
 )
 
 onMounted(async () => {
-  const [modelsRes, mcpRes, skillsRes, promptsRes] = await Promise.all([
+  const [modelsRes, mcpRes, skillsRes, promptsRes, kbRes] = await Promise.all([
     listModels(),
     listMcpServers(),
     listSkills(),
     listPrompts(),
+    listKBs(),
   ])
   modelOptions.value = (modelsRes.data || [])
     .filter((m) => m.id)
@@ -715,6 +1607,7 @@ onMounted(async () => {
   if (!form.model && firstConfiguredModel()) form.model = firstConfiguredModel()
   if (mcpRes.data) mcpServers.value = mcpRes.data
   if (skillsRes.data) skills.value = skillsRes.data
+  if (kbRes.data) knowledgeBases.value = kbRes.data
   const items = (promptsRes.data || []).map((p) => ({ label: p.name, value: p.id }))
   promptOptions.value = [{ label: t('agents.boundPromptNone'), value: '' }, ...items]
   if (props.initial) fillFromAgent(props.initial)
@@ -744,6 +1637,147 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+
+.studio-ver-badge {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.publish-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.publish-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+}
+
+.publish-block__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.publish-block__desc {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+}
+
+.publish-code {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--cf-ink) 6%, transparent);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: auto;
+  max-height: 160px;
+}
+
+.publish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.publish-block--soon {
+  opacity: 0.9;
+  background: color-mix(in oklab, var(--cf-ink) 3%, transparent);
+}
+
+.cfg-row--soon {
+  opacity: 0.85;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.version-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.version-row__note {
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
+}
+
+.chat-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-logs__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.45;
+}
+
+.chat-logs__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-logs__item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--cf-line);
+  border-radius: 0.65rem;
+  background: color-mix(in oklab, var(--cf-accent) 4%, transparent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-logs__item:hover {
+  border-color: color-mix(in oklab, var(--cf-accent) 40%, var(--cf-line));
+}
+
+.chat-logs__title {
+  font-size: 0.9rem;
+  font-weight: 550;
+  color: var(--cf-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.chat-logs__time {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
 }
 
 .studio-top__right {
@@ -838,11 +1872,95 @@ onMounted(async () => {
   color: var(--cf-ink);
 }
 
+.suggested-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggested-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.suggested-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stage-suggested {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.stage-suggested__label {
+  flex-basis: 100%;
+  margin: 0 0 2px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
+}
+
+.stage-pending {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.stage-pending__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line);
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  background: color-mix(in oklab, var(--cf-accent) 6%, transparent);
+}
+
+.stage-pending__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+  color: var(--cf-ink);
+}
+
+.stage-pending__st {
+  opacity: 0.7;
+}
+
+.stage-pending__rm {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cf-ink-soft);
+  cursor: pointer;
+}
+
+.stage-pending__rm:hover {
+  color: var(--cf-ink);
+}
+
 .cfg-hint {
   margin: 0;
   font-size: 0.72rem;
   color: var(--cf-ink-soft);
   line-height: 1.4;
+}
+
+.cfg-prompt-wrap {
+  position: relative;
 }
 
 .cfg-prompt :deep(textarea) {

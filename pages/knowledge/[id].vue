@@ -35,8 +35,14 @@
           <div class="docs-toolbar">
             <div class="docs-toolbar__left">
               <span class="cf-muted">{{ t('kb.docs', { n: documents.length }) }}</span>
+              <span v-if="!isKBOwner" class="cf-muted kb-readonly-hint">{{ t('kb.readOnlyHint') }}</span>
             </div>
-            <CfButton tone="primary" icon="i-lucide-plus" @click="openUploadModal">
+            <CfButton
+              v-if="isKBOwner"
+              tone="primary"
+              icon="i-lucide-plus"
+              @click="openUploadModal"
+            >
               {{ t('kb.addFile') }}
             </CfButton>
           </div>
@@ -65,7 +71,8 @@
                     <thead>
                       <tr>
                         <th>{{ t('common.name') }}</th>
-                        <th>{{ t('common.status') }}</th>
+                        <th>{{ t('kb.parseStatus') }}</th>
+                        <th>{{ t('kb.lifecycleCol') }}</th>
                         <th v-if="!previewDoc">{{ t('kb.chunks') }}</th>
                         <th v-if="!previewDoc">{{ t('kb.size') }}</th>
                         <th v-if="!previewDoc">{{ t('kb.time') }}</th>
@@ -96,11 +103,16 @@
                             {{ docStatusLabel(doc.status) }}
                           </UBadge>
                         </td>
+                        <td>
+                          <UBadge size="sm" variant="subtle" :color="lifecycleColor(doc.lifecycle_status)">
+                            {{ lifecycleLabel(doc.lifecycle_status) }}
+                          </UBadge>
+                        </td>
                         <td v-if="!previewDoc" class="cf-muted">{{ doc.chunk_count || '—' }}</td>
                         <td v-if="!previewDoc" class="cf-muted">{{ formatFileSize(doc.file_size) }}</td>
                         <td v-if="!previewDoc" class="cf-muted">{{ d(doc.created_at) }}</td>
                         <td @click.stop>
-                          <div class="action-btns">
+                          <div v-if="isKBOwner" class="action-btns">
                             <CfButton
                               tone="icon"
                               icon="i-lucide-scan-text"
@@ -158,6 +170,7 @@
                         {{ t('kb.modePreview') }}
                       </button>
                       <button
+                        v-if="isKBOwner && previewDoc.editable"
                         type="button"
                         role="tab"
                         class="preview-mode-btn"
@@ -186,9 +199,60 @@
                   <UBadge size="sm" variant="subtle" :color="docStatusColor(previewDoc.status)">
                     {{ docStatusLabel(previewDoc.status) }}
                   </UBadge>
+                  <USelect
+                    v-model="previewLifecycle"
+                    class="w-36"
+                    size="sm"
+                    :items="lifecycleOptions"
+                    value-key="value"
+                    :disabled="lifecycleSaving || !isKBOwner"
+                    @update:model-value="savePreviewLifecycle"
+                  />
+                  <USelect
+                    v-if="showSecurityLevel"
+                    v-model="previewSecurity"
+                    class="w-36"
+                    size="sm"
+                    :items="securityOptions"
+                    value-key="value"
+                    :disabled="lifecycleSaving || !isKBOwner"
+                    @update:model-value="savePreviewSecurity"
+                  />
                   <span class="cf-muted">{{ t('kb.chunks') }} {{ previewDoc.chunk_count || 0 }}</span>
                   <span class="cf-muted">{{ formatFileSize(previewDoc.file_size) }}</span>
                   <span v-if="previewDirty" class="preview-dirty">{{ t('kb.unsaved') }}</span>
+                </div>
+                <div v-if="isKBOwner" class="preview-validity">
+                  <div class="field field--compact">
+                    <label class="field__label">{{ t('kb.effectiveAt') }}</label>
+                    <UInput
+                      v-model="previewEffectiveLocal"
+                      type="datetime-local"
+                      size="sm"
+                      class="w-full"
+                      :disabled="lifecycleSaving"
+                    />
+                  </div>
+                  <div class="field field--compact">
+                    <label class="field__label">{{ t('kb.expireAt') }}</label>
+                    <UInput
+                      v-model="previewExpireLocal"
+                      type="datetime-local"
+                      size="sm"
+                      class="w-full"
+                      :disabled="lifecycleSaving"
+                    />
+                  </div>
+                  <CfButton
+                    tone="secondary"
+                    size="sm"
+                    icon="i-lucide-calendar-check"
+                    :loading="lifecycleSaving"
+                    :disabled="!validityDirty"
+                    @click="savePreviewValidity"
+                  >
+                    {{ t('kb.saveValidity') }}
+                  </CfButton>
                 </div>
                 <div v-if="previewDoc.error" class="preview-error">{{ previewDoc.error }}</div>
                 <div v-if="previewLoading" class="cf-state cf-state--compact">
@@ -251,11 +315,7 @@
                     <span>{{ searchModeLabel(searchMode) }}</span>
                     <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 shrink-0 opacity-70" />
                   </button>
-                  <UTooltip :text="t('kb.searchQueryTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.searchQueryTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.searchQueryTip')" />
                 </div>
                 <UTextarea
                   v-model="searchQuery"
@@ -269,6 +329,9 @@
               <div class="search-toolbar">
                 <span class="search-toolbar__meta cf-muted">
                   {{ t('kb.searchTestMeta', { mode: searchModeLabel(searchMode), k: searchTopK }) }}
+                  <template v-if="searchIncludeDrafts || searchIgnoreValidity">
+                    · {{ searchDebugFlagsLabel }}
+                  </template>
                 </span>
                 <div class="search-actions">
                   <CfButton tone="secondary" icon="i-lucide-eraser" @click="clearSearch">
@@ -310,8 +373,8 @@
           </template>
 
           <template #settings>
-            <div class="settings-panel">
-              <section class="settings-section">
+            <div class="settings-panel" :class="{ 'settings-panel--readonly': !isKBOwner }">
+              <section class="settings-section" :inert="!isKBOwner || undefined">
                 <h3 class="settings-section__title">{{ t('kb.settingsSearchMode') }}</h3>
                 <p class="settings-section__desc">{{ t('kb.settingsSearchModeDesc') }}</p>
                 <div class="search-mode-list" role="radiogroup" :aria-label="t('kb.settingsSearchMode')">
@@ -510,7 +573,48 @@
                 </div>
               </section>
 
-              <div class="settings-actions">
+              <section class="settings-section">
+                <h3 class="settings-section__title">{{ t('kb.settingsAccess') }}</h3>
+                <p class="settings-section__desc">{{ t('kb.settingsAccessDesc') }}</p>
+                <p v-if="!isKBOwner" class="settings-section__desc">{{ t('kb.readOnlyHint') }}</p>
+                <div class="search-mode-list" role="radiogroup" :aria-label="t('kb.visibility')">
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.visibility === 'private' }"
+                  >
+                    <input
+                      v-model="settingsForm.visibility"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-visibility"
+                      value="private"
+                      :disabled="!isKBOwner"
+                    >
+                    <div class="search-mode-card__body">
+                      <span class="search-mode-card__title">{{ t('kb.visibilityPrivate') }}</span>
+                    </div>
+                  </label>
+                  <label
+                    class="search-mode-card"
+                    :class="{ 'search-mode-card--on': settingsForm.visibility === 'org' }"
+                  >
+                    <input
+                      v-model="settingsForm.visibility"
+                      class="search-mode-card__radio"
+                      type="radio"
+                      name="kb-visibility"
+                      value="org"
+                      :disabled="!isKBOwner"
+                    >
+                    <div class="search-mode-card__body">
+                      <span class="search-mode-card__title">{{ t('kb.visibilityOrg') }}</span>
+                      <p class="search-mode-card__desc">{{ t('kb.visibilityNote') }}</p>
+                    </div>
+                  </label>
+                </div>
+              </section>
+
+              <div v-if="isKBOwner" class="settings-actions">
                 <CfButton
                   tone="primary"
                   icon="i-lucide-save"
@@ -725,6 +829,24 @@
                   </template>
                 </div>
               </label>
+            </div>
+          </section>
+          <section class="settings-section">
+            <h3 class="settings-section__title">{{ t('kb.searchDebugFilters') }}</h3>
+            <p class="settings-section__desc">{{ t('kb.searchDebugFiltersDesc') }}</p>
+            <div class="search-debug-row">
+              <div class="search-debug-row__text">
+                <span>{{ t('kb.includeDrafts') }}</span>
+                <span class="search-debug-row__hint">{{ t('kb.includeDraftsHint') }}</span>
+              </div>
+              <USwitch v-model="searchDraft.include_drafts" size="sm" />
+            </div>
+            <div class="search-debug-row">
+              <div class="search-debug-row__text">
+                <span>{{ t('kb.ignoreValidity') }}</span>
+                <span class="search-debug-row__hint">{{ t('kb.ignoreValidityHint') }}</span>
+              </div>
+              <USwitch v-model="searchDraft.ignore_validity" size="sm" />
             </div>
           </section>
         </div>
@@ -960,11 +1082,7 @@
               <div class="field">
                 <label class="field__label">
                   <span>{{ t('kb.splitMode') }}</span>
-                  <UTooltip :text="t('kb.splitModeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.splitModeTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.splitModeTip')" />
                 </label>
                 <USelect
                   v-model="parseForm.split_mode"
@@ -976,33 +1094,21 @@
               <div class="field">
                 <label class="field__label">
                   <span>{{ t('kb.chunkSize') }}</span>
-                  <UTooltip :text="t('kb.chunkSizeTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.chunkSizeTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.chunkSizeTip')" />
                 </label>
                 <UInput v-model.number="parseForm.chunk_size" type="number" :min="64" :max="4000" />
               </div>
               <div class="field">
                 <label class="field__label">
                   <span>{{ t('kb.chunkOverlap') }}</span>
-                  <UTooltip :text="t('kb.chunkOverlapTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.chunkOverlapTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.chunkOverlapTip')" />
                 </label>
                 <UInput v-model.number="parseForm.chunk_overlap" type="number" :min="0" :max="2000" />
               </div>
               <div v-if="parseForm.split_mode === 'separator'" class="field">
                 <label class="field__label">
                   <span>{{ t('kb.splitSeparator') }}</span>
-                  <UTooltip :text="t('kb.splitSeparatorTip')" :content="fieldHelpTooltipContent" :ui="fieldHelpTooltipUi">
-                    <button type="button" class="field__help" :aria-label="t('kb.splitSeparatorTip')">
-                      <UIcon name="i-lucide-circle-help" class="size-3.5" />
-                    </button>
-                  </UTooltip>
+                  <CfFieldHelp :text="t('kb.splitSeparatorTip')" />
                 </label>
                 <UInput v-model="parseForm.split_separator" :placeholder="t('kb.splitSeparatorPh')" />
               </div>
@@ -1146,6 +1252,16 @@
       </template>
     </CfModal>
 
+    <CfConfirmModal
+      v-model:open="discardEditOpen"
+      :title="t('kb.unsaved')"
+      :message="t('kb.discardEditConfirm')"
+      :confirm-text="t('common.confirm')"
+      confirm-icon="i-lucide-rotate-ccw"
+      @confirm="confirmDiscardEdit"
+      @cancel="onDiscardEditCancel"
+    />
+
     </template>
   </div>
 </template>
@@ -1170,6 +1286,8 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { currentUser } = useAuth()
+const { showSecurityLevel } = useSecurityFeatures()
 const route = useRoute()
 const {
   getKB,
@@ -1177,6 +1295,7 @@ const {
   listDocs,
   getDoc,
   updateDocContent,
+  updateDocLifecycle,
   uploadDoc,
   previewChunks,
   createTextDoc,
@@ -1224,6 +1343,11 @@ interface UploadItem {
 
 const pageLoading = ref(true)
 const selectedKB = ref<KnowledgeBase | null>(null)
+const isKBOwner = computed(() => {
+  const uid = currentUser.value?.id
+  const owner = selectedKB.value?.user_id
+  return !!uid && !!owner && uid === owner
+})
 const uploadModalVisible = ref(false)
 
 // Documents
@@ -1231,6 +1355,141 @@ const drawerActiveTab = ref('docs')
 const docsLoading = ref(false)
 const documents = ref<Document[]>([])
 const previewDoc = ref<DocumentPreview | null>(null)
+const previewLifecycle = ref('published')
+const previewSecurity = ref('internal')
+const previewEffectiveLocal = ref('')
+const previewExpireLocal = ref('')
+const lifecycleSaving = ref(false)
+const lifecycleOptions = computed(() => [
+  { label: t('kb.lifecycle.draft'), value: 'draft' },
+  { label: t('kb.lifecycle.review'), value: 'review' },
+  { label: t('kb.lifecycle.published'), value: 'published' },
+  { label: t('kb.lifecycle.abolished'), value: 'abolished' },
+])
+const securityOptions = computed(() => [
+  { label: t('kb.security.public'), value: 'public' },
+  { label: t('kb.security.internal'), value: 'internal' },
+  { label: t('kb.security.confidential'), value: 'confidential' },
+  { label: t('kb.security.secret'), value: 'secret' },
+])
+
+function toDatetimeLocal(iso?: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function fromDatetimeLocal(local: string): string | null {
+  if (!local) return null
+  const d = new Date(local)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+function syncValidityFromDoc(doc: Document | DocumentPreview) {
+  previewEffectiveLocal.value = toDatetimeLocal(doc.effective_at)
+  previewExpireLocal.value = toDatetimeLocal(doc.expire_at)
+}
+
+const validityDirty = computed(() => {
+  if (!previewDoc.value) return false
+  return (
+    previewEffectiveLocal.value !== toDatetimeLocal(previewDoc.value.effective_at)
+    || previewExpireLocal.value !== toDatetimeLocal(previewDoc.value.expire_at)
+  )
+})
+
+function lifecycleLabel(status?: string) {
+  const st = status || 'published'
+  const key = `kb.lifecycle.${st}`
+  const translated = t(key)
+  return translated === key ? st : translated
+}
+
+function lifecycleColor(status?: string): 'success' | 'warning' | 'error' | 'neutral' {
+  switch (status || 'published') {
+    case 'published': return 'success'
+    case 'draft': return 'neutral'
+    case 'review': return 'warning'
+    case 'abolished': return 'error'
+    default: return 'neutral'
+  }
+}
+
+function applyLifecycleDoc(doc: Document) {
+  if (!previewDoc.value) return
+  previewDoc.value = { ...previewDoc.value, ...doc }
+  previewLifecycle.value = doc.lifecycle_status || 'published'
+  previewSecurity.value = doc.security_level || 'internal'
+  syncValidityFromDoc(doc)
+  const idx = documents.value.findIndex(d => d.id === doc.id)
+  if (idx >= 0) documents.value[idx] = { ...documents.value[idx], ...doc }
+}
+
+async function savePreviewLifecycle(status: string) {
+  if (!selectedKB.value || !previewDoc.value || !status) return
+  if ((previewDoc.value.lifecycle_status || 'published') === status) return
+  lifecycleSaving.value = true
+  try {
+    const res = await updateDocLifecycle(selectedKB.value.id, previewDoc.value.id, {
+      lifecycle_status: status,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.lifecycleFail'), color: 'error' })
+      previewLifecycle.value = previewDoc.value.lifecycle_status || 'published'
+      return
+    }
+    applyLifecycleDoc(res.data)
+    toast.add({ title: t('kb.lifecycleSaved'), color: 'success' })
+  } finally {
+    lifecycleSaving.value = false
+  }
+}
+
+async function savePreviewSecurity(level: string) {
+  if (!selectedKB.value || !previewDoc.value || !level) return
+  if ((previewDoc.value.security_level || 'internal') === level) return
+  lifecycleSaving.value = true
+  try {
+    const res = await updateDocLifecycle(selectedKB.value.id, previewDoc.value.id, {
+      security_level: level,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.securityFail'), color: 'error' })
+      previewSecurity.value = previewDoc.value.security_level || 'internal'
+      return
+    }
+    applyLifecycleDoc(res.data)
+    toast.add({ title: t('kb.securitySaved'), color: 'success' })
+  } finally {
+    lifecycleSaving.value = false
+  }
+}
+
+async function savePreviewValidity() {
+  if (!selectedKB.value || !previewDoc.value) return
+  lifecycleSaving.value = true
+  try {
+    const effective = fromDatetimeLocal(previewEffectiveLocal.value)
+    const expire = fromDatetimeLocal(previewExpireLocal.value)
+    const res = await updateDocLifecycle(selectedKB.value.id, previewDoc.value.id, {
+      effective_at: effective,
+      expire_at: expire,
+      clear_effective: !previewEffectiveLocal.value,
+      clear_expire: !previewExpireLocal.value,
+    })
+    if (res.error || !res.data) {
+      toast.add({ title: res.error || t('kb.lifecycleFail'), color: 'error' })
+      return
+    }
+    applyLifecycleDoc(res.data)
+    toast.add({ title: t('kb.validitySaved'), color: 'success' })
+  } finally {
+    lifecycleSaving.value = false
+  }
+}
 const previewLoading = ref(false)
 const previewMode = ref<'preview' | 'edit'>('preview')
 const previewEditContent = ref('')
@@ -1255,16 +1514,51 @@ function clearPreviewState() {
   previewEditContent.value = ''
   previewSaving.value = false
   previewMaximized.value = false
+  previewLifecycle.value = 'published'
+  previewSecurity.value = 'internal'
+  previewEffectiveLocal.value = ''
+  previewExpireLocal.value = ''
+}
+
+const discardEditOpen = ref(false)
+let pendingDiscardAction: (() => void) | null = null
+let revertingDocsTab = false
+
+function askDiscardEdit(action: () => void) {
+  pendingDiscardAction = action
+  discardEditOpen.value = true
+}
+
+function confirmDiscardEdit() {
+  const action = pendingDiscardAction
+  pendingDiscardAction = null
+  discardEditOpen.value = false
+  if (previewDoc.value) {
+    previewEditContent.value = previewDoc.value.content || ''
+  }
+  action?.()
+}
+
+function onDiscardEditCancel() {
+  pendingDiscardAction = null
 }
 
 watch(drawerActiveTab, (tab) => {
-  if (tab !== 'docs') {
-    if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) {
-      drawerActiveTab.value = 'docs'
-      return
-    }
-    clearPreviewState()
+  if (revertingDocsTab || tab === 'docs') return
+  if (previewDirty.value) {
+    const target = tab
+    revertingDocsTab = true
+    drawerActiveTab.value = 'docs'
+    nextTick(() => {
+      revertingDocsTab = false
+    })
+    askDiscardEdit(() => {
+      clearPreviewState()
+      drawerActiveTab.value = target
+    })
+    return
   }
+  clearPreviewState()
 })
 
 function renderPreviewMarkdown(content: string) {
@@ -1288,7 +1582,17 @@ function resetPreviewEdit() {
 
 async function openDocPreview(doc: Document) {
   if (!selectedKB.value) return
-  if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) return
+  if (previewDirty.value) {
+    askDiscardEdit(() => {
+      void doOpenDocPreview(doc)
+    })
+    return
+  }
+  await doOpenDocPreview(doc)
+}
+
+async function doOpenDocPreview(doc: Document) {
+  if (!selectedKB.value) return
   previewLoading.value = true
   previewMode.value = 'preview'
   previewEditContent.value = ''
@@ -1306,10 +1610,16 @@ async function openDocPreview(doc: Document) {
   }
   previewDoc.value = res.data
   previewEditContent.value = res.data.content || ''
+  previewLifecycle.value = res.data.lifecycle_status || 'published'
+  previewSecurity.value = res.data.security_level || 'internal'
+  syncValidityFromDoc(res.data)
 }
 
 function closeDocPreview() {
-  if (previewDirty.value && !window.confirm(t('kb.discardEditConfirm'))) return
+  if (previewDirty.value) {
+    askDiscardEdit(() => clearPreviewState())
+    return
+  }
   clearPreviewState()
 }
 
@@ -1388,8 +1698,6 @@ const sourceTabs = computed(() => [
   { value: 'web' as const, label: t('kb.sourceWeb'), icon: 'i-lucide-globe' },
   { value: 'text' as const, label: t('kb.sourceText'), icon: 'i-lucide-file-pen-line' },
 ])
-const fieldHelpTooltipContent = { side: 'top' as const, collisionPadding: 8 }
-const fieldHelpTooltipUi = { content: 'max-w-xs whitespace-normal' }
 
 function newUploadId() {
   return `up_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
@@ -1659,6 +1967,8 @@ const searchHybridWeight = ref(0.7)
 const searchMode = ref<'semantic' | 'keyword' | 'hybrid'>('semantic')
 const searchRerank = ref(false)
 const searchRerankProviderId = ref('')
+const searchIncludeDrafts = ref(false)
+const searchIgnoreValidity = ref(false)
 const searchSettingsOpen = ref(false)
 const searchDraft = reactive({
   mode: 'semantic' as 'semantic' | 'keyword' | 'hybrid',
@@ -1671,6 +1981,15 @@ const searchDraft = reactive({
   top_k_hybrid: 5,
   min_score_hybrid: 0.3,
   hybrid_semantic_weight: 0.7,
+  include_drafts: false,
+  ignore_validity: false,
+})
+
+const searchDebugFlagsLabel = computed(() => {
+  const parts: string[] = []
+  if (searchIncludeDrafts.value) parts.push(t('kb.includeDraftsShort'))
+  if (searchIgnoreValidity.value) parts.push(t('kb.ignoreValidityShort'))
+  return parts.join(' · ')
 })
 
 function searchModeLabel(mode: string) {
@@ -1753,6 +2072,8 @@ async function openSearchSettings() {
   searchDraft.min_score_keyword = modeMinScore(kb, 'keyword')
   searchDraft.top_k_hybrid = modeTopK(kb, 'hybrid')
   searchDraft.min_score_hybrid = modeMinScore(kb, 'hybrid')
+  searchDraft.include_drafts = searchIncludeDrafts.value
+  searchDraft.ignore_validity = searchIgnoreValidity.value
   searchDraft.hybrid_semantic_weight = clampHybridWeight(
     searchMode.value === 'hybrid' ? searchHybridWeight.value : kb?.hybrid_semantic_weight,
     0.7,
@@ -1781,6 +2102,8 @@ function applySearchSettings() {
   searchMode.value = mode
   searchRerank.value = !!searchDraft.rerank
   searchRerankProviderId.value = searchDraft.rerank ? String(searchDraft.rerank_provider_id || '') : ''
+  searchIncludeDrafts.value = !!searchDraft.include_drafts
+  searchIgnoreValidity.value = !!searchDraft.ignore_validity
   searchDraft.top_k_semantic = clampTopK(searchDraft.top_k_semantic)
   searchDraft.min_score_semantic = clampMinScore(searchDraft.min_score_semantic)
   searchDraft.top_k_keyword = clampTopK(searchDraft.top_k_keyword)
@@ -1814,6 +2137,7 @@ watch(
 const settingsSaving = ref(false)
 const settingsForm = reactive({
   search_mode: 'semantic',
+  visibility: 'private' as 'private' | 'org',
   rerank_semantic: false,
   rerank_keyword: false,
   rerank_hybrid: false,
@@ -1836,6 +2160,7 @@ function normalizeSearchMode(mode?: string) {
 
 function syncSettingsFromKB(kb: KnowledgeBase | null) {
   settingsForm.search_mode = normalizeSearchMode(kb?.search_mode)
+  settingsForm.visibility = kb?.visibility === 'org' ? 'org' : 'private'
   settingsForm.rerank_semantic = !!kb?.rerank_semantic
   settingsForm.rerank_keyword = !!kb?.rerank_keyword
   settingsForm.rerank_hybrid = !!kb?.rerank_hybrid
@@ -1865,6 +2190,7 @@ async function saveKBSettings() {
   try {
     const input: UpdateKBInput = {
       search_mode: normalizeSearchMode(settingsForm.search_mode),
+      visibility: settingsForm.visibility === 'org' ? 'org' : 'private',
       rerank_semantic: !!settingsForm.rerank_semantic,
       rerank_keyword: !!settingsForm.rerank_keyword,
       rerank_hybrid: !!settingsForm.rerank_hybrid,
@@ -1998,6 +2324,8 @@ function clearSearch() {
   searchResults.value = []
   hasSearched.value = false
   searchDuration.value = 0
+  searchIncludeDrafts.value = false
+  searchIgnoreValidity.value = false
 }
 
 function onSearchKeydown(e: KeyboardEvent) {
@@ -2032,6 +2360,8 @@ const handleSearch = async () => {
       ...(searchRerank.value && searchRerankProviderId.value
         ? { rerank_provider_id: searchRerankProviderId.value }
         : {}),
+      ...(searchIncludeDrafts.value ? { include_drafts: true } : {}),
+      ...(searchIgnoreValidity.value ? { ignore_validity: true } : {}),
     })
 
     if (res.error) {
@@ -2635,6 +2965,25 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--cf-line);
 }
 
+.preview-validity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.preview-validity .field--compact {
+  flex: 1 1 160px;
+  min-width: 140px;
+  margin: 0;
+}
+
+.preview-validity .field__label {
+  font-size: 0.7rem;
+}
+
 .preview-error {
   margin: 8px 12px 0;
   padding: 8px 10px;
@@ -2853,6 +3202,35 @@ onBeforeUnmount(() => {
   gap: 18px;
 }
 
+.search-debug-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cf-line);
+  font-size: 0.8125rem;
+  color: var(--cf-ink);
+}
+
+.search-debug-row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.search-debug-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.search-debug-row__hint {
+  font-size: 0.75rem;
+  color: var(--cf-ink-soft);
+  line-height: 1.35;
+}
+
 .search-topk-row {
   display: flex;
   align-items: center;
@@ -2933,24 +3311,6 @@ onBeforeUnmount(() => {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--cf-ink);
-}
-
-.field__help {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--cf-muted, #64748b);
-  cursor: help;
-  line-height: 1;
-}
-
-.field__help:hover,
-.field__help:focus-visible {
-  color: var(--cf-ink);
-  outline: none;
 }
 
 .field__error {
@@ -3383,6 +3743,16 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 20px;
   padding-top: 4px;
+}
+
+.settings-panel--readonly .settings-section[inert] {
+  opacity: 0.72;
+}
+
+.kb-readonly-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.85rem;
 }
 
 .settings-section {

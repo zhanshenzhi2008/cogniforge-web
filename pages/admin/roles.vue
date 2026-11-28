@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('roles.title') }}</h1>
         <p class="cf-page-sub">{{ t('roles.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-shield-plus" @click="openCreateModal">
-        {{ t('roles.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-roles-view" />
+        <CfButton tone="primary" icon="i-lucide-shield-plus" @click="openCreateModal">
+          {{ t('roles.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -15,18 +18,60 @@
       <span class="list-hint">{{ t('common.hintDblclickEdit') }}</span>
     </div>
 
-    <div class="cf-panel">
-      <div v-if="loading" class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState v-else-if="pagedRoles.length === 0" icon="i-lucide-shield" :message="t('roles.empty')" />
 
-      <div v-else-if="pagedRoles.length === 0" class="cf-state">
-        <UIcon name="i-lucide-shield" class="size-8 opacity-50" />
-        <p>{{ t('roles.empty') }}</p>
-      </div>
+    <div v-else-if="viewMode === 'card'" class="role-grid">
+      <CfResourceCard
+        v-for="row in pagedRoles"
+        :key="row.id"
+        icon="i-lucide-shield"
+        :title="row.name"
+        :description="row.description || t('common.noDesc')"
+        :meta="roleCardMeta(row)"
+        @click="handleEdit(row)"
+      >
+        <template #sub>
+          <code class="role-code">{{ row.code }}</code>
+        </template>
+        <template #badges>
+          <UBadge
+            v-if="row.is_system"
+            size="sm"
+            variant="subtle"
+            color="error"
+          >
+            {{ t('roles.system') }}
+          </UBadge>
+          <UBadge
+            v-if="row.is_default"
+            size="sm"
+            variant="subtle"
+            color="success"
+          >
+            {{ t('roles.default') }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(row)"
+          />
+          <CfButton
+            v-if="!row.is_system"
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(row.id)"
+          />
+        </template>
+      </CfResourceCard>
+    </div>
 
-      <div v-else class="cf-table-wrap">
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
         <table class="cf-data-table">
           <thead>
             <tr>
@@ -36,6 +81,7 @@
               <th>{{ t('roles.system') }}</th>
               <th>{{ t('roles.default') }}</th>
               <th>{{ t('roles.permCount') }}</th>
+              <th v-if="showSecurityLevel">{{ t('roles.clearance') }}</th>
               <th>{{ t('common.createdAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
@@ -69,6 +115,7 @@
                 </UBadge>
               </td>
               <td class="cf-muted">{{ row.permissions?.length || 0 }}</td>
+              <td v-if="showSecurityLevel" class="cf-muted">{{ clearanceLabel(row.max_security_level) }}</td>
               <td class="cf-muted">{{ d(row.created_at) }}</td>
               <td @dblclick.stop>
                 <div class="action-btns">
@@ -91,26 +138,26 @@
           </tbody>
         </table>
       </div>
+    </div>
 
-      <div v-if="roles.length > pageSize" class="pager">
-        <CfButton
-          tone="secondary"
-          icon="i-lucide-chevron-left"
-          :disabled="page <= 1"
-          @click="page--"
-        >
-          {{ t('common.prev') }}
-        </CfButton>
-        <span class="pager-page">{{ page }} / {{ roleTotalPages }}</span>
-        <CfButton
-          tone="secondary"
-          icon="i-lucide-chevron-right"
-          :disabled="page >= roleTotalPages"
-          @click="page++"
-        >
-          {{ t('common.next') }}
-        </CfButton>
-      </div>
+    <div v-if="!loading && roles.length > pageSize" class="pager">
+      <CfButton
+        tone="secondary"
+        icon="i-lucide-chevron-left"
+        :disabled="page <= 1"
+        @click="page--"
+      >
+        {{ t('common.prev') }}
+      </CfButton>
+      <span class="pager-page">{{ page }} / {{ roleTotalPages }}</span>
+      <CfButton
+        tone="secondary"
+        icon="i-lucide-chevron-right"
+        :disabled="page >= roleTotalPages"
+        @click="page++"
+      >
+        {{ t('common.next') }}
+      </CfButton>
     </div>
 
     <CfModal
@@ -126,6 +173,7 @@
               v-model="roleForm.name"
               class="w-full"
               :placeholder="t('roles.namePh')"
+              :disabled="editingSystemRole"
               @update:model-value="errors.name = ''"
             />
             <p v-if="errors.name" class="field__error">{{ errors.name }}</p>
@@ -151,10 +199,22 @@
               class="w-full"
               :rows="3"
               :placeholder="t('roles.descPh')"
+              :disabled="editingSystemRole"
             />
           </div>
 
-          <div class="field">
+          <div v-if="showSecurityLevel" class="field">
+            <label class="field__label">{{ t('roles.clearance') }}</label>
+            <USelect
+              v-model="roleForm.max_security_level"
+              class="w-full"
+              :items="clearanceOptions"
+              value-key="value"
+            />
+            <p class="field__hint">{{ t('roles.clearanceHint') }}</p>
+          </div>
+
+          <div v-if="!editingSystemRole" class="field">
             <label class="field__label">{{ t('roles.perms') }}</label>
             <div class="perm-groups">
               <details
@@ -176,6 +236,7 @@
               </details>
             </div>
           </div>
+          <p v-else class="field__hint">{{ t('roles.systemClearanceOnly') }}</p>
         </form>
       </template>
 
@@ -197,33 +258,19 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="showDeleteModal" :title="t('roles.deleteTitle')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="confirm-text">
-          {{ t('roles.deleteText') }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="showDeleteModal = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="handleDeleteConfirm"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="showDeleteModal"
+      :title="t('roles.deleteTitle')"
+      :message="t('roles.deleteText')"
+      :loading="deletingLoading"
+      @confirm="handleDeleteConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
+
 definePageMeta({
   layout: 'default',
   requiresAuth: true,
@@ -231,8 +278,10 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { showSecurityLevel } = useSecurityFeatures()
 
 const loading = ref(false)
+const viewMode = ref<ViewMode>('card')
 const submitting = ref(false)
 const deletingLoading = ref(false)
 const roles = ref<any[]>([])
@@ -249,8 +298,43 @@ const roleForm = reactive({
   name: '',
   code: '',
   description: '',
+  max_security_level: '',
   permission_ids: [] as string[],
+  is_system: false,
 })
+
+const editingSystemRole = computed(() => isEditing.value && roleForm.is_system)
+
+const clearanceOptions = computed(() => [
+  { label: t('roles.clearanceUnlimited'), value: '' },
+  { label: t('kb.security.public'), value: 'public' },
+  { label: t('kb.security.internal'), value: 'internal' },
+  { label: t('kb.security.confidential'), value: 'confidential' },
+  { label: t('kb.security.secret'), value: 'secret' },
+])
+
+function clearanceLabel(level?: string) {
+  const lv = (level || '').trim()
+  if (!lv) return t('roles.clearanceUnlimited')
+  const key = `kb.security.${lv}`
+  const translated = t(key)
+  return translated === key ? lv : translated
+}
+
+function roleCardMeta(row: {
+  created_at?: string
+  permissions?: unknown[]
+  max_security_level?: string
+}) {
+  const parts = [
+    t('roles.permCount') + ': ' + (row.permissions?.length || 0),
+    d(row.created_at),
+  ]
+  if (showSecurityLevel.value) {
+    parts.push(clearanceLabel(row.max_security_level))
+  }
+  return parts.filter(Boolean).join(' · ')
+}
 
 const errors = reactive({
   name: '',
@@ -288,10 +372,12 @@ function validateRoleForm() {
   errors.name = ''
   errors.code = ''
 
-  if (!roleForm.name.trim()) {
-    errors.name = t('roles.needName')
-  } else if (roleForm.name.trim().length < 2 || roleForm.name.trim().length > 100) {
-    errors.name = t('roles.nameLen')
+  if (!editingSystemRole.value) {
+    if (!roleForm.name.trim()) {
+      errors.name = t('roles.needName')
+    } else if (roleForm.name.trim().length < 2 || roleForm.name.trim().length > 100) {
+      errors.name = t('roles.nameLen')
+    }
   }
 
   if (!isEditing.value) {
@@ -340,7 +426,9 @@ const handleEdit = (row: any) => {
   roleForm.name = row.name
   roleForm.code = row.code
   roleForm.description = row.description || ''
+  roleForm.max_security_level = row.max_security_level || ''
   roleForm.permission_ids = row.permissions?.map((p: any) => p.id) || []
+  roleForm.is_system = !!row.is_system
   errors.name = ''
   errors.code = ''
   showRoleModal.value = true
@@ -356,7 +444,9 @@ const resetRoleForm = () => {
   roleForm.name = ''
   roleForm.code = ''
   roleForm.description = ''
+  roleForm.max_security_level = ''
   roleForm.permission_ids = []
+  roleForm.is_system = false
   selectedRoleId.value = ''
   errors.name = ''
   errors.code = ''
@@ -367,14 +457,19 @@ const handleRoleSubmit = async () => {
 
   submitting.value = true
   try {
-    const payload: any = {
-      name: roleForm.name,
-      description: roleForm.description,
-      permission_ids: roleForm.permission_ids,
-    }
-
-    if (!isEditing.value) {
-      payload.code = roleForm.code
+    let payload: any
+    if (editingSystemRole.value) {
+      payload = { max_security_level: roleForm.max_security_level || '' }
+    } else {
+      payload = {
+        name: roleForm.name,
+        description: roleForm.description,
+        max_security_level: roleForm.max_security_level || '',
+        permission_ids: roleForm.permission_ids,
+      }
+      if (!isEditing.value) {
+        payload.code = roleForm.code
+      }
     }
 
     const url = isEditing.value
@@ -425,6 +520,19 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .name {
   font-weight: 600;
   color: var(--cf-ink);
@@ -457,7 +565,7 @@ onMounted(async () => {
   justify-content: flex-end;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 12px 0;
 }
 
 .pager-page {

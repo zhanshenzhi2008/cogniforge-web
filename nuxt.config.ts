@@ -73,6 +73,10 @@ export default defineNuxtConfig({
       // 生产：空字符串 = 浏览器请求当前域名 /api/v1/*（由 Nginx 转发）。
       // 本地 pnpm dev：默认打本机 Go 后端。可用 API_BASE 覆盖。
       apiBase: process.env.API_BASE ?? (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8080'),
+      // 金融扩展：密级 UI（文档密级 / 角色·用户 clearance / 审计 Tab）。通用版默认关。
+      showSecurityLevel: process.env.NUXT_PUBLIC_SHOW_SECURITY_LEVEL
+        ?? process.env.SHOW_SECURITY_LEVEL
+        ?? '',
     },
   },
 

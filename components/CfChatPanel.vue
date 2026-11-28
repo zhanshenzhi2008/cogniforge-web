@@ -13,23 +13,36 @@
         class="cf-chat-panel__messages"
       >
         <template #content="{ message }">
-          <slot
-            name="content"
-            :message="message"
-            :text="partsToText(message?.parts)"
-          >
-            <div
-              v-if="markdown && partsToText(message?.parts)"
-              class="cf-chat-panel__md"
-              v-html="renderChatMarkdown(partsToText(message?.parts))"
-            />
-            <div
-              v-else-if="partsToText(message?.parts)"
-              class="cf-chat-panel__plain"
+          <div class="cf-chat-panel__msg">
+            <slot
+              name="content"
+              :message="message"
+              :text="partsToText(message?.parts)"
             >
-              {{ partsToText(message?.parts) }}
+              <div
+                v-if="markdown && partsToText(message?.parts)"
+                class="cf-chat-panel__md"
+                v-html="renderChatMarkdown(partsToText(message?.parts))"
+              />
+              <div
+                v-else-if="partsToText(message?.parts)"
+                class="cf-chat-panel__plain"
+              >
+                {{ partsToText(message?.parts) }}
+              </div>
+            </slot>
+            <div
+              v-if="ttsEnabled && message?.role === 'assistant' && partsToText(message?.parts)"
+              class="cf-chat-panel__msg-actions"
+            >
+              <CfButton
+                :tone="speakingId === message.id ? 'icon-accent' : 'icon'"
+                :icon="speakingId === message.id ? 'i-lucide-square' : 'i-lucide-volume-2'"
+                :tip="speakingId === message.id ? t('chat.ttsStop') : t('chat.ttsSpeak')"
+                @click="toggleSpeak(message.id, partsToText(message?.parts))"
+              />
             </div>
-          </slot>
+          </div>
         </template>
         <template #indicator>
           <slot name="indicator">
@@ -57,6 +70,15 @@
         <template #footer>
           <div class="cf-chat-panel__footer">
             <div class="cf-chat-panel__footer-left">
+              <CfButton
+                v-if="sttEnabled"
+                :tone="listening ? 'icon-accent' : 'icon'"
+                :icon="listening ? 'i-lucide-mic-off' : 'i-lucide-mic'"
+                :tip="listening ? t('chat.sttStop') : t('chat.sttStart')"
+                :disabled="disabled || (submitStatus || status) === 'streaming'"
+                @click="toggleListen"
+              />
+              <span v-if="listening" class="cf-chat-panel__stt-live">{{ t('chat.sttListening') }}</span>
               <slot name="composer-actions" />
               <span v-if="hint" class="cf-chat-panel__hint">{{ hint }}</span>
             </div>
@@ -94,6 +116,8 @@ import {
   type CfChatMessageInput,
   type CfChatStatus,
 } from '~/utils/chatUi'
+import { startSpeechDictation, speechRecognitionSupported } from '~/utils/speechStt'
+import { isSpeaking, speakText, speechSupported, stopSpeech } from '~/utils/speechTts'
 import { CF_ICONS } from '~/constants/icons'
 
 const props = withDefaults(
@@ -109,6 +133,10 @@ const props = withDefaults(
     submitStatus?: CfChatStatus
     submitOnEnter?: boolean
     markdown?: boolean
+    /** 助手消息旁显示浏览器朗读按钮 */
+    tts?: boolean
+    /** 输入框旁显示浏览器语音输入 */
+    stt?: boolean
     rows?: number
     maxrows?: number
     spacingOffset?: number
@@ -121,6 +149,8 @@ const props = withDefaults(
     status: 'ready',
     submitOnEnter: true,
     markdown: true,
+    tts: true,
+    stt: true,
     rows: 2,
     maxrows: 6,
     spacingOffset: 24,
@@ -133,12 +163,107 @@ const emit = defineEmits<{
   stop: []
 }>()
 
-const { t } = useLocale()
+const { t, locale } = useLocale()
+const toast = useToast()
 
 const userBubble = { side: 'right' as const, variant: 'soft' as const, icon: CF_ICONS.user }
 const assistantBubble = { side: 'left' as const, variant: 'naked' as const, icon: CF_ICONS.ai }
 
 const uiMessages = computed(() => toUiChatMessages(props.messages))
+const ttsEnabled = computed(() => props.tts && speechSupported())
+const sttEnabled = computed(() => props.stt && speechRecognitionSupported())
+const speakingId = ref<string | null>(null)
+const listening = ref(false)
+const baseBeforeListen = ref('')
+let sttStop: (() => void) | null = null
+
+function clearSpeaking() {
+  speakingId.value = null
+}
+
+function stopListen() {
+  sttStop?.()
+  sttStop = null
+  listening.value = false
+}
+
+function joinComposer(base: string, chunk: string) {
+  const c = chunk.trim()
+  if (!c) return base
+  const sep = base && !/\s$/.test(base) ? ' ' : ''
+  return `${base}${sep}${c}`
+}
+
+function toggleListen() {
+  if (!speechRecognitionSupported()) {
+    toast.add({ title: t('chat.sttUnsupported'), color: 'warning' })
+    return
+  }
+  if (listening.value) {
+    stopListen()
+    return
+  }
+  // avoid speaking over mic
+  stopSpeech()
+  clearSpeaking()
+  baseBeforeListen.value = props.modelValue || ''
+  const handle = startSpeechDictation({
+    lang: locale.value,
+    onFinal: (text) => {
+      baseBeforeListen.value = joinComposer(baseBeforeListen.value, text)
+      emit('update:modelValue', baseBeforeListen.value)
+    },
+    onInterim: (text) => {
+      emit('update:modelValue', joinComposer(baseBeforeListen.value, text))
+    },
+    onEnd: () => {
+      listening.value = false
+      sttStop = null
+    },
+    onError: (code) => {
+      stopListen()
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        toast.add({ title: t('chat.sttDenied'), color: 'error' })
+      } else if (code !== 'aborted' && code !== 'no-speech') {
+        toast.add({ title: t('chat.sttFail'), color: 'warning' })
+      }
+    },
+  })
+  if (!handle) {
+    toast.add({ title: t('chat.sttUnsupported'), color: 'warning' })
+    return
+  }
+  sttStop = handle.stop
+  listening.value = true
+}
+
+function toggleSpeak(id: string, text: string) {
+  if (!speechSupported()) {
+    toast.add({ title: t('chat.ttsUnsupported'), color: 'warning' })
+    return
+  }
+  if (speakingId.value === id && isSpeaking()) {
+    stopSpeech()
+    clearSpeaking()
+    return
+  }
+  if (listening.value) stopListen()
+  const ok = speakText(text, {
+    lang: locale.value,
+    onEnd: clearSpeaking,
+    onError: clearSpeaking,
+  })
+  if (!ok) {
+    toast.add({ title: t('chat.ttsEmpty'), color: 'warning' })
+    return
+  }
+  speakingId.value = id
+}
+
+onBeforeUnmount(() => {
+  stopListen()
+  stopSpeech()
+})
 
 function onInput(value: string) {
   emit('update:modelValue', value)
@@ -184,6 +309,26 @@ function onSubmit() {
   word-break: break-word;
   line-height: 1.55;
   font-size: 0.9rem;
+}
+
+.cf-chat-panel__msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cf-chat-panel__msg-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.72;
+}
+
+.cf-chat-panel__stt-live {
+  font-size: 0.75rem;
+  color: var(--cf-accent, #0f9f8a);
+  white-space: nowrap;
 }
 
 .cf-chat-panel__composer-wrap {

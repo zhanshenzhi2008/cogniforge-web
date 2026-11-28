@@ -18,6 +18,7 @@ export type WorkflowNodeKind =
   | 'delay'
   | 'wait'
   | 'search'
+  | 'subflow'
   | 'input'
   | 'output'
 
@@ -44,6 +45,7 @@ export const WORKFLOW_NODE_META: Record<WorkflowNodeKind, WorkflowNodeMeta> = {
   delay: { icon: 'i-lucide-timer', tone: 'delay', handles: 'io' },
   wait: { icon: 'i-lucide-pause-circle', tone: 'wait', handles: 'io' },
   search: { icon: CF_ICONS.knowledge, tone: 'search', handles: 'io' },
+  subflow: { icon: 'i-lucide-git-branch-plus', tone: 'subflow', handles: 'io' },
   input: { icon: 'i-lucide-download', tone: 'input', handles: 'start' },
   output: { icon: 'i-lucide-upload', tone: 'output', handles: 'end' },
 }
@@ -55,6 +57,7 @@ export const WORKFLOW_PALETTE_TYPES: WorkflowNodeKind[] = [
   'agent',
   'team',
   'search',
+  'subflow',
   'condition',
   'loop',
   'http',
@@ -64,6 +67,9 @@ export const WORKFLOW_PALETTE_TYPES: WorkflowNodeKind[] = [
 ]
 
 export function getWorkflowNodeMeta(type: string): WorkflowNodeMeta {
+  if (type === 'human_action') {
+    return { icon: 'i-lucide-user-check', tone: 'wait', handles: 'io' }
+  }
   return WORKFLOW_NODE_META[type as WorkflowNodeKind] || {
     icon: CF_ICONS.fallback,
     tone: 'default',

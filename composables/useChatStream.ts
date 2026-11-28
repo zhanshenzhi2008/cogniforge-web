@@ -17,6 +17,14 @@ export interface ChatStreamExtras {
   model?: string
   temperature?: number
   max_tokens?: number
+  top_p?: number
+  memory_turns?: number
+  rag_top_k?: number
+  rag_min_score?: number
+  conversation_id?: string
+  attachments?: unknown[]
+  mcp_servers?: string[]
+  rag_kb_ids?: string[]
 }
 
 export const useChatStream = () => {
@@ -105,6 +113,8 @@ export const useChatStream = () => {
         error.value = fullContent
           ? t('play.streamInterrupted')
           : t('play.streamNetwork')
+      } else if (err instanceof SseStreamError && err.kind === 'empty') {
+        error.value = t('play.sendFailBody')
       } else {
         error.value = err?.message || t('play.sendFail')
       }

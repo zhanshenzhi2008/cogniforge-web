@@ -17,6 +17,7 @@
         >
           {{ t('prompts.deletePrompt') }}
         </CfButton>
+        <CfViewModeToggle v-if="!active" v-model="viewMode" storage-key="cf-prompts-view" />
         <CfButton v-if="!active" tone="secondary" icon="i-lucide-download" @click="showImport = true">
           {{ t('prompts.import') }}
         </CfButton>
@@ -28,29 +29,73 @@
 
     <template v-if="!active">
       <div class="list-toolbar">
-        <span class="list-count">{{ t('prompts.count', { n: items.length }) }}</span>
+        <span class="list-count">{{ t('prompts.count', { n: filteredItems.length }) }}</span>
+        <USelect
+          v-model="filterTag"
+          class="tag-filter"
+          :items="tagFilterOptions"
+          value-key="value"
+          :placeholder="t('prompts.filterTagPh')"
+        />
       </div>
-      <div class="cf-panel">
-        <div v-if="loading" class="cf-state">
-          <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        </div>
-        <div v-else-if="items.length === 0" class="cf-state">
-          <UIcon name="i-lucide-file-text" class="size-8 opacity-50" />
-          <p>{{ t('prompts.empty') }}</p>
-        </div>
-        <table v-else class="cf-data-table">
+      <CfLoadingState v-if="loading" />
+      <CfEmptyState
+        v-else-if="items.length === 0"
+        icon="i-lucide-file-text"
+        :message="t('prompts.empty')"
+      />
+      <CfEmptyState
+        v-else-if="filteredItems.length === 0"
+        icon="i-lucide-tags"
+        :message="t('prompts.filterTagEmpty')"
+      />
+      <div v-else-if="viewMode === 'card'" class="prompt-grid">
+        <CfResourceCard
+          v-for="p in filteredItems"
+          :key="p.id"
+          icon="i-lucide-file-text"
+          :title="p.name"
+          :description="p.description || t('common.noDesc')"
+          :meta="d(p.updated_at)"
+          @click="openDetail(p)"
+        >
+          <template #badges>
+            <UBadge
+              v-for="tag in (p.tags || []).slice(0, 3)"
+              :key="tag"
+              size="sm"
+              variant="subtle"
+              color="neutral"
+            >
+              {{ tag }}
+            </UBadge>
+          </template>
+          <template #actions>
+            <CfButton
+              tone="icon-danger"
+              icon="i-lucide-trash-2"
+              :tip="t('common.delete')"
+              @click="askDelete(p)"
+            />
+          </template>
+        </CfResourceCard>
+      </div>
+      <div v-else class="cf-panel">
+        <table class="cf-data-table">
           <thead>
             <tr>
               <th>{{ t('common.name') }}</th>
               <th>{{ t('common.description') }}</th>
+              <th>{{ t('prompts.tags') }}</th>
               <th>{{ t('common.updatedAt') }}</th>
               <th class="cf-col-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in items" :key="p.id" class="row-click" @click="openDetail(p)">
+            <tr v-for="p in filteredItems" :key="p.id" class="row-click" @click="openDetail(p)">
               <td class="name">{{ p.name }}</td>
               <td class="cf-muted">{{ p.description || '—' }}</td>
+              <td class="cf-muted">{{ (p.tags || []).join(', ') || '—' }}</td>
               <td class="cf-muted">{{ d(p.updated_at) }}</td>
               <td @click.stop>
                 <CfButton
@@ -72,6 +117,15 @@
         <p v-if="sourceLabel(active)" class="source-line">{{ sourceLabel(active) }}</p>
         <p class="cf-muted">{{ active.description }}</p>
       </div>
+
+      <section class="cf-panel block">
+        <div class="block-head">
+          <h3>{{ t('prompts.tags') }}</h3>
+          <CfButton tone="primary" :loading="savingTags" @click="saveTags">{{ t('prompts.saveTags') }}</CfButton>
+        </div>
+        <UInput v-model="tagsDraft" class="w-full" :placeholder="t('prompts.tagsPh')" />
+        <p class="cf-muted try-hint">{{ t('prompts.tagsHint') }}</p>
+      </section>
 
       <section class="cf-panel block">
         <div class="block-head">
@@ -179,9 +233,9 @@
             <UBadge
               size="sm"
               variant="subtle"
-              :color="v.status === 'published' ? 'success' : 'neutral'"
+              :color="versionStatusColor(v.status)"
             >
-              {{ v.status === 'published' ? t('prompts.published') : t('prompts.draft') }}
+              {{ versionStatusLabel(v.status) }}
             </UBadge>
             <UBadge
               v-if="v.id === active.current_version_id"
@@ -208,6 +262,24 @@
                 @click="doSetCurrent(v)"
               >
                 {{ t('prompts.setCurrent') }}
+              </CfButton>
+              <CfButton
+                v-if="v.status === 'published' && v.id !== active.current_version_id"
+                tone="secondary"
+                icon="i-lucide-archive"
+                :tip="t('prompts.archive')"
+                @click="doArchive(v)"
+              >
+                {{ t('prompts.archive') }}
+              </CfButton>
+              <CfButton
+                v-if="v.status === 'archived' || (v.status === 'published' && v.id !== active.current_version_id)"
+                tone="secondary"
+                icon="i-lucide-history"
+                :tip="t('prompts.rollbackTip')"
+                @click="doRollback(v)"
+              >
+                {{ t('prompts.rollback') }}
               </CfButton>
               <CfButton
                 tone="icon-danger"
@@ -243,6 +315,8 @@
           <h3>{{ t('prompts.new') }}</h3>
           <UInput v-model="form.name" :placeholder="t('prompts.namePh')" class="w-full" />
           <UTextarea v-model="form.description" :placeholder="t('prompts.descPh')" class="w-full" :rows="2" />
+          <UInput v-model="form.tags" :placeholder="t('prompts.tagsPh')" class="w-full" />
+          <p class="cf-muted try-hint">{{ t('prompts.tagsHint') }}</p>
           <UTextarea v-model="form.content" :placeholder="t('prompts.contentPh')" class="w-full" :rows="6" />
           <div class="modal-actions">
             <CfButton tone="secondary" @click="showCreate = false">{{ t('common.cancel') }}</CfButton>
@@ -297,53 +371,77 @@
       </template>
     </CfModal>
 
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('prompts.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <CfButton tone="secondary" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-          <CfButton tone="danger" :loading="deletingLoading" @click="confirmDelete">
-            {{ t('common.delete') }}
-          </CfButton>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('prompts.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
 
-    <CfModal v-model:open="deleteVerVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('prompts.deleteVersionText', { n: deletingVer?.version ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <CfButton tone="secondary" @click="deleteVerVisible = false">{{ t('common.cancel') }}</CfButton>
-          <CfButton tone="danger" :loading="deletingLoading" @click="confirmDeleteVersion">
-            {{ t('common.delete') }}
-          </CfButton>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVerVisible"
+      :message="t('prompts.deleteVersionText', { n: deletingVer?.version ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDeleteVersion"
+    />
 
     <CfModal v-model:open="compareVisible" :title="t('prompts.compareTitle')" :ui="{ content: 'sm:max-w-4xl' }">
       <template #body>
-        <div v-if="comparePair.length === 2" class="compare-grid">
-          <div v-for="v in comparePair" :key="v.id" class="compare-col">
+        <div v-if="comparePair.length === 2" class="compare-wrap">
+          <div class="compare-mode">
+            <CfButton
+              :tone="compareMode === 'line' ? 'primary' : 'secondary'"
+              icon="i-lucide-list"
+              @click="compareMode = 'line'"
+            >
+              {{ t('prompts.compareLine') }}
+            </CfButton>
+            <CfButton
+              :tone="compareMode === 'side' ? 'primary' : 'secondary'"
+              icon="i-lucide-columns-2"
+              @click="compareMode = 'side'"
+            >
+              {{ t('prompts.compareSide') }}
+            </CfButton>
+          </div>
+
+          <div v-if="compareMode === 'line'" class="diff-panel">
             <div class="compare-label">
-              <UBadge size="sm" variant="subtle" color="primary">v{{ v.version }}</UBadge>
-              <span class="cf-muted">{{ v.changelog || '—' }}</span>
+              <UBadge size="sm" variant="subtle" color="neutral">
+                v{{ comparePair[0]!.version }} → v{{ comparePair[1]!.version }}
+              </UBadge>
+              <span class="cf-muted">{{ t('prompts.compareLineHint') }}</span>
             </div>
-            <pre class="content compare-body">{{ v.content }}</pre>
+            <div class="diff-body" role="table">
+              <div
+                v-for="(row, idx) in compareDiffLines"
+                :key="idx"
+                class="diff-row"
+                :data-op="row.op"
+              >
+                <span class="diff-no">{{ row.leftNo ?? '' }}</span>
+                <span class="diff-no">{{ row.rightNo ?? '' }}</span>
+                <span class="diff-sign">{{ row.op === 'add' ? '+' : row.op === 'del' ? '−' : ' ' }}</span>
+                <pre class="diff-text">{{ row.text || ' ' }}</pre>
+              </div>
+              <p v-if="!compareDiffLines.length" class="cf-muted">{{ t('prompts.compareSame') }}</p>
+            </div>
+          </div>
+
+          <div v-else class="compare-grid">
+            <div v-for="v in comparePair" :key="v.id" class="compare-col">
+              <div class="compare-label">
+                <UBadge size="sm" variant="subtle" color="primary">v{{ v.version }}</UBadge>
+                <span class="cf-muted">{{ v.changelog || '—' }}</span>
+              </div>
+              <pre class="content compare-body">{{ v.content }}</pre>
+            </div>
           </div>
         </div>
       </template>
       <template #footer>
         <div class="modal-actions">
-          <CfButton tone="secondary" @click="compareVisible = false">{{ t('common.cancel') }}</CfButton>
+          <CfButton tone="secondary" @click="compareVisible = false">{{ t('common.close') }}</CfButton>
         </div>
       </template>
     </CfModal>
@@ -352,7 +450,9 @@
 
 <script setup lang="ts">
 import type { Prompt, PromptVarDef, PromptVersion, PromptUsage } from '@/composables/usePrompts'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { buildVariableMap, initVarFormValues, missingRequiredVars } from '@/utils/promptVars'
+import { lineDiff } from '@/utils/lineDiff'
 
 const { t, d } = useLocale()
 const toast = useToast()
@@ -363,19 +463,25 @@ const { list: listSkills } = useSkills()
 const { list: listModels } = useModels()
 
 const loading = ref(true)
+const viewMode = ref<ViewMode>('card')
 const saving = ref(false)
 const savingVars = ref(false)
+const savingTags = ref(false)
 const items = ref<Prompt[]>([])
 const active = ref<Prompt | null>(null)
 const versions = ref<PromptVersion[]>([])
 const usages = ref<PromptUsage[]>([])
 const varDefs = ref<PromptVarDef[]>([])
+const tagsDraft = ref('')
+/** USelect 禁止 item.value 为空串；用哨兵表示「全部」 */
+const FILTER_TAG_ALL = '__all__'
+const filterTag = ref(FILTER_TAG_ALL)
 const showCreate = ref(false)
 const showVer = ref(false)
 const showImport = ref(false)
 const importKind = ref<'agent' | 'skill'>('agent')
-const importAgentId = ref('')
-const importSkillId = ref('')
+const importAgentId = ref<string | undefined>(undefined)
+const importSkillId = ref<string | undefined>(undefined)
 const agentOptions = ref<{ label: string; value: string }[]>([])
 const skillOptions = ref<{ label: string; value: string }[]>([])
 const importKindOptions = computed(() => [
@@ -383,8 +489,40 @@ const importKindOptions = computed(() => [
   { label: t('prompts.importSkill'), value: 'skill' },
 ])
 const modelOptions = ref<{ label: string; value: string }[]>([])
-const form = reactive({ name: '', description: '', content: '' })
+const form = reactive({ name: '', description: '', content: '', tags: '' })
 const verForm = reactive({ content: '', changelog: '', publish: true })
+
+function parseTags(raw: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const part of String(raw || '').split(/[,，]/)) {
+    const tag = part.trim()
+    if (!tag || seen.has(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+  }
+  return out
+}
+
+const tagFilterOptions = computed(() => {
+  const set = new Set<string>()
+  for (const p of items.value) {
+    for (const tag of p.tags || []) {
+      const t0 = String(tag || '').trim()
+      if (t0) set.add(t0)
+    }
+  }
+  return [
+    { label: t('prompts.filterTagAll'), value: FILTER_TAG_ALL },
+    ...[...set].sort((a, b) => a.localeCompare(b)).map(tag => ({ label: tag, value: tag })),
+  ]
+})
+
+const filteredItems = computed(() => {
+  const tag = filterTag.value.trim()
+  if (!tag || tag === FILTER_TAG_ALL) return items.value
+  return items.value.filter(p => (p.tags || []).includes(tag))
+})
 
 const tryVersionId = ref('')
 const tryModel = ref('')
@@ -398,7 +536,7 @@ const tryVersionOptions = computed(() =>
   versions.value.map(v => ({
     label: [
       `v${v.version}`,
-      v.status === 'published' ? t('prompts.published') : t('prompts.draft'),
+      versionStatusLabel(v.status),
       v.id === active.value?.current_version_id ? t('prompts.current') : '',
     ].filter(Boolean).join(' · '),
     value: v.id,
@@ -421,6 +559,16 @@ const deletingLoading = ref(false)
 const compareIds = ref<string[]>([])
 const compareVisible = ref(false)
 const comparePair = ref<PromptVersion[]>([])
+const compareMode = ref<'line' | 'side'>('line')
+
+const compareDiffLines = computed(() => {
+  if (comparePair.value.length !== 2) return []
+  const [left, right] = comparePair.value
+  // 按版本号旧→新，方便读 diff
+  const older = (left!.version <= right!.version) ? left! : right!
+  const newer = older === left ? right! : left!
+  return lineDiff(older.content || '', newer.content || '')
+})
 const varSamples = reactive<Record<string, string>>({})
 
 const VAR_RE = /\{\{\s*([a-zA-Z_][\w]*)\s*\}\}/g
@@ -484,6 +632,7 @@ const openDetail = async (p: Prompt) => {
   active.value = p
   compareIds.value = []
   varDefs.value = (p.variables || []).map(v => ({ ...v }))
+  tagsDraft.value = (p.tags || []).join(', ')
   const [verRes, useRes, one] = await Promise.all([
     api.listVersions(p.id),
     api.listUsages(p.id),
@@ -494,6 +643,7 @@ const openDetail = async (p: Prompt) => {
   if (one.data?.prompt) {
     active.value = one.data.prompt
     varDefs.value = (one.data.prompt.variables || []).map(v => ({ ...v }))
+    tagsDraft.value = (one.data.prompt.tags || []).join(', ')
   }
   if (versions.value[0]) {
     verForm.content = versions.value[0].content
@@ -508,6 +658,7 @@ const closeDetail = () => {
   versions.value = []
   usages.value = []
   varDefs.value = []
+  tagsDraft.value = ''
   compareIds.value = []
   tryAnswer.value = ''
   tryError.value = ''
@@ -540,6 +691,24 @@ const saveVarDefs = async () => {
   if (res.data) {
     active.value = res.data
     tryVars.value = initVarFormValues(cleaned)
+  }
+  toast.add({ title: t('common.saveOk'), color: 'success' })
+  await load()
+}
+
+const saveTags = async () => {
+  if (!active.value) return
+  savingTags.value = true
+  const tags = parseTags(tagsDraft.value)
+  const res = await api.update(active.value.id, { tags })
+  savingTags.value = false
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  if (res.data) {
+    active.value = res.data
+    tagsDraft.value = (res.data.tags || []).join(', ')
   }
   toast.add({ title: t('common.saveOk'), color: 'success' })
   await load()
@@ -595,6 +764,18 @@ const doTry = async () => {
   }
 }
 
+function versionStatusLabel(status: string) {
+  if (status === 'published') return t('prompts.published')
+  if (status === 'archived') return t('prompts.archived')
+  return t('prompts.draft')
+}
+
+function versionStatusColor(status: string): 'success' | 'warning' | 'neutral' {
+  if (status === 'published') return 'success'
+  if (status === 'archived') return 'warning'
+  return 'neutral'
+}
+
 const doPublish = async (v: PromptVersion) => {
   if (!active.value) return
   const res = await api.publishVersion(v.id)
@@ -603,6 +784,35 @@ const doPublish = async (v: PromptVersion) => {
     return
   }
   if (res.data?.prompt) active.value = res.data.prompt
+  await load()
+  await openDetail(active.value)
+}
+
+const doArchive = async (v: PromptVersion) => {
+  if (!active.value) return
+  const res = await api.archiveVersion(v.id)
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  toast.add({ title: t('prompts.archiveOk', { n: v.version }), color: 'success' })
+  await load()
+  await openDetail(active.value)
+}
+
+const doRollback = async (v: PromptVersion) => {
+  if (!active.value) return
+  const res = await api.rollbackVersion(v.id)
+  if (res.error) {
+    toast.add({ title: res.error, color: 'error' })
+    return
+  }
+  if (res.data?.prompt) active.value = res.data.prompt
+  const n = res.data?.current_version?.version
+  toast.add({
+    title: n ? t('prompts.rollbackOk', { n }) : t('prompts.rollback'),
+    color: 'success',
+  })
   await load()
   await openDetail(active.value)
 }
@@ -620,8 +830,8 @@ const doImport = async () => {
     return
   }
   showImport.value = false
-  importAgentId.value = ''
-  importSkillId.value = ''
+  importAgentId.value = undefined
+  importSkillId.value = undefined
   const ver = res.data?.current_version
   toast.add({
     title: ver && ver.version > 1 ? t('prompts.importUpdated') : t('prompts.importCreated'),
@@ -633,12 +843,14 @@ const doImport = async () => {
 
 const loadAgents = async () => {
   const res = await listAgents()
-  agentOptions.value = (res.data || []).map(a => ({ label: a.name, value: a.id }))
+  const list = Array.isArray(res.data) ? res.data : []
+  agentOptions.value = list.map(a => ({ label: a.name, value: a.id }))
 }
 
 const loadSkills = async () => {
   const res = await listSkills()
-  skillOptions.value = (res.data || []).map(s => ({
+  const list = Array.isArray(res.data) ? res.data : []
+  skillOptions.value = list.map(s => ({
     label: s.is_built_in ? `${s.name}` : s.name,
     value: s.id,
   }))
@@ -646,7 +858,8 @@ const loadSkills = async () => {
 
 const loadModels = async () => {
   const res = await listModels()
-  modelOptions.value = (res.data || []).map(m => ({
+  const list = Array.isArray(res.data) ? res.data : []
+  modelOptions.value = list.map(m => ({
     label: m.name || m.id,
     value: m.id,
   }))
@@ -658,10 +871,12 @@ const loadModels = async () => {
 const doCreate = async () => {
   if (!form.name.trim()) return
   saving.value = true
+  const tags = parseTags(form.tags)
   const res = await api.create({
     name: form.name.trim(),
     description: form.description,
     content: form.content,
+    tags: tags.length ? tags : undefined,
   })
   saving.value = false
   if (res.error) {
@@ -672,6 +887,7 @@ const doCreate = async () => {
   form.name = ''
   form.description = ''
   form.content = ''
+  form.tags = ''
   await load()
   if (res.data?.prompt) await openDetail(res.data.prompt)
 }
@@ -781,6 +997,9 @@ const openCompare = () => {
     toast.add({ title: t('prompts.compareNeedTwo'), color: 'warning' })
     return
   }
+  // 保证 pair[0] 为较低版本，行级 diff 更直观
+  comparePair.value = [...comparePair.value].sort((a, b) => a.version - b.version)
+  compareMode.value = 'line'
   compareVisible.value = true
 }
 
@@ -793,9 +1012,21 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.list-toolbar { margin-bottom: 10px; }
+.header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
 .list-count { font-size: 13px; color: var(--cf-ink-soft); }
+.tag-filter { width: 180px; }
 .row-click { cursor: pointer; }
 .row-click:hover { background: color-mix(in oklab, var(--cf-ink) 4%, transparent); }
 .name { font-weight: 600; }
@@ -812,6 +1043,42 @@ onMounted(() => {
 .block-head h3 { margin: 0; font-size: 15px; }
 .block-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .compare-hint { margin: 0 0 12px; font-size: 12px; }
+.compare-wrap { display: flex; flex-direction: column; gap: 12px; }
+.compare-mode { display: flex; gap: 8px; flex-wrap: wrap; }
+.diff-panel { display: flex; flex-direction: column; gap: 8px; }
+.diff-body {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--cf-line);
+  border-radius: 8px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.diff-row {
+  display: grid;
+  grid-template-columns: 40px 40px 16px 1fr;
+  gap: 4px;
+  padding: 0 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-row[data-op='add'] { background: color-mix(in oklab, #16a34a 12%, transparent); }
+.diff-row[data-op='del'] { background: color-mix(in oklab, #dc2626 12%, transparent); }
+.diff-no {
+  color: var(--cf-ink-soft);
+  text-align: right;
+  user-select: none;
+}
+.diff-sign { text-align: center; user-select: none; }
+.diff-row[data-op='add'] .diff-sign { color: #16a34a; }
+.diff-row[data-op='del'] .diff-sign { color: #dc2626; }
+.diff-text {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .ver-card {
   border: 1px solid var(--cf-line);
   border-radius: 8px;

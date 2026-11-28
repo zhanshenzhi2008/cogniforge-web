@@ -11,9 +11,11 @@ import {
   SseStreamError,
 } from '~/utils/sseStream'
 
+export type ChatContent = string | Array<Record<string, unknown>>
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
-  content: string
+  content: ChatContent
 }
 
 export interface AgentChatRequest {
@@ -24,6 +26,13 @@ export interface AgentChatRequest {
   model?: string
   temperature?: number
   max_tokens?: number
+  top_p?: number
+  memory_turns?: number
+  rag_top_k?: number
+  rag_min_score?: number
+  conversation_id?: string
+  attachments?: unknown[]
+  rag_kb_ids?: string[]
 }
 
 export interface AgentChatResponse {
@@ -37,6 +46,8 @@ export interface AgentChatResponse {
     total_tokens: number
   }
 }
+
+export type AgentChatStreamExtras = Omit<AgentChatRequest, 'messages' | 'stream'>
 
 export const useAgentChat = () => {
   const api = useApi()
@@ -57,7 +68,7 @@ export const useAgentChat = () => {
   const chat = async (
     agentId: string,
     messages: ChatMessage[],
-    extras?: Pick<AgentChatRequest, 'variables' | 'model' | 'temperature' | 'max_tokens'>,
+    extras?: AgentChatStreamExtras,
   ): Promise<{ data?: AgentChatResponse; error?: string }> => {
     try {
       const res = await api.post<AgentChatResponse>(
@@ -78,7 +89,7 @@ export const useAgentChat = () => {
     agentId: string,
     messages: ChatMessage[],
     onChunk: (content: string, done: boolean) => void,
-    extras?: Pick<AgentChatRequest, 'variables' | 'model' | 'temperature' | 'max_tokens'>,
+    extras?: AgentChatStreamExtras,
   ): Promise<void> => {
     stopStream()
     streaming.value = true
@@ -145,6 +156,8 @@ export const useAgentChat = () => {
         error.value = fullContent
           ? t('play.streamInterrupted')
           : t('play.streamNetwork')
+      } else if (err instanceof SseStreamError && err.kind === 'empty') {
+        error.value = t('play.sendFailBody')
       } else {
         error.value = err.message || t('play.sendFail')
       }

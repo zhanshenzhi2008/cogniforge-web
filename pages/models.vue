@@ -48,17 +48,11 @@
     </div>
 
     <div v-if="loading" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-        <span>{{ t('common.loading') }}</span>
-      </div>
+      <CfLoadingState />
     </div>
 
     <div v-else-if="providers.length === 0" class="cf-panel">
-      <div class="cf-state">
-        <UIcon name="i-lucide-boxes" class="size-8 opacity-50" />
-        <p>{{ t('models.empty') }}</p>
-      </div>
+      <CfEmptyState icon="i-lucide-boxes" :message="t('models.empty')" />
     </div>
 
     <!-- Card view (default): compact 3–4+ columns -->
@@ -630,24 +624,12 @@
       </template>
     </CfModal>
 
-    <!-- Delete confirm -->
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('models.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" icon="i-lucide-x" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton tone="danger" strong icon="i-lucide-trash-2" :loading="deletingLoading" @click="confirmDelete">
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('models.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 

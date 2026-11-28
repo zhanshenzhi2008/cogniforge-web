@@ -5,9 +5,12 @@
         <h1 class="cf-page-title">{{ t('kb.title') }}</h1>
         <p class="cf-page-sub">{{ t('kb.sub') }}</p>
       </div>
-      <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
-        {{ t('kb.new') }}
-      </CfButton>
+      <div class="header-actions">
+        <CfViewModeToggle v-model="viewMode" storage-key="cf-kb-view" />
+        <CfButton tone="primary" icon="i-lucide-plus" @click="handleCreate">
+          {{ t('kb.new') }}
+        </CfButton>
+      </div>
     </div>
 
     <div class="list-toolbar">
@@ -21,79 +24,156 @@
       <span class="list-hint">{{ t('kb.openDocsHint') }}</span>
     </div>
 
-    <div v-if="loading" class="cf-state">
-      <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin" />
-      <span>{{ t('common.loading') }}</span>
-    </div>
+    <CfLoadingState v-if="loading" />
+    <CfEmptyState
+      v-else-if="knowledgeBases.length === 0"
+      :icon="CF_ICONS.knowledge"
+      :message="t('kb.empty')"
+    />
+    <CfEmptyState
+      v-else-if="filteredKnowledgeBases.length === 0"
+      icon="i-lucide-search-x"
+      :message="t('kb.listNoMatch')"
+    />
 
-    <div v-else-if="knowledgeBases.length === 0" class="cf-state">
-      <UIcon :name="CF_ICONS.knowledge" class="size-8 opacity-50" />
-      <p>{{ t('kb.empty') }}</p>
-    </div>
-
-    <div v-else-if="filteredKnowledgeBases.length === 0" class="cf-state">
-      <UIcon name="i-lucide-search-x" class="size-8 opacity-50" />
-      <p>{{ t('kb.listNoMatch') }}</p>
-    </div>
-
-    <div v-else class="kb-grid">
-          <div
-            v-for="kb in filteredKnowledgeBases"
-            :key="kb.id"
-            class="kb-card cf-surface"
-            :title="t('kb.openDocsHint')"
-            @click="openKnowledge(kb)"
+    <div v-else-if="viewMode === 'card'" class="kb-grid">
+      <CfResourceCard
+        v-for="kb in filteredKnowledgeBases"
+        :key="kb.id"
+        :icon="CF_ICONS.knowledge"
+        :title="kb.name"
+        :description="kb.description || t('common.noDesc')"
+        :tip="t('kb.openDocsHint')"
+        @click="openKnowledge(kb)"
+      >
+        <template #badges>
+          <UBadge
+            size="sm"
+            variant="subtle"
+            :color="kb.status === 'active' ? 'success' : 'neutral'"
           >
-            <div class="kb-header">
-              <div class="kb-name">
-                <UIcon :name="CF_ICONS.knowledge" class="size-5 shrink-0" />
-                <span>{{ kb.name }}</span>
-                <UBadge
-                  size="sm"
-                  variant="subtle"
-                  :color="kb.status === 'active' ? 'success' : 'neutral'"
-                >
-                  {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
-                </UBadge>
-              </div>
-              <div class="action-btns" @click.stop>
-                <CfButton
-                  tone="icon-accent"
-                  icon="i-lucide-file-text"
-                  :tip="t('kb.docsManage')"
-                  @click="openKnowledge(kb)"
-                />
-                <CfButton
-                  tone="icon-accent"
-                  icon="i-lucide-pencil"
-                  :tip="t('common.edit')"
-                  @click="handleEdit(kb)"
-                />
-                <CfButton
-                  tone="icon-danger"
-                  icon="i-lucide-trash-2"
-                  :tip="t('common.delete')"
-                  @click="askDelete(kb)"
-                />
-              </div>
-            </div>
-
-            <p class="kb-description">{{ kb.description || t('common.noDesc') }}</p>
-
-            <div class="kb-meta">
-              <div class="meta-left">
-                <span class="meta-item">
-                  <UIcon name="i-lucide-file-text" class="size-3.5" />
-                  {{ t('kb.docs', { n: kb.doc_count }) }}
-                </span>
-                <span class="meta-item">
-                  <UIcon name="i-lucide-server" class="size-3.5" />
-                  {{ kb.vector_db || 'chroma' }}
-                </span>
-              </div>
-              <span class="meta-item">{{ d(kb.created_at) }}</span>
-            </div>
+            {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+          </UBadge>
+          <UBadge
+            v-if="kb.visibility === 'org'"
+            size="sm"
+            variant="subtle"
+            color="info"
+          >
+            {{ t('kb.visibilitySharedBadge') }}
+          </UBadge>
+        </template>
+        <template #actions>
+          <CfButton
+            tone="icon-accent"
+            icon="i-lucide-file-text"
+            :tip="t('kb.docsManage')"
+            @click="openKnowledge(kb)"
+          />
+          <CfButton
+            v-if="isOwnedKB(kb)"
+            tone="icon-accent"
+            icon="i-lucide-pencil"
+            :tip="t('common.edit')"
+            @click="handleEdit(kb)"
+          />
+          <CfButton
+            v-if="isOwnedKB(kb)"
+            tone="icon-danger"
+            icon="i-lucide-trash-2"
+            :tip="t('common.delete')"
+            @click="askDelete(kb)"
+          />
+        </template>
+        <template #meta>
+          <div class="kb-meta-left">
+            <span class="kb-meta-item">
+              <UIcon name="i-lucide-file-text" class="size-3.5" />
+              {{ t('kb.docs', { n: kb.doc_count }) }}
+            </span>
+            <span class="kb-meta-item">
+              <UIcon name="i-lucide-server" class="size-3.5" />
+              {{ kb.vector_db || 'chroma' }}
+            </span>
           </div>
+          <span class="kb-meta-item">{{ d(kb.created_at) }}</span>
+        </template>
+      </CfResourceCard>
+    </div>
+
+    <div v-else class="cf-panel">
+      <div class="cf-table-wrap">
+        <table class="cf-data-table">
+          <thead>
+            <tr>
+              <th>{{ t('common.name') }}</th>
+              <th>{{ t('common.description') }}</th>
+              <th>{{ t('kb.docsShort') }}</th>
+              <th>{{ t('kb.vector') }}</th>
+              <th>{{ t('common.createdAt') }}</th>
+              <th class="cf-col-actions">{{ t('common.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="kb in filteredKnowledgeBases"
+              :key="kb.id"
+              class="list-row"
+              :title="t('kb.openDocsHint')"
+              @dblclick="openKnowledge(kb)"
+            >
+              <td>
+                <div class="kb-name-cell">
+                  <span class="name">{{ kb.name }}</span>
+                  <UBadge
+                    size="sm"
+                    variant="subtle"
+                    :color="kb.status === 'active' ? 'success' : 'neutral'"
+                  >
+                    {{ kb.status === 'active' ? t('common.enabled') : t('common.disabled') }}
+                  </UBadge>
+                  <UBadge
+                    v-if="kb.visibility === 'org'"
+                    size="sm"
+                    variant="subtle"
+                    color="info"
+                  >
+                    {{ t('kb.visibilitySharedBadge') }}
+                  </UBadge>
+                </div>
+              </td>
+              <td class="cf-muted">{{ kb.description || '—' }}</td>
+              <td class="cf-muted">{{ kb.doc_count }}</td>
+              <td class="cf-muted">{{ kb.vector_db || 'chroma' }}</td>
+              <td class="cf-muted">{{ d(kb.created_at) }}</td>
+              <td @dblclick.stop>
+                <div class="action-btns">
+                  <CfButton
+                    tone="icon-accent"
+                    icon="i-lucide-file-text"
+                    :tip="t('kb.docsManage')"
+                    @click="openKnowledge(kb)"
+                  />
+                  <CfButton
+                    v-if="isOwnedKB(kb)"
+                    tone="icon-accent"
+                    icon="i-lucide-pencil"
+                    :tip="t('common.edit')"
+                    @click="handleEdit(kb)"
+                  />
+                  <CfButton
+                    v-if="isOwnedKB(kb)"
+                    tone="icon-danger"
+                    icon="i-lucide-trash-2"
+                    :tip="t('common.delete')"
+                    @click="askDelete(kb)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Create / View / Edit KB -->
@@ -253,30 +333,12 @@
       </template>
     </CfModal>
 
-    <!-- Delete KB confirm -->
-    <CfModal v-model:open="deleteVisible" :title="t('common.deleteConfirm')" :ui="{ content: 'sm:max-w-md' }">
-      <template #body>
-        <p class="delete-text">
-          {{ t('kb.deleteText', { name: deleting?.name ?? '' }) }}
-        </p>
-      </template>
-      <template #footer>
-        <div class="modal-actions">
-          <div class="modal-actions__right">
-            <CfButton tone="secondary" @click="deleteVisible = false">{{ t('common.cancel') }}</CfButton>
-            <CfButton
-              tone="danger"
-              strong
-              icon="i-lucide-trash-2"
-              :loading="deletingLoading"
-              @click="confirmDelete"
-            >
-              {{ t('common.delete') }}
-            </CfButton>
-          </div>
-        </div>
-      </template>
-    </CfModal>
+    <CfConfirmModal
+      v-model:open="deleteVisible"
+      :message="t('kb.deleteText', { name: deleting?.name ?? '' })"
+      :loading="deletingLoading"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
@@ -286,6 +348,7 @@ import type {
   CreateKBInput,
   UpdateKBInput,
 } from '@/composables/useKnowledgeBases'
+import type { ViewMode } from '@/components/CfViewModeToggle.vue'
 import { CF_ICONS } from '~/constants/icons'
 
 definePageMeta({
@@ -294,6 +357,7 @@ definePageMeta({
 
 const toast = useToast()
 const { t, d } = useLocale()
+const { currentUser } = useAuth()
 const {
   listKBs,
   createKB,
@@ -301,10 +365,16 @@ const {
   deleteKB,
 } = useKnowledgeBases()
 
+function isOwnedKB(kb: KnowledgeBase) {
+  const uid = currentUser.value?.id
+  return !!uid && kb.user_id === uid
+}
+
 const loading = ref(false)
 const submitting = ref(false)
 const knowledgeBases = ref<KnowledgeBase[]>([])
 const listQuery = ref('')
+const viewMode = ref<ViewMode>('card')
 const filteredKnowledgeBases = computed(() => {
   const q = listQuery.value.trim().toLowerCase()
   if (!q) return knowledgeBases.value
@@ -505,6 +575,12 @@ onMounted(() => {
   min-height: 160px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -515,6 +591,21 @@ onMounted(() => {
 
 .kb-list-search {
   width: min(100%, 280px);
+}
+
+.list-row {
+  cursor: pointer;
+}
+
+.kb-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kb-name-cell .name {
+  font-weight: 600;
 }
 
 .list-count {
@@ -534,93 +625,31 @@ onMounted(() => {
 }
 
 
-.kb-card {
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
-  border: 1.5px solid var(--cf-line);
-  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.kb-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  border-color: color-mix(in srgb, var(--cf-accent) 35%, var(--cf-line));
-}
-
-.kb-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  gap: 8px;
-}
-
-.kb-header .action-btns {
-  flex-shrink: 0;
+.kb-grid :deep(.cf-resource-card__actions) {
   opacity: 1;
   transition: opacity 0.15s ease;
 }
 
-/* 鼠标设备：悬停/焦点才显示操作图标，减少视觉噪音 */
 @media (hover: hover) and (pointer: fine) {
-  .kb-header .action-btns {
+  .kb-grid :deep(.cf-resource-card__actions) {
     opacity: 0;
     pointer-events: none;
   }
 
-  .kb-card:hover .kb-header .action-btns,
-  .kb-card:focus-within .kb-header .action-btns {
+  .kb-grid :deep(.cf-resource-card:hover .cf-resource-card__actions),
+  .kb-grid :deep(.cf-resource-card:focus-within .cf-resource-card__actions) {
     opacity: 1;
     pointer-events: auto;
   }
 }
 
-.kb-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--cf-ink);
-  min-width: 0;
-  flex: 1;
-}
-
-.kb-name > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kb-description {
-  color: var(--cf-ink-soft);
-  font-size: 0.875rem;
-  margin: 0 0 12px;
-  min-height: 40px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.kb-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  color: var(--cf-ink-soft);
-  gap: 8px;
-}
-
-.meta-left {
+.kb-meta-left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.meta-item {
+.kb-meta-item {
   display: flex;
   align-items: center;
   gap: 4px;

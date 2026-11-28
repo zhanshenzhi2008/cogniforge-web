@@ -73,9 +73,12 @@
             <div class="empty-state">
               <div class="empty-glow" />
               <UIcon :name="CF_ICONS.chat" class="size-14 empty-icon" />
-              <p class="empty-title font-display">{{ t('play.emptyTitle') }}</p>
-              <p class="empty-sub">{{ t('play.emptySub') }}</p>
+              <p class="empty-title font-display">{{ emptyHeroTitle }}</p>
+              <p class="empty-sub">{{ emptyHeroSub }}</p>
               <div class="suggestion-chips">
+                <p v-if="suggestionChipsAreGuessed" class="suggestion-chips__label">
+                  {{ t('agents.guessYouWant') }}
+                </p>
                 <CfButton
                   v-for="chip in suggestionChips"
                   :key="chip"
@@ -241,6 +244,7 @@
               @click="imageInput?.click()"
             />
             <CfButton
+              v-if="fileAttachAllowed"
               tone="icon"
               icon="i-lucide-paperclip"
               :tip="t('play.attachFile')"
@@ -281,13 +285,28 @@
         />
       </template>
     </USlideover>
+
+    <CfConfirmModal
+      v-model:open="deleteConvOpen"
+      :message="t('play.deleteConfirm')"
+      :loading="deletingConv"
+      @confirm="confirmDeleteConversation"
+    />
+    <CfConfirmModal
+      v-model:open="insertConfirmOpen"
+      :message="t('play.insertConfirm', { n: insertRemoveCount })"
+      :confirm-text="t('common.confirm')"
+      confirm-icon="i-lucide-corner-down-left"
+      :loading="insertConfirming"
+      @confirm="doInsertAndSend"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { renderChatMarkdown } from '~/utils/chatMarkdown'
-import { mapChatHttpError } from '~/utils/chatHttpError'
 import type { CfChatStatus } from '~/utils/chatUi'
+import { guessSuggestedPrompts } from '~/utils/guessSuggestedPrompts'
 import { CF_ICONS } from '~/constants/icons'
 import {
   CHAT_IMAGE_ACCEPT,
@@ -309,19 +328,13 @@ import {
   type MessageAttachment,
   type PendingAttachment,
 } from '~/utils/chatAttachments'
-import { apiUrl } from '~/utils/apiBase'
-import {
-  fetchSse,
-  isAbortError,
-  parseOpenAISseData,
-  SseStreamError,
-} from '~/utils/sseStream'
 import {
   buildVariableMap,
   initVarFormValues,
   missingRequiredVars,
 } from '@/utils/promptVars'
 import type { Agent } from '@/composables/useAgents'
+import type { ChatMessage } from '@/composables/useAgentChat'
 import type { PromptVarDef } from '@/composables/usePrompts'
 import type {
   ConversationAttachment,
@@ -355,15 +368,24 @@ interface Model {
 
 const route = useRoute()
 const router = useRouter()
-const config = useRuntimeConfig()
 const toast = useToast()
-const { t } = useLocale()
+const { t, locale } = useLocale()
 const { list: listAgents, get: getAgent } = useAgents()
 const { getOne: getPrompt } = usePrompts()
 const { list: listConversations, get: getConversation, create: createConversation, update: updateConversation, remove: removeConversation } = useConversations()
 const { listKBs, createKB, uploadDoc } = useKnowledgeBases()
 const { get } = useApi()
 const { me: fetchQuota } = useQuota()
+const {
+  streamChat: streamAgentChat,
+  stopStream: stopAgentStream,
+  error: agentChatError,
+} = useAgentChat()
+const {
+  streamChat: streamModelChat,
+  stopStream: stopModelStream,
+  error: modelChatError,
+} = useChatStream()
 const quotaSnap = ref<QuotaSnapshot | null>(null)
 const quotaGone = computed(() => quotaExhausted(quotaSnap.value))
 
@@ -391,7 +413,6 @@ const selectedAgentInfo = ref<Agent | null>(null)
 /** 绑定 Prompt 的变量定义（17.14） */
 const promptVarDefs = ref<PromptVarDef[]>([])
 const promptVars = ref<Record<string, string>>({})
-const abortController = ref<AbortController | null>(null)
 const configOpen = ref(false)
 const historyOpen = ref(false)
 const SIDEBAR_KEY = 'cf-play-sidebar-collapsed'
@@ -401,11 +422,48 @@ const currentConversationId = ref('')
 const conversationTitle = ref('')
 let persistSeq = 0
 
-const suggestionChips = computed(() => [
-  t('play.chip1'),
-  t('play.chip2'),
-  t('play.chip3'),
-])
+const suggestionChipsAreGuessed = computed(() => {
+  const fromAgent = (selectedAgentInfo.value?.suggested_prompts || [])
+    .map(s => String(s || '').trim())
+    .filter(Boolean)
+  return !!selectedAgentInfo.value && fromAgent.length === 0
+})
+
+const suggestionChips = computed(() => {
+  const fromAgent = (selectedAgentInfo.value?.suggested_prompts || [])
+    .map(s => String(s || '').trim())
+    .filter(Boolean)
+    .slice(0, 6)
+  if (fromAgent.length) return fromAgent
+  if (selectedAgentInfo.value) {
+    return guessSuggestedPrompts({
+      name: selectedAgentInfo.value.name,
+      description: selectedAgentInfo.value.description,
+      locale: locale.value,
+      max: 3,
+    })
+  }
+  return [t('play.chip1'), t('play.chip2'), t('play.chip3')]
+})
+
+/** 无 Agent 时始终可传文件；有 Agent 时看 allow_attachments */
+const fileAttachAllowed = computed(() => {
+  if (selectedAgent.value === NONE_AGENT) return true
+  return !!selectedAgentInfo.value?.allow_attachments
+})
+
+const emptyHeroTitle = computed(() => {
+  if (selectedAgentInfo.value?.name) {
+    return t('play.withAgent', { name: selectedAgentInfo.value.name })
+  }
+  return t('play.emptyTitle')
+})
+
+const emptyHeroSub = computed(() => {
+  const opening = selectedAgentInfo.value?.opening_message?.trim()
+  if (opening) return opening
+  return t('play.emptySub')
+})
 
 const composerPlaceholder = computed(() => {
   if (quotaGone.value) return t('quota.placeholderDone')
@@ -678,24 +736,6 @@ const refreshQuota = async () => {
   if (res.data) quotaSnap.value = res.data
 }
 
-const notifyChatHttpError = (status: number, text: string) => {
-  try {
-    const parsed = JSON.parse(text)
-    if (parsed?.code === 5016) void refreshQuota()
-  } catch {
-    // ignore
-  }
-  const mapped = mapChatHttpError(status, text, t)
-  if (mapped.startsWith('HTTP ')) {
-    notifyError(t('play.sendFailHttp', {
-      status,
-      detail: text ? ` - ${text}` : '',
-    }))
-    return
-  }
-  notifyError(mapped)
-}
-
 const fetchAgents = async () => {
   try {
     const res = await listAgents()
@@ -966,8 +1006,8 @@ function cancelInsert() {
 }
 
 const stopStreaming = () => {
-  abortController.value?.abort()
-  abortController.value = null
+  stopAgentStream()
+  stopModelStream()
   streaming.value = false
   messageQueue.value = messageQueue.value.map(item => (
     item.status === 'sending' ? { ...item, status: 'queued' as const } : item
@@ -1053,6 +1093,11 @@ async function onComposerSubmit() {
   await sendMessage()
 }
 
+const insertConfirmOpen = ref(false)
+const insertRemoveCount = ref(0)
+const insertConfirming = ref(false)
+let pendingInsertIdx: number | null = null
+
 async function confirmAndInsert() {
   const afterId = insertAfterId.value
   if (!afterId) return
@@ -1063,9 +1108,31 @@ async function confirmAndInsert() {
   }
   const removeCount = messages.value.length - idx - 1
   if (removeCount > 0) {
-    const ok = window.confirm(t('play.insertConfirm', { n: removeCount }))
-    if (!ok) return
+    pendingInsertIdx = idx
+    insertRemoveCount.value = removeCount
+    insertConfirmOpen.value = true
+    return
   }
+  await applyInsertAndSend(idx)
+}
+
+async function doInsertAndSend() {
+  const idx = pendingInsertIdx
+  pendingInsertIdx = null
+  if (idx == null) {
+    insertConfirmOpen.value = false
+    return
+  }
+  insertConfirming.value = true
+  try {
+    await applyInsertAndSend(idx)
+    insertConfirmOpen.value = false
+  } finally {
+    insertConfirming.value = false
+  }
+}
+
+async function applyInsertAndSend(idx: number) {
   messages.value = messages.value.slice(0, idx + 1)
   messageQueue.value = []
   queueEditingId.value = ''
@@ -1128,138 +1195,69 @@ const sendMessage = async () => {
   pendingAttachments.value = []
 
   streaming.value = true
-  const controller = new AbortController()
-  abortController.value = controller
+
+  const { enable_web_search, ...chatParams } = params
+  const history: ChatMessage[] = messages.value
+    .filter(m =>
+      m.content.trim().length > 0
+      || (m.images?.length ?? 0) > 0
+      || (m.attachments?.length ?? 0) > 0,
+    )
+    .map(m => ({
+      role: m.role as ChatMessage['role'],
+      content: toVisionContent(m.content, m.images),
+    }))
+
+  messages.value.push({
+    id: crypto.randomUUID(),
+    role: 'assistant',
+    content: '',
+    time: new Date().toISOString(),
+  })
+  const assistantMessage = messages.value[messages.value.length - 1]
+
+  const onChunk = (content: string, _done: boolean) => {
+    assistantMessage.content = content
+  }
 
   try {
-    const endpoint = selectedAgent.value !== NONE_AGENT
-      ? apiUrl(`/api/v1/agents/${selectedAgent.value}/chat`, String(config.public.apiBase ?? ''))
-      : apiUrl('/api/v1/chat/stream', String(config.public.apiBase ?? ''))
-
-    const { enable_web_search, ...chatParams } = params
-    const body: Record<string, unknown> = {
-      model: selectedModel.value,
-      messages: messages.value
-        .filter(m =>
-          m.content.trim().length > 0
-          || (m.images?.length ?? 0) > 0
-          || (m.attachments?.length ?? 0) > 0,
-        )
-        .map(m => ({ role: m.role, content: toVisionContent(m.content, m.images) })),
-      stream: true,
-      conversation_id: currentConversationId.value || undefined,
-      attachments: attachments.length ? attachments : undefined,
-      ...chatParams,
-    }
-    // 无 Agent 时把「网络搜索」开关映射为 mcp_servers（Agent 自带 tools）
-    if (selectedAgent.value === NONE_AGENT && enable_web_search) {
-      body.mcp_servers = ['web_search']
-    }
-    if (agentVariables && Object.keys(agentVariables).length) {
-      body.variables = agentVariables
-    }
-
-    messages.value.push({
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: '',
-      time: new Date().toISOString(),
-    })
-    const assistantMessage = messages.value[messages.value.length - 1]
-    let gotContent = false
-
-    await fetchSse(
-      endpoint,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(useAuth().getToken()
-            ? { Authorization: `Bearer ${useAuth().getToken()}` }
-            : {}),
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-        connectRetries: 1,
-        retryDelayMs: 400,
-      },
-      {
-        onEvent: (ev) => {
-          const parsed = parseOpenAISseData(ev.data)
-          if (!parsed) return false
-          if (parsed.done) return false
-          if (parsed.error) {
-            notifyError(parsed.error)
-            if (!assistantMessage.content) {
-              messages.value.pop()
-            } else {
-              assistantMessage.content = parsed.error
-            }
-            return true
-          }
-          if (parsed.delta) {
-            assistantMessage.content += parsed.delta
-            gotContent = true
-            return false
-          }
-          if (parsed.full) {
-            assistantMessage.content = parsed.full
-            gotContent = true
-          }
-          return false
-        },
-        onRawLeftover: (raw) => {
-          const parsed = parseOpenAISseData(raw.startsWith('data:') ? raw.slice(5) : raw)
-          if (parsed?.full) {
-            assistantMessage.content = parsed.full
-            gotContent = true
-            return
-          }
-          try {
-            const obj = JSON.parse(raw.trim())
-            const content =
-              obj?.choices?.[0]?.message?.content
-              ?? obj?.data?.choices?.[0]?.message?.content
-            if (typeof content === 'string' && content.length > 0) {
-              assistantMessage.content = content
-              gotContent = true
-            }
-          } catch {
-            // ignore
-          }
-        },
-      },
-    )
-
-  } catch (error: any) {
-    if (isAbortError(error)) {
-      return
-    }
-    if (error instanceof SseStreamError && error.kind === 'http') {
-      notifyChatHttpError(error.status || 0, error.bodyText || '')
-      messages.value.pop()
-      return
-    }
-    if (error instanceof SseStreamError && (error.kind === 'disconnect' || error.kind === 'network')) {
-      const last = messages.value[messages.value.length - 1]
-      if (last?.role === 'assistant' && last.content) {
-        notifyError(t('play.streamInterrupted'))
-      } else {
-        notifyError(t('play.streamNetwork'))
-        messages.value.pop()
+    if (selectedAgent.value !== NONE_AGENT) {
+      await streamAgentChat(selectedAgent.value, history, onChunk, {
+        model: selectedModel.value,
+        conversation_id: currentConversationId.value || undefined,
+        attachments: attachments.length ? attachments : undefined,
+        variables: agentVariables,
+        ...chatParams,
+      })
+      const err = agentChatError.value
+      if (err) {
+        if (err === t('quota.exhausted')) void refreshQuota()
+        if (err === t('play.authExpired')) useAuth().redirectToLogin()
+        notifyError(err)
+        if (!assistantMessage.content || assistantMessage.content === err) {
+          messages.value.pop()
+        }
       }
-      return
+    } else {
+      await streamModelChat(history, onChunk, {
+        model: selectedModel.value,
+        conversation_id: currentConversationId.value || undefined,
+        attachments: attachments.length ? attachments : undefined,
+        mcp_servers: enable_web_search ? ['web_search'] : undefined,
+        ...chatParams,
+      })
+      const err = modelChatError.value
+      if (err) {
+        if (err === t('quota.exhausted')) void refreshQuota()
+        if (err === t('play.authExpired')) useAuth().redirectToLogin()
+        notifyError(err)
+        if (!assistantMessage.content || assistantMessage.content === err) {
+          messages.value.pop()
+        }
+      }
     }
-    if (error instanceof SseStreamError && error.kind === 'empty') {
-      notifyError(t('play.sendFailBody'))
-      messages.value.pop()
-      return
-    }
-    notifyError(t('play.sendFail'))
-    messages.value.pop()
   } finally {
     streaming.value = false
-    abortController.value = null
     await persistConversation({ allowEmpty: true })
     await refreshQuota()
     await drainQueueIfNeeded()
@@ -1321,17 +1319,34 @@ const loadConversation = async (id: string) => {
   await setConversationQuery(res.data.id)
 }
 
-const deleteConversation = async (id: string) => {
+const deleteConvOpen = ref(false)
+const deletingConv = ref(false)
+const pendingDeleteConvId = ref<string | null>(null)
+
+const deleteConversation = (id: string) => {
   if (!id) return
-  if (!window.confirm(t('play.deleteConfirm'))) return
-  const res = await removeConversation(id)
-  if (res.error) {
-    notifyError(res.error)
-    return
-  }
-  conversations.value = conversations.value.filter(item => item.id !== id)
-  if (currentConversationId.value === id) {
-    startNewChat()
+  pendingDeleteConvId.value = id
+  deleteConvOpen.value = true
+}
+
+const confirmDeleteConversation = async () => {
+  const id = pendingDeleteConvId.value
+  if (!id) return
+  deletingConv.value = true
+  try {
+    const res = await removeConversation(id)
+    if (res.error) {
+      notifyError(res.error)
+      return
+    }
+    conversations.value = conversations.value.filter(item => item.id !== id)
+    deleteConvOpen.value = false
+    pendingDeleteConvId.value = null
+    if (currentConversationId.value === id) {
+      startNewChat()
+    }
+  } finally {
+    deletingConv.value = false
   }
 }
 
@@ -1560,6 +1575,14 @@ watch(sidebarCollapsed, (collapsed) => {
   margin-top: 12px;
   position: relative;
   max-width: 480px;
+}
+
+.suggestion-chips__label {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
 }
 
 .message-md {

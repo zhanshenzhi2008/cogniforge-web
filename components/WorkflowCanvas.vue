@@ -5,6 +5,16 @@
     :edges="edges"
     :default-viewport="{ x: 50, y: 50, zoom: 1 }"
     :default-edge-options="defaultEdgeOptions"
+    :connection-mode="ConnectionMode.Loose"
+    :connection-radius="36"
+    :connection-line-options="connectionLineOptions"
+    :nodes-connectable="true"
+    :nodes-draggable="true"
+    :elements-selectable="true"
+    :edges-updatable="true"
+    :connect-on-click="true"
+    :is-valid-connection="isValidConnection"
+    :default-marker-color="'#4f46e5'"
     @node-click="handleNodeClick"
     @pane-click="handlePaneClick"
     @connect="handleConnect"
@@ -15,70 +25,221 @@
     <Controls />
     <MiniMap />
 
-    <template #node-start="{ data }">
-      <WorkflowFlowNode kind="start" :label="data.label" />
+    <template #node-start="{ data, id }">
+      <WorkflowFlowNode
+        kind="start"
+        :label="data.label"
+        :hint="bindNodeHint('start', data)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-end="{ data }">
-      <WorkflowFlowNode kind="end" :label="data.label" />
+    <template #node-end="{ data, id }">
+      <WorkflowFlowNode
+        kind="end"
+        :label="data.label"
+        :hint="bindNodeHint('end', data)"
+        :orphan="isOrphan(id)"
+      />
     </template>
-    <template #node-llm="{ data }">
-      <WorkflowFlowNode kind="llm" :label="data.label" />
+    <template #node-llm="{ data, id }">
+      <WorkflowFlowNode
+        kind="llm"
+        :label="data.label"
+        :hint="bindNodeHint('llm', data)"
+        :unbound="isWorkflowBindUnbound('llm', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-agent="{ data }">
-      <WorkflowFlowNode kind="agent" :label="data.label" />
+    <template #node-agent="{ data, id }">
+      <WorkflowFlowNode
+        kind="agent"
+        :label="data.label"
+        :hint="bindNodeHint('agent', data)"
+        :unbound="isWorkflowBindUnbound('agent', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-team="{ data }">
-      <WorkflowFlowNode kind="team" :label="data.label" />
+    <template #node-team="{ data, id }">
+      <WorkflowFlowNode
+        kind="team"
+        :label="data.label"
+        :hint="bindNodeHint('team', data)"
+        :unbound="isWorkflowBindUnbound('team', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-condition="{ data }">
-      <WorkflowFlowNode kind="condition" :label="data.label" />
+    <template #node-condition="{ data, id }">
+      <WorkflowFlowNode
+        kind="condition"
+        :label="data.label"
+        :hint="bindNodeHint('condition', data)"
+        :unbound="isWorkflowBindUnbound('condition', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :branch-gap="isBranchGap(id)"
+      />
     </template>
-    <template #node-loop="{ data }">
-      <WorkflowFlowNode kind="loop" :label="data.label" />
+    <template #node-loop="{ data, id }">
+      <WorkflowFlowNode
+        kind="loop"
+        :label="data.label"
+        :hint="bindNodeHint('loop', data)"
+        :unbound="isWorkflowBindUnbound('loop', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-http="{ data }">
-      <WorkflowFlowNode kind="http" :label="data.label" />
+    <template #node-http="{ data, id }">
+      <WorkflowFlowNode
+        kind="http"
+        :label="data.label"
+        :hint="bindNodeHint('http', data)"
+        :unbound="isWorkflowBindUnbound('http', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-code="{ data }">
-      <WorkflowFlowNode kind="code" :label="data.label" />
+    <template #node-code="{ data, id }">
+      <WorkflowFlowNode
+        kind="code"
+        :label="data.label"
+        :hint="bindNodeHint('code', data)"
+        :unbound="isWorkflowBindUnbound('code', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-delay="{ data }">
-      <WorkflowFlowNode kind="delay" :label="data.label" />
+    <template #node-delay="{ data, id }">
+      <WorkflowFlowNode
+        kind="delay"
+        :label="data.label"
+        :hint="bindNodeHint('delay', data)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-wait="{ data }">
-      <WorkflowFlowNode kind="wait" :label="data.label" />
+    <template #node-wait="{ data, id }">
+      <WorkflowFlowNode
+        kind="wait"
+        :label="data.label"
+        :hint="bindNodeHint('wait', data)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-search="{ data }">
-      <WorkflowFlowNode kind="search" :label="data.label" />
+    <template #node-search="{ data, id }">
+      <WorkflowFlowNode
+        kind="search"
+        :label="data.label"
+        :hint="bindNodeHint('search', data)"
+        :unbound="isWorkflowBindUnbound('search', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-input="{ data }">
-      <WorkflowFlowNode kind="input" :label="data.label" />
+    <template #node-subflow="{ data, id }">
+      <WorkflowFlowNode
+        kind="subflow"
+        :label="data.label"
+        :hint="bindNodeHint('subflow', data)"
+        :unbound="isWorkflowBindUnbound('subflow', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
     </template>
-    <template #node-output="{ data }">
-      <WorkflowFlowNode kind="output" :label="data.label" />
+    <template #node-input="{ data, id }">
+      <WorkflowFlowNode
+        kind="input"
+        :label="data.label"
+        :hint="bindNodeHint('input', data)"
+        :unbound="isWorkflowBindUnbound('input', data, bindOpts)"
+        :orphan="isOrphan(id)"
+        :dead-end="isDeadEnd(id)"
+      />
+    </template>
+    <template #node-output="{ data, id }">
+      <WorkflowFlowNode
+        kind="output"
+        :label="data.label"
+        :hint="bindNodeHint('output', data)"
+        :unbound="isWorkflowBindUnbound('output', data, bindOpts)"
+        :orphan="isOrphan(id)"
+      />
     </template>
   </VueFlow>
 </template>
 
 <script setup lang="ts">
-import { VueFlow, MarkerType, useVueFlow } from '@vue-flow/core'
+import {
+  VueFlow,
+  MarkerType,
+  ConnectionMode,
+  ConnectionLineType,
+  useVueFlow,
+  type Connection,
+} from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
+import { computed } from 'vue'
 import WorkflowFlowNode from '~/components/WorkflowFlowNode.vue'
+import { isWorkflowBindUnbound } from '@/utils/workflowBind'
+import { getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
+import {
+  findConditionsMissingBranches,
+  findDeadEndNodes,
+  reachableFromStart,
+} from '@/utils/workflowReachability'
 
-defineProps<{
+const props = defineProps<{
   nodes: any[]
   edges: any[]
+  /** 当前工作流 ID：子流程不得指向自身 */
+  currentWorkflowId?: string
 }>()
 
+const bindOpts = computed(() => ({ currentWorkflowId: props.currentWorkflowId }))
+
+const reachableIds = computed(() => reachableFromStart(props.nodes || [], props.edges || []))
+const hasStartNode = computed(() => (props.nodes || []).some(n => String(n?.type || '') === 'start'))
+const deadEndIds = computed(() => new Set(
+  findDeadEndNodes(props.nodes || [], props.edges || []).map(n => n.id),
+))
+const branchGapIds = computed(() => new Set(
+  findConditionsMissingBranches(props.nodes || [], props.edges || []).map(n => n.id),
+))
+
+function isOrphan(id: string) {
+  if (!hasStartNode.value) return false
+  return !reachableIds.value.has(id)
+}
+
+function isDeadEnd(id: string) {
+  return deadEndIds.value.has(id)
+}
+
+function isBranchGap(id: string) {
+  return branchGapIds.value.has(id)
+}
+
+/** 流式进度优先；已绑定则显示资源名副文案 */
+function bindNodeHint(kind: string, data: Record<string, unknown> | null | undefined) {
+  const stream = String(data?.streamProgress || '').trim()
+  if (stream) return stream
+  if (isWorkflowBindUnbound(kind, data, bindOpts.value)) return undefined
+  const caption = String(data?.bindCaption || '').trim()
+  return caption || undefined
+}
+
 /**
- * 箭头端点约定（配合左→右排版）：
- * - 起点：上游节点右侧 source Handle 中心
- * - 终点：下游节点左侧 target Handle 中心，带闭合箭头朝向目标
- * 条件节点：真/假从上下两个 source 出去，减少线交叉
+ * 箭头端点约定（ProcessOn 风格线头拖拽）：
+ * - 从节点右侧/上下 source 线头拖出，跟鼠标移动
+ * - 落到目标左侧 target 线头（Loose 模式也可落到节点附近）
+ * 条件节点：真/假从上下两个 source 出去
  */
 const defaultEdgeOptions = {
   animated: true,
@@ -89,6 +250,30 @@ const defaultEdgeOptions = {
     color: '#4f46e5',
   },
   style: { stroke: '#4f46e5', strokeWidth: 2 },
+}
+
+const connectionLineOptions = {
+  type: ConnectionLineType.Bezier,
+  style: {
+    stroke: '#4f46e5',
+    strokeWidth: 2,
+    strokeDasharray: '6 4',
+  },
+  markerEnd: MarkerType.ArrowClosed,
+}
+
+function isValidConnection(connection: Connection) {
+  if (!connection.source || !connection.target) return false
+  if (connection.source === connection.target) return false
+  const sourceNode = (props.nodes || []).find(n => n.id === connection.source)
+  const targetNode = (props.nodes || []).find(n => n.id === connection.target)
+  if (sourceNode && getWorkflowNodeMeta(String(sourceNode.type || '')).handles === 'end') {
+    return false
+  }
+  if (targetNode && getWorkflowNodeMeta(String(targetNode.type || '')).handles === 'start') {
+    return false
+  }
+  return true
 }
 
 const { fitView } = useVueFlow({ id: 'workflow-editor' })
@@ -102,29 +287,26 @@ defineExpose({ fitCanvas })
 const emit = defineEmits<{
   (e: 'node-click', event: any): void
   (e: 'pane-click'): void
-  (e: 'connect', params: any): void
+  (e: 'connect', params: Connection): void
   (e: 'nodes-change', changes: any[]): void
   (e: 'edges-change', changes: any[]): void
 }>()
 
 const handleNodeClick = (event: any) => emit('node-click', event)
 const handlePaneClick = () => emit('pane-click')
-const handleConnect = (params: any) => emit('connect', params)
+const handleConnect = (params: Connection) => emit('connect', params)
 const handleNodesChange = (changes: any[]) => emit('nodes-change', changes)
 const handleEdgesChange = (changes: any[]) => emit('edges-change', changes)
 </script>
 
 <style scoped>
-.vue-flow :deep(.vue-flow__handle) {
-  width: 10px;
-  height: 10px;
-  background: #4f46e5;
-  border: 2px solid #fff;
-  border-radius: 50%;
+/* 拖线时全局线头更醒目 */
+.vue-flow :deep(.vue-flow__connection-path) {
+  stroke: #4f46e5;
+  stroke-width: 2;
 }
 
-.vue-flow :deep(.vue-flow__handle:hover) {
-  background: #7c3aed;
-  transform: scale(1.2);
+.vue-flow :deep(.vue-flow__handle) {
+  z-index: 2;
 }
 </style>
