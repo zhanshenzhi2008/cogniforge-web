@@ -107,7 +107,11 @@ const rootClass = computed(() =>
   }),
 )
 
-const ariaLabel = computed(() => tipText.value || slotLabel.value || undefined)
+// 有可见文案时勿用 tip 覆盖 accessible name（否则读屏/E2E 拿到 tip 而非按钮文字）
+const ariaLabel = computed(() => {
+  if (showLabelInline.value) return undefined
+  return tipText.value || slotLabel.value || undefined
+})
 </script>
 
 <template>
