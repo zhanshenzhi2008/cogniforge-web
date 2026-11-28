@@ -518,7 +518,7 @@
               :placeholder="t('editor.userPromptPh')"
             />
             <p class="field__hint">{{ t('editor.llmPromptHint') }}</p>
-            <p class="field__hint">{{ t('editor.agentContentResultVarsHint') }}</p>
+            <p class="field__hint">{{ t('editor.llmResultVarsHint') }}</p>
           </div>
 
           <div v-if="selectedNode.type === 'llm'" class="field field--row">

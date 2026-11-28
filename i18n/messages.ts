@@ -1186,6 +1186,10 @@ export const M = {
     'zh-CN': '成功后写入 {{last_agent_content}}，供下游节点留空提示词时接力',
     'en-US': 'On success, sets {{last_agent_content}} for downstream empty prompts',
   },
+  'editor.llmResultVarsHint': {
+    'zh-CN': '成功后写入 {{last_agent_content}}、{{last_llm_model}}、{{last_llm_tokens}}、{{last_llm_latency_ms}}',
+    'en-US': 'On success, sets {{last_agent_content}}, {{last_llm_model}}, {{last_llm_tokens}}, {{last_llm_latency_ms}}',
+  },
   'editor.llmStream': { 'zh-CN': '流式生成', 'en-US': 'Stream tokens' },
   'editor.llmStreamShort': { 'zh-CN': '流式', 'en-US': 'stream' },
   'editor.llmStreamHint': {

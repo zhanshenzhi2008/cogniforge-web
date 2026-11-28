@@ -94,9 +94,9 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'llmTemperature', labelZh: '温度', note: '数字或 {{变量}}；空/0=默认；data.temperature' },
       { key: 'llmMaxTokens', labelZh: '最大生成长度', note: '数字或 {{变量}}；空/0=默认；data.maxTokens / max_tokens' },
       {
-        key: '_agentContentResultVars',
+        key: '_llmResultVars',
         labelZh: '结果变量',
-        note: '成功后写 last_agent_content',
+        note: '成功后写 last_agent_content / last_llm_model / last_llm_tokens / last_llm_latency_ms',
       },
     ],
   },
