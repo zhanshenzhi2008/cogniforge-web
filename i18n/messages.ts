@@ -1601,6 +1601,14 @@ export const M = {
   'editor.teamPickEmptyHint': { 'zh-CN': '请先在「小队」页创建团队（含主管/工人），再回来选择。', 'en-US': 'Create a team under Teams first, then pick it here.' },
   'editor.teamGoCreate': { 'zh-CN': '去创建 →', 'en-US': 'Create team →' },
   'editor.teamPickHint': { 'zh-CN': '运行时由主管分派或交接；等同竞品的多智能体 / Crew 节点', 'en-US': 'Runs as supervisor/handoff; like multi-agent / Crew nodes elsewhere' },
+  'editor.teamIdTemplatePh': {
+    'zh-CN': '小队 ID，或 {{team_id}}',
+    'en-US': 'Team id, or {{team_id}}',
+  },
+  'editor.teamIdHint': {
+    'zh-CN': '可从上方列表点选，或手写 ID / {{变量}}；成功后写 {{last_team_id}}',
+    'en-US': 'Pick from the list, or type an id / {{var}}; on success sets {{last_team_id}}',
+  },
   'editor.teamTask': { 'zh-CN': '团队任务', 'en-US': 'Team task' },
   'editor.teamTaskPh': {
     'zh-CN': '如 处理工单 {{ticket_id}}…；留空接上游 last_agent_content',
