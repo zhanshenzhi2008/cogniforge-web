@@ -147,7 +147,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         note: '支持 {{变量}}；空则 input.query → last_agent_content',
       },
       { key: 'searchMode', labelZh: '检索方式覆盖' },
-      { key: 'topK', labelZh: 'Top-K 覆盖' },
+      { key: 'topK', labelZh: 'Top-K 覆盖', note: '数字或 {{变量}}；空跟库' },
       { key: 'minScore', labelZh: '最低分覆盖' },
       { key: 'rerankMode', labelZh: 'Rerank 覆盖' },
       { key: 'rerankProviderId', labelZh: 'Rerank 模型' },

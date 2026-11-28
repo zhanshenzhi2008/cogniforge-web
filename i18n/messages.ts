@@ -1671,6 +1671,7 @@ export const M = {
   'editor.unboundChipTip': { 'zh-CN': '点击打开第一个未配置节点', 'en-US': 'Click to open the first unbound node' },
   'editor.knowledgeBase': { 'zh-CN': '知识库', 'en-US': 'Knowledge base' },
   'editor.searchTopK': { 'zh-CN': '返回条数 Top-K', 'en-US': 'Top-K' },
+  'editor.searchTopKPh': { 'zh-CN': '如 5 或 {{k}}；空=跟库', 'en-US': 'e.g. 5 or {{k}}; empty = KB' },
   'editor.searchMinScore': { 'zh-CN': '最低相似度', 'en-US': 'Min score' },
   'editor.searchMode': { 'zh-CN': '检索方式', 'en-US': 'Search mode' },
   'editor.searchModeInherit': { 'zh-CN': '跟知识库默认', 'en-US': 'Use knowledge base default' },
@@ -1700,8 +1701,8 @@ export const M = {
   },
   'editor.searchInheritPh': { 'zh-CN': '留空 = 跟库默认', 'en-US': 'Empty = KB default' },
   'editor.searchTopKHint': {
-    'zh-CN': '填 0 或留空表示跟库默认',
-    'en-US': '0 or empty = use KB default',
+    'zh-CN': '数字或 {{变量}}；空/0 跟库默认',
+    'en-US': 'Number or {{var}}; empty/0 = KB default',
   },
   'editor.searchQueryHint': {
     'zh-CN': '可用 {{变量}}；留空依次用 input.query → last_agent_content',

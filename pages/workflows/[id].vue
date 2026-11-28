@@ -931,12 +931,9 @@
             <div class="field">
               <label class="field__label">{{ t('editor.searchTopK') }}</label>
               <UInput
-                v-model.number="nodeConfig.topK"
-                type="number"
+                v-model="nodeConfig.topK"
                 class="w-full"
-                :min="0"
-                :max="20"
-                :placeholder="t('editor.searchInheritPh')"
+                :placeholder="t('editor.searchTopKPh')"
               />
               <p class="field__hint">{{ t('editor.searchTopKHint') }}</p>
             </div>
@@ -1712,7 +1709,7 @@ const nodeConfig = reactive({
   knowledgeBaseId: '',
   description: '',
   query: '',
-  topK: 0,
+  topK: '' as string | number,
   minScore: 0,
   searchMode: '',
   rerankMode: 'inherit' as 'inherit' | 'on' | 'off',
@@ -2240,7 +2237,11 @@ const loadWorkflow = async () => {
               ? {
                   knowledgeBaseId: n.data?.knowledgeBaseId || n.config?.knowledge_base_id || '',
                   query: n.data?.query || n.config?.query || '',
-                  topK: Number(n.data?.topK ?? n.config?.top_k ?? 0) || 0,
+                  topK: (() => {
+                    const raw = n.data?.topK ?? n.config?.top_k ?? ''
+                    if (raw === 0 || raw === '0' || raw == null || raw === '') return ''
+                    return typeof raw === 'string' ? raw : String(raw)
+                  })(),
                   minScore: Number(n.data?.minScore ?? n.config?.min_score ?? 0) || 0,
                   searchMode: n.data?.searchMode || n.config?.search_mode || '',
                   rerank: n.data?.rerank ?? n.config?.rerank,
@@ -2557,8 +2558,12 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const parts = [name]
     const mode = String(d.searchMode || d.search_mode || '').trim()
     if (mode) parts.push(mode)
-    const topK = Number(d.topK ?? d.top_k ?? 0)
-    if (topK > 0) parts.push(`top ${topK}`)
+    const topKRaw = String(d.topK ?? d.top_k ?? '').trim()
+    if (topKRaw.includes('{{')) parts.push(`top ${topKRaw}`)
+    else {
+      const topK = Number(topKRaw)
+      if (topK > 0) parts.push(`top ${topK}`)
+    }
     return parts.join(' · ')
   }
   if (kind === 'subflow') {
@@ -2757,7 +2762,12 @@ const handleNodeClick = (event: any) => {
   nodeConfig.knowledgeBaseId = event.node.data?.knowledgeBaseId || event.node.data?.knowledge_base_id || ''
   nodeConfig.description = event.node.data?.description || ''
   nodeConfig.query = event.node.data?.query || ''
-  nodeConfig.topK = Number(event.node.data?.topK || event.node.data?.top_k || 0) || 0
+  {
+    const raw = event.node.data?.topK ?? event.node.data?.top_k ?? ''
+    nodeConfig.topK = raw === 0 || raw === '0' || raw == null || raw === ''
+      ? ''
+      : (typeof raw === 'string' ? raw : String(raw))
+  }
   nodeConfig.minScore = Number(event.node.data?.minScore || event.node.data?.min_score || 0) || 0
   nodeConfig.searchMode = event.node.data?.searchMode || event.node.data?.search_mode || ''
   if (event.node.data?.rerank === true) nodeConfig.rerankMode = 'on'
@@ -2857,8 +2867,13 @@ const saveNodeConfig = () => {
       llmMaxTokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
       maxTokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
       max_tokens: Number(nodeConfig.llmMaxTokens) > 0 ? Number(nodeConfig.llmMaxTokens) : 0,
-      topK: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
-      top_k: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
+      ...(() => {
+        const raw = String(nodeConfig.topK ?? '').trim()
+        if (!raw) return { topK: 0, top_k: 0 }
+        const asNum = Number(raw)
+        const topK = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
+        return { topK, top_k: topK }
+      })(),
       searchMode: nodeConfig.searchMode || '',
       search_mode: nodeConfig.searchMode || '',
       ...(() => {
@@ -2965,7 +2980,12 @@ const saveNodeConfig = () => {
       bindCaption: resolveBindCaption(String(selectedNode.value.type || ''), nextBindData),
       description: nodeConfig.description,
       query: nodeConfig.query,
-      topK: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
+      ...(() => {
+        const raw = String(nodeConfig.topK ?? '').trim()
+        if (!raw) return { topK: 0 }
+        const asNum = Number(raw)
+        return { topK: raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0) }
+      })(),
       minScore: Number(nodeConfig.minScore) > 0 ? Number(nodeConfig.minScore) : 0,
       searchMode: nodeConfig.searchMode || '',
       rerank: nodeConfig.rerankMode === 'inherit' ? undefined : nodeConfig.rerankMode === 'on',
@@ -3617,7 +3637,13 @@ const handleSave = async () => {
                 ? {
                     knowledge_base_id: n.data?.knowledgeBaseId || '',
                     query: n.data?.query || '',
-                    ...(Number(n.data?.topK) > 0 ? { top_k: Number(n.data.topK) } : {}),
+                    ...(() => {
+                      const raw = String(n.data?.topK ?? n.data?.top_k ?? '').trim()
+                      if (!raw) return {}
+                      if (raw.includes('{{')) return { top_k: raw }
+                      const nTop = Number(raw)
+                      return nTop > 0 ? { top_k: nTop } : {}
+                    })(),
                     ...(Number(n.data?.minScore) > 0 ? { min_score: Number(n.data.minScore) } : {}),
                     ...(n.data?.searchMode ? { search_mode: n.data.searchMode } : {}),
                     ...(n.data?.rerank === true || n.data?.rerank === false ? { rerank: n.data.rerank } : {}),
