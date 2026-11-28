@@ -1000,13 +1000,21 @@
             <div v-if="nodeConfig.rerankMode === 'on'" class="field">
               <label class="field__label">{{ t('editor.searchRerankModel') }}</label>
               <USelect
-                v-model="nodeConfig.rerankProviderId"
+                v-if="rerankProviderOptions.length"
                 class="w-full"
+                :model-value="rerankSelectValue"
                 :items="rerankProviderOptions"
                 value-key="value"
                 :placeholder="rerankSelectPlaceholder"
-                :disabled="!rerankProviderOptions.length"
+                @update:model-value="(v: string) => { if (v) nodeConfig.rerankProviderId = v }"
               />
+              <UInput
+                v-model="nodeConfig.rerankProviderId"
+                class="w-full"
+                :class="{ 'mt-2': rerankProviderOptions.length }"
+                :placeholder="t('editor.rerankProviderIdTemplatePh')"
+              />
+              <p class="field__hint">{{ t('editor.rerankProviderIdHint') }}</p>
             </div>
             <div v-if="effectiveSearchMode === 'hybrid'" class="field">
               <label class="field__label">{{ t('editor.searchHybridWeight') }}</label>
@@ -1978,6 +1986,12 @@ const rerankProviderOptions = computed(() =>
     .filter((p: any) => p.enabled !== false && hasCap(p, 'rerank'))
     .map((p: any) => ({ label: rerankModelLabel(p), value: p.id })),
 )
+/** 下拉仅在当前值是已有重排模型时高亮；模板/手写 ID 时留空 */
+const rerankSelectValue = computed(() => {
+  const cur = String(nodeConfig.rerankProviderId || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return rerankProviderOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 const rerankSelectPlaceholder = computed(() =>
   rerankProviderOptions.value.length ? t('kb.rerankModelPh') : t('kb.rerankModelEmpty'),
 )

@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-28 | v1.272 | 检索 Rerank 模型 ID 支持 {{变量}}；标明 last_search_rerank_provider_id | orjrs |
 | 2026-11-28 | v1.271 | HTTP method 支持 {{变量}}；标明 last_http_method | orjrs |
 | 2026-11-28 | v1.270 | 子流程 workflow ID 支持 {{变量}}；标明 last_subflow_workflow_id | orjrs |
 | 2026-11-28 | v1.269 | 修复 prompts 回滚 E2E toast 严格模式重复匹配 | orjrs |
@@ -353,6 +354,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] 检索 Rerank 模型 ID {{变量}} / last_search_rerank_provider_id（2026-11-28）
+
+- **原因**：开启重排后模型只能下拉选死 ID
+- **落地**：列表点选 + 手写 ID/`{{rerank_provider_id}}`；成功写 last_search_rerank_provider_id
+- **主仓**：`nodes/search.go`；前端设计 v1.233；开发计划 v1.363
 
 ## [变更] HTTP method {{变量}} / last_http_method（2026-11-28）
 
