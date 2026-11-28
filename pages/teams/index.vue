@@ -46,6 +46,15 @@
           >
             {{ t('teams.workerRetryBadge') }}
           </UBadge>
+          <UBadge
+            v-if="isWorkerAutoHandoff(team)"
+            variant="subtle"
+            color="info"
+            size="sm"
+            :title="t('teams.workerHandoffHint')"
+          >
+            {{ t('teams.workerHandoffBadge') }}
+          </UBadge>
         </template>
         <template #actions>
           <UButton size="sm" variant="ghost" :title="t('teams.editLimits')" @click="openLimits(team)">
@@ -118,6 +127,14 @@
                     size="sm"
                   >
                     {{ t('teams.workerRetryBadge') }}
+                  </UBadge>
+                  <UBadge
+                    v-if="isWorkerAutoHandoff(team)"
+                    variant="subtle"
+                    color="info"
+                    size="sm"
+                  >
+                    {{ t('teams.workerHandoffBadge') }}
                   </UBadge>
                 </div>
               </td>
@@ -208,6 +225,18 @@
             :label="t('teams.workerRetry')"
           />
           <p class="text-xs opacity-65">{{ t('teams.workerRetryHint') }}</p>
+          <UCheckbox
+            v-model="form.worker_auto_handoff"
+            :label="t('teams.workerHandoff')"
+          />
+          <p class="text-xs opacity-65">{{ t('teams.workerHandoffHint') }}</p>
+          <UFormField :label="t('teams.workerFallbackIds')">
+            <UInput
+              v-model="form.worker_fallback_agent_ids"
+              class="w-full"
+              :placeholder="t('teams.workerFallbackIdsPh')"
+            />
+          </UFormField>
           <div class="flex justify-end gap-2 pt-2">
             <UButton variant="ghost" @click="showCreate = false">{{ t('common.cancel') }}</UButton>
             <UButton color="primary" :loading="creating" @click="submitCreate">{{ t('common.create') }}</UButton>
@@ -233,6 +262,18 @@
             v-model="limitsForm.worker_retry_once"
             :label="t('teams.workerRetry')"
           />
+          <UCheckbox
+            v-model="limitsForm.worker_auto_handoff"
+            :label="t('teams.workerHandoff')"
+          />
+          <p class="text-xs opacity-65">{{ t('teams.workerHandoffHint') }}</p>
+          <UFormField :label="t('teams.workerFallbackIds')">
+            <UInput
+              v-model="limitsForm.worker_fallback_agent_ids"
+              class="w-full"
+              :placeholder="t('teams.workerFallbackIdsPh')"
+            />
+          </UFormField>
           <div class="flex justify-end gap-2 pt-2">
             <UButton variant="ghost" @click="showLimits = false">{{ t('common.cancel') }}</UButton>
             <UButton color="primary" :loading="limitsSaving" @click="saveLimits">{{ t('common.save') }}</UButton>
@@ -331,6 +372,8 @@ const limitsForm = reactive({
   max_depth: 8,
   max_steps: 40,
   worker_retry_once: false,
+  worker_auto_handoff: false,
+  worker_fallback_agent_ids: '',
 })
 
 type PreviewMsg = { role: string, content: string, agentId?: string, failed?: boolean }
@@ -386,6 +429,8 @@ const form = reactive({
   max_depth: 8,
   max_steps: 40,
   worker_retry_once: false,
+  worker_auto_handoff: false,
+  worker_fallback_agent_ids: '',
 })
 
 const modeItems = computed(() => [
@@ -410,9 +455,30 @@ function configInt(team: AgentTeam, key: string, fallback: number) {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback
 }
 
-function isWorkerRetry(team: AgentTeam) {
-  const v = team.config?.worker_retry_once
+function isConfigTruthy(v: unknown) {
   return v === true || v === 'true' || v === 1 || v === '1'
+}
+
+function isWorkerRetry(team: AgentTeam) {
+  return isConfigTruthy(team.config?.worker_retry_once)
+}
+
+function isWorkerAutoHandoff(team: AgentTeam) {
+  return isConfigTruthy(team.config?.worker_auto_handoff)
+}
+
+function fallbackIdsText(team: AgentTeam): string {
+  const v = team.config?.worker_fallback_agent_ids
+  if (Array.isArray(v)) return v.map(String).filter(Boolean).join(', ')
+  if (typeof v === 'string') return v
+  return ''
+}
+
+function parseFallbackIds(text: string): string[] {
+  return text
+    .split(/[,，\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
 }
 
 function memberMeta(team: AgentTeam) {
@@ -439,6 +505,8 @@ function openLimits(team: AgentTeam) {
   limitsForm.max_depth = configInt(team, 'max_depth', 8)
   limitsForm.max_steps = configInt(team, 'max_steps', 40)
   limitsForm.worker_retry_once = isWorkerRetry(team)
+  limitsForm.worker_auto_handoff = isWorkerAutoHandoff(team)
+  limitsForm.worker_fallback_agent_ids = fallbackIdsText(team)
   showLimits.value = true
 }
 
@@ -454,6 +522,8 @@ async function saveLimits() {
         max_depth: depth,
         max_steps: steps,
         worker_retry_once: limitsForm.worker_retry_once,
+        worker_auto_handoff: limitsForm.worker_auto_handoff,
+        worker_fallback_agent_ids: parseFallbackIds(limitsForm.worker_fallback_agent_ids),
       },
     })
     if (res.error) {
@@ -502,6 +572,8 @@ async function submitCreate() {
         max_depth: clampLimit(form.max_depth, 1, 32, 8),
         max_steps: clampLimit(form.max_steps, 1, 200, 40),
         worker_retry_once: form.worker_retry_once,
+        worker_auto_handoff: form.worker_auto_handoff,
+        worker_fallback_agent_ids: parseFallbackIds(form.worker_fallback_agent_ids),
       },
     })
     if (res.error) {
@@ -516,6 +588,8 @@ async function submitCreate() {
     form.max_depth = 8
     form.max_steps = 40
     form.worker_retry_once = false
+    form.worker_auto_handoff = false
+    form.worker_fallback_agent_ids = ''
     await fetchAll()
   }
   finally {
