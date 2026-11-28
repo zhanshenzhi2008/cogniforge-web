@@ -1297,10 +1297,10 @@ export const M = {
     'en-US': 'Continue while true; comparison values support {{vars}} (same as condition node)',
   },
   'editor.loopArrayVar': { 'zh-CN': '数组变量', 'en-US': 'Array variable' },
-  'editor.loopArrayVarPh': { 'zh-CN': '如 items', 'en-US': 'e.g. items' },
+  'editor.loopArrayVarPh': { 'zh-CN': '如 items 或 {{list}}', 'en-US': 'e.g. items or {{list}}' },
   'editor.loopArrayVarHint': {
-    'zh-CN': '从上游变量里取数组，逐项循环；项写入下方「元素变量」',
-    'en-US': 'Read an array from upstream vars; each item is written to the item variable',
+    'zh-CN': '变量名可用 {{变量}}（展开后须为数组变量名）；项写入下方「元素变量」',
+    'en-US': 'Name supports {{vars}} (must resolve to an array key); items go to the item variable',
   },
   'editor.loopItemVar': { 'zh-CN': '元素变量', 'en-US': 'Item variable' },
   'editor.loopItemVarPh': { 'zh-CN': '默认 item', 'en-US': 'default item' },
