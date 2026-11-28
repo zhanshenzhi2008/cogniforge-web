@@ -573,7 +573,8 @@ test.describe('prompts e2e', () => {
     await expect(verCards.nth(1).getByText('已归档')).toBeVisible()
 
     await verCards.nth(1).getByRole('button', { name: '回滚发版' }).click()
-    await expect(page.getByText('已回滚发版为 v3')).toBeVisible()
+    // exact：避免与 toast 的 aria-live「Notification …」重复匹配触发 strict mode
+    await expect(page.getByText('已回滚发版为 v3', { exact: true })).toBeVisible()
     await expect(verCards).toHaveCount(3)
     await expect(verCards.first().getByText('v3', { exact: true })).toBeVisible()
     await expect(verCards.first().getByText('当前')).toBeVisible()
