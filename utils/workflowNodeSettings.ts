@@ -222,6 +222,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         labelZh: '超时秒',
         note: '默认 30，最长 60；仅 Python/JS 沙箱；data.timeout / codeTimeout',
       },
+      {
+        key: '_codeResultVars',
+        labelZh: '结果变量',
+        note: '运行后写 last_code_output',
+      },
     ],
   },
   {

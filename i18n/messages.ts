@@ -1295,6 +1295,10 @@ export const M = {
     'zh-CN': '仅 Python / JavaScript 沙箱生效；表达式忽略。超过 60 秒会按 60 截断',
     'en-US': 'Applies to Python/JS sandbox only; expression ignores it. Capped at 60s',
   },
+  'editor.codeResultVarsHint': {
+    'zh-CN': '跑完写入 {{last_code_output}}，下游节点可直接引用',
+    'en-US': 'After run, sets {{last_code_output}} for downstream nodes',
+  },
   'editor.query': { 'zh-CN': '搜索词', 'en-US': 'Query' },
   'editor.queryPh': { 'zh-CN': '搜索关键词...', 'en-US': 'Search keywords…' },
   'editor.variable': { 'zh-CN': '变量名', 'en-US': 'Variable' },

@@ -844,6 +844,7 @@
               />
               <p class="field__hint">{{ t('editor.codeTimeoutHint') }}</p>
             </div>
+            <p class="field__hint">{{ t('editor.codeResultVarsHint') }}</p>
           </template>
 
           <div v-if="selectedNode.type === 'wait'" class="field">
