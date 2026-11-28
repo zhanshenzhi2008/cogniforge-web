@@ -146,7 +146,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         labelZh: '检索问句',
         note: '支持 {{变量}}；空则 input.query → last_agent_content',
       },
-      { key: 'searchMode', labelZh: '检索方式覆盖' },
+      { key: 'searchMode', labelZh: '检索方式覆盖', note: 'semantic/keyword/hybrid 或 {{变量}}；空跟库' },
       { key: 'topK', labelZh: 'Top-K 覆盖', note: '数字或 {{变量}}；空跟库' },
       { key: 'minScore', labelZh: '最低分覆盖', note: '数字或 {{变量}}；空跟库' },
       { key: 'rerankMode', labelZh: 'Rerank 覆盖' },
@@ -155,7 +155,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_searchResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_search_context / query / total / kb_id / rerank_provider_id',
+        note: '运行后写 last_search_context / query / total / kb_id / mode / rerank_provider_id',
       },
     ],
   },

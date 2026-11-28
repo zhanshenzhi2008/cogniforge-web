@@ -1753,6 +1753,14 @@ export const M = {
   },
   'editor.searchMode': { 'zh-CN': '检索方式', 'en-US': 'Search mode' },
   'editor.searchModeInherit': { 'zh-CN': '跟知识库默认', 'en-US': 'Use knowledge base default' },
+  'editor.searchModeTemplatePh': {
+    'zh-CN': '如 semantic / hybrid 或 {{mode}}；空=跟库',
+    'en-US': 'e.g. semantic / hybrid or {{mode}}; empty = KB default',
+  },
+  'editor.searchModeHint': {
+    'zh-CN': '可从上方点选，或手写 semantic/keyword/hybrid 或 {{变量}}；空则跟库默认；成功后写 {{last_search_mode}}',
+    'en-US': 'Pick above, or type semantic/keyword/hybrid / {{var}}; empty = KB default; on success sets {{last_search_mode}}',
+  },
   'editor.searchRerank': { 'zh-CN': 'Rerank', 'en-US': 'Rerank' },
   'editor.searchRerankModel': { 'zh-CN': 'Rerank 模型', 'en-US': 'Rerank model' },
   'editor.rerankProviderIdTemplatePh': {
@@ -1795,8 +1803,8 @@ export const M = {
     'en-US': 'Supports {{vars}}; empty uses input.query, then last_agent_content',
   },
   'editor.searchResultVarsHint': {
-    'zh-CN': '检索后写入 {{last_search_context}}、{{last_search_query}}、{{last_search_total}}、{{last_search_kb_id}}、{{last_search_rerank_provider_id}}',
-    'en-US': 'After search, sets {{last_search_context}}, {{last_search_query}}, {{last_search_total}}, {{last_search_kb_id}}, {{last_search_rerank_provider_id}}',
+    'zh-CN': '检索后写入 {{last_search_context}}、{{last_search_query}}、{{last_search_total}}、{{last_search_kb_id}}、{{last_search_mode}}、{{last_search_rerank_provider_id}}',
+    'en-US': 'After search, sets {{last_search_context}}, {{last_search_query}}, {{last_search_total}}, {{last_search_kb_id}}, {{last_search_mode}}, {{last_search_rerank_provider_id}}',
   },
   'editor.node.input': { 'zh-CN': '输入节点', 'en-US': 'Input' },
   'editor.node.output': { 'zh-CN': '输出节点', 'en-US': 'Output' },

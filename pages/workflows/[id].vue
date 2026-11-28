@@ -979,11 +979,18 @@
             <div class="field">
               <label class="field__label">{{ t('editor.searchMode') }}</label>
               <USelect
-                v-model="nodeConfig.searchMode"
                 class="w-full"
+                :model-value="searchModeSelectValue"
                 :items="searchModeOptions"
                 value-key="value"
+                @update:model-value="(v: string | undefined) => { nodeConfig.searchMode = v ?? '' }"
               />
+              <UInput
+                v-model="nodeConfig.searchMode"
+                class="w-full mt-2"
+                :placeholder="t('editor.searchModeTemplatePh')"
+              />
+              <p class="field__hint">{{ t('editor.searchModeHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.searchTopK') }}</label>
@@ -2028,6 +2035,14 @@ const searchModeOptions = computed(() => [
   { label: t('kb.searchModeKeyword'), value: 'keyword' },
   { label: t('kb.searchModeHybrid'), value: 'hybrid' },
 ])
+/** 下拉仅在当前值是已知模式（含空=跟库）时高亮；模板/自定义时留空 */
+const searchModeSelectValue = computed(() => {
+  const cur = String(nodeConfig.searchMode || '').trim()
+  if (cur.includes('{{')) return undefined
+  const lower = cur.toLowerCase()
+  if (!lower) return ''
+  return searchModeOptions.value.some(o => o.value === lower) ? lower : undefined
+})
 const rerankModeOptions = computed(() => [
   { label: t('editor.searchRerankInherit'), value: 'inherit' },
   { label: t('editor.searchRerankOn'), value: 'on' },
