@@ -906,13 +906,21 @@
             <div class="field">
               <label class="field__label">{{ t('editor.knowledgeBase') }}</label>
               <USelect
+                v-if="kbOptions.length"
+                class="w-full"
+                :model-value="kbSelectValue"
+                :items="kbOptions"
+                :placeholder="t('editor.pickKnowledge')"
+                value-key="value"
+                @update:model-value="(v: string) => { if (v) nodeConfig.knowledgeBaseId = v }"
+              />
+              <UInput
                 v-model="nodeConfig.knowledgeBaseId"
                 class="w-full"
-                :items="kbOptions"
-                :placeholder="kbOptions.length ? t('editor.pickKnowledge') : t('editor.kbPickEmpty')"
-                value-key="value"
-                :disabled="!kbOptions.length"
+                :class="{ 'mt-2': kbOptions.length }"
+                :placeholder="t('editor.kbIdTemplatePh')"
               />
+              <p class="field__hint">{{ t('editor.kbIdHint') }}</p>
               <p v-if="!kbOptions.length" class="field__hint">
                 {{ t('editor.kbPickEmptyHint') }}
                 <NuxtLink to="/knowledge" class="field__link" target="_blank">{{ t('editor.kbGoCreate') }}</NuxtLink>
@@ -1931,6 +1939,12 @@ const kbList = ref<KnowledgeBase[]>([])
 const kbOptions = computed(() =>
   kbList.value.filter(k => k.id).map(k => ({ label: k.name || k.id, value: k.id })),
 )
+/** 下拉仅在当前值是已有知识库时高亮；模板/手写 ID 时留空 */
+const kbSelectValue = computed(() => {
+  const cur = String(nodeConfig.knowledgeBaseId || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return kbOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 const providers = ref<any[]>([])
 const rerankProviderOptions = computed(() =>
   providers.value

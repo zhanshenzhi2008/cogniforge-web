@@ -140,7 +140,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '知识库名 · 模式 · topK',
     fields: [
       NAME_FIELD,
-      { key: 'knowledgeBaseId', labelZh: '知识库', required: true },
+      { key: 'knowledgeBaseId', labelZh: '知识库', required: true, note: 'ID 或 {{变量}}' },
       {
         key: 'query',
         labelZh: '检索问句',
@@ -155,7 +155,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_searchResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_search_context / query / total',
+        note: '运行后写 last_search_context / query / total / kb_id',
       },
     ],
   },

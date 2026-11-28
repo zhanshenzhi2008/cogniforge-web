@@ -1679,6 +1679,14 @@ export const M = {
   'editor.kbPickEmpty': { 'zh-CN': '暂无知识库', 'en-US': 'No knowledge bases' },
   'editor.kbPickEmptyHint': { 'zh-CN': '请先创建知识库并上传文档，再回来选择。', 'en-US': 'Create a knowledge base and upload docs first, then pick it here.' },
   'editor.kbGoCreate': { 'zh-CN': '去知识库 →', 'en-US': 'Go to knowledge →' },
+  'editor.kbIdTemplatePh': {
+    'zh-CN': '知识库 ID，或 {{kb_id}}',
+    'en-US': 'KB id, or {{kb_id}}',
+  },
+  'editor.kbIdHint': {
+    'zh-CN': '可从上方列表点选，或手写 ID / {{变量}}；成功后写 {{last_search_kb_id}}',
+    'en-US': 'Pick from the list, or type an id / {{var}}; on success sets {{last_search_kb_id}}',
+  },
   'editor.bindRequired': { 'zh-CN': '「{name}」还没选{kind}，请先配置再保存', 'en-US': '“{name}” has no {kind} selected — configure it before saving' },
   'editor.bindRequiredMore': { 'zh-CN': '另有 {n} 个节点也未配置', 'en-US': '{n} more node(s) also need configuration' },
   'editor.bindKind.llm': { 'zh-CN': '模型', 'en-US': 'model' },
@@ -1746,8 +1754,8 @@ export const M = {
     'en-US': 'Supports {{vars}}; empty uses input.query, then last_agent_content',
   },
   'editor.searchResultVarsHint': {
-    'zh-CN': '检索后写入 {{last_search_context}}、{{last_search_query}}、{{last_search_total}}，下游可引用',
-    'en-US': 'After search, sets {{last_search_context}}, {{last_search_query}}, {{last_search_total}}',
+    'zh-CN': '检索后写入 {{last_search_context}}、{{last_search_query}}、{{last_search_total}}、{{last_search_kb_id}}',
+    'en-US': 'After search, sets {{last_search_context}}, {{last_search_query}}, {{last_search_total}}, {{last_search_kb_id}}',
   },
   'editor.node.input': { 'zh-CN': '输入节点', 'en-US': 'Input' },
   'editor.node.output': { 'zh-CN': '输出节点', 'en-US': 'Output' },
