@@ -1203,6 +1203,10 @@ export const M = {
     'zh-CN': '比较值可用 {{变量}}（来自入参或上游）',
     'en-US': 'Compare value supports {{vars}} from inputs or upstream',
   },
+  'editor.conditionResultVarsHint': {
+    'zh-CN': '判定后写入 {{last_condition_result}}、{{last_condition_branch}}、{{last_condition_field}}',
+    'en-US': 'After eval, sets {{last_condition_result}}, {{last_condition_branch}}, {{last_condition_field}}',
+  },
   'editor.condOpEq': { 'zh-CN': '等于', 'en-US': 'Equals' },
   'editor.condOpNe': { 'zh-CN': '不等于', 'en-US': 'Not equals' },
   'editor.condOpGt': { 'zh-CN': '大于', 'en-US': 'Greater than' },

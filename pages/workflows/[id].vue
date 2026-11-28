@@ -659,6 +659,7 @@
                 :placeholder="t('editor.conditionValuePh')"
               />
               <p class="field__hint">{{ t('editor.conditionValueHint') }}</p>
+              <p class="field__hint">{{ t('editor.conditionResultVarsHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('common.description') }}</label>

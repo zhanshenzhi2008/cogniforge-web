@@ -174,6 +174,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'conditionOperator', labelZh: '运算符' },
       { key: 'conditionValue', labelZh: '比较值', note: '支持 {{变量}}' },
       { key: 'description', labelZh: '说明' },
+      {
+        key: '_conditionResultVars',
+        labelZh: '结果变量',
+        note: '运行后写 last_condition_result / branch / field',
+      },
     ],
   },
   {
