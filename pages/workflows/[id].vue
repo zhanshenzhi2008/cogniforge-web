@@ -940,14 +940,11 @@
             <div class="field">
               <label class="field__label">{{ t('editor.searchMinScore') }}</label>
               <UInput
-                v-model.number="nodeConfig.minScore"
-                type="number"
+                v-model="nodeConfig.minScore"
                 class="w-full"
-                :min="0"
-                :max="1"
-                :step="0.05"
-                :placeholder="t('editor.searchInheritPh')"
+                :placeholder="t('editor.searchMinScorePh')"
               />
+              <p class="field__hint">{{ t('editor.searchMinScoreHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.searchRerank') }}</label>
@@ -1710,7 +1707,7 @@ const nodeConfig = reactive({
   description: '',
   query: '',
   topK: '' as string | number,
-  minScore: 0,
+  minScore: '' as string | number,
   searchMode: '',
   rerankMode: 'inherit' as 'inherit' | 'on' | 'off',
   rerankProviderId: '',
@@ -2242,7 +2239,11 @@ const loadWorkflow = async () => {
                     if (raw === 0 || raw === '0' || raw == null || raw === '') return ''
                     return typeof raw === 'string' ? raw : String(raw)
                   })(),
-                  minScore: Number(n.data?.minScore ?? n.config?.min_score ?? 0) || 0,
+                  minScore: (() => {
+                    const raw = n.data?.minScore ?? n.config?.min_score ?? ''
+                    if (raw === 0 || raw === '0' || raw == null || raw === '') return ''
+                    return typeof raw === 'string' ? raw : String(raw)
+                  })(),
                   searchMode: n.data?.searchMode || n.config?.search_mode || '',
                   rerank: n.data?.rerank ?? n.config?.rerank,
                   rerankProviderId: n.data?.rerankProviderId || n.config?.rerank_provider_id || '',
@@ -2768,7 +2769,12 @@ const handleNodeClick = (event: any) => {
       ? ''
       : (typeof raw === 'string' ? raw : String(raw))
   }
-  nodeConfig.minScore = Number(event.node.data?.minScore || event.node.data?.min_score || 0) || 0
+  {
+    const raw = event.node.data?.minScore ?? event.node.data?.min_score ?? ''
+    nodeConfig.minScore = raw === 0 || raw === '0' || raw == null || raw === ''
+      ? ''
+      : (typeof raw === 'string' ? raw : String(raw))
+  }
   nodeConfig.searchMode = event.node.data?.searchMode || event.node.data?.search_mode || ''
   if (event.node.data?.rerank === true) nodeConfig.rerankMode = 'on'
   else if (event.node.data?.rerank === false) nodeConfig.rerankMode = 'off'
@@ -2986,7 +2992,13 @@ const saveNodeConfig = () => {
         const asNum = Number(raw)
         return { topK: raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0) }
       })(),
-      minScore: Number(nodeConfig.minScore) > 0 ? Number(nodeConfig.minScore) : 0,
+      ...(() => {
+        const raw = String(nodeConfig.minScore ?? '').trim()
+        if (!raw) return { minScore: 0, min_score: 0 }
+        const asNum = Number(raw)
+        const minScore = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
+        return { minScore, min_score: minScore }
+      })(),
       searchMode: nodeConfig.searchMode || '',
       rerank: nodeConfig.rerankMode === 'inherit' ? undefined : nodeConfig.rerankMode === 'on',
       rerankProviderId: nodeConfig.rerankMode === 'on' ? nodeConfig.rerankProviderId : '',
@@ -3644,7 +3656,13 @@ const handleSave = async () => {
                       const nTop = Number(raw)
                       return nTop > 0 ? { top_k: nTop } : {}
                     })(),
-                    ...(Number(n.data?.minScore) > 0 ? { min_score: Number(n.data.minScore) } : {}),
+                    ...(() => {
+                      const raw = String(n.data?.minScore ?? n.data?.min_score ?? '').trim()
+                      if (!raw) return {}
+                      if (raw.includes('{{')) return { min_score: raw }
+                      const nScore = Number(raw)
+                      return nScore > 0 ? { min_score: nScore } : {}
+                    })(),
                     ...(n.data?.searchMode ? { search_mode: n.data.searchMode } : {}),
                     ...(n.data?.rerank === true || n.data?.rerank === false ? { rerank: n.data.rerank } : {}),
                     ...(n.data?.rerankProviderId ? { rerank_provider_id: n.data.rerankProviderId } : {}),

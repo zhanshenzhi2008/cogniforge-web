@@ -1673,6 +1673,11 @@ export const M = {
   'editor.searchTopK': { 'zh-CN': '返回条数 Top-K', 'en-US': 'Top-K' },
   'editor.searchTopKPh': { 'zh-CN': '如 5 或 {{k}}；空=跟库', 'en-US': 'e.g. 5 or {{k}}; empty = KB' },
   'editor.searchMinScore': { 'zh-CN': '最低相似度', 'en-US': 'Min score' },
+  'editor.searchMinScorePh': { 'zh-CN': '如 0.3 或 {{floor}}；空=跟库', 'en-US': 'e.g. 0.3 or {{floor}}; empty = KB' },
+  'editor.searchMinScoreHint': {
+    'zh-CN': '数字或 {{变量}}；空/0 跟库默认',
+    'en-US': 'Number or {{var}}; empty/0 = KB default',
+  },
   'editor.searchMode': { 'zh-CN': '检索方式', 'en-US': 'Search mode' },
   'editor.searchModeInherit': { 'zh-CN': '跟知识库默认', 'en-US': 'Use knowledge base default' },
   'editor.searchRerank': { 'zh-CN': 'Rerank', 'en-US': 'Rerank' },
