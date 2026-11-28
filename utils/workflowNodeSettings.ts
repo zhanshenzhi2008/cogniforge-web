@@ -207,12 +207,12 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'loopType', labelZh: '循环方式', note: 'times | while | for_each' },
-      { key: 'loopCount', labelZh: '次数', note: 'times' },
+      { key: 'loopCount', labelZh: '次数', note: 'times；数字或 {{变量}}' },
       { key: 'loopCondition', labelZh: '条件表达式', note: 'while；支持 {{变量}}' },
       { key: 'loopArrayVar', labelZh: '数组变量', required: true, note: 'for_each 必填' },
       { key: 'loopItemVar', labelZh: '元素变量', note: 'for_each' },
       { key: 'loopKeyVar', labelZh: '下标变量', note: 'for_each' },
-      { key: 'loopMaxIter', labelZh: '最大迭代' },
+      { key: 'loopMaxIter', labelZh: '最大迭代', note: '数字或 {{变量}}；默认 100' },
       {
         key: '_loopResultVars',
         labelZh: '结果变量',

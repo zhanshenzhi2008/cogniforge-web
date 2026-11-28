@@ -767,11 +767,11 @@
             <div v-if="nodeConfig.loopType === 'times'" class="field">
               <label class="field__label">{{ t('editor.loopCount') }}</label>
               <UInput
-                v-model.number="nodeConfig.loopCount"
-                type="number"
+                v-model="nodeConfig.loopCount"
                 class="w-full"
                 :placeholder="t('editor.loopCountPh')"
               />
+              <p class="field__hint">{{ t('editor.loopCountHint') }}</p>
             </div>
             <div v-if="nodeConfig.loopType === 'while'" class="field">
               <label class="field__label">{{ t('editor.loopCondition') }}</label>
@@ -812,11 +812,11 @@
             <div class="field">
               <label class="field__label">{{ t('editor.loopMaxIter') }}</label>
               <UInput
-                v-model.number="nodeConfig.loopMaxIter"
-                type="number"
+                v-model="nodeConfig.loopMaxIter"
                 class="w-full"
                 :placeholder="t('editor.loopMaxIterPh')"
               />
+              <p class="field__hint">{{ t('editor.loopMaxIterHint') }}</p>
               <p class="field__hint">{{ t('editor.loopResultVarsHint') }}</p>
             </div>
           </template>
@@ -1736,8 +1736,8 @@ const nodeConfig = reactive({
   delayDuration: '1' as string | number,
   delayUnit: 'seconds',
   loopType: 'times',
-  loopCount: 3,
-  loopMaxIter: 100,
+  loopCount: '3' as string | number,
+  loopMaxIter: '100' as string | number,
   loopCondition: '',
   loopArrayVar: '',
   loopItemVar: 'item',
@@ -2455,10 +2455,10 @@ const addNode = (type: string) => {
   if (type === 'loop') {
     data.loopType = 'times'
     data.type = 'times'
-    data.loopCount = 3
-    data.count = 3
-    data.loopMaxIter = 100
-    data.max_iter = 100
+    data.loopCount = '3'
+    data.count = '3'
+    data.loopMaxIter = '100'
+    data.max_iter = '100'
     data.bindCaption = resolveBindCaption('loop', data)
   }
   if (type === 'start') {
@@ -2593,12 +2593,12 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     if (loopType === 'count') loopType = 'times'
     if (loopType === 'while') {
       const cond = String(d.loopCondition || d.condition || '').trim()
-      const max = Number(d.loopMaxIter ?? d.max_iter ?? 100) || 100
+      const maxRaw = String(d.loopMaxIter ?? d.max_iter ?? '100').trim() || '100'
       if (cond) {
         const short = cond.length > 24 ? `${cond.slice(0, 22)}…` : cond
         return `${t('editor.loopTypeWhile')}: ${short}`
       }
-      return `${t('editor.loopTypeWhile')} ≤${max}`
+      return `${t('editor.loopTypeWhile')} ≤${maxRaw}`
     }
     if (loopType === 'for_each') {
       const arr = String(d.loopArrayVar || d.array_var || '').trim()
@@ -2606,7 +2606,10 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
       const item = String(d.loopItemVar || d.item_var || 'item').trim() || 'item'
       return `${t('editor.loopTypeForEach')}: ${arr} → ${item}`
     }
-    const n = Number(d.loopCount ?? d.count ?? 0)
+    const countRaw = String(d.loopCount ?? d.count ?? '').trim()
+    if (!countRaw) return t('editor.loopTypeTimes')
+    if (countRaw.includes('{{')) return `${t('editor.loopTypeTimes')} ×${countRaw}`
+    const n = Number(countRaw)
     if (!(n > 0)) return t('editor.loopTypeTimes')
     return `${t('editor.loopTypeTimes')} ×${n}`
   }
@@ -2789,8 +2792,14 @@ const handleNodeClick = (event: any) => {
   nodeConfig.delayUnit = event.node.data?.delayUnit || event.node.data?.unit || 'seconds'
   nodeConfig.loopType = event.node.data?.loopType || event.node.data?.type || 'times'
   if (nodeConfig.loopType === 'count') nodeConfig.loopType = 'times'
-  nodeConfig.loopCount = Number(event.node.data?.loopCount ?? event.node.data?.count ?? 3) || 3
-  nodeConfig.loopMaxIter = Number(event.node.data?.loopMaxIter ?? event.node.data?.max_iter ?? 100) || 100
+  {
+    const raw = event.node.data?.loopCount ?? event.node.data?.count ?? '3'
+    nodeConfig.loopCount = typeof raw === 'string' ? raw : String(raw ?? '3')
+  }
+  {
+    const raw = event.node.data?.loopMaxIter ?? event.node.data?.max_iter ?? '100'
+    nodeConfig.loopMaxIter = typeof raw === 'string' ? raw : String(raw ?? '100')
+  }
   nodeConfig.loopCondition = event.node.data?.loopCondition || event.node.data?.condition || ''
   nodeConfig.loopArrayVar = event.node.data?.loopArrayVar || event.node.data?.array_var || ''
   nodeConfig.loopItemVar = event.node.data?.loopItemVar || event.node.data?.item_var || 'item'
@@ -3009,19 +3018,33 @@ const saveNodeConfig = () => {
       ...(selectedNode.value.type === 'loop'
         ? {
             loopType: nodeConfig.loopType || 'times',
-            loopCount: Number(nodeConfig.loopCount) || 1,
-            loopMaxIter: Number(nodeConfig.loopMaxIter) || 100,
-            loopCondition: nodeConfig.loopCondition,
-            loopArrayVar: nodeConfig.loopArrayVar,
-            loopItemVar: nodeConfig.loopItemVar || 'item',
-            loopKeyVar: nodeConfig.loopKeyVar,
-            type: nodeConfig.loopType || 'times',
-            count: Number(nodeConfig.loopCount) || 1,
-            max_iter: Number(nodeConfig.loopMaxIter) || 100,
-            condition: nodeConfig.loopCondition,
-            array_var: nodeConfig.loopArrayVar,
-            item_var: nodeConfig.loopItemVar || 'item',
-            key_var: nodeConfig.loopKeyVar,
+            ...(() => {
+              const countRaw = String(nodeConfig.loopCount ?? '').trim()
+              const countNum = Number(countRaw)
+              const count = countRaw.includes('{{')
+                ? countRaw
+                : (countNum > 0 ? countNum : 1)
+              const maxRaw = String(nodeConfig.loopMaxIter ?? '').trim()
+              const maxNum = Number(maxRaw)
+              const max_iter = maxRaw.includes('{{')
+                ? maxRaw
+                : (maxNum > 0 ? maxNum : 100)
+              return {
+                loopCount: count,
+                loopMaxIter: max_iter,
+                loopCondition: nodeConfig.loopCondition,
+                loopArrayVar: nodeConfig.loopArrayVar,
+                loopItemVar: nodeConfig.loopItemVar || 'item',
+                loopKeyVar: nodeConfig.loopKeyVar,
+                type: nodeConfig.loopType || 'times',
+                count,
+                max_iter,
+                condition: nodeConfig.loopCondition,
+                array_var: nodeConfig.loopArrayVar,
+                item_var: nodeConfig.loopItemVar || 'item',
+                key_var: nodeConfig.loopKeyVar,
+              }
+            })(),
           }
         : {}),
       ...(selectedNode.value.type === 'code'

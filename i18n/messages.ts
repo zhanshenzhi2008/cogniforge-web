@@ -1277,7 +1277,11 @@ export const M = {
   'editor.loopTypeWhile': { 'zh-CN': '条件循环', 'en-US': 'While condition' },
   'editor.loopTypeForEach': { 'zh-CN': '遍历数组', 'en-US': 'For each' },
   'editor.loopCount': { 'zh-CN': '循环次数', 'en-US': 'Count' },
-  'editor.loopCountPh': { 'zh-CN': '如 3', 'en-US': 'e.g. 3' },
+  'editor.loopCountPh': { 'zh-CN': '如 3 或 {{rounds}}', 'en-US': 'e.g. 3 or {{rounds}}' },
+  'editor.loopCountHint': {
+    'zh-CN': '数字或 {{变量}}（展开后须为正整数）',
+    'en-US': 'Number or {{var}} (must resolve to a positive integer)',
+  },
   'editor.loopCondition': { 'zh-CN': '循环条件', 'en-US': 'Condition' },
   'editor.loopConditionPh': { 'zh-CN': '如 loop.index < {{limit}}', 'en-US': 'e.g. loop.index < {{limit}}' },
   'editor.loopConditionHint': {
@@ -1295,7 +1299,11 @@ export const M = {
   'editor.loopKeyVar': { 'zh-CN': '下标变量（可选）', 'en-US': 'Index variable (optional)' },
   'editor.loopKeyVarPh': { 'zh-CN': '如 index', 'en-US': 'e.g. index' },
   'editor.loopMaxIter': { 'zh-CN': '最大次数', 'en-US': 'Max iterations' },
-  'editor.loopMaxIterPh': { 'zh-CN': '防止死循环，默认 100', 'en-US': 'Safety cap, default 100' },
+  'editor.loopMaxIterPh': { 'zh-CN': '如 100 或 {{cap}}', 'en-US': 'e.g. 100 or {{cap}}' },
+  'editor.loopMaxIterHint': {
+    'zh-CN': '防止死循环；数字或 {{变量}}，空则默认 100',
+    'en-US': 'Safety cap; number or {{var}}, empty defaults to 100',
+  },
   'editor.loopResultVarsHint': {
     'zh-CN': '结束后写入 {{last_loop_total}}、{{last_loop_index}}、{{last_loop_type}}',
     'en-US': 'After loop, sets {{last_loop_total}}, {{last_loop_index}}, {{last_loop_type}}',
