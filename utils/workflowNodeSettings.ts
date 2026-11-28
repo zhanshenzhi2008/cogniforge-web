@@ -323,3 +323,79 @@ export function listMissingPaletteSettings(): WorkflowNodeKind[] {
   const have = new Set(WORKFLOW_NODE_SETTINGS.map(s => s.kind))
   return WORKFLOW_SETTINGS_PALETTE.filter(k => !have.has(k))
 }
+
+/**
+ * 引擎写入的 last_* 结果变量速查（对齐 nodes/*.go）。
+ * 下游可用 {{last_xxx}}；与 §11.1 / 抽屉 hint 同步维护。
+ */
+export type WorkflowLastResultVar = {
+  name: string
+  /** 写出该变量的节点类型 */
+  writers: WorkflowNodeKind[]
+  noteZh: string
+}
+
+export const WORKFLOW_LAST_RESULT_VARS: WorkflowLastResultVar[] = [
+  {
+    name: 'last_agent_content',
+    writers: ['llm', 'agent', 'team', 'subflow'],
+    noteZh: '文本输出；subflow 仅当结果含 content',
+  },
+  { name: 'last_agent_id', writers: ['agent', 'team'], noteZh: 'Agent ID；Team 写活跃成员' },
+  { name: 'last_team_id', writers: ['team'], noteZh: '小队 ID' },
+  { name: 'last_llm_model', writers: ['llm'], noteZh: '实际模型名' },
+  { name: 'last_llm_tokens', writers: ['llm'], noteZh: '总 token' },
+  { name: 'last_llm_latency_ms', writers: ['llm'], noteZh: '延迟毫秒' },
+  { name: 'last_search_query', writers: ['search'], noteZh: '实际问句' },
+  { name: 'last_search_context', writers: ['search'], noteZh: '拼接上下文' },
+  { name: 'last_search_total', writers: ['search'], noteZh: '命中条数' },
+  { name: 'last_search_kb_id', writers: ['search'], noteZh: '知识库 ID' },
+  { name: 'last_search_mode', writers: ['search'], noteZh: '展开后的模式；空=跟库' },
+  { name: 'last_search_rerank_provider_id', writers: ['search'], noteZh: '重排模型 ID；可空' },
+  { name: 'last_subflow_output', writers: ['subflow'], noteZh: '子流程输出 JSON 字符串' },
+  { name: 'last_subflow_workflow_id', writers: ['subflow'], noteZh: '嵌套工作流 ID' },
+  { name: 'last_condition_result', writers: ['condition'], noteZh: '比较结果 bool' },
+  { name: 'last_condition_branch', writers: ['condition'], noteZh: 'true / false 分支名' },
+  { name: 'last_condition_field', writers: ['condition'], noteZh: '展开后的字段名' },
+  { name: 'last_loop_total', writers: ['loop'], noteZh: '实际迭代次数' },
+  { name: 'last_loop_index', writers: ['loop'], noteZh: '末轮下标；无迭代为 -1' },
+  { name: 'last_loop_type', writers: ['loop'], noteZh: 'times / while / for_each' },
+  { name: 'last_loop_item_var', writers: ['loop'], noteZh: '仅 for_each；元素变量名' },
+  { name: 'last_loop_key_var', writers: ['loop'], noteZh: '仅 for_each；下标变量名' },
+  { name: 'last_http_method', writers: ['http'], noteZh: '实际方法（大写）' },
+  { name: 'last_http_status', writers: ['http'], noteZh: 'HTTP 状态码' },
+  { name: 'last_http_body', writers: ['http'], noteZh: '响应体文本' },
+  { name: 'last_http_ok', writers: ['http'], noteZh: 'status < 400' },
+  { name: 'last_code_output', writers: ['code'], noteZh: '代码输出' },
+  { name: 'last_code_language', writers: ['code'], noteZh: '实际语言' },
+  { name: 'last_delay_ms', writers: ['delay'], noteZh: '实际睡眠毫秒（含上限裁切）' },
+  { name: 'last_delay_duration', writers: ['delay'], noteZh: '配置时长数字' },
+  { name: 'last_delay_unit', writers: ['delay'], noteZh: 'seconds / minutes / hours' },
+  { name: 'last_wait_reason', writers: ['wait'], noteZh: '挂起原因' },
+  { name: 'last_wait_message', writers: ['wait'], noteZh: '挂起提示文案' },
+  { name: 'last_wait_timeout_sec', writers: ['wait'], noteZh: '超时秒；无则 0' },
+  {
+    name: 'last_wait_decision',
+    writers: ['wait'],
+    noteZh: '继续/审批后写入（非节点内）；兼 approval_decision',
+  },
+]
+
+/** 校验：每个调色板「有结果变量」节点在速查表里至少出现一次（writers） */
+export function listPaletteKindsMissingLastVars(): WorkflowNodeKind[] {
+  const withOutput: WorkflowNodeKind[] = [
+    'llm',
+    'agent',
+    'team',
+    'search',
+    'subflow',
+    'condition',
+    'loop',
+    'http',
+    'code',
+    'delay',
+    'wait',
+  ]
+  const covered = new Set(WORKFLOW_LAST_RESULT_VARS.flatMap(v => v.writers))
+  return withOutput.filter(k => !covered.has(k))
+}

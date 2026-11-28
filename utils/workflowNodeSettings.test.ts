@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   listMissingPaletteSettings,
+  listPaletteKindsMissingLastVars,
+  WORKFLOW_LAST_RESULT_VARS,
   WORKFLOW_NODE_SETTINGS,
   WORKFLOW_SETTINGS_PALETTE,
   workflowNodeSettingsByKind,
@@ -33,5 +35,18 @@ describe('workflowNodeSettings', () => {
     expect(req('http')).toContain('httpUrl')
     expect(req('subflow')).toContain('subflowWorkflowId')
     expect(req('condition')).toContain('conditionField')
+  })
+
+  it('documents last_* result vars for every writing palette node', () => {
+    expect(listPaletteKindsMissingLastVars()).toEqual([])
+    expect(WORKFLOW_LAST_RESULT_VARS.length).toBeGreaterThan(20)
+    const names = WORKFLOW_LAST_RESULT_VARS.map(v => v.name)
+    expect(names).toEqual(expect.arrayContaining([
+      'last_agent_content',
+      'last_http_ok',
+      'last_search_mode',
+      'last_wait_decision',
+    ]))
+    expect(new Set(names).size).toBe(names.length)
   })
 })
