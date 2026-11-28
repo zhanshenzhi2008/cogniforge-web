@@ -779,11 +779,18 @@
             <div class="field">
               <label class="field__label">{{ t('editor.delayUnit') }}</label>
               <USelect
-                v-model="nodeConfig.delayUnit"
                 class="w-full"
+                :model-value="delayUnitSelectValue"
                 :items="delayUnitOptions"
                 value-key="value"
+                @update:model-value="(v: string) => { if (v) nodeConfig.delayUnit = v }"
               />
+              <UInput
+                v-model="nodeConfig.delayUnit"
+                class="w-full mt-2"
+                :placeholder="t('editor.delayUnitTemplatePh')"
+              />
+              <p class="field__hint">{{ t('editor.delayUnitHint') }}</p>
               <p class="field__hint">{{ t('editor.delayResultVarsHint') }}</p>
             </div>
           </template>
@@ -1831,6 +1838,12 @@ const delayUnitOptions = computed(() => [
   { label: t('editor.delayUnitMinutes'), value: 'minutes' },
   { label: t('editor.delayUnitHours'), value: 'hours' },
 ])
+/** 下拉仅在当前值是常见单位时高亮；模板/自定义时留空 */
+const delayUnitSelectValue = computed(() => {
+  const cur = String(nodeConfig.delayUnit || '').trim().toLowerCase()
+  if (!cur || cur.includes('{{')) return undefined
+  return delayUnitOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 
 const loopTypeOptions = computed(() => [
   { label: t('editor.loopTypeTimes'), value: 'times' },

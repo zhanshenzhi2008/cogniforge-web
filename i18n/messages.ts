@@ -1293,6 +1293,14 @@ export const M = {
   'editor.delayUnitSeconds': { 'zh-CN': '秒', 'en-US': 'Seconds' },
   'editor.delayUnitMinutes': { 'zh-CN': '分', 'en-US': 'Minutes' },
   'editor.delayUnitHours': { 'zh-CN': '时', 'en-US': 'Hours' },
+  'editor.delayUnitTemplatePh': {
+    'zh-CN': '如 seconds 或 {{unit}}',
+    'en-US': 'e.g. seconds or {{unit}}',
+  },
+  'editor.delayUnitHint': {
+    'zh-CN': '可从上方点选，或手写 seconds/minutes/hours（及 s/m/h）或 {{变量}}；成功后写 {{last_delay_unit}}',
+    'en-US': 'Pick above, or type seconds/minutes/hours (or s/m/h) / {{var}}; on success sets {{last_delay_unit}}',
+  },
   'editor.delayResultVarsHint': {
     'zh-CN': '结束后写入 {{last_delay_ms}}、{{last_delay_duration}}、{{last_delay_unit}}',
     'en-US': 'After delay, sets {{last_delay_ms}}, {{last_delay_duration}}, {{last_delay_unit}}',

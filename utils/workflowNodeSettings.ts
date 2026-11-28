@@ -270,7 +270,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'delayDuration', labelZh: '时长', note: '数字或 {{变量}}' },
-      { key: 'delayUnit', labelZh: '单位', note: 'seconds | minutes | hours' },
+      { key: 'delayUnit', labelZh: '单位', note: 'seconds | minutes | hours 或 {{变量}}' },
       {
         key: '_delayResultVars',
         labelZh: '结果变量',
