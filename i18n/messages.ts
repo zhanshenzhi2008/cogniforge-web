@@ -1280,8 +1280,8 @@ export const M = {
     'en-US': 'When on, status ≥400 fails this node; off (default) only records status in output',
   },
   'editor.httpResultVarsHint': {
-    'zh-CN': '请求结束后写入 {{last_http_method}}、{{last_http_status}}、{{last_http_body}}，下游节点可直接引用',
-    'en-US': 'After the call, sets {{last_http_method}}, {{last_http_status}} and {{last_http_body}} for downstream nodes',
+    'zh-CN': '请求结束后写入 {{last_http_method}}、{{last_http_status}}、{{last_http_body}}、{{last_http_ok}}（状态码小于 400 为 true），下游可用条件节点分支',
+    'en-US': 'After the call, sets {{last_http_method}}, {{last_http_status}}, {{last_http_body}}, {{last_http_ok}} (true when status < 400) for downstream conditions',
   },
   'editor.delayDuration': { 'zh-CN': '等待时长', 'en-US': 'Duration' },
   'editor.delayDurationPh': { 'zh-CN': '如 3 或 {{wait_sec}}', 'en-US': 'e.g. 3 or {{wait_sec}}' },

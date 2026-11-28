@@ -239,7 +239,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_httpResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_http_method / last_http_status / last_http_body',
+        note: '运行后写 last_http_method / status / body / ok（status<400）',
       },
     ],
   },
