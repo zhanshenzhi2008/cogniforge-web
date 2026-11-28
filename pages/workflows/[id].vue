@@ -747,6 +747,7 @@
                 :items="delayUnitOptions"
                 value-key="value"
               />
+              <p class="field__hint">{{ t('editor.delayResultVarsHint') }}</p>
             </div>
           </template>
 

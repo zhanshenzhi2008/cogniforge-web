@@ -1256,6 +1256,10 @@ export const M = {
   'editor.delayUnitSeconds': { 'zh-CN': '秒', 'en-US': 'Seconds' },
   'editor.delayUnitMinutes': { 'zh-CN': '分', 'en-US': 'Minutes' },
   'editor.delayUnitHours': { 'zh-CN': '时', 'en-US': 'Hours' },
+  'editor.delayResultVarsHint': {
+    'zh-CN': '结束后写入 {{last_delay_ms}}、{{last_delay_duration}}、{{last_delay_unit}}',
+    'en-US': 'After delay, sets {{last_delay_ms}}, {{last_delay_duration}}, {{last_delay_unit}}',
+  },
   'editor.loopType': { 'zh-CN': '循环方式', 'en-US': 'Loop type' },
   'editor.loopTypeTimes': { 'zh-CN': '固定次数', 'en-US': 'Fixed times' },
   'editor.loopTypeWhile': { 'zh-CN': '条件循环', 'en-US': 'While condition' },
