@@ -189,7 +189,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '字段 运算符 值；须真/假两条出边',
     fields: [
       NAME_FIELD,
-      { key: 'conditionField', labelZh: '比较字段', required: true },
+      { key: 'conditionField', labelZh: '比较字段', required: true, note: '支持 {{变量}}（展开为字段名）' },
       { key: 'conditionOperator', labelZh: '运算符' },
       { key: 'conditionValue', labelZh: '比较值', note: '支持 {{变量}}' },
       { key: 'description', labelZh: '说明' },

@@ -638,6 +638,7 @@
                 class="w-full"
                 :placeholder="t('editor.conditionFieldPh')"
               />
+              <p class="field__hint">{{ t('editor.conditionFieldHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.conditionOperator') }}</label>

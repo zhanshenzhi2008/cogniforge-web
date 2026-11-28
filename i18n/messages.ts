@@ -1203,7 +1203,11 @@ export const M = {
   },
   'editor.conditionPh': { 'zh-CN': '备注（可选）…', 'en-US': 'Notes (optional)…' },
   'editor.conditionField': { 'zh-CN': '判断字段', 'en-US': 'Field' },
-  'editor.conditionFieldPh': { 'zh-CN': '如 status 或 {{nodes.xxx.output}}', 'en-US': 'e.g. status or {{nodes.xxx.output}}' },
+  'editor.conditionFieldPh': { 'zh-CN': '如 status 或 {{which}}', 'en-US': 'e.g. status or {{which}}' },
+  'editor.conditionFieldHint': {
+    'zh-CN': '字段名可用 {{变量}}（展开后须为变量名，如 status / last_http_status）',
+    'en-US': 'Field name supports {{vars}} (must resolve to a key, e.g. status / last_http_status)',
+  },
   'editor.conditionOperator': { 'zh-CN': '运算符', 'en-US': 'Operator' },
   'editor.conditionValue': { 'zh-CN': '比较值', 'en-US': 'Value' },
   'editor.conditionValuePh': { 'zh-CN': '期望值，可用 {{变量}}', 'en-US': 'Expected value; supports {{vars}}' },
