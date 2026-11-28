@@ -290,7 +290,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_waitResultVars',
         labelZh: '结果变量',
-        note: '挂起写 last_wait_*；审批后有 approval_decision',
+        note: '挂起写 last_wait_*；继续/审批后写 last_wait_decision',
       },
     ],
   },

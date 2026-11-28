@@ -1731,8 +1731,8 @@ export const M = {
     'en-US': 'Number or {{var}}; empty/0 = no timeout',
   },
   'editor.waitResultVarsHint': {
-    'zh-CN': '挂起时写入 {{last_wait_reason}}、{{last_wait_message}}、{{last_wait_timeout_sec}}；审批通过后还有 approval_decision',
-    'en-US': 'On pause, sets {{last_wait_reason}}, {{last_wait_message}}, {{last_wait_timeout_sec}}; after approve also approval_decision',
+    'zh-CN': '挂起时写入 {{last_wait_reason}}、{{last_wait_message}}、{{last_wait_timeout_sec}}；继续/审批后写 {{last_wait_decision}}（resumed/approved，兼容 approval_decision）',
+    'en-US': 'On pause, sets {{last_wait_reason}}, {{last_wait_message}}, {{last_wait_timeout_sec}}; after resume/approve sets {{last_wait_decision}} (resumed/approved; approval_decision still set)',
   },
   'editor.waitTimeoutPh': { 'zh-CN': '如 120 或 {{ttl}}；空=不超时', 'en-US': 'e.g. 120 or {{ttl}}; empty = none' },
   'editor.resume': { 'zh-CN': '继续', 'en-US': 'Resume' },
