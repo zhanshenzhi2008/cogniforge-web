@@ -706,11 +706,18 @@
             <div class="field">
               <label class="field__label">{{ t('editor.httpMethod') }}</label>
               <USelect
-                v-model="nodeConfig.httpMethod"
                 class="w-full"
+                :model-value="httpMethodSelectValue"
                 :items="httpMethodOptions"
                 value-key="value"
+                @update:model-value="(v: string) => { if (v) nodeConfig.httpMethod = v }"
               />
+              <UInput
+                v-model="nodeConfig.httpMethod"
+                class="w-full mt-2"
+                :placeholder="t('editor.httpMethodTemplatePh')"
+              />
+              <p class="field__hint">{{ t('editor.httpMethodHint') }}</p>
             </div>
             <div class="field">
               <label class="field__label">{{ t('editor.httpUrl') }}</label>
@@ -1802,6 +1809,12 @@ const httpMethodOptions = [
   { label: 'PATCH', value: 'PATCH' },
   { label: 'DELETE', value: 'DELETE' },
 ]
+/** 下拉仅在当前值是常见方法时高亮；模板/自定义时留空 */
+const httpMethodSelectValue = computed(() => {
+  const cur = String(nodeConfig.httpMethod || '').trim().toUpperCase()
+  if (!cur || cur.includes('{{')) return undefined
+  return httpMethodOptions.some(o => o.value === cur) ? cur : undefined
+})
 
 const delayUnitOptions = computed(() => [
   { label: t('editor.delayUnitSeconds'), value: 'seconds' },

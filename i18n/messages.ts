@@ -1240,6 +1240,11 @@ export const M = {
   'editor.condOpContains': { 'zh-CN': '包含', 'en-US': 'Contains' },
   'editor.condOpEmpty': { 'zh-CN': '为空', 'en-US': 'Empty' },
   'editor.httpMethod': { 'zh-CN': '请求方法', 'en-US': 'Method' },
+  'editor.httpMethodTemplatePh': { 'zh-CN': '如 POST 或 {{method}}', 'en-US': 'e.g. POST or {{method}}' },
+  'editor.httpMethodHint': {
+    'zh-CN': '可从上方点选，或手写方法名 / {{变量}}；展开后自动转大写；成功后写 {{last_http_method}}',
+    'en-US': 'Pick above, or type a method / {{var}}; resolved value is uppercased; on success sets {{last_http_method}}',
+  },
   'editor.httpUrl': { 'zh-CN': '请求地址', 'en-US': 'URL' },
   'editor.httpUrlPh': { 'zh-CN': 'https://api.example.com/{{path}}', 'en-US': 'https://api.example.com/{{path}}' },
   'editor.httpBody': { 'zh-CN': '请求体', 'en-US': 'Body' },
@@ -1275,8 +1280,8 @@ export const M = {
     'en-US': 'When on, status ≥400 fails this node; off (default) only records status in output',
   },
   'editor.httpResultVarsHint': {
-    'zh-CN': '请求结束后写入 {{last_http_status}}、{{last_http_body}}，下游节点可直接引用',
-    'en-US': 'After the call, sets {{last_http_status}} and {{last_http_body}} for downstream nodes',
+    'zh-CN': '请求结束后写入 {{last_http_method}}、{{last_http_status}}、{{last_http_body}}，下游节点可直接引用',
+    'en-US': 'After the call, sets {{last_http_method}}, {{last_http_status}} and {{last_http_body}} for downstream nodes',
   },
   'editor.delayDuration': { 'zh-CN': '等待时长', 'en-US': 'Duration' },
   'editor.delayDurationPh': { 'zh-CN': '如 3 或 {{wait_sec}}', 'en-US': 'e.g. 3 or {{wait_sec}}' },

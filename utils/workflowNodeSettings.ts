@@ -226,7 +226,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: 'METHOD url；头/超时/严校验后缀',
     fields: [
       NAME_FIELD,
-      { key: 'httpMethod', labelZh: '方法' },
+      { key: 'httpMethod', labelZh: '方法', note: 'GET/POST…或 {{变量}}；展开后转大写' },
       { key: 'httpUrl', labelZh: 'URL', required: true, note: '支持 {{变量}}' },
       { key: 'httpBody', labelZh: '请求体', note: '支持 {{变量}}' },
       { key: 'httpHeaders', labelZh: '请求头', note: 'JSON；值支持 {{变量}}' },
@@ -239,7 +239,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       {
         key: '_httpResultVars',
         labelZh: '结果变量',
-        note: '运行后写 last_http_status / last_http_body',
+        note: '运行后写 last_http_method / last_http_status / last_http_body',
       },
     ],
   },

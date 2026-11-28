@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-28 | v1.271 | HTTP method 支持 {{变量}}；标明 last_http_method | orjrs |
 | 2026-11-28 | v1.270 | 子流程 workflow ID 支持 {{变量}}；标明 last_subflow_workflow_id | orjrs |
 | 2026-11-28 | v1.269 | 修复 prompts 回滚 E2E toast 严格模式重复匹配 | orjrs |
 | 2026-11-28 | v1.268 | 检索知识库 ID 支持 {{变量}}；标明 last_search_kb_id | orjrs |
@@ -352,6 +353,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] HTTP method {{变量}} / last_http_method（2026-11-28）
+
+- **原因**：HTTP 方法只能下拉写死
+- **落地**：列表点选 + 手写方法/`{{method}}`；成功写 last_http_method
+- **主仓**：`nodes/http.go`；前端设计 v1.232；开发计划 v1.362
 
 ## [变更] 子流程 workflow ID {{变量}} / last_subflow_workflow_id（2026-11-28）
 
