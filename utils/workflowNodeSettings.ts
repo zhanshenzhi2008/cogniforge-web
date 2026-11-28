@@ -157,6 +157,11 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
         labelZh: '入参映射',
         note: '可选 JSON；字符串值支持 {{变量}}；空则透传当前上下文',
       },
+      {
+        key: '_subflowResultVars',
+        labelZh: '结果变量',
+        note: '运行后写 last_subflow_output；有 content 时写 last_agent_content',
+      },
     ],
   },
   {
@@ -245,7 +250,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '原因: 消息 · 超时',
     fields: [
       NAME_FIELD,
-      { key: 'waitReason', labelZh: '等待原因', note: '默认 approval；可 {{变量}}' },
+      { key: 'waitReason', labelZh: '等待原因', note: '默认 approval；支持 {{变量}}' },
       { key: 'waitMessage', labelZh: '提示文案', note: '支持 {{变量}}' },
       { key: 'timeoutSec', labelZh: '超时秒' },
     ],

@@ -1589,6 +1589,10 @@ export const M = {
     'zh-CN': '留空则把当前变量与入参整包传下去；字符串值可用 {{变量}}',
     'en-US': 'Leave empty to pass current vars/input; string values support {{vars}}',
   },
+  'editor.subflowResultVarsHint': {
+    'zh-CN': '跑完写入 {{last_subflow_output}}（JSON）；若有 content 还会写 last_agent_content',
+    'en-US': 'After run, sets {{last_subflow_output}} (JSON); content also updates last_agent_content',
+  },
   'editor.subflowInputInvalid': {
     'zh-CN': '子流程入参不是合法 JSON 对象，已忽略',
     'en-US': 'Nested input must be a JSON object — ignored',
@@ -1674,7 +1678,11 @@ export const M = {
   'editor.node.input': { 'zh-CN': '输入节点', 'en-US': 'Input' },
   'editor.node.output': { 'zh-CN': '输出节点', 'en-US': 'Output' },
   'editor.waitReason': { 'zh-CN': '等待原因', 'en-US': 'Wait reason' },
-  'editor.waitReasonPh': { 'zh-CN': 'approval / external / manual', 'en-US': 'approval / external / manual' },
+  'editor.waitReasonPh': { 'zh-CN': 'approval / external / manual；可用 {{变量}}', 'en-US': 'approval / external / manual; supports {{vars}}' },
+  'editor.waitReasonHint': {
+    'zh-CN': '等待原因可用 {{变量}}（如审批类型随入参变化）',
+    'en-US': 'Reason supports {{vars}} (e.g. approval type from inputs)',
+  },
   'editor.waitMessage': { 'zh-CN': '等待说明', 'en-US': 'Wait message' },
   'editor.waitMessagePh': { 'zh-CN': '请审批订单 {{order_id}}', 'en-US': 'Please approve order {{order_id}}' },
   'editor.waitMessageHint': {

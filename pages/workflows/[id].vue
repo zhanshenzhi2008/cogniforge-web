@@ -628,6 +628,7 @@
                 :placeholder="t('editor.subflowInputPh')"
               />
               <p class="field__hint">{{ t('editor.subflowInputHint') }}</p>
+              <p class="field__hint">{{ t('editor.subflowResultVarsHint') }}</p>
             </div>
           </template>
 
@@ -854,6 +855,7 @@
               class="w-full"
               :placeholder="t('editor.waitReasonPh')"
             />
+            <p class="field__hint">{{ t('editor.waitReasonHint') }}</p>
           </div>
           <div v-if="selectedNode.type === 'wait'" class="field">
             <label class="field__label">{{ t('editor.waitMessage') }}</label>
