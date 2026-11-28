@@ -122,13 +122,22 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     fields: [
       NAME_FIELD,
       { key: 'knowledgeBaseId', labelZh: '知识库', required: true },
-      { key: 'query', labelZh: '检索问句' },
+      {
+        key: 'query',
+        labelZh: '检索问句',
+        note: '支持 {{变量}}；空则 input.query → last_agent_content',
+      },
       { key: 'searchMode', labelZh: '检索方式覆盖' },
       { key: 'topK', labelZh: 'Top-K 覆盖' },
       { key: 'minScore', labelZh: '最低分覆盖' },
       { key: 'rerankMode', labelZh: 'Rerank 覆盖' },
       { key: 'rerankProviderId', labelZh: 'Rerank 模型' },
       { key: 'hybridSemanticWeight', labelZh: '混合语义权重' },
+      {
+        key: '_searchResultVars',
+        labelZh: '结果变量',
+        note: '运行后写 last_search_context / query / total',
+      },
     ],
   },
   {

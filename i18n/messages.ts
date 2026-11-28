@@ -1660,8 +1660,12 @@ export const M = {
     'en-US': '0 or empty = use KB default',
   },
   'editor.searchQueryHint': {
-    'zh-CN': '可用 {{query}} 引用试跑输入；留空则自动用流程输入里的 query',
-    'en-US': 'Use {{query}} for run input; empty falls back to input.query',
+    'zh-CN': '可用 {{变量}}；留空依次用 input.query → last_agent_content',
+    'en-US': 'Supports {{vars}}; empty uses input.query, then last_agent_content',
+  },
+  'editor.searchResultVarsHint': {
+    'zh-CN': '检索后写入 {{last_search_context}}、{{last_search_query}}、{{last_search_total}}，下游可引用',
+    'en-US': 'After search, sets {{last_search_context}}, {{last_search_query}}, {{last_search_total}}',
   },
   'editor.node.input': { 'zh-CN': '输入节点', 'en-US': 'Input' },
   'editor.node.output': { 'zh-CN': '输出节点', 'en-US': 'Output' },

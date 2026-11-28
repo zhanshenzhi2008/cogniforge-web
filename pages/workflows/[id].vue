@@ -981,6 +981,7 @@
               <label class="field__label">{{ t('editor.query') }}</label>
               <UInput v-model="nodeConfig.query" class="w-full" :placeholder="t('editor.queryPh')" />
               <p class="field__hint">{{ t('editor.searchQueryHint') }}</p>
+              <p class="field__hint">{{ t('editor.searchResultVarsHint') }}</p>
             </div>
           </template>
 
