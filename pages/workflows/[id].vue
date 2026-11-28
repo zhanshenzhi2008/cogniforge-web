@@ -587,13 +587,21 @@
           <div v-if="selectedNode.type === 'team'" class="field">
             <label class="field__label">{{ t('editor.teamPick') }}</label>
             <USelect
+              v-if="teamOptions.length"
+              class="w-full"
+              :model-value="teamSelectValue"
+              :items="teamOptions"
+              :placeholder="t('editor.teamPickPh')"
+              value-key="value"
+              @update:model-value="(v: string) => { if (v) nodeConfig.teamId = v }"
+            />
+            <UInput
               v-model="nodeConfig.teamId"
               class="w-full"
-              :items="teamOptions"
-              :placeholder="teamOptions.length ? t('editor.teamPickPh') : t('editor.teamPickEmpty')"
-              value-key="value"
-              :disabled="!teamOptions.length"
+              :class="{ 'mt-2': teamOptions.length }"
+              :placeholder="t('editor.teamIdTemplatePh')"
             />
+            <p class="field__hint">{{ t('editor.teamIdHint') }}</p>
             <p v-if="!teamOptions.length" class="field__hint">
               {{ t('editor.teamPickEmptyHint') }}
               <NuxtLink to="/teams" class="field__link" target="_blank">{{ t('editor.teamGoCreate') }}</NuxtLink>
@@ -1902,6 +1910,12 @@ function initDebugFormFromStartVars() {
 }
 
 const teamOptions = ref<{ label: string, value: string }[]>([])
+/** 下拉仅在当前值是已有小队时高亮；模板/手写 ID 时留空 */
+const teamSelectValue = computed(() => {
+  const cur = String(nodeConfig.teamId || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return teamOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 const workflowPickOptions = ref<{ label: string, value: string }[]>([])
 const subflowWorkflowOptions = computed(() =>
   workflowPickOptions.value.filter(w => w.value !== workflowId.value),

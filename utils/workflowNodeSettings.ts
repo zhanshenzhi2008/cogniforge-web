@@ -125,12 +125,12 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '小队名称',
     fields: [
       NAME_FIELD,
-      { key: 'teamId', labelZh: '小队', required: true },
+      { key: 'teamId', labelZh: '小队', required: true, note: 'ID 或 {{变量}}' },
       { key: 'prompt', labelZh: '任务说明', note: '支持 {{变量}}；空则接 last_agent_content' },
       {
         key: '_agentContentResultVars',
         labelZh: '结果变量',
-        note: '成功后写 last_agent_content',
+        note: '成功后写 last_agent_content / last_team_id（活跃成员兼写 last_agent_id）',
       },
     ],
   },
