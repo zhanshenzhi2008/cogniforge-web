@@ -4,6 +4,7 @@
 
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |------|------|----------|--------|
+| 2026-11-28 | v1.268 | 检索知识库 ID 支持 {{变量}}；标明 last_search_kb_id | orjrs |
 | 2026-11-28 | v1.267 | Team ID 支持 {{变量}}；标明 last_team_id | orjrs |
 | 2026-11-28 | v1.266 | Agent ID 支持 {{变量}}；标明 last_agent_id | orjrs |
 | 2026-11-28 | v1.265 | LLM 结果变量 last_llm_model/tokens/latency | orjrs |
@@ -349,6 +350,12 @@
 - **原因**：无知识库时下拉空且无引导
 - **落地**：空态 + `/knowledge`；选中时刷新
 - **主仓**：前端设计 v1.128
+
+## [变更] 检索知识库 ID {{变量}} / last_search_kb_id（2026-11-28）
+
+- **原因**：知识库只能下拉选死 ID
+- **落地**：列表点选 + 手写 ID/`{{kb_id}}`；成功写 last_search_kb_id
+- **主仓**：`nodes/search.go`；前端设计 v1.230；开发计划 v1.359
 
 ## [变更] Team ID {{变量}} / last_team_id（2026-11-28）
 
