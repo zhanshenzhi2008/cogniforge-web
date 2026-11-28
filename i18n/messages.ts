@@ -1714,11 +1714,15 @@ export const M = {
     'en-US': 'Hint for the operator; supports {{vars}}',
   },
   'editor.waitTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
+  'editor.waitTimeoutHint': {
+    'zh-CN': '数字或 {{变量}}；空/0 表示不超时',
+    'en-US': 'Number or {{var}}; empty/0 = no timeout',
+  },
   'editor.waitResultVarsHint': {
     'zh-CN': '挂起时写入 {{last_wait_reason}}、{{last_wait_message}}、{{last_wait_timeout_sec}}；审批通过后还有 approval_decision',
     'en-US': 'On pause, sets {{last_wait_reason}}, {{last_wait_message}}, {{last_wait_timeout_sec}}; after approve also approval_decision',
   },
-  'editor.waitTimeoutPh': { 'zh-CN': '0 表示不超时', 'en-US': '0 = no timeout' },
+  'editor.waitTimeoutPh': { 'zh-CN': '如 120 或 {{ttl}}；空=不超时', 'en-US': 'e.g. 120 or {{ttl}}; empty = none' },
   'editor.resume': { 'zh-CN': '继续', 'en-US': 'Resume' },
   'editor.approve': { 'zh-CN': '审批通过', 'en-US': 'Approve' },
   'editor.reject': { 'zh-CN': '拒绝', 'en-US': 'Reject' },

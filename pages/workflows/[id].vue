@@ -876,11 +876,11 @@
           <div v-if="selectedNode.type === 'wait'" class="field">
             <label class="field__label">{{ t('editor.waitTimeout') }}</label>
             <UInput
-              v-model.number="nodeConfig.timeoutSec"
-              type="number"
+              v-model="nodeConfig.timeoutSec"
               class="w-full"
               :placeholder="t('editor.waitTimeoutPh')"
             />
+            <p class="field__hint">{{ t('editor.waitTimeoutHint') }}</p>
             <p class="field__hint">{{ t('editor.waitResultVarsHint') }}</p>
           </div>
 
@@ -1722,7 +1722,7 @@ const nodeConfig = reactive({
   variable: '',
   waitReason: 'approval',
   waitMessage: '',
-  timeoutSec: 0,
+  timeoutSec: '' as string | number,
   conditionField: '',
   conditionOperator: '==',
   conditionValue: '',
@@ -2578,8 +2578,14 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const reason = String(d.waitReason || d.reason || 'approval').trim() || 'approval'
     const msg = String(d.waitMessage || d.message || '').trim()
     let base = msg ? `${reason}: ${msg.length > 24 ? `${msg.slice(0, 22)}…` : msg}` : reason
-    const timeout = Number(d.timeoutSec ?? d.timeout_sec ?? d.timeout ?? 0)
-    if (timeout > 0) base = `${base} · ${timeout}s`
+    const timeoutRaw = String(d.timeoutSec ?? d.timeout_sec ?? d.timeout ?? '').trim()
+    if (timeoutRaw) {
+      if (timeoutRaw.includes('{{')) base = `${base} · ${timeoutRaw}s`
+      else {
+        const timeout = Number(timeoutRaw)
+        if (timeout > 0) base = `${base} · ${timeout}s`
+      }
+    }
     return base
   }
   if (kind === 'loop') {
@@ -2751,7 +2757,10 @@ const handleNodeClick = (event: any) => {
   nodeConfig.variable = event.node.data?.variable || ''
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
-  nodeConfig.timeoutSec = Number(event.node.data?.timeoutSec || event.node.data?.timeout_sec || 0)
+  {
+    const raw = event.node.data?.timeoutSec ?? event.node.data?.timeout_sec ?? ''
+    nodeConfig.timeoutSec = raw === 0 || raw === '0' ? '' : (typeof raw === 'string' ? raw : (raw ? String(raw) : ''))
+  }
   const cond0 = Array.isArray(event.node.data?.conditions) ? event.node.data.conditions[0] : null
   nodeConfig.conditionField = event.node.data?.conditionField || cond0?.field || ''
   nodeConfig.conditionOperator = event.node.data?.conditionOperator || cond0?.operator || '=='
@@ -2830,8 +2839,13 @@ const saveNodeConfig = () => {
       top_k: Number(nodeConfig.topK) > 0 ? Number(nodeConfig.topK) : 0,
       searchMode: nodeConfig.searchMode || '',
       search_mode: nodeConfig.searchMode || '',
-      timeoutSec: nodeConfig.timeoutSec || 0,
-      timeout_sec: nodeConfig.timeoutSec || 0,
+      ...(() => {
+        const raw = String(nodeConfig.timeoutSec ?? '').trim()
+        if (!raw) return { timeoutSec: 0, timeout_sec: 0 }
+        const asNum = Number(raw)
+        const timeoutSec = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
+        return { timeoutSec, timeout_sec: timeoutSec }
+      })(),
       httpTimeout: nodeConfig.httpTimeout,
       timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
       httpFailOnError: !!nodeConfig.httpFailOnError,
@@ -2931,7 +2945,13 @@ const saveNodeConfig = () => {
       variable: nodeConfig.variable,
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
-      timeoutSec: nodeConfig.timeoutSec || 0,
+      ...(() => {
+        const raw = String(nodeConfig.timeoutSec ?? '').trim()
+        if (!raw) return { timeoutSec: 0, timeout_sec: 0 }
+        const asNum = Number(raw)
+        const timeoutSec = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
+        return { timeoutSec, timeout_sec: timeoutSec }
+      })(),
       ...(selectedNode.value.type === 'condition'
         ? {
             conditionField: nodeConfig.conditionField,
@@ -3513,11 +3533,22 @@ const handleSave = async () => {
               variables: normalizeStartVars(n.data?.variables),
             }
           : n.type === 'wait'
-          ? {
-              reason: n.data?.waitReason || 'approval',
-              message: n.data?.waitMessage || '',
-              timeout_sec: Number(n.data?.timeoutSec || 0) || undefined,
-            }
+          ? (() => {
+              const raw = String(n.data?.timeoutSec ?? n.data?.timeout_sec ?? '').trim()
+              let timeout_sec: string | number | undefined
+              if (raw) {
+                if (raw.includes('{{')) timeout_sec = raw
+                else {
+                  const nSec = Number(raw)
+                  if (nSec > 0) timeout_sec = nSec
+                }
+              }
+              return {
+                reason: n.data?.waitReason || 'approval',
+                message: n.data?.waitMessage || '',
+                timeout_sec,
+              }
+            })()
           : n.type === 'team'
             ? {
                 team_id: n.data?.teamId || '',

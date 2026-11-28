@@ -286,7 +286,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       NAME_FIELD,
       { key: 'waitReason', labelZh: '等待原因', note: '默认 approval；支持 {{变量}}' },
       { key: 'waitMessage', labelZh: '提示文案', note: '支持 {{变量}}' },
-      { key: 'timeoutSec', labelZh: '超时秒' },
+      { key: 'timeoutSec', labelZh: '超时秒', note: '数字或 {{变量}}；空=不超时' },
       {
         key: '_waitResultVars',
         labelZh: '结果变量',
