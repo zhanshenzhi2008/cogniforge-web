@@ -230,7 +230,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'httpUrl', labelZh: 'URL', required: true, note: '支持 {{变量}}' },
       { key: 'httpBody', labelZh: '请求体', note: '支持 {{变量}}' },
       { key: 'httpHeaders', labelZh: '请求头', note: 'JSON；值支持 {{变量}}' },
-      { key: 'httpTimeout', labelZh: '超时秒', note: '默认 30，会作用于本次请求' },
+      { key: 'httpTimeout', labelZh: '超时秒', note: '数字或 {{变量}}；默认 30' },
       {
         key: 'httpFailOnError',
         labelZh: '非 2xx 失败',

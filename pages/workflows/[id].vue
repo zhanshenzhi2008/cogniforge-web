@@ -716,11 +716,11 @@
             <div class="field">
               <label class="field__label">{{ t('editor.httpTimeout') }}</label>
               <UInput
-                v-model.number="nodeConfig.httpTimeout"
-                type="number"
+                v-model="nodeConfig.httpTimeout"
                 class="w-full"
                 :placeholder="t('editor.httpTimeoutPh')"
               />
+              <p class="field__hint">{{ t('editor.httpTimeoutHint') }}</p>
             </div>
             <div class="field field--row">
               <div>
@@ -1730,7 +1730,7 @@ const nodeConfig = reactive({
   httpUrl: '',
   httpBody: '',
   httpHeaders: '',
-  httpTimeout: 30,
+  httpTimeout: '30' as string | number,
   httpFailOnError: false,
   subflowInput: '',
   delayDuration: '1' as string | number,
@@ -2250,23 +2250,27 @@ const loadWorkflow = async () => {
                 }
               : {}),
             ...(n.type === 'http'
-              ? {
-                  method: n.data?.method || n.data?.httpMethod || n.config?.method || 'GET',
-                  httpMethod: n.data?.httpMethod || n.data?.method || n.config?.method || 'GET',
-                  url: n.data?.url || n.data?.httpUrl || n.config?.url || '',
-                  httpUrl: n.data?.httpUrl || n.data?.url || n.config?.url || '',
-                  timeout: Number(n.data?.timeout ?? n.data?.httpTimeout ?? n.config?.timeout ?? 30) || 30,
-                  httpTimeout: Number(n.data?.httpTimeout ?? n.data?.timeout ?? n.config?.timeout ?? 30) || 30,
-                  httpFailOnError: !!(
-                    n.data?.httpFailOnError ?? n.data?.failOnError ?? n.data?.fail_on_error ?? n.config?.fail_on_error
-                  ),
-                  failOnError: !!(
-                    n.data?.failOnError ?? n.data?.httpFailOnError ?? n.data?.fail_on_error ?? n.config?.fail_on_error
-                  ),
-                  fail_on_error: !!(
-                    n.data?.fail_on_error ?? n.data?.failOnError ?? n.data?.httpFailOnError ?? n.config?.fail_on_error
-                  ),
-                }
+              ? (() => {
+                  const raw = n.data?.timeout ?? n.data?.httpTimeout ?? n.config?.timeout ?? '30'
+                  const timeout = typeof raw === 'string' ? raw : String(raw ?? '30')
+                  return {
+                    method: n.data?.method || n.data?.httpMethod || n.config?.method || 'GET',
+                    httpMethod: n.data?.httpMethod || n.data?.method || n.config?.method || 'GET',
+                    url: n.data?.url || n.data?.httpUrl || n.config?.url || '',
+                    httpUrl: n.data?.httpUrl || n.data?.url || n.config?.url || '',
+                    timeout,
+                    httpTimeout: timeout,
+                    httpFailOnError: !!(
+                      n.data?.httpFailOnError ?? n.data?.failOnError ?? n.data?.fail_on_error ?? n.config?.fail_on_error
+                    ),
+                    failOnError: !!(
+                      n.data?.failOnError ?? n.data?.httpFailOnError ?? n.data?.fail_on_error ?? n.config?.fail_on_error
+                    ),
+                    fail_on_error: !!(
+                      n.data?.fail_on_error ?? n.data?.failOnError ?? n.data?.httpFailOnError ?? n.config?.fail_on_error
+                    ),
+                  }
+                })()
               : {}),
             ...(n.type === 'code'
               ? {
@@ -2500,12 +2504,16 @@ function resolveBindCaption(kind: string, data?: Record<string, unknown> | null)
     const url = String(d.url || d.httpUrl || '').trim()
     if (!url) return ''
     const short = url.length > 36 ? `${url.slice(0, 34)}…` : url
-    const timeout = Number(d.timeout ?? d.httpTimeout ?? 0)
+    const timeoutRaw = String(d.timeout ?? d.httpTimeout ?? '').trim()
     const headers = parseHttpHeadersJson(d.headers ?? d.httpHeaders)
     const headerN = headers ? Object.keys(headers).length : 0
     let base = `${method} ${short}`
     if (headerN > 0) base = `${base} · ${t('editor.httpHeadersShort', { n: headerN })}`
-    if (timeout > 0 && timeout !== 30) base = `${base} · ${timeout}s`
+    if (timeoutRaw.includes('{{')) base = `${base} · ${timeoutRaw}s`
+    else {
+      const timeout = Number(timeoutRaw)
+      if (timeout > 0 && timeout !== 30) base = `${base} · ${timeout}s`
+    }
     if (d.failOnError || d.fail_on_error || d.httpFailOnError) {
       base = `${base} · ${t('editor.httpFailOnErrorShort')}`
     }
@@ -2779,7 +2787,10 @@ const handleNodeClick = (event: any) => {
   nodeConfig.httpHeaders = formatHttpHeadersJson(
     event.node.data?.headers ?? event.node.data?.httpHeaders,
   )
-  nodeConfig.httpTimeout = Number(event.node.data?.timeout || event.node.data?.httpTimeout || 30) || 30
+  {
+    const raw = event.node.data?.timeout ?? event.node.data?.httpTimeout ?? '30'
+    nodeConfig.httpTimeout = typeof raw === 'string' ? raw : String(raw ?? '30')
+  }
   nodeConfig.httpFailOnError = !!(
     event.node.data?.httpFailOnError
     ?? event.node.data?.failOnError
@@ -2855,8 +2866,12 @@ const saveNodeConfig = () => {
         const timeoutSec = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 0)
         return { timeoutSec, timeout_sec: timeoutSec }
       })(),
-      httpTimeout: nodeConfig.httpTimeout,
-      timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
+      ...(() => {
+        const raw = String(nodeConfig.httpTimeout ?? '').trim()
+        const asNum = Number(raw)
+        const timeout = raw.includes('{{') ? raw : (asNum > 0 ? asNum : 30)
+        return { httpTimeout: timeout, timeout }
+      })(),
       httpFailOnError: !!nodeConfig.httpFailOnError,
       failOnError: !!nodeConfig.httpFailOnError,
       fail_on_error: !!nodeConfig.httpFailOnError,
@@ -2987,13 +3002,19 @@ const saveNodeConfig = () => {
             if (String(nodeConfig.httpHeaders || '').trim() && !headers) {
               toast.add({ title: t('editor.httpHeadersInvalid'), color: 'warning' })
             }
+            const timeoutRaw = String(nodeConfig.httpTimeout ?? '').trim()
+            const timeoutNum = Number(timeoutRaw)
+            const timeout = timeoutRaw.includes('{{')
+              ? timeoutRaw
+              : (timeoutNum > 0 ? timeoutNum : 30)
             return {
               method: nodeConfig.httpMethod || 'GET',
               url: nodeConfig.httpUrl,
               body: trimmed ? body : undefined,
               headers: headers || undefined,
               httpHeaders: headers || undefined,
-              timeout: Number(nodeConfig.httpTimeout) > 0 ? Number(nodeConfig.httpTimeout) : 30,
+              timeout,
+              httpTimeout: timeout,
               httpFailOnError: !!nodeConfig.httpFailOnError,
               failOnError: !!nodeConfig.httpFailOnError,
               fail_on_error: !!nodeConfig.httpFailOnError,

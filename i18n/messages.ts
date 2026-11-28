@@ -1247,7 +1247,11 @@ export const M = {
     'en-US': 'Use {{vars}} for path/query (from start inputs or upstream outputs)',
   },
   'editor.httpTimeout': { 'zh-CN': '超时（秒）', 'en-US': 'Timeout (sec)' },
-  'editor.httpTimeoutPh': { 'zh-CN': '默认 30', 'en-US': 'Default 30' },
+  'editor.httpTimeoutPh': { 'zh-CN': '如 30 或 {{ttl}}', 'en-US': 'e.g. 30 or {{ttl}}' },
+  'editor.httpTimeoutHint': {
+    'zh-CN': '数字或 {{变量}}；空则默认 30 秒',
+    'en-US': 'Number or {{var}}; empty defaults to 30s',
+  },
   'editor.httpFailOnError': { 'zh-CN': '非 2xx 视为失败', 'en-US': 'Fail on non-2xx' },
   'editor.httpFailOnErrorShort': { 'zh-CN': '严校验', 'en-US': 'strict' },
   'editor.httpFailOnErrorHint': {
