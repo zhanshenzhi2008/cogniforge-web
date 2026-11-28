@@ -963,12 +963,8 @@
             <div v-if="effectiveSearchMode === 'hybrid'" class="field">
               <label class="field__label">{{ t('editor.searchHybridWeight') }}</label>
               <UInput
-                v-model.number="nodeConfig.hybridSemanticWeight"
-                type="number"
+                v-model="nodeConfig.hybridSemanticWeight"
                 class="w-full"
-                :min="0"
-                :max="1"
-                :step="0.05"
                 :placeholder="t('editor.searchInheritPh')"
               />
               <p class="field__hint">{{ t('editor.searchHybridWeightHint') }}</p>
@@ -1704,7 +1700,7 @@ const nodeConfig = reactive({
   searchMode: '',
   rerankMode: 'inherit' as 'inherit' | 'on' | 'off',
   rerankProviderId: '',
-  hybridSemanticWeight: null as number | null,
+  hybridSemanticWeight: '' as string | number,
   variable: '',
   waitReason: 'approval',
   waitMessage: '',
@@ -2251,7 +2247,11 @@ const loadWorkflow = async () => {
                   searchMode: n.data?.searchMode || n.config?.search_mode || '',
                   rerank: n.data?.rerank ?? n.config?.rerank,
                   rerankProviderId: n.data?.rerankProviderId || n.config?.rerank_provider_id || '',
-                  hybridSemanticWeight: n.data?.hybridSemanticWeight ?? n.config?.hybrid_semantic_weight,
+                  hybridSemanticWeight: (() => {
+                    const raw = n.data?.hybridSemanticWeight ?? n.config?.hybrid_semantic_weight
+                    if (raw == null || raw === '') return ''
+                    return typeof raw === 'string' ? raw : String(raw)
+                  })(),
                 }
               : {}),
             ...(n.type === 'http'
@@ -2798,7 +2798,8 @@ const handleNodeClick = (event: any) => {
   else nodeConfig.rerankMode = 'inherit'
   nodeConfig.rerankProviderId = event.node.data?.rerankProviderId || event.node.data?.rerank_provider_id || ''
   const hy = event.node.data?.hybridSemanticWeight ?? event.node.data?.hybrid_semantic_weight
-  nodeConfig.hybridSemanticWeight = hy == null || hy === '' ? null : Number(hy)
+  nodeConfig.hybridSemanticWeight =
+    hy == null || hy === '' ? '' : typeof hy === 'string' ? hy : String(hy)
   nodeConfig.variable = event.node.data?.variable || ''
   nodeConfig.waitReason = event.node.data?.waitReason || event.node.data?.reason || 'approval'
   nodeConfig.waitMessage = event.node.data?.waitMessage || event.node.data?.message || ''
@@ -3034,9 +3035,15 @@ const saveNodeConfig = () => {
       searchMode: nodeConfig.searchMode || '',
       rerank: nodeConfig.rerankMode === 'inherit' ? undefined : nodeConfig.rerankMode === 'on',
       rerankProviderId: nodeConfig.rerankMode === 'on' ? nodeConfig.rerankProviderId : '',
-      hybridSemanticWeight: nodeConfig.hybridSemanticWeight == null || nodeConfig.hybridSemanticWeight === ('' as any)
-        ? undefined
-        : Number(nodeConfig.hybridSemanticWeight),
+      ...(() => {
+        const raw = String(nodeConfig.hybridSemanticWeight ?? '').trim()
+        if (!raw) return { hybridSemanticWeight: undefined }
+        const asNum = Number(raw)
+        const hybridSemanticWeight = raw.includes('{{')
+          ? raw
+          : (Number.isFinite(asNum) ? asNum : undefined)
+        return { hybridSemanticWeight }
+      })(),
       variable: nodeConfig.variable,
       waitReason: nodeConfig.waitReason,
       waitMessage: nodeConfig.waitMessage,
@@ -3698,9 +3705,13 @@ const handleSave = async () => {
                     ...(n.data?.searchMode ? { search_mode: n.data.searchMode } : {}),
                     ...(n.data?.rerank === true || n.data?.rerank === false ? { rerank: n.data.rerank } : {}),
                     ...(n.data?.rerankProviderId ? { rerank_provider_id: n.data.rerankProviderId } : {}),
-                    ...(n.data?.hybridSemanticWeight != null && n.data?.hybridSemanticWeight !== ''
-                      ? { hybrid_semantic_weight: Number(n.data.hybridSemanticWeight) }
-                      : {}),
+                    ...(() => {
+                      const raw = String(n.data?.hybridSemanticWeight ?? n.data?.hybrid_semantic_weight ?? '').trim()
+                      if (!raw) return {}
+                      if (raw.includes('{{')) return { hybrid_semantic_weight: raw }
+                      const nW = Number(raw)
+                      return Number.isFinite(nW) ? { hybrid_semantic_weight: nW } : {}
+                    })(),
                   }
                 : n.type === 'subflow'
                   ? {

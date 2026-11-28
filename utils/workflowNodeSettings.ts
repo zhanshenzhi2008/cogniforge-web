@@ -151,7 +151,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
       { key: 'minScore', labelZh: '最低分覆盖', note: '数字或 {{变量}}；空跟库' },
       { key: 'rerankMode', labelZh: 'Rerank 覆盖' },
       { key: 'rerankProviderId', labelZh: 'Rerank 模型' },
-      { key: 'hybridSemanticWeight', labelZh: '混合语义权重' },
+      { key: 'hybridSemanticWeight', labelZh: '混合语义权重', note: '数字或 {{变量}}；空跟库' },
       {
         key: '_searchResultVars',
         labelZh: '结果变量',

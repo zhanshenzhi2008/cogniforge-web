@@ -1687,8 +1687,8 @@ export const M = {
   'editor.searchRerankOff': { 'zh-CN': '本次关闭', 'en-US': 'Disable for this run' },
   'editor.searchHybridWeight': { 'zh-CN': '混合：语义权重', 'en-US': 'Hybrid: semantic weight' },
   'editor.searchHybridWeightHint': {
-    'zh-CN': '0～1；留空跟库默认。语义权重 + 关键字权重 = 1',
-    'en-US': '0–1; empty uses KB default. Semantic + keyword = 1',
+    'zh-CN': '0～1 或 {{变量}}；留空跟库默认。语义权重 + 关键字权重 = 1',
+    'en-US': '0–1 or {{var}}; empty uses KB default. Semantic + keyword = 1',
   },
   'editor.searchHybridWeightValue': {
     'zh-CN': '语义 {semantic}% / 关键字 {keyword}%',
