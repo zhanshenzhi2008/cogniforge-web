@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  lastResultVarsForKind,
   listMissingPaletteSettings,
   listPaletteKindsMissingLastVars,
   WORKFLOW_LAST_RESULT_VARS,
@@ -48,5 +49,13 @@ describe('workflowNodeSettings', () => {
       'last_wait_decision',
     ]))
     expect(new Set(names).size).toBe(names.length)
+  })
+
+  it('lists last_* by node kind for the drawer', () => {
+    expect(lastResultVarsForKind('http').map(v => v.name)).toEqual(
+      expect.arrayContaining(['last_http_ok', 'last_http_status']),
+    )
+    expect(lastResultVarsForKind('start')).toEqual([])
+    expect(lastResultVarsForKind('unknown')).toEqual([])
   })
 })

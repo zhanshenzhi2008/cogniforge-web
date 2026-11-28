@@ -399,3 +399,10 @@ export function listPaletteKindsMissingLastVars(): WorkflowNodeKind[] {
   const covered = new Set(WORKFLOW_LAST_RESULT_VARS.flatMap(v => v.writers))
   return withOutput.filter(k => !covered.has(k))
 }
+
+/** 某节点类型会写出的 last_*（抽屉「本节点写出」列表用） */
+export function lastResultVarsForKind(kind: string): WorkflowLastResultVar[] {
+  return WORKFLOW_LAST_RESULT_VARS.filter(v =>
+    v.writers.includes(kind as WorkflowNodeKind),
+  )
+}

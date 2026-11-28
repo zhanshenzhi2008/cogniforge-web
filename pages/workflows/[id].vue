@@ -1060,6 +1060,17 @@
             <label class="field__label">{{ t('editor.variable') }}</label>
             <UInput v-model="nodeConfig.variable" class="w-full" :placeholder="t('editor.variablePh')" />
           </div>
+
+          <details v-if="selectedNodeLastResultVars.length" class="result-vars">
+            <summary class="result-vars__summary">{{ t('editor.resultVarsTitle') }}</summary>
+            <p class="field__hint field__hint--block">{{ t('editor.resultVarsIntro') }}</p>
+            <ul class="result-vars__list">
+              <li v-for="v in selectedNodeLastResultVars" :key="v.name" class="result-vars__item">
+                <code class="result-vars__name">{{ '{{' + v.name + '}}' }}</code>
+                <span class="result-vars__note">{{ v.noteZh }}</span>
+              </li>
+            </ul>
+          </details>
         </div>
       </template>
 
@@ -1485,6 +1496,7 @@ import {
   listStaleActiveExecutionIds,
 } from '@/utils/workflowExecStatus'
 import { WORKFLOW_PALETTE_TYPES, getWorkflowNodeMeta } from '@/utils/workflowNodeMeta'
+import { lastResultVarsForKind } from '@/utils/workflowNodeSettings'
 import { isSubflowSelfReference, isWorkflowBindUnbound } from '@/utils/workflowBind'
 import { formatHttpHeadersJson, parseHttpHeadersJson } from '@/utils/workflowHttpHeaders'
 import { formatJsonObject, parseJsonObject } from '@/utils/workflowJsonObject'
@@ -1749,6 +1761,10 @@ const savingBasic = ref(false)
 const executing = ref(false)
 const configDrawer = ref(false)
 const selectedNode = ref<any>(null)
+/** 当前抽屉节点会写出的 last_*（无则隐藏速查块） */
+const selectedNodeLastResultVars = computed(() =>
+  lastResultVarsForKind(String(selectedNode.value?.type || '')),
+)
 const editPopoverShow = ref(false)
 
 const workflowBasicInfo = reactive({
@@ -5077,6 +5093,47 @@ onMounted(() => {
 }
 .field__link:hover {
   text-decoration: underline;
+}
+
+.result-vars {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--cf-line, #e2e8f0);
+  border-radius: 8px;
+  background: var(--cf-bg, #f8fafc);
+}
+.result-vars__summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cf-ink, #0f172a);
+  list-style: none;
+}
+.result-vars__summary::-webkit-details-marker {
+  display: none;
+}
+.result-vars__list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.result-vars__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.result-vars__name {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--cf-accent, #0f9f8a);
+}
+.result-vars__note {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--cf-ink-soft, #64748b);
 }
 
 .start-var-row {

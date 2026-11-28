@@ -1239,6 +1239,14 @@ export const M = {
   'editor.condOpLte': { 'zh-CN': '小于等于', 'en-US': 'Less or equal' },
   'editor.condOpContains': { 'zh-CN': '包含', 'en-US': 'Contains' },
   'editor.condOpEmpty': { 'zh-CN': '为空', 'en-US': 'Empty' },
+  'editor.resultVarsTitle': {
+    'zh-CN': '本节点写出的结果变量',
+    'en-US': 'Result variables this node sets',
+  },
+  'editor.resultVarsIntro': {
+    'zh-CN': '下游可用 {{变量名}} 引用；同名会被后执行的节点覆盖。',
+    'en-US': 'Downstream nodes can use {{name}}; later nodes overwrite the same key.',
+  },
   'editor.httpMethod': { 'zh-CN': '请求方法', 'en-US': 'Method' },
   'editor.httpMethodTemplatePh': { 'zh-CN': '如 POST 或 {{method}}', 'en-US': 'e.g. POST or {{method}}' },
   'editor.httpMethodHint': {
