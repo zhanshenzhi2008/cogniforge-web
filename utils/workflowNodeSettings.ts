@@ -87,7 +87,7 @@ export const WORKFLOW_NODE_SETTINGS: WorkflowNodeSettingsSpec[] = [
     caption: '模型名；流式 / t= / maxN 后缀',
     fields: [
       NAME_FIELD,
-      { key: 'model', labelZh: '模型', required: true },
+      { key: 'model', labelZh: '模型', required: true, note: '模型 ID 或 {{变量}}' },
       { key: 'systemPrompt', labelZh: '系统提示', note: '支持 {{变量}}' },
       { key: 'prompt', labelZh: '用户提示', note: '支持 {{变量}}；空则接 last_agent_content / 流程输入' },
       { key: 'llmStream', labelZh: '流式收集', note: 'data.stream / llmStream' },

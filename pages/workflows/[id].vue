@@ -477,13 +477,21 @@
           <div v-if="selectedNode.type === 'llm'" class="field">
             <label class="field__label">{{ t('common.model') }}</label>
             <USelect
+              v-if="modelOptions.length"
+              class="w-full"
+              :model-value="llmModelSelectValue"
+              :items="modelOptions"
+              :placeholder="t('editor.pickModel')"
+              value-key="value"
+              @update:model-value="(v: string) => { if (v) nodeConfig.model = v }"
+            />
+            <UInput
               v-model="nodeConfig.model"
               class="w-full"
-              :items="modelOptions"
-              :placeholder="modelOptions.length ? t('editor.pickModel') : t('editor.modelPickEmpty')"
-              value-key="value"
-              :disabled="!modelOptions.length"
+              :class="{ 'mt-2': modelOptions.length }"
+              :placeholder="t('editor.llmModelTemplatePh')"
             />
+            <p class="field__hint">{{ t('editor.llmModelHint') }}</p>
             <p v-if="!modelOptions.length" class="field__hint">
               {{ t('editor.modelPickEmptyHint') }}
               <NuxtLink to="/models" class="field__link" target="_blank">{{ t('editor.modelGoCreate') }}</NuxtLink>
@@ -2013,6 +2021,12 @@ const nodeTypes = WORKFLOW_PALETTE_TYPES
 
 const modelOptions = ref<{ label: string; value: string }[]>([])
 const firstConfiguredModel = () => modelOptions.value[0]?.value || ''
+/** 下拉只在当前值是已配置模型时高亮；模板/手写 ID 时留空，避免 USelect 显示错项 */
+const llmModelSelectValue = computed(() => {
+  const cur = String(nodeConfig.model || '').trim()
+  if (!cur || cur.includes('{{')) return undefined
+  return modelOptions.value.some(o => o.value === cur) ? cur : undefined
+})
 
 const getNodeIcon = (type: string) => getWorkflowNodeMeta(type).icon
 

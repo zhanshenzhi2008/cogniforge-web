@@ -1157,6 +1157,14 @@ export const M = {
   'editor.modelPickEmpty': { 'zh-CN': '暂无可用模型', 'en-US': 'No models yet' },
   'editor.modelPickEmptyHint': { 'zh-CN': '请先在「模型」页配置厂商与模型，再回来选择。', 'en-US': 'Configure providers and models under Models first, then pick one here.' },
   'editor.modelGoCreate': { 'zh-CN': '去模型页 →', 'en-US': 'Go to models →' },
+  'editor.llmModelTemplatePh': {
+    'zh-CN': '模型 ID，或 {{model}}',
+    'en-US': 'Model id, or {{model}}',
+  },
+  'editor.llmModelHint': {
+    'zh-CN': '可从上方列表点选，或手写模型 ID / {{变量}}（运行时展开）',
+    'en-US': 'Pick from the list above, or type a model id / {{var}} (resolved at run time)',
+  },
   'editor.userPrompt': { 'zh-CN': '用户提示', 'en-US': 'User prompt' },
   'editor.userPromptPh': {
     'zh-CN': '可选；如 请总结 {{topic}}；不填则用流程输入和上游输出',
